@@ -1,6 +1,9 @@
 # SkyCoop
 Multiplayer for The Long Dark game
 
+We don't own The Long Dark! The Long Dark belong to Hinterland Studio Inc. 
+This is free modification that loads with using MelonLoader.
+
 # How to install mod?
 
 First of all this is mod that loads with using MelonLoader, so you need to install [MelonLoader](https://melonwiki.xyz/#/)
@@ -33,4 +36,47 @@ How to play the mod?
 - Animals Animals can attack or react only on nearest player.
 - Locations Both players can be in different locations in same time, but if you on one location and very far from each others, animals may not spawn around one of players.
 - Friendly Fire Watch your fire! You can hurt other player with firearms, be careful when hunting animals!
-- Reviving Across whole world you can find medkits, or craft them yourself. If one of players are dead, other player revive them with medkit, you need to get close to them and press N when you will see text about possible reviving
+- Reviving Across whole world you can find medkits, or craft them yourself. If one of players are dead, other player revive them with medkit, you need to get close to them and press N when you will see text about possible reviving.
+
+
+# Used stuff:
+
+BuildAssetBundles script for Unity
+
+ModComponent by Original dll by WulfMarius, rework by ds5678 
+AssetLoader by Original dll by WulfMarius, rework by ds5678 
+
+All models used in the mod is free models from site https://sketchfab.com/
+Human model https://assetstore.unity.com/packages/3d/characters/survival-stylized-characters-5-weapons-115559
+Glowing outlines https://assetstore.unity.com/packages/tools/particles-effects/quick-outline-115488
+
+----------------------------------------------------------------------
+
+Some code references used from:
+
+JumpMod by DigitalzombieTLD https://github.com/DigitalzombieTLD/JumpMod
+FoxCompanion by DigitalzombieTLD https://github.com/DigitalzombieTLD/FoxCompanion
+
+Tutorial how to write multiplayer https://www.youtube.com/playlist?list=PLXkn83W0QkfnqsK8I0RAz5AbUxfg3bOQ5
+
+----------------------------------------------------------------------
+
+Used for debuging:
+
+UnityExplorer https://github.com/sinai-dev/UnityExplorer
+DeveloperConsole https://github.com/FINDarkside/TLD-Developer-Console
+
+(For custom gears spawns)
+
+Coordinates-Grabber https://github.com/ds5678/Coordinates-Grabber
+PlacingAnywhere https://github.com/Xpazeman/tld-placing-anywhere
+KeyboardUtilities https://github.com/ds5678/KeyboardUtilities
+
+
+----------------------------------------------------------------------
+
+Big thanks for The long Dark Modding Discord Community!
+
+Special thanks:
+Digitalzombie for explanation how to load custom models, animation and resources works.
+ds5678 for help with some problems, and help with ModComponent.
