@@ -22,15 +22,10 @@ namespace GameServer
         LIGHTSOURCENAME,
         //MAKEFIRE,
         ANIMSTATE,
-        HASRIFLE,
-        HASREVOLVER,
         SLEEPHOURS,
         SYNCWEATHER,
         REVIVE,
         REVIVEDONE,
-        HASAXE,
-        HISARROWS,
-        HASMEDKIT,
         ANIMALROLE,
         ANIMALSYNC,
         DARKWALKERREADY,
@@ -54,6 +49,40 @@ namespace GameServer
         CARRYBODY,
         BODYWARP,
         ANIMALDELETE,
+        KEEPITALIVE,
+        RQRECONNECT,
+        EQUIPMENT,
+        CHAT,
+        PLAYERSSTATUS,
+        CONNECTSTEAM,
+        CHANGENAME,
+        CLOTH,
+        ASKSPAWNDATA,
+        LEVELGUID,
+        FURNBROKEN,
+        FURNBROKENLIST,
+        FURNBREAKINGGUID,
+        FURNBREAKINSTOP,
+        GEARPICKUP,
+        GEARPICKUPLIST,
+        ROPE,
+        ROPELIST,
+        CONSUME,
+        SERVERCFG,
+        STOPCONSUME,
+        HEAVYBREATH,
+        BLOODLOSTS,
+        APPLYACTIONONPLAYER,
+        DONTMOVEWARNING,
+        INFECTIONSRISK,
+        CANCLEPICKUP,
+        CONTAINERINTERACT,
+        LOOTEDCONTAINER,
+        LOOTEDCONTAINERLIST,
+        HARVESTPLANT,
+        LOOTEDHARVESTABLE,
+        LOOTEDHARVESTABLEALL,
+        SELECTEDCHARACTER,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -71,15 +100,10 @@ namespace GameServer
         LIGHTSOURCENAME,
         //MAKEFIRE,
         ANIMSTATE,
-        HASRIFLE,
-        HASREVOLVER,
         SLEEPHOURS,
         SYNCWEATHER,
         REVIVE,
         REVIVEDONE,
-        HASAXE,
-        HISARROWS,
-        HASMEDKIT,
         ANIMALROLE,
         ANIMALSYNC,
         DARKWALKERREADY,
@@ -103,6 +127,40 @@ namespace GameServer
         CARRYBODY,
         BODYWARP,
         ANIMALDELETE,
+        KEEPITALIVE,
+        RQRECONNECT,
+        EQUIPMENT,
+        CHAT,
+        PLAYERSSTATUS,
+        CONNECTSTEAM,
+        CHANGENAME,
+        CLOTH,
+        ASKSPAWNDATA,
+        LEVELGUID,
+        FURNBROKEN,
+        FURNBROKENLIST,
+        FURNBREAKINGGUID,
+        FURNBREAKINSTOP,
+        GEARPICKUP,
+        GEARPICKUPLIST,
+        ROPE,
+        ROPELIST,
+        CONSUME,
+        SERVERCFG,
+        STOPCONSUME,
+        HEAVYBREATH,
+        BLOODLOSTS,
+        APPLYACTIONONPLAYER,
+        DONTMOVEWARNING,
+        INFECTIONSRISK,
+        CANCLEPICKUP,
+        CONTAINERINTERACT,
+        LOOTEDCONTAINER,
+        LOOTEDCONTAINERLIST,
+        HARVESTPLANT,
+        LOOTEDHARVESTABLE,
+        LOOTEDHARVESTABLEALL,
+        SELECTEDCHARACTER,
     }
 
     public class Packet : IDisposable
@@ -126,6 +184,11 @@ namespace GameServer
             readPos = 0; // Set readPos to 0
 
             Write(_id); // Write packet id to the buffer
+        }
+
+        public int ReturnSize()
+        {
+            return buffer.Count;
         }
 
         /// <summary>Creates a packet from which data can be read. Used for receiving.</summary>
@@ -373,8 +436,10 @@ namespace GameServer
             Write(obj.AP_DamageBodyPart);
             Write(obj.AP_AttackId);
 
-            Write(obj.m_UnderYourControl);
+            Write(obj.m_Controller);
             Write(obj.m_ProxySave);
+            Write(obj.m_LevelD);
+            Write(obj.m_SpawnRegionGUID);
         }
 
         public void Write(MyMod.AnimalTrigger obj)
@@ -399,6 +464,7 @@ namespace GameServer
             Write(obj.m_Meat);
             Write(obj.m_Guts);
             Write(obj.m_Hide);
+            Write(obj.m_Guid);
         }
 
         public void Write(MyMod.SaveSlotSync obj)
@@ -414,6 +480,9 @@ namespace GameServer
         {
             Write(obj.m_Guid);
             Write(obj.m_State);
+            Write(obj.m_LevelID);
+            Write(obj.m_LevelGUID);
+            Write(obj.m_Inspected);
         }
 
         public void Write(MyMod.WalkTracker obj)
@@ -426,8 +495,69 @@ namespace GameServer
             Write(obj.m_Proxy);
             Write(obj.m_Guid);
         }
-        
-
+        public void Write(MyMod.PlayerEquipmentData obj)
+        {
+            Write(obj.m_Arrows);
+            Write(obj.m_HasAxe);
+            Write(obj.m_HasMedkit);
+            Write(obj.m_HasRevolver);
+            Write(obj.m_HasRifle);
+            Write(obj.m_Flares);
+            Write(obj.m_BlueFlares);
+        }
+        public void Write(MyMod.MultiplayerChatMessage obj)
+        {
+            Write(obj.m_By);
+            Write(obj.m_Message);
+            Write(obj.m_Type);
+        }
+        public void Write(MyMod.MultiPlayerClientStatus obj)
+        {
+            Write(obj.m_ID);
+            Write(obj.m_Name);
+            Write(obj.m_Sleep);
+            Write(obj.m_Dead);
+        }
+        public void Write(MyMod.PlayerClothingData obj)
+        {
+            Write(obj.m_Hat);
+            Write(obj.m_Top);
+            Write(obj.m_Bottom);
+            Write(obj.m_Boots);
+            Write(obj.m_Scarf);
+        }
+        public void Write(MyMod.BrokenFurnitureSync obj)
+        {
+            Write(obj.m_Guid);
+            Write(obj.m_ParentGuid);
+            Write(obj.m_LevelID);
+            Write(obj.m_LevelGUID);
+        }
+        public void Write(MyMod.PickedGearSync obj)
+        {
+            Write(obj.m_Spawn);
+            Write(obj.m_LevelID);
+            Write(obj.m_LevelGUID);
+            Write(obj.m_MyInstanceID);
+        }
+        public void Write(MyMod.ClimbingRopeSync obj)
+        {
+            Write(obj.m_Position);
+            Write(obj.m_LevelID);
+            Write(obj.m_LevelGUID);
+            Write(obj.m_Deployed);
+            Write(obj.m_Snapped);
+        }
+        public void Write(MyMod.ServerConfigData obj)
+        {
+            Write(obj.m_FastConsumption);
+            Write(obj.m_DuppedSpawns);
+        }
+        public void Write(MyMod.HarvestableSyncData obj)
+        {
+            Write(obj.m_Guid);
+            Write(obj.m_State);
+        }
         #endregion
 
         #region Read Data
@@ -512,7 +642,9 @@ namespace GameServer
             }
             else
             {
-                throw new Exception("Could not read value of type 'int'!");
+                //throw new Exception("Could not read value of type 'int'!");
+                Console.WriteLine("Could not read value of type 'int'!");
+                return 0;
             }
         }
 
@@ -722,8 +854,10 @@ namespace GameServer
             obj.AP_DeadSide = ReadInt();
             obj.AP_DamageBodyPart = ReadInt();
             obj.AP_AttackId = ReadInt();
-            obj.m_UnderYourControl = ReadBool();
+            obj.m_Controller = ReadInt();
             obj.m_ProxySave = ReadString();
+            obj.m_LevelD = ReadInt();
+            obj.m_SpawnRegionGUID = ReadString();
 
             return obj;
         }
@@ -754,6 +888,7 @@ namespace GameServer
             obj.m_Meat = ReadFloat();
             obj.m_Guts = ReadInt();
             obj.m_Hide = ReadInt();
+            obj.m_Guid = ReadString();
             return obj;
         }
 
@@ -775,6 +910,9 @@ namespace GameServer
 
             obj.m_Guid = ReadString();
             obj.m_State = ReadBool();
+            obj.m_LevelID = ReadInt();
+            obj.m_LevelGUID = ReadString();
+            obj.m_Inspected = ReadBool();
             return obj;
         }
 
@@ -792,6 +930,102 @@ namespace GameServer
             MyMod.AnimalAligner obj = new MyMod.AnimalAligner();
             obj.m_Proxy = ReadString();
             obj.m_Guid = ReadString();
+            return obj;
+        }
+
+        public MyMod.PlayerEquipmentData ReadEQ(bool _moveReadPos = true)
+        {
+            MyMod.PlayerEquipmentData obj = new MyMod.PlayerEquipmentData();
+            obj.m_Arrows = ReadInt();
+            obj.m_HasAxe = ReadBool();
+            obj.m_HasMedkit = ReadBool();
+            obj.m_HasRevolver = ReadBool();
+            obj.m_HasRifle = ReadBool();
+            obj.m_Flares = ReadInt();
+            obj.m_BlueFlares = ReadInt();
+
+            return obj;
+        }
+        public MyMod.MultiplayerChatMessage ReadChat()
+        {
+            MyMod.MultiplayerChatMessage obj = new MyMod.MultiplayerChatMessage();
+            obj.m_By = ReadString();
+            obj.m_Message = ReadString();
+            obj.m_Type = ReadInt();
+
+            return obj;
+        }
+
+        public MyMod.MultiPlayerClientStatus ReadClientStatus()
+        {
+            MyMod.MultiPlayerClientStatus obj = new MyMod.MultiPlayerClientStatus();
+            obj.m_ID = ReadInt();
+            obj.m_Name = ReadString();
+            obj.m_Sleep = ReadBool();
+            obj.m_Dead = ReadBool();
+
+            return obj;
+        }
+        public MyMod.PlayerClothingData ReadClothingData()
+        {
+            MyMod.PlayerClothingData obj = new MyMod.PlayerClothingData();
+            obj.m_Hat = ReadString();
+            obj.m_Top = ReadString();
+            obj.m_Bottom = ReadString();
+            obj.m_Boots = ReadString();
+            obj.m_Scarf = ReadString();
+
+            return obj;
+        }
+
+        public MyMod.BrokenFurnitureSync ReadFurn()
+        {
+            MyMod.BrokenFurnitureSync obj = new MyMod.BrokenFurnitureSync();
+            obj.m_Guid = ReadString();
+            obj.m_ParentGuid = ReadString();
+            obj.m_LevelID = ReadInt();
+            obj.m_LevelGUID = ReadString();
+
+            return obj;
+        }
+
+        public MyMod.PickedGearSync ReadPickedGear()
+        {
+            MyMod.PickedGearSync obj = new MyMod.PickedGearSync();
+            obj.m_Spawn = ReadVector3();
+            obj.m_LevelID = ReadInt();
+            obj.m_LevelGUID = ReadString();
+            obj.m_MyInstanceID = ReadInt();
+
+            return obj;
+        }
+
+        public MyMod.ClimbingRopeSync ReadRope()
+        {
+            MyMod.ClimbingRopeSync obj = new MyMod.ClimbingRopeSync();
+            obj.m_Position = ReadVector3();
+            obj.m_LevelID = ReadInt();
+            obj.m_LevelGUID = ReadString();
+            obj.m_Deployed = ReadBool();
+            obj.m_Snapped = ReadBool();
+
+            return obj;
+        }
+
+        public MyMod.ServerConfigData ReadServerCFG()
+        {
+            MyMod.ServerConfigData obj = new MyMod.ServerConfigData();
+            obj.m_FastConsumption = ReadBool();
+            obj.m_DuppedSpawns = ReadBool();
+
+            return obj;
+        }
+        public MyMod.HarvestableSyncData ReadHarvestablePlant()
+        {
+            MyMod.HarvestableSyncData obj = new MyMod.HarvestableSyncData();
+            obj.m_Guid = ReadString();
+            obj.m_State = ReadString();
+
             return obj;
         }
 

@@ -12,24 +12,9 @@ namespace GameServer
         public static Quaternion boiQuat = new Quaternion(0,0,0,0);
         public static Vector3 LastBlockVector3 = new Vector3(0, 0, 0);
         public static bool DarkShatalkerMode = false;
-        public static int clientlevelid = 0;
-        public static int mylevelid = 0;
         public static string gametime = "12:0";
-        public static string LastLightName = "";
-        public static string LastAnimState = "Idle";
         public static bool LastLight = false;
         public static Vector3 LastFire = new Vector3(0, 0, 0);
-        public static bool MyHasRifle = false;
-        public static bool MyHasRevolver = false;
-        public static bool MyHasAxe = false;
-        public static bool LastHasRifle = false;
-        public static bool LastHasRevolver = false;
-        public static bool LastHasAxe = false;
-        public static int MyArrows = 0;
-        private static int LastArrows = 0;
-        private static bool MyHasMedkit = false;
-        private static bool LastHasMedkit = false;
-        public static int OtherPlayerSleep = 0;
         public static bool CanSend = false;
         public static bool LastReadyState = false;
         public static bool IamShatalker = false;
@@ -44,69 +29,118 @@ namespace GameServer
             int _clientIdCheck = _packet.ReadInt();
             string _username = _packet.ReadString();
 
-            Console.WriteLine($"{Server.clients[_fromClient].tcp.socket.Client.RemoteEndPoint} connected successfully and is now player {_fromClient}.");
             if (_fromClient != _clientIdCheck)
             {
                 Console.WriteLine($"Player \"{_username}\" (ID: {_fromClient}) has assumed the wrong client ID ({_clientIdCheck})!");
             }
             CanSend = true;
-            using (Packet __packet = new Packet((int)ServerPackets.LEVELID))
-            {
-                ServerSend.LEVELID(1, mylevelid);
-            }
             using (Packet __packet = new Packet((int)ServerPackets.GAMETIME))
             {
-                ServerSend.GAMETIME(1, gametime);
+                ServerSend.GAMETIME(gametime);
             }
-            using (Packet __packet = new Packet((int)ServerPackets.HOSTISDARKWALKER))
+
+            MyMod.playersData[_fromClient].m_Name = _username;
+
+            MelonLoader.MelonLogger.Msg("Client "+ _fromClient+" with user name "+ _username+" connected!");
+            MelonLoader.MelonLogger.Msg("Sending init data to new client...");
+
+            MelonLoader.MelonLogger.Msg("[Init data] Client 0 -> Client "+_fromClient+ " Data from host player object");
+            ServerSend.SERVERCFG(_fromClient);
+            ServerSend.GEARPICKUPLIST(_fromClient);
+            ServerSend.FURNBROKENLIST(_fromClient);
+            ServerSend.ROPELIST(_fromClient);
+            ServerSend.LOOTEDCONTAINERLIST(_fromClient);
+            ServerSend.LOOTEDHARVESTABLEALL(_fromClient);
+
+            int character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
+
+            ServerSend.SELECTEDCHARACTER(0, character, false, _fromClient);
+
+            ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, false, _fromClient);
+            ServerSend.XYZW(0, GameManager.GetPlayerTransform().rotation, false, _fromClient);
+            ServerSend.LEVELID(0, MyMod.levelid, false, _fromClient);
+            ServerSend.LEVELGUID(0, MyMod.level_guid, false, _fromClient);
+            ServerSend.LIGHTSOURCE(0, MyMod.MyLightSource, false, _fromClient);
+            ServerSend.LIGHTSOURCENAME(0, MyMod.MyLightSourceName, false, _fromClient);
+
+            MyMod.PlayerEquipmentData Edata = new MyMod.PlayerEquipmentData();
+            Edata.m_HasAxe = MyMod.MyHasAxe;
+            Edata.m_HasMedkit = MyMod.MyHasMedkit;
+            Edata.m_HasRevolver = MyMod.MyHasRevolver;
+            Edata.m_HasRifle = MyMod.MyHasRifle;
+            Edata.m_Arrows = MyMod.MyArrows;
+            ServerSend.EQUIPMENT(0, Edata, false, _fromClient);
+            MyMod.PlayerClothingData Cdata = new MyMod.PlayerClothingData();
+            Cdata.m_Hat = MyMod.MyHat;
+            Cdata.m_Top = MyMod.MyTop;
+            Cdata.m_Bottom = MyMod.MyBottom;
+            ServerSend.CLOTH(0, Cdata, false, _fromClient);
+
+            for (int i = 1; i <= Server.MaxPlayers; i++)
             {
-                ServerSend.HOSTISDARKWALKER(1, IamShatalker);
+                //MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " sid "+Server.clients[i].udp.sid);
+                //if(Server.clients[i].udp.endPoint == null)
+                //{
+                //    MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " endPoint null");
+                //}else{
+                //    MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " endPoint "+Server.clients[i].udp.endPoint.ToString());
+                //}
+                //MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " sid " + Server.clients[i].IsBusy());
+
+                if (Server.clients[i].IsBusy() == true)
+                {
+                    
+                    if (MyMod.playersData[i] != null && i != _fromClient)
+                    {
+                        int PlayerIndex = i;
+                        MelonLoader.MelonLogger.Msg("[Init data] Client " + i + " -> Client " + _fromClient + " Data from playersData[" + PlayerIndex + "]");
+                        int _FromId = i;
+                        int _ForId = _fromClient;
+                        MyMod.MultiPlayerClientData pD = MyMod.playersData[i];
+
+                        ServerSend.XYZ(_FromId, pD.m_Position, false, _ForId);
+                        ServerSend.XYZW(_FromId, pD.m_Rotation, false, _ForId);
+                        ServerSend.LEVELID(_FromId, pD.m_Levelid, false, _ForId);
+                        ServerSend.LEVELGUID(_FromId, pD.m_LevelGuid, true);
+                        ServerSend.LIGHTSOURCE(_FromId, pD.m_PlayerEquipmentData.m_LightSourceOn, false, _ForId);
+                        ServerSend.LIGHTSOURCENAME(_FromId, pD.m_PlayerEquipmentData.m_HoldingItem, false, _ForId);
+                        ServerSend.EQUIPMENT(_FromId, pD.m_PlayerEquipmentData, false, _ForId);
+                        ServerSend.CLOTH(_FromId, pD.m_PlayerClothingData, false, _ForId);
+                        ServerSend.SELECTEDCHARACTER(_FromId, pD.m_Character, false, _ForId);
+                    }
+                }
             }
-            using (Packet __packet = new Packet((int)ServerPackets.HASRIFLE))
-            {
-                ServerSend.HASRIFLE(1, MyHasRifle);
-            }
-            using (Packet __packet = new Packet((int)ServerPackets.HASREVOLVER))
-            {
-                ServerSend.HASREVOLVER(1, MyHasRevolver);
-            }
-            using (Packet __packet = new Packet((int)ServerPackets.HASAXE))
-            {
-                ServerSend.HASAXE(1, MyHasAxe);
-            }
-            using (Packet __packet = new Packet((int)ServerPackets.HISARROWS))
-            {
-                ServerSend.HISARROWS(1, MyArrows);
-            }
-            MyMod.SendSlotData();
+
+            MyMod.SendSlotData(_fromClient);
+            MyMod.NoHostResponceSeconds = 0;
+            MyMod.SendRQEvent = false;
+            MyMod.NeedTryReconnect = false;
+            MyMod.TryingReconnect = false;
+
+            MyMod.MultiplayerChatMessage joinMessage = new MyMod.MultiplayerChatMessage();
+            joinMessage.m_Type = 0;
+            joinMessage.m_By = _username;
+            joinMessage.m_Message = _username + " join the server";
+
+            MyMod.SendMessageToChat(joinMessage, false);
+
+            ServerSend.CHAT(_fromClient, joinMessage, false);
         }
         public static void XYZ(int _fromClient, Packet _packet)
         {
-            Vector3 maboi;
-            maboi = _packet.ReadVector3();
+            Vector3 maboi = _packet.ReadVector3();
             boiVector3 = new Vector3(maboi.x, maboi.y + 0.03f, maboi.z);
 
-            if (MyMod.IamShatalker == true)
+            if (MyMod.playersData[_fromClient] != null)
             {
-                bool NeedListIt = true;
+                MyMod.playersData[_fromClient].m_Position = boiVector3;
 
-                for (int i = 0; i < MyMod.SurvivorWalks.Count; i++)
+                if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayer>() != null)
                 {
-                    if (MyMod.SurvivorWalks[i].m_levelid == MyMod.anotherplayer_levelid)
-                    {
-                        NeedListIt = false;
-                        MyMod.SurvivorWalks[i].m_V3 = maboi;
-                        break;
-                    }
-                }
-                if (NeedListIt == true)
-                {
-                    MyMod.WalkTracker ToAdd = new MyMod.WalkTracker();
-                    ToAdd.m_levelid = MyMod.anotherplayer_levelid;
-                    ToAdd.m_V3 = maboi;
-                    MyMod.SurvivorWalks.Add(ToAdd);
+                    MyMod.LongActionCancleCauseMoved(MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayer>());
                 }
             }
+            ServerSend.XYZ(_fromClient, boiVector3, false);
         }
         public static void XYZDW(int _fromClient, Packet _packet)
         {
@@ -117,28 +151,62 @@ namespace GameServer
         }
         public static void XYZW(int _fromClient, Packet _packet)
         {
-            Quaternion maboi;
-            maboi = _packet.ReadQuaternion();
-            boiQuat = maboi;
+            Quaternion Rot = _packet.ReadQuaternion();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_Rotation = Rot;
+            }
+
+            ServerSend.XYZW(_fromClient, Rot, false);
         }
         public static void BLOCK(int _fromClient, Packet _packet)
         {
-            Vector3 maboi;
-            maboi = _packet.ReadVector3();
+            Vector3 V3 = _packet.ReadVector3();
 
-            LastBlockVector3 = maboi;
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                if (MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid)
+                {
+                    GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    cube.transform.position = V3;
+                }
+            }
+            ServerSend.BLOCK(_fromClient, V3, false);
         }
         public static void LEVELID(int _fromClient, Packet _packet)
         {
-            int maboi;
-            maboi = _packet.ReadInt();
+            int lel = _packet.ReadInt();
+            MelonLoader.MelonLogger.Msg("Player " + _fromClient + "  transition to level " + lel);
 
-            clientlevelid = maboi;
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_Levelid = lel;
+            }
+            ServerSend.LEVELID(_fromClient, lel, false);
+        }
+        public static void LEVELGUID(int _fromClient, Packet _packet)
+        {
+            string lel = _packet.ReadString();
+            
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_LevelGuid = lel;
+            }
+            MelonLoader.MelonLogger.Msg("Player " + _fromClient + "  transition to level with GUID " + lel);
+            ServerSend.LEVELGUID(_fromClient, lel, false);
         }
         public static void GOTITEM(int _fromClient, Packet _packet)
         {
             GearItem got = _packet.ReadGear();
-            MyMod.GiveRecivedItem(got);
+            int ToID = _packet.ReadInt();
+
+            if(ToID == 0)
+            {
+                MyMod.GiveRecivedItem(got);
+            }else{
+                ServerSend.GOTITEM(ToID, got);
+            }
         }
         public static void GAMETIME(int _fromClient, Packet _packet)
         {
@@ -148,54 +216,33 @@ namespace GameServer
         }
         public static void LIGHTSOURCENAME(int _fromClient, Packet _packet)
         {
-            string got = _packet.ReadString();
-            LastLightName = got;
-            Console.WriteLine("Other player changed source light: " + got);
+            string Item = _packet.ReadString();
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_HoldingItem = Item;
+            }
+
+            ServerSend.LIGHTSOURCENAME(_fromClient, Item, false);
         }
         public static void LIGHTSOURCE(int _fromClient, Packet _packet)
         {
-            bool got = _packet.ReadBool();
-            LastLight = got;
-            Console.WriteLine("Other player toggle light: " + got);
+            bool On = _packet.ReadBool();
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_LightSourceOn = On;
+            }
+            ServerSend.LIGHTSOURCE(_fromClient, On, false);
         }
         public static void ANIMSTATE(int _fromClient, Packet _packet)
         {
-            LastAnimState = _packet.ReadString();
-            //Console.WriteLine("Other player changed animation: " + LastAnimState);
-        }
-        public static void HASRIFLE(int _fromClient, Packet _packet)
-        {
-            bool got = _packet.ReadBool();
-            LastHasRifle = got;
-            Console.WriteLine("Other player toggle rifle: " + got);
-        }
-        public static void HASREVOLVER(int _fromClient, Packet _packet)
-        {
-            bool got = _packet.ReadBool();
-            LastHasRevolver = got;
-            Console.WriteLine("Other player toggle revolver: " + got);
-        }
-        public static void HASAXE(int _fromClient, Packet _packet)
-        {
-            bool got = _packet.ReadBool();
-            LastHasAxe = got;
-            Console.WriteLine("Other player toggle axe: " + got);
-        }
-        public static void HISARROWS(int _fromClient, Packet _packet)
-        {
-            int got = _packet.ReadInt();
-            LastArrows = got;
-            Console.WriteLine("Other player changed count of arrows: " + got);
-        }
-        public static void HASMEDKIT(int _fromClient, Packet _packet)
-        {
-            bool got = _packet.ReadBool();
-            LastHasMedkit = got;
-            Console.WriteLine("Other player toggle medkit: " + got);
-        }
-        public static void SYNCWEATHER(int _fromClient, Packet _packet)
-        {
-            Console.WriteLine("Got useless event!");
+            string anim = _packet.ReadString();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_AnimState = anim;
+            }
+
+            ServerSend.ANIMSTATE(_fromClient, anim, false);
         }
         public static void REVIVE(int _fromClient, Packet _packet)
         {
@@ -211,7 +258,10 @@ namespace GameServer
         }
         public static void SLEEPHOURS(int _fromClient, Packet _packet)
         {
-            OtherPlayerSleep = _packet.ReadInt();
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_SleepHours = _packet.ReadInt();
+            }
         }
         public static void DARKWALKERREADY(int _fromClient, Packet _packet)
         {
@@ -236,7 +286,9 @@ namespace GameServer
         public static void SHOOTSYNC(int _fromClient, Packet _packet)
         {
             MyMod.ShootSync shoot = _packet.ReadShoot();
-            MyMod.DoShootSync(shoot);
+            MyMod.DoShootSync(shoot, _fromClient);
+
+            ServerSend.SHOOTSYNC(_fromClient, shoot, false);
         }
         public static void PIMPSKILL(int _fromClient, Packet _packet)
         {
@@ -245,48 +297,63 @@ namespace GameServer
             if (SkillTypeId == 1)
             {
                 GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Rifle, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                MelonLoader.MelonLogger.Log("Got remote skill upgrade Rifle");
+                MelonLoader.MelonLogger.Msg("Got remote skill upgrade Rifle");
             }
             else if (SkillTypeId == 2)
             {
                 GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Revolver, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                MelonLoader.MelonLogger.Log("Got remote skill upgrade Revolver");
+                MelonLoader.MelonLogger.Msg("Got remote skill upgrade Revolver");
             }
         }
         public static void HARVESTINGANIMAL(int _fromClient, Packet _packet)
         {
-            string got = _packet.ReadString();
-            MyMod.OtherHarvetingAnimal = got;
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_HarvestingAnimal = _packet.ReadString();
+            }
         }
         public static void DONEHARVASTING(int _fromClient, Packet _packet)
         {
             MyMod.HarvestStats got = _packet.ReadHarvest();
-            MyMod.DoForcedHarvestAnimal(MyMod.OtherHarvetingAnimal, got);
+            MyMod.DoForcedHarvestAnimal(got.m_Guid, got);
+
+            ServerSend.DONEHARVASTING(0, got, true);
         }
         public static void ANIMALSYNC(int _fromClient, Packet _packet)
         {
             MyMod.AnimalSync got = _packet.ReadAnimal();
             MyMod.DoAnimalSync(got);
+            ServerSend.ANIMALSYNC(_fromClient, got, true, got.m_LevelD, got.m_position);
         }
         public static void ANIMALSYNCTRIGG(int _fromClient, Packet _packet)
         {
             MyMod.AnimalTrigger got = _packet.ReadAnimalTrigger();
             MyMod.SetAnimalTriggers(got);
+            ServerSend.ANIMALSYNCTRIGG(_fromClient, got, true);
         }
         public static void BULLETDAMAGE(int _fromClient, Packet _packet)
         {
             float damage = _packet.ReadFloat();
-            MyMod.DamageByBullet(damage);
+            int _for = _packet.ReadInt();
+            if(_for == 0)
+            {
+                MyMod.DamageByBullet(damage);
+            }else{
+                ServerSend.BULLETDAMAGE(_for, damage);
+            }
         }
         public static void MULTISOUND(int _fromClient, Packet _packet)
         {
             string sound = _packet.ReadString();
-            MyMod.PlayMultiplayer3dAduio(sound);
+            MyMod.PlayMultiplayer3dAduio(sound, _fromClient);
+            ServerSend.MULTISOUND(_fromClient, sound, false);
         }
         public static void CONTAINEROPEN(int _fromClient, Packet _packet)
         {
             MyMod.ContainerOpenSync box = _packet.ReadContainer();
             MyMod.DoSyncContainer(box);
+
+            ServerSend.CONTAINEROPEN(_fromClient, box, false);
         }
         public static void LUREPLACEMENT(int _fromClient, Packet _packet)
         {
@@ -308,12 +375,12 @@ namespace GameServer
             string Proxy = "";
             for (int i = 0; i < BaseAiManager.m_BaseAis.Count; i++)
             {
-                if (BaseAiManager.m_BaseAis[i] != null && BaseAiManager.m_BaseAis[i].gameObject != null)
+                if (BaseAiManager.m_BaseAis.get_Item(i) != null && BaseAiManager.m_BaseAis.get_Item(i).gameObject != null)
                 {
-                    GameObject animal = BaseAiManager.m_BaseAis[i].gameObject;
+                    GameObject animal = BaseAiManager.m_BaseAis.get_Item(i).gameObject;
                     if (animal.GetComponent<ObjectGuid>() != null && animal.GetComponent<ObjectGuid>().Get() == _guid)
                     {
-                        Proxy = BaseAiManager.m_BaseAis[i].Serialize();
+                        Proxy = BaseAiManager.m_BaseAis.get_Item(i).Serialize();
                         break;
                     }
                 }
@@ -343,90 +410,330 @@ namespace GameServer
             string AnimalGuid = _packet.ReadString();
             MyMod.DeleteAnimal(AnimalGuid);
         }
+        public static void KEEPITALIVE(int _fromClient, Packet _packet)
+        {
+            MyMod.NoHostResponceSeconds = 0;
+            Server.clients[_fromClient].TimeOutTime = 0;
+        }
+        public static void SYNCWEATHER(int _fromClient, Packet _packet)
+        {
 
-        public static Vector3 ReturnLastBoi()
-        {
-            return boiVector3;
         }
-        public static Quaternion ReturnLastBoiQuat()
+        public static void EQUIPMENT(int _fromClient, Packet _packet)
         {
-            return boiQuat;
+            MyMod.PlayerEquipmentData item = _packet.ReadEQ();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_Arrows = item.m_Arrows;
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_HasAxe = item.m_HasAxe;
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_HasMedkit = item.m_HasMedkit;
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_HasRevolver = item.m_HasRevolver;
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_HasRifle = item.m_HasRifle;
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_Flares = item.m_Flares;
+                MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_BlueFlares = item.m_BlueFlares;
+            }
+
+            ServerSend.EQUIPMENT(_fromClient, item, false);
         }
-        public static Vector3 ReutrnLastBlock()
+        public static void CHAT(int _fromClient, Packet _packet)
         {
-            return LastBlockVector3;
+            MyMod.MultiplayerChatMessage message = _packet.ReadChat();
+            MyMod.SendMessageToChat(message, false);
+            ServerSend.CHAT(_fromClient, message, false);
         }
-        public static bool ReturnShatalkerMode()
+        public static void CHANGENAME(int _fromClient, Packet _packet)
         {
-            return DarkShatalkerMode;
+            string newName = _packet.ReadString();
+            
+            MyMod.MultiplayerChatMessage message = new MyMod.MultiplayerChatMessage();
+            message.m_Type = 0;
+            message.m_By = MyMod.playersData[_fromClient].m_Name;
+            message.m_Message = MyMod.playersData[_fromClient].m_Name + " changed name to "+ newName;
+
+            MyMod.playersData[_fromClient].m_Name = newName;
+
+            MyMod.SendMessageToChat(message, true);
+            ServerSend.CHANGENAME(_fromClient, newName, false);
         }
-        public static int ReturnLastLevelID()
+
+        public static void CLOTH(int _fromClient, Packet _packet)
         {
-            return clientlevelid;
+            MyMod.PlayerClothingData ClotchData = _packet.ReadClothingData();
+            MyMod.playersData[_fromClient].m_PlayerClothingData = ClotchData;
+            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Hat " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Hat);
+            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Torso " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Top);
+            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Legs " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Bottom);
+            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Feets " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Boots);
+            ServerSend.CLOTH(_fromClient, ClotchData, false);
         }
-        public static void SetMyLevelId(int level)
+
+        public static void CONNECTSTEAM(int _fromClient, Packet _packet)
         {
-            mylevelid = level;
+            string sid = _packet.ReadString();
+            int freeSlot = 0;
+
+            bool ReConnection = false;
+
+            for (int i = 1; i <= Server.MaxPlayers; i++)
+            {
+                if (Server.clients[i].udp != null && Server.clients[i].udp.sid == sid)
+                {
+                    ReConnection = true;
+                    MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Reconnecting " + sid + " as client " + i);
+                    Server.clients[i].TimeOutTime = 0;
+                    ServerSend.Welcome(freeSlot, "WELCOME TO STEAM SERVER", Server.MaxPlayers);
+                    freeSlot = i;
+                    break;
+                }
+            }
+
+            if(ReConnection == false)
+            {
+                for (int i = 1; i <= Server.MaxPlayers; i++)
+                {
+                    if (Server.clients[i].IsBusy() == false)
+                    {
+                        MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Here an empty slot " + i + " for " + sid);
+                        freeSlot = i;
+                        Server.clients[i].udp.sid = sid;
+                        ServerSend.Welcome(freeSlot, "WELCOME TO STEAM SERVER", Server.MaxPlayers);
+                        break;
+                    }
+                }
+            }
+
+            //MyMod.MultiplayerChatMessage joinMessage = new MyMod.MultiplayerChatMessage();
+            //joinMessage.m_Type = 0;
+            //joinMessage.m_By = sid;
+            //joinMessage.m_Message = "STEAM USER "+sid + " trying to join server in slot "+freeSlot;
+
+            //MyMod.SendMessageToChat(joinMessage, false);
         }
-        public static void SetGameTime(string gtime)
+        public static void ASKSPAWNDATA(int _fromClient, Packet _packet)
         {
-            gametime = gtime;
+            int lvl = _packet.ReadInt();
+
+            if(lvl == MyMod.levelid)
+            {
+                MyMod.SendSpawnData(false);
+            }
+
+            ServerSend.ASKSPAWNDATA(_fromClient, lvl, false);
         }
-        public static string ReturnLastLight()
+        public static void FURNBROKEN(int _fromClient, Packet _packet)
         {
-            return LastLightName;
+            MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+
+            MyMod.OnFurnitureDestroyed(furn.m_Guid, furn.m_ParentGuid, furn.m_LevelID, furn.m_LevelGUID, false);
+
+            ServerSend.FURNBROKEN(_fromClient, furn, false);
         }
-        public static bool ReturnLastLightState()
+        public static void FURNBREAKINGGUID(int _fromClient, Packet _packet)
         {
-            return LastLight;
+            MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+
+            if(MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_BrakingObject = furn;
+
+                if(MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+                {
+                    MyMod.playersData[_fromClient].m_BrakingSounds = MyMod.GetBreakDownSound(furn);
+                }
+            }
+
+            ServerSend.FURNBREAKINGGUID(_fromClient, furn, false);
         }
-        public static Vector3 ReturnLastFire()
+        public static void FURNBREAKINSTOP(int _fromClient, Packet _packet)
         {
-            return LastFire;
+            bool broken = _packet.ReadBool();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_BrakingObject = new MyMod.BrokenFurnitureSync();
+                MyMod.playersData[_fromClient].m_BrakingSounds = "";
+            }
+
+            ServerSend.FURNBREAKINSTOP(_fromClient, true, false);
         }
-        public static string ReturnLastAnimState()
+        public static void GEARPICKUP(int _fromClient, Packet _packet)
         {
-            return LastAnimState;
+            MyMod.PickedGearSync gear = _packet.ReadPickedGear();
+
+            if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+            {
+                if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                {
+                    MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().Pickup();
+                }
+            }
+
+            MyMod.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, _fromClient, gear.m_MyInstanceID, false);
+
+            ServerSend.GEARPICKUP(_fromClient, gear, false);
         }
-        public static bool ReturnLastHasRifle()
+        public static void ROPE(int _fromClient, Packet _packet)
         {
-            return LastHasRifle;
+            MyMod.ClimbingRopeSync rope = _packet.ReadRope();
+
+            MyMod.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
+
+            ServerSend.ROPE(_fromClient, rope, false);
         }
-        public static bool ReturnLastHasRevolver()
+        public static void CONSUME(int _fromClient, Packet _packet)
         {
-            return LastHasRevolver;
+            bool IsDrink = _packet.ReadBool();
+
+            if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+            {
+                if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                {
+                    MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_IsDrink = IsDrink;
+                    MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().Consumption();
+                }
+            }
+
+            ServerSend.CONSUME(_fromClient, IsDrink, false);
         }
-        public static bool ReturnLastHasAxe()
+        public static void STOPCONSUME(int _fromClient, Packet _packet)
         {
-            return LastHasAxe;
+            string LastAnim = _packet.ReadString();
+            
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                if(MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+                {
+                    if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                    {
+                        MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().StopConsumption();
+                    }
+                }
+                MyMod.playersData[_fromClient].m_AnimState = LastAnim;
+            }
+            ServerSend.STOPCONSUME(_fromClient, LastAnim, false);
         }
-        public static int ReturnLastArrow()
+        public static void HEAVYBREATH(int _fromClient, Packet _packet)
         {
-            return LastArrows;
+            bool IsHeavyBreath = _packet.ReadBool();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_HeavyBreath = IsHeavyBreath;
+            }
+            ServerSend.HEAVYBREATH(_fromClient, IsHeavyBreath, false);
         }
-        public static bool ReturnLastHasMedkit()
+        public static void BLOODLOSTS(int _fromClient, Packet _packet)
         {
-            return LastHasMedkit;
+            int BloodCount = _packet.ReadInt();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_BloodLosts = BloodCount;
+            }
+            ServerSend.BLOODLOSTS(_fromClient, BloodCount, false);
         }
-        public static int ReturnLastSleeping()
+        public static void APPLYACTIONONPLAYER(int _fromClient, Packet _packet)
         {
-            return OtherPlayerSleep;
+            string ActionType = _packet.ReadString();
+            int ForWho = _packet.ReadInt();
+
+            if(ForWho == 0)
+            {
+                MyMod.OtherPlayerApplyActionOnMe(ActionType, _fromClient);
+            }else{
+                ServerSend.APPLYACTIONONPLAYER(_fromClient, ActionType, false, ForWho);
+            }
         }
-        public static bool ReturnLastReadyState()
+        public static void DONTMOVEWARNING(int _fromClient, Packet _packet)
         {
-            return LastReadyState;
+            bool ok = _packet.ReadBool();
+            int ForWho = _packet.ReadInt();
+
+            if(ForWho == 0)
+            {
+                if (MyMod.playersData[_fromClient] != null)
+                {
+                    MyMod.LowHealthStaggerBlockTime = 5;
+                    HUDMessage.AddMessage("PLEASE DON'T MOVE, " + MyMod.playersData[_fromClient].m_Name + " IS TENDING YOU");
+                    GameManager.GetVpFPSPlayer().Controller.Stop();
+                }
+            }else{
+                ServerSend.DONTMOVEWARNING(_fromClient, true, false, ForWho);
+            }
         }
-        public static bool ReturnLastWardIsActive()
+        public static void INFECTIONSRISK(int _fromClient, Packet _packet)
         {
-            return LastWardIsActive;
+            bool InfRisk = _packet.ReadBool();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_NeedAntiseptic = InfRisk;
+            }
+            ServerSend.INFECTIONSRISK(_fromClient, InfRisk, false);
         }
-        public static bool ReturnNeedReloadDWReadtState()
+        public static void CONTAINERINTERACT(int _fromClient, Packet _packet)
         {
-            return NeedReloadDWReadtState;
+            MyMod.ContainerOpenSync box = _packet.ReadContainer();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                if(box.m_Guid == "NULL")
+                {
+                    MyMod.playersData[_fromClient].m_Container = null;
+                }else{
+                    MyMod.playersData[_fromClient].m_Container = box;
+                }
+            }
+
+            if(box.m_Guid != "NULL")
+            {
+                MyMod.AddLootedContainer(box, true);
+                if (box.m_LevelID == MyMod.levelid && box.m_LevelGUID == MyMod.level_guid)
+                {
+                    MyMod.ApplyLootedContainers();
+                }
+            }
+
+            ServerSend.CONTAINERINTERACT(_fromClient, box, false);
         }
-        public static float ReturnLastCountDown()
+        public static void HARVESTPLANT(int _fromClient, Packet _packet)
         {
-            return LastCountDown;
+            MyMod.HarvestableSyncData harveData = _packet.ReadHarvestablePlant();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                if (harveData.m_State == "Start")
+                {
+                    MyMod.playersData[_fromClient].m_Plant = harveData.m_Guid;
+                }else{
+                    MyMod.playersData[_fromClient].m_Plant = "";
+                }
+            }
+            if(harveData.m_State == "Done")
+            {
+                MyMod.AddHarvastedPlant(harveData.m_Guid, _fromClient);
+            }
+            ServerSend.HARVESTPLANT(_fromClient, harveData, false);
+        }
+
+        public static void SELECTEDCHARACTER(int _fromClient, Packet _packet)
+        {
+            int character = _packet.ReadInt();
+
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_Character = character;
+                if (character == 0)
+                {
+                    MyMod.playersData[_fromClient].m_Female = false;
+                }
+                if (character == 1)
+                {
+                    MyMod.playersData[_fromClient].m_Female = true;
+                }
+            }
+            ServerSend.SELECTEDCHARACTER(_fromClient, character, false);
         }
     }
 }
