@@ -12,10 +12,10 @@ using SkyCoop;
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("SkyCoop")]
-[assembly: AssemblyCopyright("Copyright ©  2020")]
+[assembly: AssemblyCopyright("Copyright ©  2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-[assembly: MelonInfo(typeof(MyMod), "Sky Co-op", "0.0.1", "Filigrani")]
+[assembly: MelonInfo(typeof(MyMod), "Sky Co-op", "0.5.1", "Filigrani")]
 [assembly: MelonGame("Hinterland", "TheLongDark")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
