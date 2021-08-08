@@ -2996,7 +2996,8 @@ namespace SkyCoop
                                 ServerSend.CONTAINERINTERACT(0, MyMod.MyContainer, true);
                             }
                         }
-                        MyMod.AddLootedContainer(MyMod.MyContainer, true);
+
+                        MyMod.AddLootedContainer(MyMod.MyContainer, true, MyMod.instance.myId);
                     }
                 }
             }

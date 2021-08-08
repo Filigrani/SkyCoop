@@ -1062,7 +1062,7 @@ namespace SkyCoop
                 {
                     Container currentBox = ContainerManager.m_Containers.get_Item(i);
 
-                    if (currentBox.m_Inspected == false)
+                    if (currentBox.m_Inspected == false && currentBox.m_SearchInProgress == false)
                     {
                         ContainerOpenSync FindData = new ContainerOpenSync();
                         FindData.m_LevelID = levelid;
@@ -1084,7 +1084,7 @@ namespace SkyCoop
             }
         }
 
-        public static void AddLootedContainer(ContainerOpenSync box, bool needSync)
+        public static void AddLootedContainer(ContainerOpenSync box, bool needSync, int Looter = 0)
         {
             if (LootedContainers.Contains(box) == false)
             {
@@ -1096,7 +1096,12 @@ namespace SkyCoop
             {
                 if (iAmHost == true)
                 {
-                    ServerSend.LOOTEDCONTAINER(0, box, true);
+                    if(Looter == 0)
+                    {
+                        ServerSend.LOOTEDCONTAINER(0, box, true);
+                    }else{
+                        ServerSend.LOOTEDCONTAINER(Looter, box, false);
+                    }
                 }
             }else{
                 if (box.m_LevelID == levelid && box.m_LevelGUID == level_guid)

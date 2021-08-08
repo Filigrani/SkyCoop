@@ -688,7 +688,7 @@ namespace GameServer
 
             if(box.m_Guid != "NULL")
             {
-                MyMod.AddLootedContainer(box, true);
+                MyMod.AddLootedContainer(box, true, _fromClient);
                 if (box.m_LevelID == MyMod.levelid && box.m_LevelGUID == MyMod.level_guid)
                 {
                     MyMod.ApplyLootedContainers();

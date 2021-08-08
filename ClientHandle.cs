@@ -763,7 +763,8 @@ namespace SkyCoop
         public static void LOOTEDCONTAINER(Packet _packet)
         {
             MyMod.ContainerOpenSync box = _packet.ReadContainer();
-            MyMod.AddLootedContainer(box, false);
+            int from = _packet.ReadInt();
+            MyMod.AddLootedContainer(box, false, from);
         }
         public static void LOOTEDCONTAINERLIST(Packet _packet)
         {
