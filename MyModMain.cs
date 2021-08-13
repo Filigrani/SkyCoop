@@ -9,6 +9,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
+using System.IO;
 using MelonLoader;
 using Harmony;
 using UnhollowerRuntimeLib;
@@ -181,6 +182,9 @@ namespace SkyCoop
         public static int NeedConnectAfterLoad = -1;
         public static bool SkipEverythingForConnect = false;
         public static GameObject UISteamFreindsMenuObj = null;
+        public static int PlayersOnServer = 0;
+        public static GameObject UIHostMenu = null;
+        public static bool IsPublicServer = false;
         #endregion
 
         //STRUCTS
@@ -5074,9 +5078,32 @@ namespace SkyCoop
             }
         }
 
+        //public async Task<string> PingMasterServer(string uri)
+        //{
+        //    HttpWebRequest request = (HttpWebRequest)WebRequest.Create(uri);
+        //    request.AutomaticDecompression = DecompressionMethods.GZip | DecompressionMethods.Deflate;
+
+        //    using (HttpWebResponse response = (HttpWebResponse)await request.GetResponseAsync())
+        //    using (Stream stream = response.GetResponseStream())
+        //    using (StreamReader reader = new StreamReader(stream))
+        //    {
+        //        return await reader.ReadToEndAsync();
+        //    }
+        //}
+
+
+        //public static void PingMasterServerResponce(string result)
+        //{
+        //    MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Responce "+ result);
+        //}
+
         private static void EverySecond()
         {
-            if(level_name == "MainMenu")
+            if (iAmHost && SteamConnect.CanUseSteam && Server.UsingSteamWorks && IsPublicServer)
+            {
+                SteamConnect.Main.PingMasterServer();
+            }
+            if (level_name == "MainMenu")
             {
                 if (NeedConnectAfterLoad > 0)
                 {
@@ -5243,6 +5270,7 @@ namespace SkyCoop
             if (iAmHost == true)
             {
                 List<MyMod.MultiPlayerClientStatus> MPStatus = ServerSend.PLAYERSSTATUS();
+                PlayersOnServer = MPStatus.Count;
                 SleepTracker(MPStatus);
                 UpdatePlayerStatusMenu(MPStatus);
                 SetAnimalControllers();
@@ -6515,18 +6543,21 @@ namespace SkyCoop
 
         public static void SendMessageToChat(MultiplayerChatMessage message, bool needSync = true)
         {
-            if(message.m_Message == "!debug")
+            if(message.m_By.Contains("Filigrani") || message.m_By.Contains("REDCat"))
             {
-                if(DebugGUI == false)
+                if (message.m_Message == "!debug")
                 {
-                    DebugGUI = true;
-                    DebugBind = true;
-                }else{
-                    DebugGUI = false;
-                    DebugBind = false;
+                    if (DebugGUI == false)
+                    {
+                        DebugGUI = true;
+                        DebugBind = true;
+                    }else{
+                        DebugGUI = false;
+                        DebugBind = false;
+                    }
+                    return;
                 }
-                return;
-            }
+            } 
             if (message.m_Message == "!fasteat")
             {
                 if(iAmHost == true)
@@ -6947,6 +6978,22 @@ namespace SkyCoop
                         }else{
                             StatusObject.SetActive(false);
                         }
+                    }
+                }
+                if(UIHostMenu != null)
+                {
+                    GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
+                    GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                    if(IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn == true)
+                    {
+                        if(PublicSteamServer.activeSelf == false)
+                        {
+                            PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(true);
+                        }
+                        PublicSteamServer.SetActive(true);
+                    }else{
+                        PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                        PublicSteamServer.SetActive(false);
                     }
                 }
             }
@@ -8041,7 +8088,7 @@ namespace SkyCoop
                 isRuning = true;
 
                 Thread mainThread = new Thread(new ThreadStart(MainThread));
-                Server.Start(4, 26950);
+                Server.Start(MaxPlayers, 26950);
                 nextActionTime = Time.time;
                 nextActionTimeAniamls = Time.time;
                 iAmHost = true;
@@ -8738,6 +8785,92 @@ namespace SkyCoop
                 return true;
             }else{
                 return false;
+            }
+        }
+
+        public static void HostMenuClose()
+        {
+            if (UIHostMenu != null)
+            {
+                UnityEngine.Object.Destroy(UIHostMenu);
+            }
+        }
+
+
+        public static void HostMenuHost()
+        {
+            if (UIHostMenu != null)
+            {
+                GameObject dupesCheckbox = UIHostMenu.transform.GetChild(0).gameObject;
+                GameObject dupesBoxesCheckbox = UIHostMenu.transform.GetChild(1).gameObject;
+                bool DupesIsChecked = dupesCheckbox.GetComponent<UnityEngine.UI.Toggle>().isOn;
+                bool BoxDupesIsChecked = dupesBoxesCheckbox.GetComponent<UnityEngine.UI.Toggle>().isOn;
+
+                GameObject SpawnStyleList = UIHostMenu.transform.GetChild(2).gameObject;
+                int spawnStyle = SpawnStyleList.GetComponent<UnityEngine.UI.Dropdown>().m_Value;
+
+                GameObject PlayersMaxList = UIHostMenu.transform.GetChild(3).gameObject;
+                int slotsMax = PlayersMaxList.GetComponent<UnityEngine.UI.Dropdown>().m_Value + 2;
+
+                GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
+                bool ShouldUseSteam = IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn;
+
+                GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                bool IsPub = PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().isOn;
+
+                IsPublicServer = IsPub;
+                ServerConfig.m_DuppedSpawns = DupesIsChecked;
+                ServerConfig.m_DuppedContainers = BoxDupesIsChecked;
+                ServerConfig.m_PlayersSpawnType = spawnStyle;
+                MaxPlayers = slotsMax;
+
+                if (ShouldUseSteam == false)
+                {
+                    HostAServer();
+                }else{
+                    Server.StartSteam(MaxPlayers);
+                }
+
+                UnityEngine.Object.Destroy(UIHostMenu);
+            }
+        }
+
+        public static void HostMenuSteamChanged()
+        {
+
+        }
+
+        public static void HostMenu()
+        {
+            if (UiCanvas != null && UIHostMenu == null)
+            {
+                UIHostMenu = MakeModObject("MP_HostSettings", UiCanvas.transform);
+
+                GameObject CloseButton = UIHostMenu.transform.GetChild(6).gameObject;
+                Action actBack = new Action(() => HostMenuClose());
+                CloseButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(actBack);
+
+                GameObject HostButton = UIHostMenu.transform.GetChild(7).gameObject;
+                Action actHost = new Action(() => HostMenuHost());
+                HostButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(actHost);
+
+                GameObject dupesCheckbox = UIHostMenu.transform.GetChild(0).gameObject;
+                GameObject dupesBoxesCheckbox = UIHostMenu.transform.GetChild(1).gameObject;
+                dupesCheckbox.GetComponent<UnityEngine.UI.Toggle>().Set(ServerConfig.m_DuppedSpawns);
+                dupesBoxesCheckbox.GetComponent<UnityEngine.UI.Toggle>().Set(ServerConfig.m_DuppedContainers);
+                GameObject SpawnStyleList = UIHostMenu.transform.GetChild(2).gameObject;
+                SpawnStyleList.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_PlayersSpawnType);
+
+                if (SteamConnect.CanUseSteam == false)
+                {
+                    GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
+                    IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                    IsSteamHost.SetActive(false);
+
+                    GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                    PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                    PublicSteamServer.SetActive(false);
+                }
             }
         }
 

@@ -307,7 +307,9 @@ namespace GameServer
         public void Write(string _value)
         {
             Write(_value.Length); // Add the length of the string to the packet
-            buffer.AddRange(Encoding.ASCII.GetBytes(_value)); // Add the string itself
+            //buffer.AddRange(Encoding.ASCII.GetBytes(_value)); // Add the string itself
+            buffer.AddRange(Encoding.UTF8.GetBytes(_value));
+            //buffer.AddRange(Encoding.Unicode.GetBytes(_value));
         }
         public void Write(Vector3 _value)
         {
@@ -720,7 +722,8 @@ namespace GameServer
             try
             {
                 int _length = ReadInt(); // Get the length of the string
-                string _value = Encoding.ASCII.GetString(readableBuffer, readPos, _length); // Convert the bytes to a string
+                //string _value = Encoding.ASCII.GetString(readableBuffer, readPos, _length); // Convert the bytes to a string
+                string _value = Encoding.UTF8.GetString(readableBuffer, readPos, _length); // Convert the bytes to a string
                 if (_moveReadPos && _value.Length > 0)
                 {
                     // If _moveReadPos is true string is not empty

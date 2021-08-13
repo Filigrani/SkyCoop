@@ -711,7 +711,10 @@ namespace SkyCoop
 
         public static bool DuppableGearItem(string GearName)
         {
-            if (GearName.Contains("TechnicalBackpack") == true || GearName.Contains("Crampons") == true)
+            if (GearName.Contains("TechnicalBackpack") == true 
+                || GearName.Contains("Crampons") == true
+                || GearName.Contains("CanneryCodeNote") == true
+                || GearName.Contains("MountainTownFarmKey") == true)
             {
                 MelonLogger.Msg(ConsoleColor.Blue, "Item " + GearName + " is can be picked by other player");
                 return true;
@@ -1546,14 +1549,17 @@ namespace SkyCoop
         public static bool NeedSkipCauseConnect()
         {
             string[] arguments = Environment.GetCommandLineArgs();
-            if (arguments.Count() > 2)
+            for (int i = 0; i < arguments.Length; i++)
             {
-                int PreLast = arguments.Count() - 2;
-                int Last = arguments.Count() - 1;
-                if (arguments[PreLast] == "join")
+                //MelonLogger.Msg("Argument ["+i+"] Parameter ["+arguments[i]+"]");
+
+                if (arguments[i] == "join" || arguments[i] == "-join")
                 {
-                    MelonLogger.Msg("[STEAMWORKS.NET] Skip everything to connect to: " + arguments[Last]);
-                    return true;
+                    if (i+1 <= arguments.Length-1)
+                    {
+                        MelonLogger.Msg("[STEAMWORKS.NET] Skip everything to connect to: " + arguments[i+1]);
+                        return true;
+                    }
                 }
             }
             return false;
@@ -1601,18 +1607,39 @@ namespace SkyCoop
                         MelonLogger.Msg("[SteamWorks.NET] Loading...");
                         SteamConnect.StartSteam();
                         string[] arguments = Environment.GetCommandLineArgs();
-                        if (arguments.Count() > 2)
+
+
+
+                        for (int i = 0; i < arguments.Length; i++)
                         {
-                            int PreLast = arguments.Count() - 2;
-                            int Last = arguments.Count() - 1;
-                            if(arguments[PreLast] == "join")
+                            //MelonLogger.Msg("Argument ["+i+"] Parameter ["+arguments[i]+"]");
+
+                            if(arguments[i] == "join" || arguments[i] == "-join")
                             {
-                                MelonLogger.Msg("[STEAMWORKS.NET] Connect from startup to: "+ arguments[Last]);
-                                MyMod.ConnectedSteamWorks = true;
-                                MyMod.SteamServerWorks = arguments[Last];
-                                MyMod.NeedConnectAfterLoad = 3;
+                                if(i+1 <= arguments.Length-1)
+                                {
+                                    MyMod.SteamServerWorks = arguments[i + 1];
+                                    MyMod.ConnectedSteamWorks = true;
+                                    MyMod.NeedConnectAfterLoad = 3;
+                                    break;
+                                }
                             }
                         }
+
+
+
+                        //if (arguments.Count() > 2)
+                        //{
+                        //    int PreLast = arguments.Count() - 2;
+                        //    int Last = arguments.Count() - 1;
+                        //    if(arguments[PreLast] == "join")
+                        //    {
+                        //        MelonLogger.Msg("[STEAMWORKS.NET] Connect from startup to: "+ arguments[Last]);
+                        //        MyMod.ConnectedSteamWorks = true;
+                        //        MyMod.SteamServerWorks = arguments[Last];
+                        //        MyMod.NeedConnectAfterLoad = 3;
+                        //    }
+                        //}
                     }
                     MyMod.FirstBoot = false;
                 }
@@ -2976,6 +3003,18 @@ namespace SkyCoop
                         {
                             pendingContainer.m_Guid = contObj.GetComponent<ObjectGuid>().Get();
                         }
+
+                        for (int index = 0; index < __instance.m_Items.Count; ++index)
+                        {
+                            GearItem gearItem = __instance.m_Items.get_Item(index);
+                            if (gearItem != null)
+                            {
+                                if(gearItem.m_GearName.Contains("MountainTownFarmKey") == true)
+                                {
+                                    return;
+                                }
+                            }
+                        }
                     }
                     if (MyMod.MyContainer == null || MyMod.MyContainer.Equals(pendingContainer) == false)
                     {
@@ -3215,171 +3254,184 @@ namespace SkyCoop
             }
         }
 
-    //        if (SteamConnect.CanUseSteam == true)
-    //        {
-    //            SteamConnect.Main.ConnectToHost(MyMod.SteamServerWorks);
-    //        }
+        [HarmonyLib.HarmonyPatch(typeof(TextInputField), "Start")]
+        internal class TextInputField_MoreLetters
+        {
+            private static void Postfix(TextInputField __instance)
+            {
+                if(__instance.m_Input.characterLimit < 100)
+                {
+                    __instance.m_MaxLength = 100;
+                    __instance.m_Input.characterLimit = (int)__instance.m_MaxLength;
+                }
+            }
+        }
 
-    //[HarmonyLib.HarmonyPatch(typeof(LootTable), "GetRandomGearPrefab")]
-    //public static class LootTable_SeededRandom
-    //{
-    //    public static bool Prefix()
-    //    {
-    //        return false;
-    //    }
+        //        if (SteamConnect.CanUseSteam == true)
+        //        {
+        //            SteamConnect.Main.ConnectToHost(MyMod.SteamServerWorks);
+        //        }
 
-    //    public static List<LootTableItem> m_FilteredLootTableItems = new List<LootTableItem>();
+        //[HarmonyLib.HarmonyPatch(typeof(LootTable), "GetRandomGearPrefab")]
+        //public static class LootTable_SeededRandom
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        return false;
+        //    }
 
-    //    public static void Postfix(LootTable __instance, ref GameObject __result)
-    //    {
-    //        //MelonLogger.Msg("Proessing loottable " + __instance.gameObject.name);
-    //        //MelonLogger.Msg("Prefabs in loottable: " + __instance.m_Prefabs.Count);
-    //        int index1 = 0;
-    //        for (int index2 = 0; index2 < __instance.m_Prefabs.Count; ++index2)
-    //        {
-    //            if (index1 >= 256)
-    //            {
-    //                break;
-    //            }
-    //            if (!__instance.DisableForXPMode(__instance.m_Prefabs[index2]))
-    //            {
-    //                GameObject pref = __instance.m_Prefabs[index2];
-    //                int weig = __instance.m_Weights[index2];
-    //                //MelonLogger.Msg("__instance: " + pref + " Chance " + weig + "%");
+        //    public static List<LootTableItem> m_FilteredLootTableItems = new List<LootTableItem>();
 
-    //                if(m_FilteredLootTableItems.Count <= index1) 
-    //                {
-    //                    m_FilteredLootTableItems.Add(new LootTableItem());
-    //                }
+        //    public static void Postfix(LootTable __instance, ref GameObject __result)
+        //    {
+        //        //MelonLogger.Msg("Proessing loottable " + __instance.gameObject.name);
+        //        //MelonLogger.Msg("Prefabs in loottable: " + __instance.m_Prefabs.Count);
+        //        int index1 = 0;
+        //        for (int index2 = 0; index2 < __instance.m_Prefabs.Count; ++index2)
+        //        {
+        //            if (index1 >= 256)
+        //            {
+        //                break;
+        //            }
+        //            if (!__instance.DisableForXPMode(__instance.m_Prefabs[index2]))
+        //            {
+        //                GameObject pref = __instance.m_Prefabs[index2];
+        //                int weig = __instance.m_Weights[index2];
+        //                //MelonLogger.Msg("__instance: " + pref + " Chance " + weig + "%");
+
+        //                if(m_FilteredLootTableItems.Count <= index1) 
+        //                {
+        //                    m_FilteredLootTableItems.Add(new LootTableItem());
+        //                }
 
 
-    //                m_FilteredLootTableItems[index1].m_Weight = weig;
-    //                m_FilteredLootTableItems[index1].m_Prefab = pref;
-    //                //MelonLogger.Msg("FilteredLootTableItems: " + m_FilteredLootTableItems[index1].m_Prefab.name + " Chance " + m_FilteredLootTableItems[index1].m_Weight + "%");
-    //                ++index1;
-    //            }
-    //        }
-    //        //MelonLogger.Msg("Found " + index1 + " for this experience mode");
-    //        GameObject go = __instance.gameObject;
-    //        int _x = (int)go.transform.position.x;
-    //        int _y = (int)go.transform.position.y;
-    //        int _z = (int)go.transform.position.z;
-    //        int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + _x + _y + _z;
-    //        MelonLogger.Msg("Input values for Random: X " + _x + " Y " + _y + " Z " + _z + " GameSeed " + GameManager.m_SceneTransitionData.m_GameRandomSeed + " Final seed " + seed + " for table " + __instance.gameObject.name);
-    //        System.Random RNG = new System.Random(seed);
+        //                m_FilteredLootTableItems[index1].m_Weight = weig;
+        //                m_FilteredLootTableItems[index1].m_Prefab = pref;
+        //                //MelonLogger.Msg("FilteredLootTableItems: " + m_FilteredLootTableItems[index1].m_Prefab.name + " Chance " + m_FilteredLootTableItems[index1].m_Weight + "%");
+        //                ++index1;
+        //            }
+        //        }
+        //        //MelonLogger.Msg("Found " + index1 + " for this experience mode");
+        //        GameObject go = __instance.gameObject;
+        //        int _x = (int)go.transform.position.x;
+        //        int _y = (int)go.transform.position.y;
+        //        int _z = (int)go.transform.position.z;
+        //        int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + _x + _y + _z;
+        //        MelonLogger.Msg("Input values for Random: X " + _x + " Y " + _y + " Z " + _z + " GameSeed " + GameManager.m_SceneTransitionData.m_GameRandomSeed + " Final seed " + seed + " for table " + __instance.gameObject.name);
+        //        System.Random RNG = new System.Random(seed);
 
-    //        int num1 = 0;
-    //        for (int index2 = 0; index2 < index1; ++index2)
-    //        {
-    //            if (m_FilteredLootTableItems[index2] == null)
-    //            {
-    //                //MelonLogger.Msg("LootTable.m_FilteredLootTableItems[" + index2 + "] is NULL");
-    //            }
-    //            else
-    //            {
-    //                if (m_FilteredLootTableItems[index2].m_Prefab != null)
-    //                {
-    //                    num1 += m_FilteredLootTableItems[index2].m_Weight;
-    //                }
-    //            }
-    //        }
+        //        int num1 = 0;
+        //        for (int index2 = 0; index2 < index1; ++index2)
+        //        {
+        //            if (m_FilteredLootTableItems[index2] == null)
+        //            {
+        //                //MelonLogger.Msg("LootTable.m_FilteredLootTableItems[" + index2 + "] is NULL");
+        //            }
+        //            else
+        //            {
+        //                if (m_FilteredLootTableItems[index2].m_Prefab != null)
+        //                {
+        //                    num1 += m_FilteredLootTableItems[index2].m_Weight;
+        //                }
+        //            }
+        //        }
 
-    //        int num2 = RNG.Next(0, num1);
+        //        int num2 = RNG.Next(0, num1);
 
-    //        MelonLogger.Msg("Got random int " + num2 + " from 0/" + num1 + " for " + __instance.gameObject.name);
-    //        int num3 = 0;
-    //        int index3 = 0;
-    //        for (int index2 = 0; index2 < index1; ++index2)
-    //        {
-    //            int num4 = num3 + m_FilteredLootTableItems[index2].m_Weight;
-    //            if (num2 >= num3 && num2 < num4)
-    //            {
-    //                if (m_FilteredLootTableItems[index3].m_Prefab == null)
-    //                {
-    //                    //MelonLogger.Msg("Null prefab found at loot table index: " + index3 + " for loot table: " + __instance.gameObject.name);
-    //                    __result = (GameObject)null;
-    //                    return;
-    //                }
+        //        MelonLogger.Msg("Got random int " + num2 + " from 0/" + num1 + " for " + __instance.gameObject.name);
+        //        int num3 = 0;
+        //        int index3 = 0;
+        //        for (int index2 = 0; index2 < index1; ++index2)
+        //        {
+        //            int num4 = num3 + m_FilteredLootTableItems[index2].m_Weight;
+        //            if (num2 >= num3 && num2 < num4)
+        //            {
+        //                if (m_FilteredLootTableItems[index3].m_Prefab == null)
+        //                {
+        //                    //MelonLogger.Msg("Null prefab found at loot table index: " + index3 + " for loot table: " + __instance.gameObject.name);
+        //                    __result = (GameObject)null;
+        //                    return;
+        //                }
 
-    //                if (m_FilteredLootTableItems[index3].m_Prefab.GetComponent<GearItem>() == null)
-    //                {
-    //                    //MelonLogger.Msg("Gear Null found  at loot table index " + index3 + " for loot table: " + __instance.gameObject.name);
-    //                    __result = (GameObject)null;
-    //                    return;
-    //                }
-    //                else
-    //                {
-    //                    MelonLogger.Msg("Picked result " + m_FilteredLootTableItems[index3].m_Prefab.name + " for loot table: " + __instance.gameObject.name);
-    //                    __result = m_FilteredLootTableItems[index3].m_Prefab;
-    //                    return;
-    //                }
+        //                if (m_FilteredLootTableItems[index3].m_Prefab.GetComponent<GearItem>() == null)
+        //                {
+        //                    //MelonLogger.Msg("Gear Null found  at loot table index " + index3 + " for loot table: " + __instance.gameObject.name);
+        //                    __result = (GameObject)null;
+        //                    return;
+        //                }
+        //                else
+        //                {
+        //                    MelonLogger.Msg("Picked result " + m_FilteredLootTableItems[index3].m_Prefab.name + " for loot table: " + __instance.gameObject.name);
+        //                    __result = m_FilteredLootTableItems[index3].m_Prefab;
+        //                    return;
+        //                }
 
-    //                //__result = LootTable.m_FilteredLootTableItems[index3].m_Prefab.GetComponent<GearItem>() == null ? (GameObject)null : LootTable.m_FilteredLootTableItems[index3].m_Prefab;
-    //                //return;
-    //            }
-    //            num3 = num4;
-    //            ++index3;
-    //        }
-    //        MelonLogger.Msg("Found nothing for loot table: " + __instance.gameObject.name);
-    //        __result = (GameObject)null;
-    //        return;
-    //    }
-    //}
-    //[HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")]
-    //private static class LoadSceneData_LevelGUID
-    //{
-    //    internal static void Prefix(SaveGameSystem _instance, string name, string sceneSaveName)
-    //    {
-    //        MelonLogger.Msg("Loading scene GUID "+ sceneSaveName);
-    //    }
-    //}
-    //[HarmonyLib.HarmonyPatch(typeof(LightFadeFire), "LateUpdate")]
-    //private static class LateUpdate_Hook
-    //{
-    //    internal static bool Prefix(LightFadeFire __instance)
-    //    {
-    //        if (GameManager.m_IsPaused)
-    //            return false;
-    //        if (__instance.m_Light)
-    //        {
-    //            __instance.m_Light = __instance.gameObject.GetComponent<Light>();
-    //            __instance.originalBrightness = __instance.m_Light.intensity;
-    //            if (__instance.startOff)
-    //            {
-    //                __instance.m_Light.intensity = 0.0f;
-    //                __instance.m_Light.enabled = false;
-    //            }
-    //        }else{
-    //            return false;
-    //        }
-    //        __instance.fireTime = 10000;
-    //        if (__instance.fireTime > __instance.maxTimeSec)
-    //        {
-    //            __instance.m_Light.intensity = __instance.originalBrightness * 1;
-    //            if (__instance.autoSwitchAfterIngnition)
-    //            {
-    //                __instance.autoSwitchAfterIngnition = false;
-    //                __instance.SetNewMaxTime(__instance.fullOnMinutes * 60f);
-    //            }
-    //        }
-    //        else if (__instance.fireTime > __instance.minTimeSec && __instance.fireTime <= __instance.maxTimeSec)
-    //        {
-    //            __instance.fadeTimeStep = __instance.fireTime * __instance.fadeTimeDifference;
-    //            __instance.m_Light.intensity = Mathf.Lerp(0.0f, __instance.originalBrightness, __instance.fadeTimeStep) * __instance.sourceFire.m_LightIntensityMultiplier;
-    //            if (__instance.useFireIgnitionFirst)
-    //            {
-    //                __instance.useFireIgnitionFirst = false;
-    //                __instance.SetNewMaxTime(100000);
-    //            }
-    //        }
-    //        else if (__instance.fireTime <= __instance.minTimeSec)
-    //            __instance.m_Light.intensity = 0.0f;
-    //        if (Utils.IsZero(__instance.m_Light.intensity, 0.0001f))
-    //            __instance.m_Light.enabled = false;
-    //        else
-    //            __instance.m_Light.enabled = true;
-    //        return false;
-    //    }
-    //}
-}
+        //                //__result = LootTable.m_FilteredLootTableItems[index3].m_Prefab.GetComponent<GearItem>() == null ? (GameObject)null : LootTable.m_FilteredLootTableItems[index3].m_Prefab;
+        //                //return;
+        //            }
+        //            num3 = num4;
+        //            ++index3;
+        //        }
+        //        MelonLogger.Msg("Found nothing for loot table: " + __instance.gameObject.name);
+        //        __result = (GameObject)null;
+        //        return;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")]
+        //private static class LoadSceneData_LevelGUID
+        //{
+        //    internal static void Prefix(SaveGameSystem _instance, string name, string sceneSaveName)
+        //    {
+        //        MelonLogger.Msg("Loading scene GUID "+ sceneSaveName);
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(LightFadeFire), "LateUpdate")]
+        //private static class LateUpdate_Hook
+        //{
+        //    internal static bool Prefix(LightFadeFire __instance)
+        //    {
+        //        if (GameManager.m_IsPaused)
+        //            return false;
+        //        if (__instance.m_Light)
+        //        {
+        //            __instance.m_Light = __instance.gameObject.GetComponent<Light>();
+        //            __instance.originalBrightness = __instance.m_Light.intensity;
+        //            if (__instance.startOff)
+        //            {
+        //                __instance.m_Light.intensity = 0.0f;
+        //                __instance.m_Light.enabled = false;
+        //            }
+        //        }else{
+        //            return false;
+        //        }
+        //        __instance.fireTime = 10000;
+        //        if (__instance.fireTime > __instance.maxTimeSec)
+        //        {
+        //            __instance.m_Light.intensity = __instance.originalBrightness * 1;
+        //            if (__instance.autoSwitchAfterIngnition)
+        //            {
+        //                __instance.autoSwitchAfterIngnition = false;
+        //                __instance.SetNewMaxTime(__instance.fullOnMinutes * 60f);
+        //            }
+        //        }
+        //        else if (__instance.fireTime > __instance.minTimeSec && __instance.fireTime <= __instance.maxTimeSec)
+        //        {
+        //            __instance.fadeTimeStep = __instance.fireTime * __instance.fadeTimeDifference;
+        //            __instance.m_Light.intensity = Mathf.Lerp(0.0f, __instance.originalBrightness, __instance.fadeTimeStep) * __instance.sourceFire.m_LightIntensityMultiplier;
+        //            if (__instance.useFireIgnitionFirst)
+        //            {
+        //                __instance.useFireIgnitionFirst = false;
+        //                __instance.SetNewMaxTime(100000);
+        //            }
+        //        }
+        //        else if (__instance.fireTime <= __instance.minTimeSec)
+        //            __instance.m_Light.intensity = 0.0f;
+        //        if (Utils.IsZero(__instance.m_Light.intensity, 0.0001f))
+        //            __instance.m_Light.enabled = false;
+        //        else
+        //            __instance.m_Light.enabled = true;
+        //        return false;
+        //    }
+        //}
+    }
 }

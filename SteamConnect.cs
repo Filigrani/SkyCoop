@@ -3,6 +3,8 @@ using UnityEngine;
 using MelonLoader;
 using UnhollowerBaseLib;
 using Steamworks;
+using System.IO;
+using System.Net;
 
 using GameServer;
 
@@ -12,6 +14,7 @@ namespace SkyCoop
     {
         public static bool CanUseSteam = false;
         public static string SteamName = "";
+        public static bool PiningMaster = false;
 
         public static void StartSteam()
         {
@@ -182,6 +185,71 @@ namespace SkyCoop
                     SendUDPData(_packet, receiver);
                 }
             }
+
+            public static void Detail_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
+            {
+                PiningMaster = false;
+                if (e.Error != null)
+                {
+                    //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Error " + e.Error.Message);
+                    return;
+                }
+                if(e.Result != "")
+                {
+                    string[] newClinets = e.Result.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
+
+                    for (int i = 0; i < newClinets.Length; i++)
+                    {
+                        CSteamID sid = new CSteamID(ulong.Parse(newClinets[i]));
+                        MyMod.MultiplayerChatMessage msg = new MyMod.MultiplayerChatMessage();
+                        msg.m_Type = 0;
+                        msg.m_By = MyMod.MyChatName;
+                        msg.m_Message = "Someone connecting from master server";
+                        MyMod.SendMessageToChat(msg, true);
+                        SteamNetworking.AcceptP2PSessionWithUser(sid);
+                    }
+                }
+                //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Responce " + e.Result);
+            }
+
+            public static void PingMasterServer()
+            {
+                if(PiningMaster == true)
+                {
+                    return;
+                }
+                PiningMaster = true;
+                WebClient web = new WebClient();
+                string url = "http://168.119.36.188:35131/app/servers/SkyCoopServer.php";
+                string sid = SteamUser.GetSteamID().ToString();
+                string userName = SteamFriends.GetPersonaName();
+                int slots = Server.MaxPlayers;
+                int players = MyMod.PlayersOnServer;
+                int xpmode = 1;
+                int currxp = (int)ExperienceModeManager.s_CurrentModeType;
+                    
+                if (currxp == 0) // Pilgrim
+                {
+                    xpmode = 2;
+                }else if(currxp == 1){ // Voyageur
+                    xpmode = 1;
+                }
+                else if (currxp == 2){ // Stalker
+                    xpmode = 3;
+                }
+                else if (currxp == 9){ // Interloper
+                    xpmode = 4;
+                }
+
+
+                string data = "?sid="+sid+"&name="+userName+"&players="+players+"&slots="+slots+"&xpmode="+xpmode;
+                url = url + data;
+                Uri uri = new Uri(url);
+                //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Pinging...");
+                web.DownloadStringCompleted += new DownloadStringCompletedEventHandler(Detail_DownloadStringCompleted);
+                web.DownloadStringAsync(uri);
+            }
+
             public static void OnP2PSessionRequest(P2PSessionRequest_t request)
             {
                 if (CanUseSteam == false)

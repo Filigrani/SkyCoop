@@ -233,12 +233,13 @@ namespace SkyCoop
 
                     if (CustomId == 0)
                     {
-                        if (SteamConnect.CanUseSteam == true)
-                        {
-                            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, "LOCAL OR STEAM?", "You can use local mode to connect with using LAN network emulators, or port forwarding 26950 port. In Steam mode players can join only by invites of host.", Panel_Confirmation.ButtonLayout.Button_2, "LOCAL", "STEAM", Panel_Confirmation.Background.Transperent, null, null);
-                        }else{
-                            MyMod.HostAServer();
-                        }
+                        //if (SteamConnect.CanUseSteam == true)
+                        //{
+                        //    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, "LOCAL OR STEAM?", "You can use local mode to connect with using LAN network emulators, or port forwarding 26950 port. In Steam mode players can join only by invites of host.", Panel_Confirmation.ButtonLayout.Button_2, "LOCAL", "STEAM", Panel_Confirmation.Background.Transperent, null, null);
+                        //}else{
+                        //    MyMod.HostAServer();
+                        //}
+                        MyMod.HostMenu();
                     }else if (CustomId == 1)
                     {
                         MyMod.DoIPConnectWindow();
