@@ -190,10 +190,13 @@ namespace SkyCoop
                     //ecf.Initialize();
                     //ecf.TriggerStage(FireState.FullBurn, true);
 
-                    GameObject WIDEBOOOI = MyMod.MakeModObject("multi_test_wide");
-                    WIDEBOOOI.transform.position = GameManager.GetPlayerTransform().position;
+                    //GameObject WIDEBOOOI = MyMod.MakeModObject("multi_test_wide");
+                    //WIDEBOOOI.transform.position = GameManager.GetPlayerTransform().position;
 
-                    
+                    //GameObject shelter = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetSnowShelterManager().m_SnowShelterPrefab.gameObject);
+                    //shelter.name = GameManager.GetSnowShelterManager().m_SnowShelterPrefab.name;
+                    //shelter.transform.position = GameManager.GetPlayerTransform().position;
+                    //shelter.AddComponent<MyMod.DoNotSerializeThis>();
 
                     //GameObject BreathObj = UnityEngine.Object.Instantiate<GameObject>(Resources.Load("BreathWildlife").Cast<GameObject>());
                     //BreathObj.transform.position = GameManager.GetPlayerTransform().position;

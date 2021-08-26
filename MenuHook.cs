@@ -199,19 +199,26 @@ namespace SkyCoop
                 {
                     //For Debug Alone
                     bool DebugAlone = false;
-                    if(DebugAlone == true)
+                    bool ConnectedScreenTest = false;
+
+                    if(ConnectedScreenTest == true)
                     {
-                        MyMod.SaveSlotSync SaveData = new MyMod.SaveSlotSync();
-                        SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
-                        SaveData.m_Episode = (int)Episode.One;
-                        SaveData.m_ExperienceMode = (int)ExperienceModeType.Stalker;
-                        SaveData.m_Location = (int)GameRegion.LakeRegion;
-                        SaveData.m_Seed = 22566665;
-                        //SaveData.m_Seed = -1541615651;
-                        MyMod.PendingSave = SaveData;
-                        MyMod.CheckHaveSaveFileToJoin(SaveData);
+                        MyMod.DoWaitForConnect();
                     }else{
-                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                        if (DebugAlone == true)
+                        {
+                            MyMod.SaveSlotSync SaveData = new MyMod.SaveSlotSync();
+                            SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
+                            SaveData.m_Episode = (int)Episode.One;
+                            SaveData.m_ExperienceMode = (int)ExperienceModeType.Stalker;
+                            SaveData.m_Location = (int)GameRegion.LakeRegion;
+                            SaveData.m_Seed = 22566665;
+                            //SaveData.m_Seed = -1541615651;
+                            MyMod.PendingSave = SaveData;
+                            MyMod.CheckHaveSaveFileToJoin(SaveData);
+                        }else{
+                            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                        }
                     }
                 }
             }

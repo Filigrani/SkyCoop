@@ -209,7 +209,7 @@ namespace GameServer
                 }
             }
         }
-        public static void GOTITEM(int _toClient, GearItem _msg)
+        public static void GOTITEM(int _toClient, MyMod.GearItemDataPacket _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
             {
@@ -1393,6 +1393,107 @@ namespace GameServer
         public static void SELECTEDCHARACTER(int _From, int _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SELECTEDCHARACTER))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void ADDSHELTER(int _From, MyMod.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDSHELTER))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void REMOVESHELTER(int _From, MyMod.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVESHELTER))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void ALLSHELTERS(int OnlyFor)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ALLSHELTERS))
+            {
+                int ReadCount = MyMod.ShowSheltersBuilded.Count;
+
+                if (ReadCount == 0)
+                {
+                    return;
+                }
+
+                _packet.Write(ReadCount);
+
+                for (int i = 0; i < ReadCount; i++)
+                {
+                    _packet.Write(MyMod.ShowSheltersBuilded[i]);
+                }
+                SendUDPData(OnlyFor, _packet);
+            }
+        }
+        public static void USESHELTER(int _From, MyMod.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.USESHELTER))
             {
                 if (toEveryOne == true)
                 {

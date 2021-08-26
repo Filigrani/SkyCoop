@@ -16,10 +16,16 @@ namespace SkyCoop
         public static string SteamName = "";
         public static bool PiningMaster = false;
 
-        public static void StartSteam()
+        public static bool StartSteam()
         {
+            if(SteamManager.Initialized == false)
+            {
+                MelonLogger.Msg(ConsoleColor.Red,"STEAM IN OFFLINE MODE! Please shutdown your game, and run steam/log in to steam freinds, to be able use STEAM P2P multiplayer.");
+                return false;
+            }
             CanUseSteam = true;
             Main.Run();
+            return true;
         }
         public static void DoUpdate()
         {
@@ -33,9 +39,6 @@ namespace SkyCoop
         public class Main : MelonMod
         {
             //private static Callback<P2PSessionRequest_t> _p2PSessionRequestCallback;
-            public static ulong REDCAT = 76561198867520214;
-            public static ulong FILI = 76561198152259224;
-            public static ulong REM = 76561199087238139;
             //public delegate void P2PRQ_Delegate(P2PSessionRequest_t request);
             //public static P2PRQ_Delegate del = new P2PRQ_Delegate(OnP2PSessionRequest);
 
@@ -55,9 +58,6 @@ namespace SkyCoop
                 //Callback<P2PSessionRequest_t>.Create(del_);
                 MelonLogger.Msg("[SteamWorks.NET] Logins as " + name + " SteamID " + SteamUser.GetSteamID().ToString());
                 MyMod.LoadChatName(name);
-
-                //ACCEPT SENDER
-                //SteamNetworking.AcceptP2PSessionWithUser(new CSteamID(FILI));
             }
 
             public static string GetFriends()
@@ -130,17 +130,6 @@ namespace SkyCoop
                 SteamFriends.InviteUserToGame(reciver, "join " + SteamUser.GetSteamID().ToString());
                 SteamNetworking.AcceptP2PSessionWithUser(reciver);
             }
-
-            public static void InviteFriend()
-            {
-                CSteamID reciver = new CSteamID(REM);
-                InviteFriendBySid(reciver);
-            }
-            public static void InviteFriend2()
-            {
-                CSteamID reciver = new CSteamID(REDCAT);
-                InviteFriendBySid(reciver);
-            }
             public static void ConnectToHost(string hostid)
             {
                 MyMod.instance.myId = 0;
@@ -166,24 +155,6 @@ namespace SkyCoop
                 CSteamID sid = new Steamworks.CSteamID(ulong.Parse(receiver));
 
                 SendUDPData(_packet, sid);
-            }
-            public static void DoTestSteamMessage()
-            {
-                if(CanUseSteam == false)
-                {
-                    return;
-                }
-                // RECIVER
-                CSteamID receiver = new CSteamID(REDCAT);
-                MelonLogger.Msg("[SteamWorks.NET] Trying sent test message " + receiver.m_SteamID + " " + SteamFriends.GetFriendPersonaName(receiver));
-                using (Packet _packet = new Packet((int)ServerPackets.LIGHTSOURCENAME))
-                {
-                    _packet.Write("Test SUS");
-                    _packet.Write(1);
-                    _packet.WriteLength();
-                    _packet.InsertInt(1);
-                    SendUDPData(_packet, receiver);
-                }
             }
 
             public static void Detail_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
@@ -214,8 +185,9 @@ namespace SkyCoop
 
             public static void PingMasterServer()
             {
-                if(PiningMaster == true)
+                if(PiningMaster == true || MyMod.PlayersOnServer >= Server.MaxPlayers)
                 {
+                    MelonLogger.Msg("PiningMaster "+ PiningMaster+ " PlayersOnServer" + MyMod.PlayersOnServer+ " Server.MaxPlayers "+ Server.MaxPlayers);
                     return;
                 }
                 PiningMaster = true;

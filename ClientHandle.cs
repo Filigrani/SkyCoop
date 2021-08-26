@@ -26,6 +26,7 @@ namespace SkyCoop
             int _MaxPlayers = _packet.ReadInt();
 
             MyMod.MaxPlayers = _MaxPlayers;
+            MyMod.InitAllPlayers();
 
             MelonLogger.Msg($"Message from server: {_msg}");
             MyMod.instance.myId = _myId;
@@ -126,7 +127,14 @@ namespace SkyCoop
         }
         public static void GOTITEM(Packet _packet)
         {
-            GearItem got = _packet.ReadGear();
+            MyMod.GearItemDataPacket got = _packet.ReadGearData();
+            //MelonLogger.Msg(ConsoleColor.Blue, "Someone gave item to" + got.m_SendedTo);
+            //MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name [" + got.m_GearName + "] DATA: " + got.m_DataProxy);
+
+            if(got.m_SendedTo == MyMod.instance.myId)
+            {
+                //MelonLogger.Msg(ConsoleColor.Blue, "This is item for me");
+            }
             MyMod.GiveRecivedItem(got);
         }
         public static void GAMETIME(Packet _packet)
@@ -474,6 +482,7 @@ namespace SkyCoop
         public static void SAVEDATA(Packet _packet)
         {
             MyMod.SaveSlotSync SaveData = _packet.ReadSaveSlot();
+            MyMod.RemoveWaitForConnect();
 
             if (InterfaceManager.IsMainMenuActive() == false)
             {
@@ -829,6 +838,48 @@ namespace SkyCoop
                 if (character == 1)
                 {
                     MyMod.playersData[from].m_Female = true;
+                }
+            }
+        }
+        public static void ADDSHELTER(Packet _packet)
+        {
+            MelonLogger.Msg("Someone created shelter!");
+            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            int from = _packet.ReadInt();
+            MyMod.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
+        }
+        public static void REMOVESHELTER(Packet _packet)
+        {
+            MelonLogger.Msg("Someone removed shelter!");
+            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            int from = _packet.ReadInt();
+            MyMod.ShelterRemoved(shelter.m_Position, shelter.m_LevelID, shelter.m_LevelGUID, false);
+        }
+        public static void ALLSHELTERS(Packet _packet)
+        {
+            int howmany = _packet.ReadInt();
+
+            for (int i = 1; i <= howmany; i++)
+            {
+                MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+
+                if (MyMod.ShowSheltersBuilded.Contains(shelter) == false)
+                {
+                    MyMod.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
+                }
+            }
+        }
+        public static void USESHELTER(Packet _packet)
+        {
+            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            int from = _packet.ReadInt();
+            if (MyMod.playersData[from] != null)
+            {
+                if(shelter.m_Position == new Vector3(0, 0, 0))
+                {
+                    MyMod.playersData[from].m_Shelter = null;
+                }else{
+                    MyMod.playersData[from].m_Shelter = shelter;
                 }
             }
         }

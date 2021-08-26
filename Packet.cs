@@ -83,6 +83,10 @@ namespace GameServer
         LOOTEDHARVESTABLE,
         LOOTEDHARVESTABLEALL,
         SELECTEDCHARACTER,
+        ADDSHELTER,
+        REMOVESHELTER,
+        ALLSHELTERS,
+        USESHELTER,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -161,6 +165,10 @@ namespace GameServer
         LOOTEDHARVESTABLE,
         LOOTEDHARVESTABLEALL,
         SELECTEDCHARACTER,
+        ADDSHELTER,
+        REMOVESHELTER,
+        ALLSHELTERS,
+        USESHELTER,
     }
 
     public class Packet : IDisposable
@@ -311,6 +319,11 @@ namespace GameServer
             buffer.AddRange(Encoding.UTF8.GetBytes(_value));
             //buffer.AddRange(Encoding.Unicode.GetBytes(_value));
         }
+        public void WriteUnicodeString(string _value)
+        {
+            Write(_value.Length);
+            buffer.AddRange(Encoding.Unicode.GetBytes(_value));
+        }
         public void Write(Vector3 _value)
         {
             Write(_value.x);
@@ -365,32 +378,52 @@ namespace GameServer
 
         public void Write(GearItem gear)
         {
-            Write(gear.m_GearName);
-            Write(gear.m_CurrentHP);
-            Write(gear.m_WeightKG);
-            if (gear.m_FoodItem != null)
-            {
-                Write(gear.m_FoodItem);
-            }else{
-                Write(new FoodItem());
-            }
-            if (gear.m_EvolveItem != null)
-            {
-                Write(gear.m_EvolveItem);
-            }else{
-                Write(new EvolveItem());
-            }
-            Write(gear.m_GearBreakConditionThreshold);
-            if (gear.m_WaterSupply != null)
-            {
-                Write(gear.m_WaterSupply);
-            }
-            else
-            {
-                Write(new WaterSupply());
-            }
-            //Write(gear.m_StackableItem);
+            Write(gear.Serialize());
         }
+
+        public void Write(MyMod.GearItemDataPacket gear)
+        {
+            Write(gear.m_GearName);
+            Write(gear.m_DataProxy);
+            Write(gear.m_Water);
+            Write(gear.m_SendedTo);
+        }
+        public void Write(MyMod.ShowShelterByOther shelter)
+        {
+            Write(shelter.m_Position);
+            Write(shelter.m_Rotation);
+            Write(shelter.m_LevelID);
+            Write(shelter.m_LevelGUID);
+        }
+
+        //public void Write(GearItem gear)
+        //{
+        //    Write(gear.m_GearName);
+        //    Write(gear.m_CurrentHP);
+        //    Write(gear.m_WeightKG);
+        //    if (gear.m_FoodItem != null)
+        //    {
+        //        Write(gear.m_FoodItem);
+        //    }else{
+        //        Write(new FoodItem());
+        //    }
+        //    if (gear.m_EvolveItem != null)
+        //    {
+        //        Write(gear.m_EvolveItem);
+        //    }else{
+        //        Write(new EvolveItem());
+        //    }
+        //    Write(gear.m_GearBreakConditionThreshold);
+        //    if (gear.m_WaterSupply != null)
+        //    {
+        //        Write(gear.m_WaterSupply);
+        //    }
+        //    else
+        //    {
+        //        Write(new WaterSupply());
+        //    }
+        //    //Write(gear.m_StackableItem);
+        //}
         public void Write(ObjectGuid _guid, GameObject obj)
         {
             if(_guid == null)
@@ -509,8 +542,8 @@ namespace GameServer
         }
         public void Write(MyMod.MultiplayerChatMessage obj)
         {
-            Write(obj.m_By);
-            Write(obj.m_Message);
+            Write(obj.m_By);//WriteUnicodeString(obj.m_By);
+            Write(obj.m_Message);//WriteUnicodeString(obj.m_Message);
             Write(obj.m_Type);
         }
         public void Write(MyMod.MultiPlayerClientStatus obj)
@@ -554,6 +587,8 @@ namespace GameServer
         {
             Write(obj.m_FastConsumption);
             Write(obj.m_DuppedSpawns);
+            Write(obj.m_DuppedContainers);
+            Write(obj.m_PlayersSpawnType);
         }
         public void Write(MyMod.HarvestableSyncData obj)
         {
@@ -724,12 +759,27 @@ namespace GameServer
                 int _length = ReadInt(); // Get the length of the string
                 //string _value = Encoding.ASCII.GetString(readableBuffer, readPos, _length); // Convert the bytes to a string
                 string _value = Encoding.UTF8.GetString(readableBuffer, readPos, _length); // Convert the bytes to a string
+                //_value = _value.TrimStart();
                 if (_moveReadPos && _value.Length > 0)
                 {
                     // If _moveReadPos is true string is not empty
                     readPos += _length; // Increase readPos by the length of the string
                 }
                 return _value; // Return the string
+            }
+            catch
+            {
+                throw new Exception("Could not read value of type 'string'!");
+            }
+        }
+        public string ReadUnicodeString()
+        {
+            try
+            {
+                int _length = ReadInt();
+                string _value = Encoding.Unicode.GetString(readableBuffer, readPos, _length);
+                readPos += _length;
+                return _value;
             }
             catch
             {
@@ -788,7 +838,7 @@ namespace GameServer
             return evo;
         }
 
-        public GearItem ReadGear(bool _moveReadPos = true)
+        public GearItem ReadGearSimple (bool _moveReadPos = true)
         {
             GearItem gear = new GearItem();
 
@@ -952,8 +1002,8 @@ namespace GameServer
         public MyMod.MultiplayerChatMessage ReadChat()
         {
             MyMod.MultiplayerChatMessage obj = new MyMod.MultiplayerChatMessage();
-            obj.m_By = ReadString();
-            obj.m_Message = ReadString();
+            obj.m_By = ReadString();//ReadUnicodeString();
+            obj.m_Message = ReadString();//ReadUnicodeString();
             obj.m_Type = ReadInt();
 
             return obj;
@@ -963,7 +1013,7 @@ namespace GameServer
         {
             MyMod.MultiPlayerClientStatus obj = new MyMod.MultiPlayerClientStatus();
             obj.m_ID = ReadInt();
-            obj.m_Name = ReadString();
+            obj.m_Name = ReadString();//ReadUnicodeString();
             obj.m_Sleep = ReadBool();
             obj.m_Dead = ReadBool();
 
@@ -1020,6 +1070,8 @@ namespace GameServer
             MyMod.ServerConfigData obj = new MyMod.ServerConfigData();
             obj.m_FastConsumption = ReadBool();
             obj.m_DuppedSpawns = ReadBool();
+            obj.m_DuppedContainers = ReadBool();
+            obj.m_PlayersSpawnType = ReadInt();
 
             return obj;
         }
@@ -1031,6 +1083,28 @@ namespace GameServer
 
             return obj;
         }
+
+        public MyMod.GearItemDataPacket ReadGearData()
+        {
+            MyMod.GearItemDataPacket obj = new MyMod.GearItemDataPacket();
+            obj.m_GearName = ReadString();
+            obj.m_DataProxy = ReadString();
+            obj.m_Water = ReadFloat();
+            obj.m_SendedTo = ReadInt();
+            
+            return obj;
+        }
+        public MyMod.ShowShelterByOther ReadShelter()
+        {
+            MyMod.ShowShelterByOther obj = new MyMod.ShowShelterByOther();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_LevelID = ReadInt();
+            obj.m_LevelGUID = ReadString();
+
+            return obj;
+        }
+        
 
         #endregion
 

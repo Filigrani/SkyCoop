@@ -256,6 +256,9 @@ namespace GameServer
                 { (int)ClientPackets.CONTAINERINTERACT, ServerHandle.CONTAINERINTERACT},
                 { (int)ClientPackets.HARVESTPLANT, ServerHandle.HARVESTPLANT},
                 { (int)ClientPackets.SELECTEDCHARACTER, ServerHandle.SELECTEDCHARACTER},
+                { (int)ClientPackets.ADDSHELTER, ServerHandle.ADDSHELTER},
+                { (int)ClientPackets.REMOVESHELTER, ServerHandle.REMOVESHELTER},
+                { (int)ClientPackets.USESHELTER, ServerHandle.USESHELTER},
             };
             Console.WriteLine("Initialized packets.");
         }

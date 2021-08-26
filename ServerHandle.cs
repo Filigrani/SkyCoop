@@ -51,6 +51,7 @@ namespace GameServer
             ServerSend.ROPELIST(_fromClient);
             ServerSend.LOOTEDCONTAINERLIST(_fromClient);
             ServerSend.LOOTEDHARVESTABLEALL(_fromClient);
+            ServerSend.ALLSHELTERS(_fromClient);
 
             int character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
 
@@ -197,15 +198,16 @@ namespace GameServer
             ServerSend.LEVELGUID(_fromClient, lel, false);
         }
         public static void GOTITEM(int _fromClient, Packet _packet)
-        {
-            GearItem got = _packet.ReadGear();
-            int ToID = _packet.ReadInt();
+        {          
+            MyMod.GearItemDataPacket got = _packet.ReadGearData();
+            //MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "Client " + _fromClient + " gave item to" + got.m_SendedTo);
+            //MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name [" + got.m_GearName + "] DATA: " + got.m_DataProxy);
 
-            if(ToID == 0)
+            if (got.m_SendedTo == 0)
             {
                 MyMod.GiveRecivedItem(got);
             }else{
-                ServerSend.GOTITEM(ToID, got);
+                ServerSend.GOTITEM(got.m_SendedTo, got);
             }
         }
         public static void GAMETIME(int _fromClient, Packet _packet)
@@ -734,6 +736,34 @@ namespace GameServer
                 }
             }
             ServerSend.SELECTEDCHARACTER(_fromClient, character, false);
+        }
+
+        public static void ADDSHELTER(int _fromClient, Packet _packet)
+        {
+            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            MyMod.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
+            ServerSend.ADDSHELTER(_fromClient, shelter,  false);
+        }
+
+        public static void REMOVESHELTER(int _fromClient, Packet _packet)
+        {
+            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            MyMod.ShelterRemoved(shelter.m_Position, shelter.m_LevelID, shelter.m_LevelGUID, false);
+            ServerSend.REMOVESHELTER(_fromClient, shelter, false);
+        }
+        public static void USESHELTER(int _fromClient, Packet _packet)
+        {
+            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                if (shelter.m_Position == new Vector3(0, 0, 0))
+                {
+                    MyMod.playersData[_fromClient].m_Shelter = null;
+                }else{
+                    MyMod.playersData[_fromClient].m_Shelter = shelter;
+                }
+            }
+            ServerSend.USESHELTER(_fromClient, shelter, false);
         }
     }
 }

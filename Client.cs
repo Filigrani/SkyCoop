@@ -206,6 +206,7 @@ namespace GameServer
                     using (Packet _packet = new Packet(_packetBytes))
                     {
                         int _packetId = _packet.ReadInt();
+                        //MelonLoader.MelonLogger.Msg(ConsoleColor.Cyan, "Handle Packet with ID " + _packetId);
                         Server.packetHandlers[_packetId](id, _packet); // Call appropriate method to handle the packet
                     }
                 });

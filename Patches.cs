@@ -858,7 +858,7 @@ namespace SkyCoop
                             }
                         }
                     }
-                    MyMod.LetChooseSpawnForClient(MyMod.PendingSave);
+                    MyMod.ForcedCreateSave(MyMod.PendingSave);
                     return false;
                 }
                 return true;
@@ -872,15 +872,19 @@ namespace SkyCoop
             {
                 if (MyMod.OverrideMenusForConnection == true)
                 {
-                    __instance.Enable(false);
-                    InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = __instance.m_SelectedItem.m_Region;
-                    MyMod.PendingSave.m_Location = (int)__instance.m_SelectedItem.m_Region;
-                    GameAudioManager.PlayGUIButtonClick();
-                    GameAudioManager.PlayGuiConfirm();
-                    MyMod.ForcedCreateSave(MyMod.PendingSave);
                     return false;
                 }
                 return true;
+            }
+            public static void Postfix(Panel_SelectRegion_Map __instance)
+            {
+                if (MyMod.OverrideMenusForConnection == true)
+                {
+                    InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = __instance.m_SelectedItem.m_Region;
+                    MyMod.PendingSave.m_Location = (int)__instance.m_SelectedItem.m_Region;
+                    __instance.Enable(false);
+                    MyMod.SelectGenderForConnection();
+                }
             }
         }
 
@@ -892,9 +896,7 @@ namespace SkyCoop
                 if (MyMod.OverrideMenusForConnection == true)
                 {
                     __instance.Enable(false);
-                    GameAudioManager.PlayGUIButtonClick();
-                    GameAudioManager.PlayGuiConfirm();
-                    MyMod.ForcedCreateSave(MyMod.PendingSave);
+                    MyMod.SelectGenderForConnection();
                     return false;
                 }
                 return true;
@@ -1571,6 +1573,7 @@ namespace SkyCoop
         {
             public static void Postfix()
             {
+                MelonLogger.Msg(ConsoleColor.Yellow, "[SceneManager] OnSceneLoaded");
                 if (MyMod.level_name == "Boot")
                 {
                     if (uConsole.m_Instance == null)
@@ -1605,11 +1608,14 @@ namespace SkyCoop
                     if (v_type == "Steam")
                     {
                         MelonLogger.Msg("[SteamWorks.NET] Loading...");
-                        SteamConnect.StartSteam();
+                        bool ok = SteamConnect.StartSteam();
+
+                        if(ok == false)
+                        {
+                            return;
+                        }
+
                         string[] arguments = Environment.GetCommandLineArgs();
-
-
-
                         for (int i = 0; i < arguments.Length; i++)
                         {
                             //MelonLogger.Msg("Argument ["+i+"] Parameter ["+arguments[i]+"]");
@@ -1656,8 +1662,17 @@ namespace SkyCoop
                     }
 
                     MyMod.NotNeedToPauseUntilLoaded = false;
-                    MyMod.SendSpawnData();                  
-                    MyMod.NeedDestoryPickedGears = true;
+                    MyMod.SendSpawnData();
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateRopesAndFurns in 2 seconds!");
+                    MyMod.UpdateRopesAndFurns = 2;
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateLootedContainers in 3 seconds!");
+                    MyMod.UpdateLootedContainers = 3;
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedPlants in 3 seconds!");
+                    MyMod.UpdatePickedPlants = 3;
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateSnowshelters in 3 seconds!");
+                    MyMod.UpdateSnowshelters = 3;
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedGears in 3 seconds!");
+                    MyMod.UpdatePickedGears = 3;
                 }
             }
         }
@@ -1828,7 +1843,6 @@ namespace SkyCoop
                 MelonLogger.Msg("[Saving][ServerConfig] You on server being client, not need save this.");
                 return;
             }
-
             string data = JSON.Dump(MyMod.ServerConfig);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_cfg", data);
             if (ok == true)
@@ -1853,6 +1867,20 @@ namespace SkyCoop
             }
         }
 
+        public static void SaveSnowShelters(SaveSlotType gameMode, string name)
+        {
+            MelonLogger.Msg("[Saving][SnowShelters] Saving...");
+            MyMod.ShowShelterByOther[] saveProxy = MyMod.ShowSheltersBuilded.ToArray();
+            string data = JSON.Dump(saveProxy);
+            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_shelters", data);
+            if (ok == true)
+            {
+                MelonLogger.Msg("[Saving][SnowShelters] Successfully!");
+            }else{
+                MelonLogger.Msg("[Saving][SnowShelters] Fail!");
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")]
         public static class SaveGameSystemPatch_SaveSceneData
         {
@@ -1864,6 +1892,7 @@ namespace SkyCoop
                 SaveDeployedRopes(gameMode, name);
                 SaveLootedBoxes(gameMode, name);
                 SavePlants(gameMode, name);
+                SaveSnowShelters(gameMode, name);
             }
         }
 
@@ -1987,6 +2016,30 @@ namespace SkyCoop
             }
         }
 
+        public static void LoadSnowShelters(string name)
+        {
+            MelonLogger.Msg("[Saving][SnowShelters] Loading...");
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_shelters");
+            if (data != null)
+            {
+                MyMod.ShowShelterByOther[] saveProxy = JSON.Load(data).Make<MyMod.ShowShelterByOther[]>();
+                List<MyMod.ShowShelterByOther> loadedData = saveProxy.ToList<MyMod.ShowShelterByOther>();
+
+                for (int i = 0; i < loadedData.Count; i++)
+                {
+                    MyMod.ShowShelterByOther ToAdd = loadedData[i];
+                    if (MyMod.ShowSheltersBuilded.Contains(ToAdd) == false)
+                    {
+                        MyMod.ShowSheltersBuilded.Add(ToAdd);
+                    }
+                }
+                MelonLogger.Msg("[Saving][SnowShelters] Loaded Entries: " + loadedData.Count);
+                MelonLogger.Msg("[Saving][SnowShelters] Total Entries: " + MyMod.ShowSheltersBuilded.Count);
+            }else{
+                MelonLogger.Msg("[Saving][SnowShelters] No saves found!");
+            }
+        }
+
         public static void LoadServerConfig(string name)
         {
             MelonLogger.Msg("[Saving][ServerConfig] Loading...");
@@ -2014,24 +2067,39 @@ namespace SkyCoop
         {
             public static void Postfix(string name)
             {
+                MelonLogger.Msg(ConsoleColor.Yellow,"[Saving] Loading "+name+"...");
                 LoadServerConfig(name);
                 LoadBrokenFurtiture(name);
                 LoadPickedGears(name);
                 LoadDeployedRopes(name);
                 LoadLootedBoxes(name);
                 LoadPlants(name);
+                LoadSnowShelters(name);
             }
         }
+
+        public static void FlushAllSavable()
+        {
+            MelonLogger.Msg("[Saving] Wipe all savables cause of quit");
+            MyMod.ServerConfig = new MyMod.ServerConfigData();
+            MyMod.BrokenFurniture = new List<MyMod.BrokenFurnitureSync>();
+            MyMod.PickedGears = new List<MyMod.PickedGearSync>();
+            MyMod.DeployedRopes = new List<MyMod.ClimbingRopeSync>();
+            if(MyMod.sendMyPosition == true)
+            {
+                MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
+                MyMod.Disconnect();
+            }
+        }
+
+
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadMainMenu")]
         public static class GameManager_BackToMenu
         {
             public static void Prefix()
             {
-                MelonLogger.Msg("[Saving] Wipe all savables cause of quit");
-                MyMod.ServerConfig = new MyMod.ServerConfigData();
-                MyMod.BrokenFurniture = new List<MyMod.BrokenFurnitureSync>();
-                MyMod.PickedGears = new List<MyMod.PickedGearSync>();
-                MyMod.DeployedRopes = new List<MyMod.ClimbingRopeSync>();
+                FlushAllSavable();
             }
         }
 
@@ -3042,30 +3110,39 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(ContainerManager), "Deserialize", new System.Type[] { typeof(string), typeof(Il2CppSystem.Collections.Generic.List<GearItem>) })]
-        public static class ContainerManager_Deserialize
-        {
-            public static void Postfix(ContainerManager __instance)
-            {
-                MyMod.UpdateLootedContainers = 2;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(GearManager), "Deserialize", new System.Type[] { typeof(string), typeof(Il2CppSystem.Collections.Generic.List<GearItem>) })]
-        public static class GearManager_Deserialize
-        {
-            public static void Postfix()
-            {
-                MyMod.UpdatePickedGears = 2;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(HarvestableManager), "DeserializeAll")]
-        public static class HarvestableManager_Deserialize
-        {
-            public static void Postfix()
-            {
-                MyMod.UpdatePickedPlants = 2;
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(ContainerManager), "Deserialize", new System.Type[] { typeof(string), typeof(Il2CppSystem.Collections.Generic.List<GearItem>) })]
+        //public static class ContainerManager_Deserialize
+        //{
+        //    public static void Postfix(ContainerManager __instance)
+        //    {
+
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(GearManager), "Deserialize", new System.Type[] { typeof(string), typeof(Il2CppSystem.Collections.Generic.List<GearItem>) })]
+        //public static class GearManager_Deserialize
+        //{
+        //    public static void Postfix()
+        //    {
+
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(HarvestableManager), "DeserializeAll")]
+        //public static class HarvestableManager_Deserialize
+        //{
+        //    public static void Postfix()
+        //    {
+
+        //    }
+        //}
+
+        //[HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "DeserializeAll")]
+        //public static class SnowShelterManager_Deserialize
+        //{
+        //    public static void Postfix()
+        //    {
+                
+        //    }
+        //}
 
         public static void SendHarvestPlantState(string state, Harvestable plant)
         {
@@ -3267,10 +3344,160 @@ namespace SkyCoop
             }
         }
 
-        //        if (SteamConnect.CanUseSteam == true)
-        //        {
-        //            SteamConnect.Main.ConnectToHost(MyMod.SteamServerWorks);
-        //        }
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelter), "Start")]
+        internal class SnowShelter_Serialize
+        {
+            private static bool Prefix(SnowShelter __instance)
+            {
+                if (__instance.m_StartHasBeenCalled)
+                {
+                    return false;
+                }
+                __instance.m_StartHasBeenCalled = true;
+                if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.DoNotSerializeThis>() == null)
+                {
+                    SnowShelterManager.Add(__instance);
+                    //MelonLogger.Msg("Registered an snowshelter, cause have not DoNotSerializeThis component.");
+                }else{
+                    //MelonLogger.Msg("Skip snowshelter, cause have DoNotSerializeThis component.");
+                }
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterBuild), "BuildFinished")]
+        public static class Panel_SnowShelterBuild_BuildFinished
+        {
+            public static void Prefix(Panel_SnowShelterBuild __instance)
+            {
+                if(__instance.m_SnowShelter != null)
+                {
+                    MelonLogger.Msg("Shelter builded!");
+                    GameObject shelter = __instance.m_SnowShelter.gameObject;
+                    MyMod.ShelterCreated(shelter.transform.position, shelter.transform.rotation, MyMod.levelid, MyMod.level_guid, true);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelter), "DismantleFinished")]
+        public static class SnowShelter_DismantleFinished
+        {
+            public static void Postfix(SnowShelter __instance)
+            {
+                MelonLogger.Msg("Shelter removed!");
+                GameObject shelter = __instance.gameObject;
+                MyMod.ShelterRemoved(shelter.transform.position, MyMod.levelid, MyMod.level_guid, true);
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnUse")]
+        public static class Panel_SnowShelterInteract_OnUse
+        {
+            public static void Postfix(Panel_SnowShelterInteract __instance)
+            {
+                if (__instance.m_SnowShelter != null)
+                {
+                    MelonLogger.Msg("Entering shelter");
+
+                    MyMod.ShowShelterByOther shelter = new MyMod.ShowShelterByOther();
+                    shelter.m_Position = __instance.m_SnowShelter.gameObject.transform.position;
+                    shelter.m_Rotation = __instance.m_SnowShelter.gameObject.transform.rotation;
+                    shelter.m_LevelID = MyMod.levelid;
+                    shelter.m_LevelGUID = MyMod.level_guid;
+                    if (MyMod.sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.USESHELTER))
+                        {
+                            _packet.Write(shelter);
+                            SendTCPData(_packet);
+                        }
+                    }
+                    if (MyMod.iAmHost == true)
+                    {
+                        ServerSend.USESHELTER(0, shelter, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "EnterShelter")]
+        public static class SnowShelterManager_EnterShelter
+        {
+            public static void Postfix(SnowShelterManager __instance, SnowShelter ss)
+            {
+                if (ss != null)
+                {
+                    MelonLogger.Msg("Entering shelter");
+
+                    MyMod.ShowShelterByOther shelter = new MyMod.ShowShelterByOther();
+                    shelter.m_Position = ss.gameObject.transform.position;
+                    shelter.m_Rotation = ss.gameObject.transform.rotation;
+                    shelter.m_LevelID = MyMod.levelid;
+                    shelter.m_LevelGUID = MyMod.level_guid;
+                    if (MyMod.sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.USESHELTER))
+                        {
+                            _packet.Write(shelter);
+                            SendTCPData(_packet);
+                        }
+                    }
+                    if (MyMod.iAmHost == true)
+                    {
+                        ServerSend.USESHELTER(0, shelter, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "ExitShelter")]
+        public static class SnowShelterManager_ExitShelter
+        {
+            public static void Postfix(SnowShelterManager __instance, SnowShelter ss)
+            {
+                if (ss != null)
+                {
+                    MelonLogger.Msg("Exiting shelter");
+                    MyMod.ShowShelterByOther shelter = new MyMod.ShowShelterByOther();
+                    if (MyMod.sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.USESHELTER))
+                        {
+                            _packet.Write(shelter);
+                            SendTCPData(_packet);
+                        }
+                    }
+                    if (MyMod.iAmHost == true)
+                    {
+                        ServerSend.USESHELTER(0, shelter, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnDismantle")]
+        public static class Panel_SnowShelterInteract_OnDismantle
+        {
+            public static bool Prefix(Panel_SnowShelterInteract __instance)
+            {
+                MyMod.ShowShelterByOther FindData = new MyMod.ShowShelterByOther();
+                if (__instance.m_SnowShelter != null && __instance.m_SnowShelter.gameObject != null)
+                {
+                    FindData.m_Position = __instance.m_SnowShelter.gameObject.transform.position;
+                    FindData.m_Rotation = __instance.m_SnowShelter.gameObject.transform.rotation;
+                    FindData.m_LevelID = MyMod.levelid;
+                    FindData.m_LevelGUID = MyMod.level_guid;
+                }
+                for (int i = 0; i < MyMod.playersData.Count; i++)
+                {
+                    if (MyMod.playersData[i] != null)
+                    {
+                        MyMod.ShowShelterByOther shelter = MyMod.playersData[i].m_Shelter;
+                        if (FindData == shelter)
+                        {
+                            HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " INSIDE, CAN'T DISMANTLE THIS!");
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+        }
 
         //[HarmonyLib.HarmonyPatch(typeof(LootTable), "GetRandomGearPrefab")]
         //public static class LootTable_SeededRandom
