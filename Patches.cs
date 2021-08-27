@@ -226,17 +226,6 @@ namespace SkyCoop
                     }
                 }
             }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnCancel")]
-            private static class Panel_Confirmation_Cancle
-            {
-                internal static void Postfix(Panel_Confirmation __instance)
-                {
-                    if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "LOCAL OR STEAM?")
-                    {
-                        Server.StartSteam(4);
-                    }
-                }
-            }
             [HarmonyLib.HarmonyPatch(typeof(Weather), "ChooseWeatherSetOfType")]
             private static class Weather_ChooseWeatherSetOfType
             {
@@ -829,7 +818,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_MainMenu __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     MyMod.SelectGenderForConnection();
                     return false;
@@ -843,7 +832,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_MainMenu __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     GameAudioManager.PlayGuiConfirm();
                     FeatEnabledTracker.m_FeatsEnabledThisSandbox = new Il2CppSystem.Collections.Generic.List<FeatType>();
@@ -870,7 +859,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_SelectRegion_Map __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     return false;
                 }
@@ -878,7 +867,7 @@ namespace SkyCoop
             }
             public static void Postfix(Panel_SelectRegion_Map __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = __instance.m_SelectedItem.m_Region;
                     MyMod.PendingSave.m_Location = (int)__instance.m_SelectedItem.m_Region;
@@ -893,7 +882,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_SelectRegion __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     __instance.Enable(false);
                     MyMod.SelectGenderForConnection();
@@ -908,7 +897,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_SelectRegion_Map __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     return false;
                 }
@@ -921,7 +910,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_SelectRegion __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     return false;
                 }
@@ -934,11 +923,10 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_SelectSurvivor __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Male;
                     __instance.Enable(false);
-                    InterfaceManager.m_Panel_MainMenu.SendMessage("Update");
                     MyMod.SelectBagesForConnection();
 
                     return false;
@@ -952,13 +940,12 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_SelectSurvivor __instance)
             {
-                if (MyMod.OverrideMenusForConnection == true)
+                if (MyMod.PendingSave != null)
                 {
                     InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Female;
                     __instance.Enable(false);
-                    InterfaceManager.m_Panel_MainMenu.SendMessage("Update");
                     MyMod.SelectBagesForConnection();
-
+                    
                     return false;
                 }
 

@@ -187,7 +187,7 @@ namespace SkyCoop
             {
                 if(PiningMaster == true || MyMod.PlayersOnServer >= Server.MaxPlayers)
                 {
-                    MelonLogger.Msg("PiningMaster "+ PiningMaster+ " PlayersOnServer" + MyMod.PlayersOnServer+ " Server.MaxPlayers "+ Server.MaxPlayers);
+                    //MelonLogger.Msg("PiningMaster "+ PiningMaster+ " PlayersOnServer" + MyMod.PlayersOnServer+ " Server.MaxPlayers "+ Server.MaxPlayers);
                     return;
                 }
                 PiningMaster = true;

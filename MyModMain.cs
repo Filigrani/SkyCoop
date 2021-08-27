@@ -6597,7 +6597,6 @@ namespace SkyCoop
 
 
         public static SaveSlotSync PendingSave = null;
-        public static bool OverrideMenusForConnection = false;
 
         public static void SendSlotData(int _forClient)
         {
@@ -6622,6 +6621,8 @@ namespace SkyCoop
             if(PendingSave.m_SaveSlotType == (int)SaveSlotType.SANDBOX && InterfaceManager.m_Panel_MainMenu.GetNumUnlockedFeats() > 0)
             {
                 InterfaceManager.m_Panel_MainMenu.SelectWindow(InterfaceManager.m_Panel_MainMenu.m_SelectFeatWindow);
+            }else{
+                ForcedCreateSave(PendingSave);
             }
         }
 
@@ -6667,7 +6668,6 @@ namespace SkyCoop
                 MelonLogger.Msg("Selecting slot " + SaveGameSystem.GetCurrentSaveName());
                 GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
             }else{
-                OverrideMenusForConnection = true;
                 LetChooseSpawnForClient(PendingSave);
             }
         }
@@ -6723,6 +6723,7 @@ namespace SkyCoop
             InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = Region;
             InterfaceManager.m_Panel_MainMenu.OnSandboxFinal();
             GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
+            MyMod.PendingSave = null;
         }
 
         public static void PlayMultiplayer3dAduio(string sound, int from)

@@ -15,7 +15,7 @@ using SkyCoop;
 [assembly: AssemblyCopyright("Copyright ©  2021")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
-[assembly: MelonInfo(typeof(MyMod), "Sky Co-op", "0.5.4", "Filigrani")]
+[assembly: MelonInfo(typeof(MyMod), "Sky Co-op", "0.5.5", "Filigrani")]
 [assembly: MelonGame("Hinterland", "TheLongDark")]
 
 // Setting ComVisible to false makes the types in this assembly not visible 
