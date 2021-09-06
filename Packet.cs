@@ -20,7 +20,6 @@ namespace GameServer
         GAMETIME,
         LIGHTSOURCE,
         LIGHTSOURCENAME,
-        //MAKEFIRE,
         ANIMSTATE,
         SLEEPHOURS,
         SYNCWEATHER,
@@ -87,6 +86,7 @@ namespace GameServer
         REMOVESHELTER,
         ALLSHELTERS,
         USESHELTER,
+        FIRE,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -102,7 +102,6 @@ namespace GameServer
         GAMETIME,
         LIGHTSOURCE,
         LIGHTSOURCENAME,
-        //MAKEFIRE,
         ANIMSTATE,
         SLEEPHOURS,
         SYNCWEATHER,
@@ -169,6 +168,7 @@ namespace GameServer
         REMOVESHELTER,
         ALLSHELTERS,
         USESHELTER,
+        FIRE,
     }
 
     public class Packet : IDisposable
@@ -594,6 +594,16 @@ namespace GameServer
         {
             Write(obj.m_Guid);
             Write(obj.m_State);
+        }
+        public void Write(MyMod.FireSourcesSync obj)
+        {
+            Write(obj.m_Fuel);
+            Write(obj.m_Guid);
+            Write(obj.m_LevelGUID);
+            Write(obj.m_LevelId);
+            Write(obj.m_Position);
+            Write(obj.m_Rotation);
+            Write(obj.m_IsCampfire);
         }
         #endregion
 
@@ -1104,7 +1114,21 @@ namespace GameServer
 
             return obj;
         }
+        public MyMod.FireSourcesSync ReadFire()
+        {
+            MyMod.FireSourcesSync obj = new MyMod.FireSourcesSync();
+            obj.m_Fuel = ReadFloat();
+            obj.m_Guid = ReadString();
+            obj.m_LevelGUID = ReadString();
+            obj.m_LevelId = ReadInt();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_IsCampfire = ReadBool();
+
+            return obj;
+        }
         
+
 
         #endregion
 

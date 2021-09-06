@@ -883,5 +883,11 @@ namespace SkyCoop
                 }
             }
         }
+        public static void FIRE(Packet _packet)
+        {
+            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            int from = _packet.ReadInt();
+            MyMod.MayAddFireSources(FireSource);
+        }
     }
 }

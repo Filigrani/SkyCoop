@@ -765,5 +765,11 @@ namespace GameServer
             }
             ServerSend.USESHELTER(_fromClient, shelter, false);
         }
+        public static void FIRE(int _fromClient, Packet _packet)
+        {
+            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            MyMod.MayAddFireSources(FireSource);
+            ServerSend.FIRE(_fromClient, FireSource, false);
+        }
     }
 }

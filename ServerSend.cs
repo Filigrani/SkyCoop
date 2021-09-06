@@ -1518,5 +1518,28 @@ namespace GameServer
                 }
             }
         }
+        public static void FIRE(int _From, MyMod.FireSourcesSync _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.FIRE))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }else{
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }else{
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
     }
 }

@@ -259,6 +259,7 @@ namespace GameServer
                 { (int)ClientPackets.ADDSHELTER, ServerHandle.ADDSHELTER},
                 { (int)ClientPackets.REMOVESHELTER, ServerHandle.REMOVESHELTER},
                 { (int)ClientPackets.USESHELTER, ServerHandle.USESHELTER},
+                { (int)ClientPackets.FIRE, ServerHandle.FIRE},
             };
             Console.WriteLine("Initialized packets.");
         }

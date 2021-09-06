@@ -1554,6 +1554,24 @@ namespace SkyCoop
             return false;
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string), typeof(string) })]
+        public class GameManager_LoadSceneOverLoad1
+        {
+            public static void Prefix()
+            {                
+                MelonLogger.Msg(ConsoleColor.Yellow,"Loading other scene...");
+                MyMod.ApplyOtherCampfires = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string)})]
+        public class GameManager_LoadSceneOverLoad2
+        {
+            public static void Prefix()
+            {
+                MelonLogger.Msg(ConsoleColor.Yellow, "Loading other scene...");
+                MyMod.ApplyOtherCampfires = false;
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(SceneManager), "OnSceneLoaded")]
         public class SceneManager_Load
@@ -1650,7 +1668,7 @@ namespace SkyCoop
 
                     MyMod.NotNeedToPauseUntilLoaded = false;
                     MyMod.SendSpawnData();
-                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateRopesAndFurns in 2 seconds!");
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateRopesAndFurnsAndCampfires in 2 seconds!");
                     MyMod.UpdateRopesAndFurns = 2;
                     MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateLootedContainers in 3 seconds!");
                     MyMod.UpdateLootedContainers = 3;
@@ -1660,6 +1678,8 @@ namespace SkyCoop
                     MyMod.UpdateSnowshelters = 3;
                     MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedGears in 3 seconds!");
                     MyMod.UpdatePickedGears = 3;
+                    MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateCampfires in 4 seconds!");
+                    MyMod.UpdateCampfires = 4;
                 }
             }
         }
@@ -3483,6 +3503,110 @@ namespace SkyCoop
                     }
                 }
                 return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Fire), "AddFuel")]
+        public static class Fire_AddFuel
+        {
+            public static void Postfix(Fire __instance)
+            {
+                if(__instance.m_StartedByPlayer == false)
+                {
+                    MelonLogger.Msg("Assign firesource of other player to myself");
+                    __instance.m_StartedByPlayer = true;
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlacePoints), "ShouldShow")]
+        public static class PlacePoints_ShouldShow
+        {
+            public static void Postfix(PlacePoints __instance, bool __result)
+            {
+                if(__instance.m_AttachedFire != null)
+                {
+                    if(__instance.m_AttachedFire.IsBurning() && __instance.m_AttachedFire.m_StartedByPlayer == false)
+                    {
+                        __result = false;
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "CanBeInteractedWith")]
+        public static class CookingSlot_CanBeInteractedWith
+        {
+            public static bool Prefix(CookingSlot __instance)
+            {
+                if (__instance.m_GearPlacePoint != null
+                    && __instance.m_GearPlacePoint.m_FireToAttach != null
+                    && __instance.m_GearPlacePoint.m_FireToAttach.IsBurning()
+                    && __instance.m_GearPlacePoint.m_FireToAttach.m_StartedByPlayer == false)
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "CanOpenCookingInterface")]
+        public static class CookingPotItem_CanOpenCookingInterface
+        {
+            public static bool Prefix(CookingPotItem __instance)
+            {
+                if (__instance.m_FireBeingUsed != null
+                    && __instance.m_FireBeingUsed.IsBurning()
+                    && __instance.m_FireBeingUsed.m_StartedByPlayer == false)
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "AttachedFireIsBurning")]
+        public static class CookingPotItem_AttachedFireIsBurning
+        {
+            public static bool Prefix(CookingPotItem __instance)
+            {
+                if (__instance.m_FireBeingUsed != null
+                    && __instance.m_FireBeingUsed.IsBurning()
+                    && __instance.m_FireBeingUsed.m_StartedByPlayer == false)
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "GetHoverText")]
+        public static class WoodStove_GetHoverText
+        {
+            public static void Postfix(WoodStove __instance, ref string __result)
+            {
+                if (__instance.m_Fire != null
+                    && __instance.m_Fire.IsBurning()
+                    && __instance.m_Fire.m_StartedByPlayer == false)
+                {
+                    __result = __instance.m_LocalizedDisplayName.Text() + "\nADD YOUR FUEL\nTO ABLE COOK AND WARM";
+                    //MelonLogger.Msg(__result);
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Campfire), "GetHoverText")]
+        public static class Campfire_GetHoverText
+        {
+            public static void Postfix(Campfire __instance, ref string __result)
+            {
+                if (__instance.m_Fire != null
+                    && __instance.m_Fire.IsBurning()
+                    && __instance.m_Fire.m_StartedByPlayer == false)
+                {
+                    __result = __instance.m_DisplayName + "\nADD YOUR FUEL\nTO ABLE COOK AND WARM";
+                    //MelonLogger.Msg(__result);
+                }
             }
         }
 
