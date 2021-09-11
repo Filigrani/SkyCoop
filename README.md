@@ -47,7 +47,7 @@ ModComponent by Original dll by WulfMarius, rework by ds5678
 AssetLoader by Original dll by WulfMarius, rework by ds5678 
 
 Some models used in the mod is free models from site https://sketchfab.com/
-Human model https://assetstore.unity.com/packages/3d/characters/survival-stylized-characters-5-weapons-115559
+Human RIG https://assetstore.unity.com/packages/3d/characters/survival-stylized-characters-5-weapons-115559
 Glowing outlines https://assetstore.unity.com/packages/tools/particles-effects/quick-outline-115488
 
 ----------------------------------------------------------------------
