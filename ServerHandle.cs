@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using UnityEngine;
 using SkyCoop;
+using MelonLoader;
 
 namespace GameServer
 {
@@ -28,11 +29,31 @@ namespace GameServer
             OverflowAnimalsOnConnectTimer = 10;
             int _clientIdCheck = _packet.ReadInt();
             string _username = _packet.ReadString();
+            string ModVersion = "";
+            if (_packet.Length() > 1)
+            {
+                ModVersion = _packet.ReadString();
+            }
 
             if (_fromClient != _clientIdCheck)
             {
                 Console.WriteLine($"Player \"{_username}\" (ID: {_fromClient}) has assumed the wrong client ID ({_clientIdCheck})!");
+                return;
             }
+
+            if(ModVersion != MyMod.BuildInfo.Version)
+            {
+                ServerSend.KICKMESSAGE(_fromClient, "Wrong mod version! Server using version "+ MyMod.BuildInfo.Version);
+                MyMod.MultiplayerChatMessage DisconnectMessage = new MyMod.MultiplayerChatMessage();
+                DisconnectMessage.m_Type = 0;
+                DisconnectMessage.m_By = _username;
+                DisconnectMessage.m_Message = _username + " can't join because has different mod version!";
+                MyMod.SendMessageToChat(DisconnectMessage, true);
+                MelonLogger.Msg("Client " + _fromClient + " has different version! Processing disconnect!");
+                Server.clients[_fromClient].udp.Disconnect();
+                return;
+            }
+
             CanSend = true;
             using (Packet __packet = new Packet((int)ServerPackets.GAMETIME))
             {
@@ -208,6 +229,16 @@ namespace GameServer
                 MyMod.GiveRecivedItem(got);
             }else{
                 ServerSend.GOTITEM(got.m_SendedTo, got);
+            }
+        }
+        public static void GOTITEMSLICE(int _fromClient, Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            if (got.m_SendTo == 0)
+            {
+                MyMod.AddSlicedJsonData(got);
+            }else{
+                ServerSend.GOTITEMSLICE(got.m_SendTo, got);
             }
         }
         public static void GAMETIME(int _fromClient, Packet _packet)
@@ -484,7 +515,7 @@ namespace GameServer
                     ReConnection = true;
                     MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Reconnecting " + sid + " as client " + i);
                     Server.clients[i].TimeOutTime = 0;
-                    ServerSend.Welcome(freeSlot, "WELCOME TO STEAM SERVER", Server.MaxPlayers);
+                    ServerSend.Welcome(freeSlot, Server.MaxPlayers);
                     freeSlot = i;
                     break;
                 }
@@ -499,7 +530,7 @@ namespace GameServer
                         MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Here an empty slot " + i + " for " + sid);
                         freeSlot = i;
                         Server.clients[i].udp.sid = sid;
-                        ServerSend.Welcome(freeSlot, "WELCOME TO STEAM SERVER", Server.MaxPlayers);
+                        ServerSend.Welcome(freeSlot, Server.MaxPlayers);
                         break;
                     }
                 }
@@ -770,6 +801,30 @@ namespace GameServer
             MyMod.FireSourcesSync FireSource = _packet.ReadFire();
             MyMod.MayAddFireSources(FireSource);
             ServerSend.FIRE(_fromClient, FireSource, false);
+        }
+        public static void CUSTOM(int _fromClient, Packet _packet)
+        {
+            API.CustomEventCallback(_packet, _fromClient);
+        }
+        public static void VOICECHAT(int _fromClient, Packet _packet)
+        {
+            int readLength = _packet.ReadInt();
+            int samples = _packet.ReadInt();
+            byte[] CompressedData = _packet.ReadBytes(readLength);
+            //MelonLogger.Msg("Compressed data " + CompressedData.Length + " bytes");
+            MyMod.ProcessVoiceChatData(_fromClient, CompressedData, samples);
+            ServerSend.VOICECHAT(_fromClient, CompressedData, samples, false);
+        }
+
+        public static void SLICEDBYTES(int _fromClient, Packet _packet)
+        {
+            MyMod.SlicedBytesData got = _packet.ReadSlicedBytes();
+            MyMod.AddSlicedBytesData(got, _fromClient);
+
+            if(got.m_SendTo != 0)
+            {
+                ServerSend.SLICEDBYTES(_fromClient, got, false, got.m_SendTo);
+            }
         }
     }
 }

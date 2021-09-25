@@ -59,7 +59,7 @@ namespace GameServer
 
                 stream.BeginRead(receiveBuffer, 0, dataBufferSize, ReceiveCallback, null);
 
-                ServerSend.Welcome(id, "Welcome to the server!", Server.MaxPlayers);
+                ServerSend.Welcome(id, Server.MaxPlayers);
             }
 
             public void SendData(Packet _packet)
@@ -174,12 +174,12 @@ namespace GameServer
             {
                 Console.WriteLine($"Incoming connection from {_endPoint.Address}...");
                 endPoint = _endPoint;
-                ServerSend.Welcome(id, "Welcome to the server!", Server.MaxPlayers);
+                ServerSend.Welcome(id, Server.MaxPlayers);
             }
             public void ConnectSteamWorks(string _sid)
             {
                 sid = _sid;
-                ServerSend.Welcome(id, "Welcome to the server!", Server.MaxPlayers);
+                ServerSend.Welcome(id, Server.MaxPlayers);
             }
 
             /// <summary>Sends data to the client via UDP.</summary>

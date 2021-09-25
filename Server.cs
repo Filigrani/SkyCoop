@@ -21,7 +21,7 @@ namespace GameServer
         private static TcpListener tcpListener;
         private static UdpClient udpListener;
 
-        public static void Start(int _maxPlayers, int _port)
+        public static void Start(int _maxPlayers, int _port = 26950)
         {
             MaxPlayers = _maxPlayers;
             MyMod.MaxPlayers = MaxPlayers;
@@ -53,6 +53,7 @@ namespace GameServer
             MyMod.OveridedTime = MyMod.OverridedHourse + ":" + MyMod.OverridedMinutes;
             MyMod.NeedSyncTime = true;
             MyMod.RealTimeCycleSpeed = true;
+            MyMod.HadEverPingedMaster = false;
         }
 
         private static void TCPConnectCallback(IAsyncResult _result)
@@ -207,7 +208,6 @@ namespace GameServer
                 { (int)ClientPackets.GAMETIME, ServerHandle.GAMETIME},
                 { (int)ClientPackets.LIGHTSOURCENAME, ServerHandle.LIGHTSOURCENAME},
                 { (int)ClientPackets.LIGHTSOURCE, ServerHandle.LIGHTSOURCE},
-                ///{ (int)ClientPackets.MAKEFIRE, ServerHandle.MAKEFIRE},
                 { (int)ClientPackets.ANIMSTATE, ServerHandle.ANIMSTATE},
                 { (int)ClientPackets.SLEEPHOURS, ServerHandle.SLEEPHOURS},
                 { (int)ClientPackets.SYNCWEATHER, ServerHandle.SYNCWEATHER},
@@ -260,6 +260,10 @@ namespace GameServer
                 { (int)ClientPackets.REMOVESHELTER, ServerHandle.REMOVESHELTER},
                 { (int)ClientPackets.USESHELTER, ServerHandle.USESHELTER},
                 { (int)ClientPackets.FIRE, ServerHandle.FIRE},
+                { (int)ClientPackets.CUSTOM, ServerHandle.CUSTOM},
+                { (int)ClientPackets.GOTITEMSLICE, ServerHandle.GOTITEMSLICE},
+                { (int)ClientPackets.VOICECHAT, ServerHandle.VOICECHAT},
+                { (int)ClientPackets.SLICEDBYTES, ServerHandle.SLICEDBYTES},
             };
             Console.WriteLine("Initialized packets.");
         }

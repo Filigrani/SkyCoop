@@ -21,14 +21,13 @@ namespace SkyCoop
     {
         public static void Welcome(Packet _packet)
         {
-            string _msg = _packet.ReadString();
             int _myId = _packet.ReadInt();
             int _MaxPlayers = _packet.ReadInt();
 
             MyMod.MaxPlayers = _MaxPlayers;
             MyMod.InitAllPlayers();
 
-            MelonLogger.Msg($"Message from server: {_msg}");
+            MelonLogger.Msg("Welcome to server!");
             MyMod.instance.myId = _myId;
             MelonLogger.Msg("Host registered me as client "+ _myId);
             MyMod.sendMyPosition = true;
@@ -44,6 +43,7 @@ namespace SkyCoop
             {
                 _packet.Write(MyMod.instance.myId);
                 _packet.Write(MyMod.MyChatName);
+                _packet.Write(MyMod.BuildInfo.Version);
 
                 MyMod.SendTCPData(_packet);
             }
@@ -294,8 +294,6 @@ namespace SkyCoop
                 return;
             }
 
-
-            //MelonLoader.MelonLogger.Msg("On server " + howmany + " players");
             for (int i = 0; i < MyMod.MaxPlayers; i++)
             {
                 if (MyMod.playersData[i] != null)
@@ -316,9 +314,7 @@ namespace SkyCoop
                     if (client.m_Sleep == true)
                     {
                         MyMod.playersData[client.m_ID].m_SleepHours = 1;
-                    }
-                    else
-                    {
+                    }else{
                         MyMod.playersData[client.m_ID].m_SleepHours = 0;
                     }
                     MyMod.playersData[client.m_ID].m_Dead = client.m_Dead;
@@ -888,6 +884,34 @@ namespace SkyCoop
             MyMod.FireSourcesSync FireSource = _packet.ReadFire();
             int from = _packet.ReadInt();
             MyMod.MayAddFireSources(FireSource);
+        }
+        public static void CUSTOM(Packet _packet)
+        {
+            API.CustomEventCallback(_packet, -1);
+        }
+        public static void KICKMESSAGE(Packet _packet)
+        {
+            string kickMessage = _packet.ReadString();
+            MyMod.DoKickMessage(kickMessage);
+        }
+        public static void GOTITEMSLICE(Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            MyMod.AddSlicedJsonData(got);
+        }
+        public static void VOICECHAT(Packet _packet)
+        {
+            int readLength = _packet.ReadInt();
+            int samples = _packet.ReadInt();
+            byte[] CompressedData = _packet.ReadBytes(readLength);
+            int from = _packet.ReadInt();
+            MyMod.ProcessVoiceChatData(from, CompressedData, samples);
+        }
+        public static void SLICEDBYTES(Packet _packet)
+        {
+            MyMod.SlicedBytesData got = _packet.ReadSlicedBytes();
+            int from = _packet.ReadInt();
+            MyMod.AddSlicedBytesData(got, from);
         }
     }
 }

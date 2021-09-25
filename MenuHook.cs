@@ -200,10 +200,15 @@ namespace SkyCoop
                     //For Debug Alone
                     bool DebugAlone = false;
                     bool ConnectedScreenTest = false;
+                    bool KickTest = false;
 
                     if(ConnectedScreenTest == true)
                     {
                         MyMod.DoWaitForConnect();
+                        if(KickTest == true)
+                        {
+                            MyMod.DoKickMessage("Wrong mod version! Server using version " + MyMod.BuildInfo.Version);
+                        }
                     }else{
                         if (DebugAlone == true)
                         {

@@ -182,7 +182,6 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Responce " + e.Result);
             }
-
             public static void PingMasterServer()
             {
                 if(PiningMaster == true || MyMod.PlayersOnServer >= Server.MaxPlayers)
@@ -213,8 +212,14 @@ namespace SkyCoop
                     xpmode = 4;
                 }
 
-
                 string data = "?sid="+sid+"&name="+userName+"&players="+players+"&slots="+slots+"&xpmode="+xpmode;
+
+                if(MyMod.HadEverPingedMaster == false)
+                {
+                    data = data + "&firststart=1";
+                    MyMod.HadEverPingedMaster = true;
+                }
+
                 url = url + data;
                 Uri uri = new Uri(url);
                 //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Pinging...");

@@ -201,6 +201,11 @@ namespace SkyCoop
                     //GameObject BreathObj = UnityEngine.Object.Instantiate<GameObject>(Resources.Load("BreathWildlife").Cast<GameObject>());
                     //BreathObj.transform.position = GameManager.GetPlayerTransform().position;
                     //BreathObj.GetComponent<ParticleSystem>().Play();
+
+                    //foreach (var device in Microphone.devices)
+                    //{
+                    //    MelonLogger.Msg(ConsoleColor.Blue, "Microphone: " + device);
+                    //}
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {

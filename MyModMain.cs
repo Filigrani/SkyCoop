@@ -11,17 +11,31 @@ using System.Threading.Tasks;
 using System.Net;
 using System.Net.Sockets;
 using System.IO;
+using System.IO.Compression;
 using MelonLoader;
 using Harmony;
 using UnhollowerRuntimeLib;
 using UnhollowerBaseLib;
 using GameServer;
 using MelonLoader.TinyJSON;
+using UnityEngine.Networking;
+using KeyboardUtilities;
 
 namespace SkyCoop
 {
     public class MyMod : MelonMod
     {
+
+        public static class BuildInfo
+        {
+            public const string Name = "Sky Co-op";
+            public const string Description = "Multiplayer mod"; 
+            public const string Author = "Filigrani";
+            public const string Company = null; 
+            public const string Version = "0.5.7";
+            public const string DownloadLink = null;
+        }
+
         //VARS
         #region VARS
         public static bool isRuning = false;
@@ -188,9 +202,160 @@ namespace SkyCoop
         public static GameObject UISteamFreindsMenuObj = null;
         public static int PlayersOnServer = 0;
         public static GameObject UIHostMenu = null;
+        public static GameObject MicrophoneIdicator = null;
         public static bool IsPublicServer = false;
         public static bool ApplyOtherCampfires = false;
+        public static bool HadEverPingedMaster = false;
+        public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
+        public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
+        //Voice chat
+        public static int VoiceChatFrequencyHz = 19000;
+        public static int MyMicrophoneID = 0;
+        public static bool DoingRecord = false;
+        public static GameObject VoiceTestDummy = null;
         #endregion
+
+        public static void AddSlicedJsonData(SlicedJsonData jData)
+        {
+            MelonLogger.Msg(ConsoleColor.Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
+            if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
+            {
+                string previousString = "";
+                if(SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
+                {
+                    string wholeString = previousString + jData.m_Str;
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
+                }else{
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+                }
+            }else{
+                SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+            }
+
+            if (jData.m_Last)
+            {
+                string finalJsonData = "";
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
+                {
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    GearItemDataPacket gData = new GearItemDataPacket();
+                    gData.m_GearName = jData.m_GearName;
+                    gData.m_DataProxy = finalJsonData;
+                    MyMod.GiveRecivedItem(gData);
+                }
+            }
+        }
+
+        public static void AddSlicedBytesData(SlicedBytesData bytesData, int from)
+        {
+            MelonLogger.Msg(ConsoleColor.Yellow, "Got Bytes Slice for hash:" + bytesData.m_Hash);
+            if (SlicedBytesDataBuffer.ContainsKey(bytesData.m_Hash))
+            {
+                List<byte> Buffer;
+                if (SlicedBytesDataBuffer.TryGetValue(bytesData.m_Hash, out Buffer) == true)
+                {
+                    Buffer.AddRange(bytesData.m_Data);
+                    SlicedBytesDataBuffer.Remove(bytesData.m_Hash);
+                    SlicedBytesDataBuffer.Add(bytesData.m_Hash, Buffer);
+                }else{
+                    List<byte> Buffer2 = new List<byte>();
+                    Buffer2.AddRange(bytesData.m_Data);
+                    SlicedBytesDataBuffer.Add(bytesData.m_Hash, Buffer2);
+                }
+            }else{
+                List<byte> Buffer2 = new List<byte>();
+                Buffer2.AddRange(bytesData.m_Data);
+                SlicedBytesDataBuffer.Add(bytesData.m_Hash, Buffer2);
+            }
+
+            if (bytesData.m_Last)
+            {
+                MelonLogger.Msg(ConsoleColor.Yellow, "Got last slice for hash:" + bytesData.m_Hash);
+                List<byte> FinalBuffer;
+                if (SlicedBytesDataBuffer.TryGetValue(bytesData.m_Hash, out FinalBuffer) == true)
+                {
+                    SlicedBytesDataBuffer.Remove(bytesData.m_Hash);
+                    GotLargeDataArray(FinalBuffer.ToArray(), bytesData.m_Action, from, bytesData.m_ExtraInt);
+                }
+            }
+        }
+
+        public static void GotLargeDataArray(byte[] array, string action, int from, int ExtraInt)
+        {
+            if(action == "VOICE")
+            {
+                ProcessVoiceChatData(from, array, ExtraInt);
+            }
+        }
+
+        public static void SendSlicedData(byte[] array, int startIdx, int length, int ClientId, string action, bool LastSlice, int ExtraInt)
+        {
+            MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice for array with hash:" + array.GetHashCode());
+            SlicedBytesData Data = new SlicedBytesData();
+            Data.m_Hash = array.GetHashCode();
+            Data.m_Last = LastSlice;
+            Data.m_SendTo = ClientId;
+            Data.m_Action = action;
+
+            byte[] sendData = new byte[CHUNK_SIZE];
+
+            int ToWrite = 0;
+
+            for (int i = startIdx; i < length; i++)
+            {
+                sendData[ToWrite] = array[i];
+                ToWrite = ToWrite + 1;
+            }
+            Data.m_Data = sendData;
+            Data.m_Length = sendData.Length;
+            if(LastSlice == true)
+            {
+                Data.m_ExtraInt = ExtraInt;
+            }
+            if (iAmHost == true)
+            {
+                using (Packet _packet = new Packet((int)ServerPackets.SLICEDBYTES))
+                {
+                    ServerSend.SLICEDBYTES(0, Data, false, ClientId);
+                }
+            }
+            if (sendMyPosition == true)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.SLICEDBYTES))
+                {
+                    _packet.Write(Data);
+                    SendTCPData(_packet);
+                }
+            }
+        }
+
+        private const int CHUNK_SIZE = 500;
+
+        private static void SendLargeArray(byte[] array, int ForClient, string action, int ExtraInt = 0)
+        {
+            MelonLogger.Msg(ConsoleColor.Yellow, "SendLargeArray with hash:" + array.GetHashCode());
+            for (int startIdx = 0; startIdx < array.Length; startIdx += CHUNK_SIZE)
+            {
+                bool IsLast = false;
+                if(startIdx+CHUNK_SIZE > array.Length)
+                {
+                    IsLast = true;
+                }
+                int length = Math.Min(array.Length - startIdx, CHUNK_SIZE);
+                SendSlicedData(array, startIdx, length, ForClient, action, IsLast, ExtraInt);
+            }
+        }
+        private static void SendLargeArrayToAll(byte[] array, string action, int ExtraInt = 0)
+        {
+            for (int i = 1; i <= Server.MaxPlayers; i++)
+            {
+                if (Server.clients[i].IsBusy() == true)
+                {
+                    SendLargeArray(array, i, action, ExtraInt);
+                }
+            }
+        }
 
         //STRUCTS
         #region STRUCTS
@@ -201,6 +366,25 @@ namespace SkyCoop
             public bool m_DuppedContainers = false;
             public int m_PlayersSpawnType = 0;
         }
+        public class SlicedJsonData
+        {
+            public bool m_Last = false;
+            public string m_Str = "";
+            public int m_Hash = 0;
+            public string m_GearName = "";
+            public int m_SendTo = 0;
+        }
+        public class SlicedBytesData
+        {
+            public bool m_Last = false;
+            public byte[] m_Data;
+            public int m_Length = 0; 
+            public int m_Hash = 0;
+            public int m_SendTo = 0;
+            public string m_Action = "";
+            public int m_ExtraInt = 0;
+        }
+
         public class PlayerEquipmentData //: MelonMod
         {
             public string m_HoldingItem = "";
@@ -590,6 +774,11 @@ namespace SkyCoop
 
             return act;
         }
+        public class VoiceChatQueueElement
+        {
+            public byte[] m_VoiceData;
+            public int m_Samples = 0;
+        }
         #endregion
 
         public static void LoadChatName(string _name = "")
@@ -642,7 +831,6 @@ namespace SkyCoop
         public override void OnApplicationStart()
         {
             Debug.Log($"[{InfoAttribute.Name}] Version {InfoAttribute.Version} loaded!");
-
             ClassInjector.RegisterTypeInIl2Cpp<AnimalUpdates>();
             ClassInjector.RegisterTypeInIl2Cpp<DestoryArrowOnHit>();
             ClassInjector.RegisterTypeInIl2Cpp<PlayerBulletDamage>();
@@ -659,6 +847,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<FakeFire>();
             ClassInjector.RegisterTypeInIl2Cpp<FakeFireLight>();
             ClassInjector.RegisterTypeInIl2Cpp<DoNotSerializeThis>();
+            ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerVoiceChatPlayer>();
 
             if (instance == null)
             {
@@ -670,16 +859,13 @@ namespace SkyCoop
             {
 
             }
-            LoadedBundle = AssetBundle.LoadFromFile("Mods\\multiplayerstuff.unity3d");
 
+            LoadedBundle = AssetBundle.LoadFromFile("Mods\\multiplayerstuff.unity3d");
             if (LoadedBundle == null)
             {
                 MelonLogger.Msg("Have problems with loading multiplayerstuff.unity3d!!");
-            }
-            else
-            {
+            }else{
                 MelonLogger.Msg("Models loaded.");
-
             }
         }
 
@@ -1478,6 +1664,36 @@ namespace SkyCoop
                     if(m_RB.isKinematic == true)
                     {
                         UnityEngine.Object.Destroy(m_Obj);
+                    }
+                }
+            }
+        }
+
+        public class MultiplayerPlayerVoiceChatPlayer : MonoBehaviour
+        {
+            public MultiplayerPlayerVoiceChatPlayer(IntPtr ptr) : base(ptr) { }
+            public AudioSource aSource;
+            public List<VoiceChatQueueElement> VoiceQueue = new List<VoiceChatQueueElement>();
+            void Update()
+            {
+                if (aSource != null)
+                {
+                    if(aSource.isPlaying == false)
+                    {
+                        if (VoiceQueue.Count > 0)
+                        {
+                            VoiceChatQueueElement Voice = VoiceQueue[0];
+                            if (Voice != null)
+                            {
+                                PlayVoiceFromPlayerObject(aSource.gameObject, Voice.m_VoiceData, Voice.m_Samples);
+                            }
+                            VoiceQueue.RemoveAt(0);
+                        }
+                    }else{
+                        if(aSource.clip != null)
+                        {
+                            //aSource.volume = 
+                        } 
                     }
                 }
             }
@@ -4270,7 +4486,6 @@ namespace SkyCoop
             { (int)ServerPackets.GAMETIME, ClientHandle.GAMETIME},
             { (int)ServerPackets.LIGHTSOURCENAME, ClientHandle.LIGHTSOURCENAME},
             { (int)ServerPackets.LIGHTSOURCE, ClientHandle.LIGHTSOURCE},
-            //{ (int)ServerPackets.MAKEFIRE, ClientHandle.MAKEFIRE},
             { (int)ServerPackets.ANIMSTATE, ClientHandle.ANIMSTATE},
             { (int)ServerPackets.SLEEPHOURS, ClientHandle.SLEEPHOURS},
             { (int)ServerPackets.SYNCWEATHER, ClientHandle.SYNCWEATHER},
@@ -4336,6 +4551,11 @@ namespace SkyCoop
             { (int)ServerPackets.ALLSHELTERS, ClientHandle.ALLSHELTERS},
             { (int)ServerPackets.USESHELTER, ClientHandle.USESHELTER},
             { (int)ServerPackets.FIRE, ClientHandle.FIRE},
+            { (int)ServerPackets.CUSTOM, ClientHandle.CUSTOM},
+            { (int)ServerPackets.KICKMESSAGE, ClientHandle.KICKMESSAGE},
+            { (int)ServerPackets.GOTITEMSLICE, ClientHandle.GOTITEMSLICE},
+            { (int)ServerPackets.VOICECHAT, ClientHandle.VOICECHAT},
+            { (int)ServerPackets.SLICEDBYTES, ClientHandle.SLICEDBYTES},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -4837,10 +5057,11 @@ namespace SkyCoop
 
             if (watermode == false) // If this is water we not give new item, but just add to supply.
             {
-                GearItem new_gear = GameManager.GetPlayerManagerComponent().InstatiateItemAtLocation(give_name, 1, new Vector3(0,0,0), false);
+                float randomY = -1000;
+                randomY = randomY + -UnityEngine.Random.Range(100, 300);
+                GearItem new_gear = GameManager.GetPlayerManagerComponent().InstatiateItemAtLocation(give_name, 1, new Vector3(0, randomY, 0), false);
                 new_gear.Deserialize(gearData.m_DataProxy);
                 GameManager.GetPlayerManagerComponent().AddItemToPlayerInventory(new_gear);
-                //GameManager.GetInventoryComponent().AddGear(new_gear.gameObject);
                 say = new_gear.m_LocalizedDisplayName.Text();
             }else{
                 string bottlename = Resources.Load(give_name).Cast<GameObject>().GetComponent<GearItem>().m_LocalizedDisplayName.Text();
@@ -5457,11 +5678,18 @@ namespace SkyCoop
             //dummyFire.m_FullBurnTriggered = true;
             //dummyFire.m_IsPerpetual = true;
             //ecf.Initialize();
+            
+            if(fire.m_Campfire != null)
+            {
+                Campfire campFire = fire.m_Campfire.GetComponent<Campfire>();
+                campFire.SetState(CampfireState.Lit);
+            }
         }
 
         public static void MakeFakeCampfire(FireSourcesSync SyncData)
         {
             GameObject campfireObj = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetFireManagerComponent().m_CampFirePrefab);
+            campfireObj.name = GameManager.GetFireManagerComponent().m_CampFirePrefab.name;
             campfireObj.transform.position = SyncData.m_Position;
             campfireObj.transform.rotation = SyncData.m_Rotation;
             Fire cfFire = campfireObj.GetComponent<Fire>();
@@ -5549,7 +5777,7 @@ namespace SkyCoop
                         if(SyncData.m_IsCampfire == true)
                         {
                             //MelonLogger.Msg("But is campfire, so creating an new one");
-                            //MakeFakeCampfire(SyncData);
+                            MakeFakeCampfire(SyncData);
                         }
                     }
                 }
@@ -7228,6 +7456,37 @@ namespace SkyCoop
                 needSync = false;
                 SaveNewName(MyChatName);
             }
+            //if (message.m_Message.StartsWith("!hz ") == true)
+            //{
+            //    string text = message.m_Message;
+            //    VoiceChatFrequencyHz = Convert.ToInt32(text.Replace("!hz ", ""));
+            //    message.m_Type = 0;
+            //    message.m_By = MyChatName;
+            //    message.m_Message = "Your new name " + MyChatName;
+            //    needSync = true;
+            //    MultiplayerChatMessage NewMsg = new MultiplayerChatMessage();
+            //    message.m_Type = 0;
+            //    message.m_By = MyChatName;
+            //    message.m_Message = "New voice chat frequency is " + VoiceChatFrequencyHz+"hz now!";
+            //    SendMessageToChat(NewMsg, false);
+            //}
+            if (message.m_Message.StartsWith("!mic ") == true)
+            {
+                string text = message.m_Message;
+                int wannaDatId = Convert.ToInt32(text.Replace("!mic ", ""));
+                
+                message.m_Type = 0;
+                message.m_By = MyChatName;
+                if(wannaDatId >= 0 && wannaDatId < Microphone.devices.Count)
+                {
+                    MyMicrophoneID = wannaDatId;
+                    message.m_Message = "Using microphone " + Microphone.devices[wannaDatId];
+                }else{
+                    message.m_Message = "Using microphone with ID "+ wannaDatId + " not exist!";
+                }
+                needSync = false;
+            }
+
             if (ChatMessages.Count > MaxChatMessages)
             {
                 UnityEngine.Object.Destroy(ChatMessages[0].m_TextObj.gameObject);
@@ -7376,7 +7635,12 @@ namespace SkyCoop
 
                     m_Player.AddComponent<MultiplayerPlayerAnimator>().m_Animer = m_Player.GetComponent<Animator>();
                     m_Player.AddComponent<MultiplayerPlayerClothingManager>().m_Player = m_Player;
-
+                    m_Player.AddComponent<AudioSource>();
+                    m_Player.AddComponent<MultiplayerPlayerVoiceChatPlayer>();
+                    m_Player.GetComponent<MultiplayerPlayerVoiceChatPlayer>().aSource = m_Player.GetComponent<AudioSource>();
+                    //m_Player.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
+                    //m_Player.GetComponent<AudioSource>().dopplerLevel = 0;
+                    //m_Player.GetComponent<AudioSource>().spatialBlend = 1;
                     MultiplayerPlayer mP = m_Player.AddComponent<MultiplayerPlayer>();
                     mP.m_Player = m_Player;
                     mP.m_ID = i;
@@ -7418,6 +7682,17 @@ namespace SkyCoop
                 InterfaceManager.m_Panel_Confirmation.OnCancel();
             }
         }
+        public static void DoKickMessage(string txt)
+        {
+            RemoveWaitForConnect();
+            if (GameManager.m_InterfaceManager != null && GameManager.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            {
+                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n"+ txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+            }
+            MelonLogger.Msg("Kicked by server, message from host: "+ txt);
+            MyMod.LastConnectedIp = "";
+            MyMod.Disconnect();
+        }
 
         public static void CancleDismantling()
         {
@@ -7450,10 +7725,260 @@ namespace SkyCoop
             }
         }
 
+        public static void PlayVoiceFromPlayerObject(GameObject m_Player, byte[] voiceData, int samples)
+        {
+            Il2CppStructArray<float> clipData = new float[samples];
+            int readPos = 0;
+            for (int i = 0; i < clipData.Length; i++)
+            {
+                float _value = BitConverter.ToSingle(voiceData, readPos);
+                clipData[i] = _value;
+                readPos += 4;
+            }
+            AudioSource audioSource = m_Player.GetComponent<AudioSource>();
+            if (audioSource != null)
+            {
+                audioSource.clip = AudioClip.Create("Voice", VoiceChatFrequencyHz, 1, VoiceChatFrequencyHz, false);
+                audioSource.clip.SetData(clipData, 0);
+                audioSource.Play();
+
+                //AudioClip NewClip = AudioClip.Create("Voice", VoiceChatFrequencyHz, 1, VoiceChatFrequencyHz, false);
+                //NewClip.SetData(clipData, 0);
+                //audioSource.PlayOneShot(NewClip);
+            }
+        }
+
+        public static void ProcessVoiceChatData(int from, byte[] CompressedData, int samples)
+        {
+            //MelonLogger.Msg("Going to decompress...");
+            byte[] decompressedData = MyMod.Decompress(CompressedData);
+            //MelonLogger.Msg("Decompressed data " + decompressedData.Length + " bytes");
+            if (MyMod.players[from] != null)
+            {
+                if (MyMod.playersData[from].m_Levelid == MyMod.levelid && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
+                {
+                    if (MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerVoiceChatPlayer>() != null)
+                    {
+                        MyMod.MultiplayerPlayerVoiceChatPlayer mPVoice = MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerVoiceChatPlayer>();
+                        MyMod.VoiceChatQueueElement DataForQueue = new MyMod.VoiceChatQueueElement();
+                        DataForQueue.m_VoiceData = decompressedData;
+                        DataForQueue.m_Samples = samples;
+                        mPVoice.VoiceQueue.Add(DataForQueue);
+                    }
+                }
+            }
+        }
+
+        public static byte[] Compress(byte[] data)
+        {
+            using (var compressedStream = new MemoryStream())
+            using (var zipStream = new GZipStream(compressedStream, CompressionMode.Compress))
+            {
+                zipStream.Write(data, 0, data.Length);
+                zipStream.Close();
+                return compressedStream.ToArray();
+            }
+        }
+
+        public static byte[] Decompress(byte[] data)
+        {
+            using (var compressedStream = new MemoryStream(data))
+            using (var zipStream = new GZipStream(compressedStream, CompressionMode.Decompress))
+            using (var resultStream = new MemoryStream())
+            {
+                zipStream.CopyTo(resultStream);
+                return resultStream.ToArray();
+            }
+        }
+
+        public static void TrackWhenRecordOver()
+        {
+            if (GameManager.m_PlayerObject == null)
+            {
+                return;
+            }
+
+            AudioSource audioSource = GameManager.GetPlayerObject().GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = GameManager.GetPlayerObject().AddComponent<AudioSource>();
+            }
+
+            DoingRecord = KeyboardUtilities.InputManager.GetKey(KeyCode.V);
+
+            if (audioSource != null)
+            {
+                if(Microphone.IsRecording(MyMicrophoneID) == false)
+                {
+                    if(DoingRecord == true)
+                    {
+                        if (audioSource.clip != null)
+                        {
+                            TrackVoiceToSend();
+                            audioSource.clip = null;
+                        }
+                        audioSource.loop = false;
+                        audioSource.clip = Microphone.StartRecord(MyMicrophoneID, false, 1, VoiceChatFrequencyHz);
+                    }
+                }else{
+                    if(DoingRecord == false)
+                    {
+                        Microphone.EndRecord(MyMicrophoneID);
+                    }
+                }
+            }
+
+            if(MicrophoneIdicator != null)
+            {
+                MicrophoneIdicator.SetActive(DoingRecord);
+            }
+        }
+
+        public static AudioClip TrimSilence(List<float> samples, float min, int channels, int hz, bool _3D, bool stream)
+        {
+            int i;
+
+            for (i = 0; i < samples.Count; i++)
+            {
+                if (Mathf.Abs(samples[i]) > min)
+                {
+                    break;
+                }
+            }
+            //MelonLogger.Msg("First samples.RemoveRange " + i);
+
+            if(i > 0)
+            {
+                samples.RemoveRange(0, i);
+            }
+            for (i = samples.Count - 1; i > 0; i--)
+            {
+                if (Mathf.Abs(samples[i]) > min)
+                {
+                    break;
+                }
+            }
+            int debugInt = samples.Count - i;
+
+
+            //MelonLogger.Msg("Second samples.RemoveRange " + i + " samples.Count " + samples.Count + " samples.Count-i " + debugInt);
+            if (i > 0 && debugInt > 0)
+            {
+                samples.RemoveRange(i, samples.Count - i);
+            }
+
+            if (samples.Count > 0)
+            {
+                var clip = AudioClip.Create("TempClip", samples.Count, channels, hz, _3D, stream);
+
+                clip.SetData(samples.ToArray(), 0);
+
+                return clip;
+            }else{
+                return null;
+            }
+        }
+
+        public static void TrackVoiceToSend()
+        {
+            if (GameManager.m_PlayerObject == null)
+            {
+                return;
+            }
+
+            AudioSource audioSource = GameManager.GetPlayerObject().GetComponent<AudioSource>();
+            if (audioSource != null && audioSource.clip != null)
+            {
+                Il2CppStructArray<float> clipData = new float[audioSource.clip.samples];
+                //MelonLogger.Msg("clipData samples " + audioSource.clip.samples);
+                audioSource.clip.GetData(clipData, 0);
+                Il2CppStructArray<float> CleanedclipData = new float[audioSource.clip.samples];
+                AudioClip CleanedClip = TrimSilence(clipData.ToList(), 0.017f, audioSource.clip.channels, VoiceChatFrequencyHz, false, false);
+                if(CleanedClip == null)
+                {
+                    //MelonLogger.Msg("Voice file has been empty after cleanup");
+                    return;
+                }
+
+                CleanedClip.GetData(CleanedclipData, 0);
+                //MelonLogger.Msg("Cleanned clipData samples " + CleanedClip.samples);
+
+                List<byte> BytesBuffer = new List<byte>();
+                for (int i = 0; i < CleanedclipData.Length; i++)
+                {
+                    BytesBuffer.AddRange(BitConverter.GetBytes(CleanedclipData[i]));
+                }
+                //MelonLogger.Msg("BytesBuffer contains " + BytesBuffer.Count + " bytes");
+
+                byte[] compressedArray = Compress(BytesBuffer.ToArray());
+                //MelonLogger.Msg("CompressedArray contains " + compressedArray.Length + " bytes");
+                if (iAmHost == true)
+                {
+                    if (Server.UsingSteamWorks == true)
+                    {
+                        ServerSend.VOICECHAT(0, compressedArray, audioSource.clip.samples, true);
+                    }else{
+                        //SendLargeArrayToAll(compressedArray, "VOICE", audioSource.clip.samples);
+                    }
+                }
+                if(sendMyPosition == true)
+                {
+                    if(ConnectedSteamWorks == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.VOICECHAT))
+                        {
+                            _packet.Write(compressedArray.Length);
+                            _packet.Write(audioSource.clip.samples);
+                            _packet.Write(compressedArray);
+                            SendTCPData(_packet);
+                        }
+                    }else{
+                        //SendLargeArray(compressedArray, 0, "VOICE", audioSource.clip.samples);
+                    }
+                }
+
+                //if (VoiceTestDummy == null)
+                //{
+                //    VoiceTestDummy = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                //    VoiceTestDummy.transform.position = GameManager.GetPlayerObject().transform.position;
+                //    VoiceTestDummy.AddComponent<AudioSource>();
+                //    VoiceTestDummy.GetComponent<AudioSource>().loop = false;
+                //    //VoiceTestDummy.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
+                //    //VoiceTestDummy.GetComponent<AudioSource>().dopplerLevel = 0;
+                //    //VoiceTestDummy.GetComponent<AudioSource>().spatialBlend = 1;
+                //}
+                //if (VoiceTestDummy.GetComponent<AudioSource>() != null)
+                //{
+                //    byte[] decompressedData = MyMod.Decompress(compressedArray);
+                //    MelonLogger.Msg("Decompressed bytes array contains " + decompressedData.Length + " elements!");
+                //    PlayVoiceFromPlayerObject(VoiceTestDummy, decompressedData, audioSource.clip.samples);
+                //}
+            }
+        }
+
         public override void OnUpdate()
         {
             UpdateMain();
             GameLogic.Update();
+
+            if(iAmHost == true)
+            {
+                API.m_ClientState = API.SkyCoopClientState.HOST;
+            }else if(sendMyPosition == true)
+            {
+                API.m_ClientState = API.SkyCoopClientState.CLIENT;
+            }else{
+                API.m_ClientState = API.SkyCoopClientState.NONE;
+            }
+            API.m_MyClientID = instance.myId;
+
+            if (GameManager.m_vpFPSCamera != null)
+            {
+                if (GameManager.GetVpFPSCamera().gameObject.GetComponent<AudioListener>() == null)
+                {
+                    GameManager.GetVpFPSCamera().gameObject.AddComponent<AudioListener>();
+                }
+            }
 
             if (GameManager.m_SceneTransitionData != null)
             {
@@ -7612,6 +8137,13 @@ namespace SkyCoop
                     StatusPanel = StatusObject.transform.GetChild(0).GetChild(0).GetChild(0).gameObject;
                     StatusObject.SetActive(false);
                     MelonLogger.Msg("[UI] Status object created!");
+                    GameObject LoadedAssets3 = LoadedBundle.LoadAsset<GameObject>("MP_VoiceChat");
+                    MicrophoneIdicator = GameObject.Instantiate(LoadedAssets3, UiCanvas.transform);
+                    if (MicrophoneIdicator != null)
+                    {
+                        MelonLogger.Msg("[UI] Microphone Indicator created!");
+                        MicrophoneIdicator.SetActive(false);
+                    }
                 }
             }else{
                 if(GameManager.m_InterfaceManager != null && GameManager.m_InterfaceManager && uConsole.m_Instance != null && uConsole.m_On == false && Cursor.visible == false)
@@ -7659,6 +8191,7 @@ namespace SkyCoop
                 {
                     GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
                     GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                    GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
                     if(IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn == true)
                     {
                         if(PublicSteamServer.activeSelf == false)
@@ -7666,9 +8199,11 @@ namespace SkyCoop
                             PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                         }
                         PublicSteamServer.SetActive(true);
+                        PortsObject.SetActive(false);
                     }else{
                         PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                         PublicSteamServer.SetActive(false);
+                        PortsObject.SetActive(true);
                     }
                 }
             }
@@ -7851,10 +8386,10 @@ namespace SkyCoop
                     MenuStuffSpawned = pl1;
                 }
             }
+            TrackWhenRecordOver();
 
             if (levelid > 3)
             {
-
                 if (IamShatalker == true)
                 {
                     GameManager.GetVpFPSPlayer().Controller.MotorVelocityMax = DarkWalkerSpeed;
@@ -8203,7 +8738,6 @@ namespace SkyCoop
                     Il2CppSystem.Collections.Generic.List<GearItemObject> items = GameManager.GetInventoryComponent().m_Items;
                     GearItem _gear = null;
                     string saveProxyData = "";
-                    bool Shorter = false;
 
                     for (int i = 0; i < items.Count; i++)
                     {
@@ -8214,13 +8748,17 @@ namespace SkyCoop
                             _gear = items.get_Item(i).m_GearItem;
                             //saveProxyData = _gear.Serialize();
                             GameObject cloneObj = UnityEngine.Object.Instantiate(_gear.gameObject);
+                            float randomY = -1000;
+                            randomY = randomY + -UnityEngine.Random.Range(100, 300);
+                            cloneObj.transform.position = new Vector3(0, randomY, 0);
                             GearItem cloneGear = cloneObj.GetComponent<GearItem>();
                             if (cloneGear.m_StackableItem != null)
                             {
                                 cloneGear.m_StackableItem.m_Units = 1;
                             }
                             cloneGear.m_InPlayerInventory = false;
-                            saveProxyData = JsonNullsRemover.RemoveJsonNulls(cloneGear.Serialize());
+                            //saveProxyData = JsonNullsRemover.RemoveJsonNulls(cloneGear.Serialize());
+                            saveProxyData = cloneGear.Serialize();
                             UnityEngine.Object.DestroyImmediate(cloneObj);
                             break;
                         }
@@ -8272,27 +8810,93 @@ namespace SkyCoop
                             //MelonLogger.Msg("UTF8 bytes: " + Encoding.UTF8.GetBytes(saveProxyData).Length);
                         }
 
-                        if (iAmHost == true)
+                        if(waterMode == true)
                         {
-                            using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
+                            if (iAmHost == true)
                             {
-                                ServerSend.GOTITEM(GiveItemTo, GearDataPak);
-                            }
-                        }
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.GOTITEM))
-                            {
-                                _packet.Write(GearDataPak);
-
-                                if (_packet.Length() >= 1500 && ConnectedSteamWorks == false)
+                                using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
                                 {
-                                    MelonLogger.Msg(ConsoleColor.Red, "Can't transfer item to other player " + GearDataPak.m_GearName + " json is too large, this is not fits to MTU limit. Used bytes: " + _packet.Length() + "/1500");
-                                    MelonLogger.Msg(ConsoleColor.Red, "Please make screenshot of this error message and send it to #discussions on Sky Co-op Discord server with ping @Filigrani");
-                                    MelonLogger.Msg(ConsoleColor.Blue, "Data proxy JSON string: " + GearDataPak.m_DataProxy);
-                                    return;
+                                    ServerSend.GOTITEM(GiveItemTo, GearDataPak);
                                 }
-                                SendTCPData(_packet);
+                            }
+                            if (sendMyPosition == true)
+                            {
+                                using (Packet _packet = new Packet((int)ClientPackets.GOTITEM))
+                                {
+                                    _packet.Write(GearDataPak);
+                                    SendTCPData(_packet);
+                                }
+                            }
+                        }else{
+                            byte[] bytesToSlice = Encoding.UTF8.GetBytes(saveProxyData);
+                            MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
+                            if(bytesToSlice.Length > 500)
+                            {
+                                List<byte> BytesBuffer = new List<byte>();
+                                BytesBuffer.AddRange(bytesToSlice);
+
+                                while( BytesBuffer.Count >= 500)
+                                {
+                                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
+                                    BytesBuffer.RemoveRange(0, 499);
+
+                                    string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                                    SlicedJsonData SlicedPacket = new SlicedJsonData();
+                                    SlicedPacket.m_GearName = _gear.m_GearName;
+                                    SlicedPacket.m_SendTo = GiveItemTo;
+                                    SlicedPacket.m_Hash = saveProxyData.GetHashCode();
+                                    SlicedPacket.m_Str = jsonStringSlice;
+                                    
+                                    if(BytesBuffer.Count != 0)
+                                    {
+                                        SlicedPacket.m_Last = false;
+                                    }else{
+                                        SlicedPacket.m_Last = true;
+                                    }
+                                    MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+
+                                    if (iAmHost == true)
+                                    {
+                                        ServerSend.GOTITEMSLICE(GiveItemTo, SlicedPacket);
+                                    }
+                                    if (sendMyPosition == true)
+                                    {
+                                        using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
+                                        {
+                                            _packet.Write(SlicedPacket);
+                                            SendTCPData(_packet);
+                                        }
+                                    }
+                                }
+
+                                if(BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
+                                {
+                                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                                    string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
+                                    SlicedJsonData SlicedPacket = new SlicedJsonData();
+                                    SlicedPacket.m_GearName = _gear.m_GearName;
+                                    SlicedPacket.m_SendTo = GiveItemTo;
+                                    SlicedPacket.m_Hash = saveProxyData.GetHashCode();
+                                    SlicedPacket.m_Str = jsonStringSlice;
+                                    SlicedPacket.m_Last = true;
+
+                                    MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+
+                                    if (iAmHost == true)
+                                    {
+                                        ServerSend.GOTITEMSLICE(GiveItemTo, SlicedPacket);
+                                    }
+                                    if (sendMyPosition == true)
+                                    {
+                                        using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
+                                        {
+                                            _packet.Write(SlicedPacket);
+                                            SendTCPData(_packet);
+                                        }
+                                    }
+                                }
                             }
                         }
                         if (waterMode == true)
@@ -8827,14 +9431,14 @@ namespace SkyCoop
 
         public static bool AtHostMenu = false;
 
-        public static void HostAServer()
+        public static void HostAServer(int port = 26950)
         {
             if (iAmHost != true)
             {
                 isRuning = true;
 
                 Thread mainThread = new Thread(new ThreadStart(MainThread));
-                Server.Start(MaxPlayers, 26950);
+                Server.Start(MaxPlayers, port);
                 nextActionTime = Time.time;
                 nextActionTimeAniamls = Time.time;
                 iAmHost = true;
@@ -9564,6 +10168,9 @@ namespace SkyCoop
                 GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
                 bool IsPub = PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().isOn;
 
+                GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
+                int PortToHost = Convert.ToInt32(PortsObject.GetComponent<UnityEngine.UI.InputField>().text);
+
                 IsPublicServer = IsPub;
                 ServerConfig.m_DuppedSpawns = DupesIsChecked;
                 ServerConfig.m_DuppedContainers = BoxDupesIsChecked;
@@ -9572,7 +10179,7 @@ namespace SkyCoop
 
                 if (ShouldUseSteam == false)
                 {
-                    HostAServer();
+                    HostAServer(PortToHost);
                 }else{
                     Server.StartSteam(MaxPlayers);
                 }
@@ -9603,6 +10210,7 @@ namespace SkyCoop
                 SpawnStyleList.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_PlayersSpawnType);
 
                 GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
 
                 if (SteamConnect.CanUseSteam == false)
                 {
@@ -9610,9 +10218,11 @@ namespace SkyCoop
                     IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                     IsSteamHost.SetActive(false);
 
-                    
                     PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                     PublicSteamServer.SetActive(false);
+                    PortsObject.SetActive(false);
+                }else{
+                    PortsObject.SetActive(true);
                 }
                 PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
             }

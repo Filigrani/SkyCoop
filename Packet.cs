@@ -87,6 +87,11 @@ namespace GameServer
         ALLSHELTERS,
         USESHELTER,
         FIRE,
+        CUSTOM,
+        KICKMESSAGE,
+        GOTITEMSLICE,
+        VOICECHAT,
+        SLICEDBYTES,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -169,6 +174,11 @@ namespace GameServer
         ALLSHELTERS,
         USESHELTER,
         FIRE,
+        CUSTOM,
+        KICKMESSAGE,
+        GOTITEMSLICE,
+        VOICECHAT,
+        SLICEDBYTES,
     }
 
     public class Packet : IDisposable
@@ -314,15 +324,8 @@ namespace GameServer
         /// <param name="_value">The string to add.</param>
         public void Write(string _value)
         {
-            Write(_value.Length); // Add the length of the string to the packet
-            //buffer.AddRange(Encoding.ASCII.GetBytes(_value)); // Add the string itself
-            buffer.AddRange(Encoding.UTF8.GetBytes(_value));
-            //buffer.AddRange(Encoding.Unicode.GetBytes(_value));
-        }
-        public void WriteUnicodeString(string _value)
-        {
             Write(_value.Length);
-            buffer.AddRange(Encoding.Unicode.GetBytes(_value));
+            buffer.AddRange(Encoding.UTF8.GetBytes(_value));
         }
         public void Write(Vector3 _value)
         {
@@ -605,6 +608,24 @@ namespace GameServer
             Write(obj.m_Rotation);
             Write(obj.m_IsCampfire);
         }
+        public void Write(MyMod.SlicedJsonData obj)
+        {
+            Write(obj.m_GearName);
+            Write(obj.m_Hash);
+            Write(obj.m_Str);
+            Write(obj.m_SendTo);
+            Write(obj.m_Last);
+        }
+        public void Write(MyMod.SlicedBytesData obj)
+        {
+            Write(obj.m_Hash);
+            Write(obj.m_Action);
+            Write(obj.m_SendTo);
+            Write(obj.m_Last);
+            Write(obj.m_Length);
+            Write(obj.m_ExtraInt);
+            Write(obj.m_Data);
+        }
         #endregion
 
         #region Read Data
@@ -679,6 +700,13 @@ namespace GameServer
             if (buffer.Count > readPos)
             {
                 // If there are unread bytes
+
+                if(readableBuffer == null)
+                {
+                    Console.WriteLine("Could not read value of type 'int'! readableBuffer is null!!!");
+                    return 0;
+                }
+
                 int _value = BitConverter.ToInt32(readableBuffer, readPos); // Convert the bytes to an int
                 if (_moveReadPos)
                 {
@@ -1012,8 +1040,8 @@ namespace GameServer
         public MyMod.MultiplayerChatMessage ReadChat()
         {
             MyMod.MultiplayerChatMessage obj = new MyMod.MultiplayerChatMessage();
-            obj.m_By = ReadString();//ReadUnicodeString();
-            obj.m_Message = ReadString();//ReadUnicodeString();
+            obj.m_By = ReadString();
+            obj.m_Message = ReadString();
             obj.m_Type = ReadInt();
 
             return obj;
@@ -1023,7 +1051,7 @@ namespace GameServer
         {
             MyMod.MultiPlayerClientStatus obj = new MyMod.MultiPlayerClientStatus();
             obj.m_ID = ReadInt();
-            obj.m_Name = ReadString();//ReadUnicodeString();
+            obj.m_Name = ReadString();
             obj.m_Sleep = ReadBool();
             obj.m_Dead = ReadBool();
 
@@ -1127,9 +1155,30 @@ namespace GameServer
 
             return obj;
         }
-        
 
+        public MyMod.SlicedJsonData ReadSlicedGear()
+        {
+            MyMod.SlicedJsonData obj = new MyMod.SlicedJsonData();
+            obj.m_GearName = ReadString();
+            obj.m_Hash = ReadInt();
+            obj.m_Str = ReadString();
+            obj.m_SendTo = ReadInt();
+            obj.m_Last = ReadBool();
+            return obj;
+        }
+        public MyMod.SlicedBytesData ReadSlicedBytes()
+        {
+            MyMod.SlicedBytesData obj = new MyMod.SlicedBytesData();
+            obj.m_Hash = ReadInt();
+            obj.m_Action = ReadString();
+            obj.m_SendTo = ReadInt();
+            obj.m_Last = ReadBool();
+            obj.m_Length = ReadInt();
+            obj.m_ExtraInt = ReadInt();
+            obj.m_Data = ReadBytes(obj.m_Length);
+            return obj;
 
+        }
         #endregion
 
         private bool disposed = false;

@@ -38,7 +38,7 @@ namespace GameServer
             }
         }
 
-        private static void SendUDPDataToAll(Packet _packet)
+        public static void SendUDPDataToAll(Packet _packet)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
@@ -49,7 +49,7 @@ namespace GameServer
                 }
             }
         }
-        private static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId)
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
@@ -63,7 +63,7 @@ namespace GameServer
         /// <summary>Sends a packet to all clients except one via UDP.</summary>
         /// <param name="_exceptClient">The client to NOT send the data to.</param>
         /// <param name="_packet">The packet to send.</param>
-        private static void SendUDPDataToAll(int _exceptClient, Packet _packet)
+        public static void SendUDPDataToAll(int _exceptClient, Packet _packet)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
@@ -75,11 +75,10 @@ namespace GameServer
             }
         }
 
-        public static void Welcome(int _toClient, string _msg, int maxPlayers)
+        public static void Welcome(int _toClient, int maxPlayers)
         {
             using (Packet _packet = new Packet((int)ServerPackets.welcome))
             {
-                _packet.Write(_msg);
                 _packet.Write(_toClient);
                 _packet.Write(maxPlayers);
 
@@ -212,6 +211,16 @@ namespace GameServer
         public static void GOTITEM(int _toClient, MyMod.GearItemDataPacket _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void GOTITEMSLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.GOTITEMSLICE))
             {
                 _packet.Write(_msg);
                 _packet.Write(_toClient);
@@ -694,6 +703,7 @@ namespace GameServer
                 me.m_Sleep = MyMod.IsSleeping;
                 me.m_Dead = MyMod.IsDead;
                 List<MyMod.MultiPlayerClientStatus> L = new List<SkyCoop.MyMod.MultiPlayerClientStatus>();
+                L.Add(me);
                 for (int i = 1; i <= Server.MaxPlayers; i++)
                 {
                     if (Server.clients[i].IsBusy() == true)
@@ -719,7 +729,6 @@ namespace GameServer
                     }
                 }
                 _packet.Write(ReadCount);
-                _packet.Write(me);
 
                 for (int i = 0; i < L.Count; i++)
                 {
@@ -727,7 +736,6 @@ namespace GameServer
                     _packet.Write(other);
                 }
                 SendUDPDataToAll(_packet);
-                L.Add(me);
                 return L;
             }
         }
@@ -1534,6 +1542,100 @@ namespace GameServer
                         _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
                     }else{
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+
+        public static void CUSTOM(int _From, byte _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CUSTOM))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void KICKMESSAGE(int _toClient, string _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.KICKMESSAGE))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void VOICECHAT(int _From, byte[] _msg, int samples, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.VOICECHAT))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg.Length);
+                    _packet.Write(samples);
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }else{
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg.Length);
+                        _packet.Write(samples);
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }else{
+                        _packet.Write(_msg.Length);
+                        _packet.Write(samples);
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void SLICEDBYTES(int _From, MyMod.SlicedBytesData _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.SLICEDBYTES))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
                         _packet.Write(_msg);
                         _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
