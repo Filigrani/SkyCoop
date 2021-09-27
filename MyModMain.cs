@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod"; 
             public const string Author = "Filigrani";
             public const string Company = null; 
-            public const string Version = "0.5.7";
+            public const string Version = "0.5.8";
             public const string DownloadLink = null;
         }
 
@@ -215,9 +215,14 @@ namespace SkyCoop
         public static GameObject VoiceTestDummy = null;
         #endregion
 
+        public static bool HasNonASCIIChars(string str)
+        {
+            return (Encoding.UTF8.GetByteCount(str) != str.Length);
+        }
+
         public static void AddSlicedJsonData(SlicedJsonData jData)
         {
-            MelonLogger.Msg(ConsoleColor.Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
+            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
             if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
             {
                 string previousString = "";
@@ -249,7 +254,7 @@ namespace SkyCoop
 
         public static void AddSlicedBytesData(SlicedBytesData bytesData, int from)
         {
-            MelonLogger.Msg(ConsoleColor.Yellow, "Got Bytes Slice for hash:" + bytesData.m_Hash);
+            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Bytes Slice for hash:" + bytesData.m_Hash);
             if (SlicedBytesDataBuffer.ContainsKey(bytesData.m_Hash))
             {
                 List<byte> Buffer;
@@ -271,7 +276,7 @@ namespace SkyCoop
 
             if (bytesData.m_Last)
             {
-                MelonLogger.Msg(ConsoleColor.Yellow, "Got last slice for hash:" + bytesData.m_Hash);
+                //MelonLogger.Msg(ConsoleColor.Yellow, "Got last slice for hash:" + bytesData.m_Hash);
                 List<byte> FinalBuffer;
                 if (SlicedBytesDataBuffer.TryGetValue(bytesData.m_Hash, out FinalBuffer) == true)
                 {
@@ -291,7 +296,7 @@ namespace SkyCoop
 
         public static void SendSlicedData(byte[] array, int startIdx, int length, int ClientId, string action, bool LastSlice, int ExtraInt)
         {
-            MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice for array with hash:" + array.GetHashCode());
+            //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice for array with hash:" + array.GetHashCode());
             SlicedBytesData Data = new SlicedBytesData();
             Data.m_Hash = array.GetHashCode();
             Data.m_Last = LastSlice;
@@ -802,7 +807,7 @@ namespace SkyCoop
                 HaveFile = false;
             }
 
-            if(_name == "")
+            if(ValidNickName(_name) == false)
             {
                 UseSteamName = false;
             }
@@ -3267,9 +3272,7 @@ namespace SkyCoop
                 if (m_LastAnim == "close")
                 {
                     sync.m_State = false;
-                }
-                else
-                {
+                }else{
                     sync.m_State = true;
                 }
 
@@ -4459,7 +4462,7 @@ namespace SkyCoop
 
             if (ip != "")
             {
-                MelonLogger.Msg("Trying connect to " + ip);
+                MelonLogger.Msg("Trying connect to " + ip+":"+ instance.port);
                 InitializeClientData();
                 //tcp.Connect();
 
@@ -4468,7 +4471,8 @@ namespace SkyCoop
                     MelonLogger.Msg("udp is null");
                 }
 
-                udp.Connect(instance.port+1, ip);
+                //udp.Connect(instance.port+1, ip);
+                udp.Connect(instance.port, ip);
             }
         }
         //PACKETS
@@ -4784,6 +4788,7 @@ namespace SkyCoop
                 endPoint = new IPEndPoint(IPAddress.Parse(ip), instance.port);
                 socket = new UdpClient(_localPort);
                 socket.Connect(endPoint);
+                MelonLogger.Msg("Open socket for "+ endPoint.Address+":"+ endPoint.Port);
                 //IAsyncResult result = socket.BeginReceive(ReceiveCallback, null);
                 socket.BeginReceive(ReceiveCallback, null);
                 //bool success = result.AsyncWaitHandle.WaitOne(5000, true);
@@ -4921,7 +4926,11 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("[UDP] Disconnecting...");
                     //MyMod.instance.udp.endPoint = null;
-                    MyMod.instance.udp.socket.Client.BeginDisconnect(true, DoneDisconnect, null);
+
+                    if(MyMod.instance.udp.socket.Client != null)
+                    {
+                        MyMod.instance.udp.socket.Client.BeginDisconnect(true, DoneDisconnect, null);
+                    }
                 }
                 HUDMessage.AddMessage("DISCONNECTED FROM SERVER");
                 sendMyPosition = false;
@@ -4952,82 +4961,9 @@ namespace SkyCoop
             //MyMod.instance.udp.SendData(_packet);
         }
 
-        //public static void GiveRecivedItem(GearItem got)
-        //{
-        //    string dummy_name = got.m_GearName;
-        //    string give_name = "";
-
-        //    string say = "";
-        //    bool watermode = false;
-        //    LiquidQuality water_q = LiquidQuality.Potable;
-
-        //    if (dummy_name.Contains("(Clone)")) //If it has ugly (Clone), cutting it.
-        //    {
-        //        int L = dummy_name.Length - 7;
-        //        give_name = dummy_name.Remove(L, 7);
-        //    }
-        //    else
-        //    {
-        //        give_name = dummy_name;
-        //    }
-
-        //    if (give_name == "GEAR_WaterSupplyPotable")
-        //    {
-        //        watermode = true;
-        //    }
-        //    if (give_name == "GEAR_WaterSupplyNotPotable")
-        //    {
-        //        watermode = true;
-        //        water_q = LiquidQuality.NonPotable;
-        //    }
-
-        //    if (watermode == false) // If this is water we not give new item, but just add to supply.
-        //    {
-        //        //Creating new item to load all static parameters of item as base, to not ask host about constant values of item.
-        //        GearItem new_gear = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory(give_name, 1);
-        //        //Setting dynamic values of item that we got from host
-        //        new_gear.m_CurrentHP = got.m_CurrentHP;
-        //        new_gear.m_WeightKG = got.m_WeightKG;
-        //        new_gear.m_GearBreakConditionThreshold = got.m_GearBreakConditionThreshold;
-
-        //        if (new_gear.m_FoodItem != null) // If it food, we need load FoodItem component too.
-        //        {
-        //            new_gear.m_FoodItem.m_CaloriesTotal = got.m_FoodItem.m_CaloriesTotal;
-        //            new_gear.m_FoodItem.m_CaloriesRemaining = got.m_FoodItem.m_CaloriesRemaining;
-        //            new_gear.m_FoodItem.m_HeatPercent = got.m_FoodItem.m_HeatPercent;
-        //            new_gear.m_FoodItem.m_Packaged = got.m_FoodItem.m_Packaged;
-        //            new_gear.m_FoodItem.m_Opened = got.m_FoodItem.m_Opened;
-        //        }
-        //        if (new_gear.m_EvolveItem != null) // If is evolve item(So stupid name) then we need load item of it was drying.
-        //        {
-        //            new_gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = got.m_EvolveItem.m_TimeSpentEvolvingGameHours;
-        //        }
-        //        say = new_gear.m_LocalizedDisplayName.Text();
-        //    }
-        //    else
-        //    {
-        //        string bottlename = Resources.Load(give_name).Cast<GameObject>().GetComponent<GearItem>().m_LocalizedDisplayName.Text();
-
-        //        MelonLogger.Msg("Got water " + got.m_WaterSupply.m_VolumeInLiters);
-        //        if (got.m_WaterSupply.m_VolumeInLiters == 0.5f)
-        //        {
-        //            say = "half liter of " + bottlename;
-        //        }
-        //        else
-        //        {
-        //            say = got.m_WaterSupply.m_VolumeInLiters + " of " + bottlename;
-        //        }
-        //        GameManager.GetInventoryComponent().AddToWaterSupply(got.m_WaterSupply.m_VolumeInLiters, water_q);
-        //    }
-
-        //    HUDMessage.AddMessage("Other player gave you " + say + ".");
-
-        //    MelonLogger.Msg("Other player gave you item " + give_name);
-        //}
-
         public static void GiveRecivedItem(GearItemDataPacket gearData)
         {
-            MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name ["+ gearData.m_GearName + "] DATA: "+ gearData.m_DataProxy);
+            //MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name ["+ gearData.m_GearName + "] DATA: "+ gearData.m_DataProxy);
 
             GearItemSaveDataProxy itemSaveDataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(gearData.m_DataProxy);
             string dummy_name = gearData.m_GearName;
@@ -6155,12 +6091,20 @@ namespace SkyCoop
 
             if (LastConnectedIp != "" || iAmHost == true)
             {
+                int character = 0;
+
+                if(GameManager.m_PlayerManager  != null)
+                {
+                    character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
+                }
+
                 if (iAmHost == true)
                 {
                     using (Packet _packet = new Packet((int)ServerPackets.KEEPITALIVE))
                     {
                         ServerSend.KEEPITALIVE(0, true);
                     }
+                    ServerSend.SELECTEDCHARACTER(0, character, true);
                 }
 
                 if (sendMyPosition == true)
@@ -6168,6 +6112,11 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.KEEPITALIVE))
                     {
                         _packet.Write(true);
+                        SendTCPData(_packet);
+                    }
+                    using (Packet _packet = new Packet((int)ClientPackets.SELECTEDCHARACTER))
+                    {
+                        _packet.Write(character);
                         SendTCPData(_packet);
                     }
                 }
@@ -7266,7 +7215,7 @@ namespace SkyCoop
         }
         public static bool ValidNickName(string name)
         {
-            if(name == "" || name == " " || name == "Player")
+            if(name == "" || name == " " || name == "Player" || HasNonASCIIChars(name) == true)
             {
                 return false;
             }else{
@@ -7350,6 +7299,13 @@ namespace SkyCoop
 
         public static void SendMessageToChat(MultiplayerChatMessage message, bool needSync = true)
         {
+            if(HasNonASCIIChars(message.m_Message) == true)
+            {
+                message.m_Type = 0;
+                message.m_By = MyChatName;
+                message.m_Message = "Please use only english! Other languages are not supported!";
+                needSync = false;
+            }
             if(message.m_By.Contains("Filigrani") || message.m_By.Contains("REDcat"))
             {
                 if (message.m_Message == "!debug")
@@ -8829,7 +8785,7 @@ namespace SkyCoop
                             }
                         }else{
                             byte[] bytesToSlice = Encoding.UTF8.GetBytes(saveProxyData);
-                            MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
+                            //MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
                             if(bytesToSlice.Length > 500)
                             {
                                 List<byte> BytesBuffer = new List<byte>();
@@ -8853,7 +8809,7 @@ namespace SkyCoop
                                     }else{
                                         SlicedPacket.m_Last = true;
                                     }
-                                    MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                                    //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
 
                                     if (iAmHost == true)
                                     {
@@ -8882,7 +8838,7 @@ namespace SkyCoop
                                     SlicedPacket.m_Str = jsonStringSlice;
                                     SlicedPacket.m_Last = true;
 
-                                    MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                                    //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
 
                                     if (iAmHost == true)
                                     {
@@ -9422,8 +9378,28 @@ namespace SkyCoop
 
         public static void DoConnectToIp(string _ip)
         {
-            PendingConnectionIp = _ip;
-            instance.ip = _ip;
+            string newPort = "";
+            string newIP = "";
+            if (_ip.Contains(":"))
+            {
+                char seperator = Convert.ToChar(":");
+                
+                string[] sliced = _ip.Split(seperator);
+                newIP = sliced[0];
+                newPort = sliced[1];
+            }
+
+            if(newIP == "" && newPort == "")
+            {
+                PendingConnectionIp = _ip;
+                instance.ip = _ip;
+                MelonLogger.Msg("Going to connect to "+instance.ip+":"+instance.port);
+            }else{
+                PendingConnectionIp = newIP;
+                instance.ip = newIP;
+                instance.port = Convert.ToInt32(newPort);
+                MelonLogger.Msg("Going to connect to "+instance.ip+":"+instance.port);
+            }
             instance.ConnectToServer();
             DoWaitForConnect();
         }
