@@ -264,6 +264,7 @@ namespace GameServer
                 { (int)ClientPackets.GOTITEMSLICE, ServerHandle.GOTITEMSLICE},
                 { (int)ClientPackets.VOICECHAT, ServerHandle.VOICECHAT},
                 { (int)ClientPackets.SLICEDBYTES, ServerHandle.SLICEDBYTES},
+                { (int)ClientPackets.SLEEPPOSE, ServerHandle.SLEEPPOSE},
             };
             Console.WriteLine("Initialized packets.");
         }

@@ -34,14 +34,23 @@ namespace SkyCoop
         {
             if (__instance.gameObject != null)
             {
+                //Panel
+                //GetChild(1) //MenuRoot
+                //GetChild(1).GetChild(0) //Menu
+                //GetChild(1).GetChild(0).GetChild(5) //Left_Align
+                //GetChild(1).GetChild(0).GetChild(5).GetChild(2) //Grid
+
+
                 if (__instance.gameObject.transform.GetChild(1) != null && __instance.gameObject.transform.GetChild(1).GetChild(0) != null && __instance.m_BasicMenu.m_ItemModelList.Count >= 4)
                 {
                     Transform Menu = __instance.gameObject.transform.GetChild(1).GetChild(0);
-                    if (Menu.transform.GetChild(2) != null && Menu.transform.GetChild(2).GetChild(0) != null)
+                    Transform Left_Align = Menu.GetChild(5);
+                    Transform Grid = Left_Align.GetChild(2);
+                    if (Grid != null)
                     {
                         for (int i = 0; i < 4; i++)
                         {
-                            GameObject Button = Menu.transform.GetChild(2).GetChild(i).gameObject;
+                            GameObject Button = Grid.GetChild(i).gameObject;
                             GameObject Lable = Button.transform.GetChild(0).gameObject;
 
                             string text = "";
@@ -145,20 +154,21 @@ namespace SkyCoop
             __instance.m_BasicMenu.AddItem(id, menuItem, order, name, name, (string)null, act, Color.green, Color.white);
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Start", null)]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Initialize", null)]
         public class Panel_MainMenu_Start
         {
             public static void Postfix(Panel_MainMenu __instance)
             {
-                if (!InterfaceManager.IsMainMenuActive()) return;
-
+                MelonLogger.Msg("[UI] Trying modify main menu...");
+                //if (!InterfaceManager.IsMainMenuEnabled()) return;
+                //MelonLogger.Msg("[UI] Main main enabled starting modify...");
                 AddButton(__instance, "Donaters", 1, 10);
                 AddButton(__instance, "Connect", 5, 9);
 
                 MoveUpMainMenuWordmark(Convert.ToInt16(__instance.m_BasicMenu.m_MenuItems.Count.ToString()));
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "Start", null)]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "Initialize", null)]
         public class Panel_PauseMenu_Start
         {
             public static void Postfix(Panel_PauseMenu __instance)
@@ -245,12 +255,6 @@ namespace SkyCoop
 
                     if (CustomId == 0)
                     {
-                        //if (SteamConnect.CanUseSteam == true)
-                        //{
-                        //    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, "LOCAL OR STEAM?", "You can use local mode to connect with using LAN network emulators, or port forwarding 26950 port. In Steam mode players can join only by invites of host.", Panel_Confirmation.ButtonLayout.Button_2, "LOCAL", "STEAM", Panel_Confirmation.Background.Transperent, null, null);
-                        //}else{
-                        //    MyMod.HostAServer();
-                        //}
                         MyMod.HostMenu();
                     }else if (CustomId == 1)
                     {

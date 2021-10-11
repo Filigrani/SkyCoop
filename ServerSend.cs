@@ -43,7 +43,7 @@ namespace GameServer
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
-                if(Server.clients[i].IsBusy() == true)
+                if (Server.clients[i].IsBusy() == true)
                 {
                     Server.clients[i].udp.SendData(_packet);
                 }
@@ -54,7 +54,7 @@ namespace GameServer
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
-                if(i != SenderId && Server.clients[i].IsBusy() == true)
+                if (i != SenderId && Server.clients[i].IsBusy() == true)
                 {
                     Server.clients[i].udp.SendData(_packet);
                 }
@@ -696,14 +696,18 @@ namespace GameServer
         {
             using (Packet _packet = new Packet((int)ServerPackets.PLAYERSSTATUS))
             {
-                int ReadCount = 1;
-                MyMod.MultiPlayerClientStatus me = new MyMod.MultiPlayerClientStatus();
-                me.m_ID = 0;
-                me.m_Name = MyMod.MyChatName;
-                me.m_Sleep = MyMod.IsSleeping;
-                me.m_Dead = MyMod.IsDead;
+                int ReadCount = 0;
                 List<MyMod.MultiPlayerClientStatus> L = new List<SkyCoop.MyMod.MultiPlayerClientStatus>();
-                L.Add(me);
+                if (Application.isBatchMode == false)
+                {
+                    ReadCount = ReadCount + 1;
+                    MyMod.MultiPlayerClientStatus me = new MyMod.MultiPlayerClientStatus();
+                    me.m_ID = 0;
+                    me.m_Name = MyMod.MyChatName;
+                    me.m_Sleep = MyMod.IsSleeping;
+                    me.m_Dead = MyMod.IsDead;
+                    L.Add(me);
+                }
                 for (int i = 1; i <= Server.MaxPlayers; i++)
                 {
                     if (Server.clients[i].IsBusy() == true)
@@ -1543,6 +1547,37 @@ namespace GameServer
                         SendUDPDataToAllButNotSender(_packet, _From);
                     }else{
                         _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+
+        public static void SLEEPPOSE(int _From, Vector3 xyzui, Quaternion rotation, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.SLEEPPOSE))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(xyzui);
+                    _packet.Write(rotation);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(xyzui);
+                        _packet.Write(rotation);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(xyzui);
+                        _packet.Write(rotation);
                         _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
                     }

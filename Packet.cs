@@ -92,6 +92,7 @@ namespace GameServer
         GOTITEMSLICE,
         VOICECHAT,
         SLICEDBYTES,
+        SLEEPPOSE,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -179,6 +180,7 @@ namespace GameServer
         GOTITEMSLICE,
         VOICECHAT,
         SLICEDBYTES,
+        SLEEPPOSE,
     }
 
     public class Packet : IDisposable

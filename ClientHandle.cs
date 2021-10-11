@@ -208,9 +208,24 @@ namespace SkyCoop
             MyMod.WeatherProxies weather = _packet.ReadWeather();
             if (MyMod.level_name != "Boot" && MyMod.level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null)
             {
+                //Weather wa = GameManager.GetWeatherComponent();
+                //WeatherSaveDataProxy weatherSaveDataProxy = Utils.DeserializeObject<WeatherSaveDataProxy>(weather.m_WeatherProxy);
+                //wa.m_PrevBodyTemp = weatherSaveDataProxy.m_PrevBodyTempProxy;
+                //wa.SetTempHigh(weatherSaveDataProxy.m_TempHighProxy);
+                //wa.SetTempLow(weatherSaveDataProxy.m_TempLowProxy);
+                //if (weatherSaveDataProxy.m_UseMinAirTemperature)
+                //    wa.m_MinAirTemperature = weatherSaveDataProxy.m_MinAirTemperature;
+                //wa.m_LastTimeOfDay = weatherSaveDataProxy.m_LastTimeOfDay;
+                //wa.m_BaseTemperatureAccumulatorForTimeOfDay = weatherSaveDataProxy.m_BaseTemperatureAccumulatorForTimeOfDay;
+                //wa.m_WindchillAccumulatorForTimeOfDay = weatherSaveDataProxy.m_WindchillAccumulatorForTimeOfDay;
+                //wa.m_TemperatureCountForTimeOfDay = weatherSaveDataProxy.m_TemperatureCountForTimeOfDay;
+                //GameManager.GetUniStorm().SetWeatherStage(weatherSaveDataProxy.m_WeatherStageProxy, 0.0f);
+                //GameManager.GetUniStorm().SetElapsedHours(weatherSaveDataProxy.m_UniStormElapsedHoursProxy);
+
                 GameManager.GetWeatherComponent().Deserialize(weather.m_WeatherProxy);
                 GameManager.GetWeatherTransitionComponent().Deserialize(weather.m_WeatherTransitionProxy);
                 GameManager.GetWindComponent().Deserialize(weather.m_WindProxy);
+                //MelonLogger.Msg("Amogus slomal jopu Tod'oo");
             }
         }
         public static void REVIVE(Packet _packet)
@@ -480,7 +495,7 @@ namespace SkyCoop
             MyMod.SaveSlotSync SaveData = _packet.ReadSaveSlot();
             MyMod.RemoveWaitForConnect();
 
-            if (InterfaceManager.IsMainMenuActive() == false)
+            if (InterfaceManager.IsMainMenuEnabled() == false)
             {
                 return;
             }
@@ -912,6 +927,17 @@ namespace SkyCoop
             MyMod.SlicedBytesData got = _packet.ReadSlicedBytes();
             int from = _packet.ReadInt();
             MyMod.AddSlicedBytesData(got, from);
+        }
+        public static void SLEEPPOSE(Packet _packet)
+        {
+            Vector3 Position = _packet.ReadVector3();
+            Quaternion Rotation = _packet.ReadQuaternion();
+            int from = _packet.ReadInt();
+            if (MyMod.playersData[from] != null)
+            {
+                MyMod.playersData[from].m_SleepV3 = Position;
+                MyMod.playersData[from].m_SleepQuat = Rotation;
+            }
         }
     }
 }

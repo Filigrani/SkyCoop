@@ -21,7 +21,7 @@ namespace SkyCoop
         public static bool m_Debug = false;
 
         public static void CustomEventCallback(Packet _pak, int from)
-        {
+        { 
             if (m_Debug)
             {
                 MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[SkyCoop API] ");

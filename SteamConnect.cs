@@ -212,6 +212,11 @@ namespace SkyCoop
                     xpmode = 4;
                 }
 
+                if(MyMod.CustomServerName != "")
+                {
+                    userName = MyMod.CustomServerName;
+                }
+
                 string data = "?sid="+sid+"&name="+userName+"&players="+players+"&slots="+slots+"&xpmode="+xpmode;
 
                 if(MyMod.HadEverPingedMaster == false)

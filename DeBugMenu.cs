@@ -238,9 +238,7 @@ namespace SkyCoop
                     if (MyMod.playersData[0].m_Mimic == false)
                     {
                         MyMod.playersData[0].m_Mimic = true;
-                    }
-                    else
-                    {
+                    }else{
                         MyMod.playersData[0].m_Mimic = false;
                     }
 
@@ -256,7 +254,10 @@ namespace SkyCoop
                         MyMod.playersData[1].m_Levelid = MyMod.levelid;
                         MyMod.playersData[1].m_Position = GameManager.GetPlayerTransform().position;
                         MyMod.playersData[1].m_Rotation = GameManager.GetPlayerTransform().rotation;
-                        Server.clients[1].udp.sid = "Dummy";
+                        MyMod.playersData[1].m_Position = GameManager.GetPlayerTransform().position;
+                        MyMod.playersData[1].m_Rotation = GameManager.GetPlayerTransform().rotation;
+                        Server.clients[1].udp.sid = "11111111111111111";
+                        Server.clients[1].TimeOutTime = 0;
                     }
                 }
                 if (GUI.Button(new Rect(160, 220, 80, 20), "Back"))
@@ -280,6 +281,7 @@ namespace SkyCoop
                     MyMod.ItemsForDebug.Add("GEAR_Stone");
                     MyMod.ItemsForDebug.Add("GEAR_KeroseneLamp");
                     MyMod.ItemsForDebug.Add("GEAR_FlareGun");
+                    MyMod.ItemsForDebug.Add("Book");
                     MyMod.ItemsForDebug.Add("");
                 }
                 if (GUI.Button(new Rect(160, 40, 80, 20), "Next Item"))
