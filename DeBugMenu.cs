@@ -55,28 +55,45 @@ namespace SkyCoop
                     if (stillExists == true && MyMod.DebugLastAnimal != null && MyMod.AdvancedDebugMode == "AnimalsAllStats")
                     {
                         MyMod.AnimalUpdates _AU = MyMod.DebugLastAnimal.GetComponent<MyMod.AnimalUpdates>();
+                        BaseAi _AI = MyMod.DebugLastAnimal.GetComponent<BaseAi>();
 
                         if (_AU != null)
                         {
                             GUI.Label(new Rect(700, 10 + offset * 4, 500, 100), "m_ClientController " + _AU.m_ClientController);
                             GUI.Label(new Rect(700, 10 + offset * 5, 500, 100), "m_ClientControlled " + _AU.m_ClientControlled);
-                            GUI.Label(new Rect(700, 10 + offset * 6, 500, 100), "m_InActive " + _AU.m_InActive);
+                            GUI.Label(new Rect(700, 10 + offset * 6, 500, 100), "m_Inactive " + _AU.m_InActive);
                             GUI.Label(new Rect(700, 10 + offset * 7, 500, 100), "m_Banned " + _AU.m_Banned);
                             GUI.Label(new Rect(700, 10 + offset * 8, 500, 100), "m_DampingIgnore " + _AU.m_DampingIgnore);
                             GUI.Label(new Rect(700, 10 + offset * 9, 500, 100), "NoResponce " + _AU.NoResponce);
-                            GUI.Label(new Rect(700, 10 + offset * 10, 500, 100), "ActiveSelf " + MyMod.DebugLastAnimal.activeSelf);
+                            GUI.Label(new Rect(700, 10 + offset * 10, 500, 100), "Object active " + MyMod.DebugLastAnimal.activeSelf);
+                            GUI.Label(new Rect(700, 10 + offset * 11, 500, 100), "RetakeCooldown " + _AU.ReTakeCoolDown);
+                            GUI.Label(new Rect(700, 10 + offset * 12, 500, 100), "LastFoundPlayer " + _AU.LastFoundPlayer);
+                            GUI.Label(new Rect(700, 10 + offset * 13, 500, 100), "Ai Mode " + _AI.GetAiMode());
+                            GUI.Label(new Rect(700, 10 + offset * 14, 500, 100), "HP " + _AI.m_CurrentHP);
+                            GUI.Label(new Rect(700, 10 + offset * 15, 500, 100), "m_HasEnteredStruggleOnLastAttack " + _AI.m_HasEnteredStruggleOnLastAttack);
+                            if (GameManager.m_PlayerObject != null)
+                            {
+                                GUI.Label(new Rect(700, 10 + offset * 17, 500, 100), "My Distance " + Vector3.Distance(MyMod.DebugLastAnimal.transform.position, GameManager.GetPlayerObject().transform.position));
+                                for (int i = 0; i < MyMod.playersData.Count; i++)
+                                {
+                                    if(MyMod.playersData[i] != null)
+                                    {
+                                        int mult = 18 + i;
+                                        GUI.Label(new Rect(700, 10 + offset * mult, 500, 100), "Player[" + i + "] Distance " + Vector3.Distance(MyMod.DebugLastAnimal.transform.position, MyMod.playersData[i].m_Position));
+                                    }
+                                }
+                            }
                         }
                         else
                         {
-                            GUI.Label(new Rect(700, 10 + offset * 4, 500, 100), "No AnimalUpdates!");
+                            GUI.Label(new Rect(700, 10 + offset * 39, 500, 100), "No AnimalUpdates!");
                         }
                     }
                     if(MyMod.iAmHost == true)
                     {
-                        GUI.Label(new Rect(700, 10 + offset * 11, 500, 100), MyMod.MyChatName+" Ticks: " + MyMod.MyTicksOnScene + " Scene " + MyMod.levelid);
                         for (int i = 0; i < MyMod.MaxPlayers; i++)
                         {
-                            int mult = 12 + i;
+                            int mult = 40 + i;
 
                             if(MyMod.playersData[i].m_Levelid != 0)
                             {

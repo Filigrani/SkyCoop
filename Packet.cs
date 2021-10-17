@@ -93,6 +93,8 @@ namespace GameServer
         VOICECHAT,
         SLICEDBYTES,
         SLEEPPOSE,
+        ANIMALDAMAGE,
+        FIREFUEL,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -181,6 +183,8 @@ namespace GameServer
         VOICECHAT,
         SLICEDBYTES,
         SLEEPPOSE,
+        ANIMALDAMAGE,
+        FIREFUEL,
     }
 
     public class Packet : IDisposable
@@ -594,6 +598,7 @@ namespace GameServer
             Write(obj.m_DuppedSpawns);
             Write(obj.m_DuppedContainers);
             Write(obj.m_PlayersSpawnType);
+            Write(obj.m_FireSync);
         }
         public void Write(MyMod.HarvestableSyncData obj)
         {
@@ -602,13 +607,13 @@ namespace GameServer
         }
         public void Write(MyMod.FireSourcesSync obj)
         {
-            Write(obj.m_Fuel);
             Write(obj.m_Guid);
             Write(obj.m_LevelGUID);
             Write(obj.m_LevelId);
             Write(obj.m_Position);
             Write(obj.m_Rotation);
             Write(obj.m_IsCampfire);
+            Write(obj.m_FuelName);
         }
         public void Write(MyMod.SlicedJsonData obj)
         {
@@ -1112,6 +1117,7 @@ namespace GameServer
             obj.m_DuppedSpawns = ReadBool();
             obj.m_DuppedContainers = ReadBool();
             obj.m_PlayersSpawnType = ReadInt();
+            obj.m_FireSync = ReadInt();
 
             return obj;
         }
@@ -1147,13 +1153,13 @@ namespace GameServer
         public MyMod.FireSourcesSync ReadFire()
         {
             MyMod.FireSourcesSync obj = new MyMod.FireSourcesSync();
-            obj.m_Fuel = ReadFloat();
             obj.m_Guid = ReadString();
             obj.m_LevelGUID = ReadString();
             obj.m_LevelId = ReadInt();
             obj.m_Position = ReadVector3();
             obj.m_Rotation = ReadQuaternion();
             obj.m_IsCampfire = ReadBool();
+            obj.m_FuelName = ReadString();
 
             return obj;
         }

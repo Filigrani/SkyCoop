@@ -355,8 +355,14 @@ namespace GameServer
         public static void ANIMALSYNC(int _fromClient, Packet _packet)
         {
             MyMod.AnimalSync got = _packet.ReadAnimal();
-            MyMod.DoAnimalSync(got);
-            ServerSend.ANIMALSYNC(_fromClient, got, true, got.m_LevelD, got.m_position);
+            int _for = _packet.ReadInt();
+
+            if (_for == 0)
+            {
+                MyMod.DoAnimalSync(got);
+            }else{
+                ServerSend.ANIMALSYNC(_fromClient, got, _for);
+            }
         }
         public static void ANIMALSYNCTRIGG(int _fromClient, Packet _packet)
         {
@@ -802,6 +808,17 @@ namespace GameServer
             MyMod.MayAddFireSources(FireSource);
             ServerSend.FIRE(_fromClient, FireSource, false);
         }
+        public static void FIREFUEL(int _fromClient, Packet _packet)
+        {
+            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            if (FireSource.m_LevelId == MyMod.levelid && FireSource.m_LevelGUID == MyMod.level_guid)
+            {
+                MyMod.AddOtherFuel(FireSource, FireSource.m_FuelName);
+            }
+            
+            ServerSend.FIREFUEL(_fromClient, FireSource, false);
+
+        }
         public static void CUSTOM(int _fromClient, Packet _packet)
         {
             API.CustomEventCallback(_packet, _fromClient);
@@ -836,6 +853,19 @@ namespace GameServer
                 MyMod.playersData[_fromClient].m_SleepQuat = Rotation;
             }
             ServerSend.SLEEPPOSE(_fromClient, Position, Rotation, false);
+        }
+        public static void ANIMALDAMAGE(int _fromClient, Packet _packet)
+        {
+            string guid = _packet.ReadString();
+            float damage = _packet.ReadFloat();
+            int to = _packet.ReadInt();
+
+            if(to == 0)
+            {
+                MyMod.DoAnimalDamage(guid, damage);
+            }else{
+                ServerSend.ANIMALDAMAGE(_fromClient, guid, damage, to);
+            }
         }
     }
 }

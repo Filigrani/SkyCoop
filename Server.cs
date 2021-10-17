@@ -27,7 +27,7 @@ namespace GameServer
             MyMod.MaxPlayers = MaxPlayers;
             Port = _port;
 
-            Console.WriteLine("Starting server...");
+            MelonLoader.MelonLogger.Msg("Starting server...");
             InitializeServerData();
 
             //tcpListener = new TcpListener(IPAddress.Any, Port);
@@ -37,15 +37,15 @@ namespace GameServer
             udpListener = new UdpClient(Port);
             udpListener.BeginReceive(UDPReceiveCallback, null);
 
-            Console.WriteLine($"Server started on port {Port}.");
+            MelonLoader.MelonLogger.Msg($"Server started on port {Port}.");
         }
         public static void StartSteam(int _maxPlayers)
         {
             MaxPlayers = _maxPlayers;
             MyMod.MaxPlayers = MaxPlayers;
-            Console.WriteLine("Starting server...");
+            MelonLoader.MelonLogger.Msg("Starting server...");
             InitializeServerData();
-            Console.WriteLine("[SteamWorks.NET] Server started!");
+            MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Server started!");
             UsingSteamWorks = true;
             MyMod.iAmHost = true;
             MyMod.OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
@@ -60,7 +60,7 @@ namespace GameServer
         {
             TcpClient _client = tcpListener.EndAcceptTcpClient(_result);
             tcpListener.BeginAcceptTcpClient(TCPConnectCallback, null);
-            Console.WriteLine($"Incoming connection from {_client.Client.RemoteEndPoint}...");
+            MelonLoader.MelonLogger.Msg($"Incoming connection from {_client.Client.RemoteEndPoint}...");
 
             for (int i = 1; i <= MaxPlayers; i++)
             {
@@ -71,7 +71,7 @@ namespace GameServer
                 }
             }
 
-            Console.WriteLine($"{_client.Client.RemoteEndPoint} failed to connect: Server full!");
+            MelonLoader.MelonLogger.Msg($"{_client.Client.RemoteEndPoint} failed to connect: Server full!");
         }
 
         private static void UDPReceiveCallback(IAsyncResult _result)
@@ -159,7 +159,7 @@ namespace GameServer
             }
             catch (Exception _ex)
             {
-                Console.WriteLine($"Error receiving UDP data: {_ex}");
+                MelonLoader.MelonLogger.Msg($"Error receiving UDP data: {_ex}");
             }
         }
 
@@ -174,7 +174,7 @@ namespace GameServer
             }
             catch (Exception _ex)
             {
-                Console.WriteLine($"Error sending data to {_clientEndPoint} via UDP: {_ex}");
+                MelonLoader.MelonLogger.Msg($"Error sending data to {_clientEndPoint} via UDP: {_ex}");
             }
         }
         public static void SendP2PData(string _client, Packet _packet)
@@ -265,6 +265,8 @@ namespace GameServer
                 { (int)ClientPackets.VOICECHAT, ServerHandle.VOICECHAT},
                 { (int)ClientPackets.SLICEDBYTES, ServerHandle.SLICEDBYTES},
                 { (int)ClientPackets.SLEEPPOSE, ServerHandle.SLEEPPOSE},
+                { (int)ClientPackets.ANIMALDAMAGE, ServerHandle.ANIMALDAMAGE},
+                { (int)ClientPackets.FIREFUEL, ServerHandle.FIREFUEL},
             };
             Console.WriteLine("Initialized packets.");
         }

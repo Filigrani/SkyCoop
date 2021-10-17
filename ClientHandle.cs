@@ -340,13 +340,9 @@ namespace SkyCoop
         }
         public static void ANIMALSYNC(Packet _packet)
         {
-            if (MyMod.level_name == "Boot" || MyMod.level_name == "Empty")
-            {
-                return;
-            }
-
-            MyMod.AnimalSync obj = _packet.ReadAnimal();
-            MyMod.DoAnimalSync(obj);
+            MyMod.AnimalSync got = _packet.ReadAnimal();
+            int from = _packet.ReadInt();
+            MyMod.DoAnimalSync(got);
         }
 
         public static void ANIMALSYNCTRIGG(Packet _packet)
@@ -660,6 +656,7 @@ namespace SkyCoop
             MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedSpawns: " + MyMod.ServerConfig.m_DuppedSpawns);
             MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedContainers: " + MyMod.ServerConfig.m_DuppedContainers);
             MelonLogger.Msg(ConsoleColor.Blue, "m_PlayersSpawnType: " + MyMod.ServerConfig.m_PlayersSpawnType);
+            MelonLogger.Msg(ConsoleColor.Blue, "m_FireSync: " + MyMod.ServerConfig.m_FireSync);
         }
         public static void STOPCONSUME(Packet _packet)
         {
@@ -900,6 +897,16 @@ namespace SkyCoop
             int from = _packet.ReadInt();
             MyMod.MayAddFireSources(FireSource);
         }
+        public static void FIREFUEL(Packet _packet)
+        {
+            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            if(FireSource.m_LevelId != MyMod.levelid || FireSource.m_LevelGUID != MyMod.level_guid)
+            {
+                return;
+            }
+            int from = _packet.ReadInt();
+            MyMod.AddOtherFuel(FireSource, FireSource.m_FuelName);
+        }
         public static void CUSTOM(Packet _packet)
         {
             API.CustomEventCallback(_packet, -1);
@@ -938,6 +945,12 @@ namespace SkyCoop
                 MyMod.playersData[from].m_SleepV3 = Position;
                 MyMod.playersData[from].m_SleepQuat = Rotation;
             }
+        }
+        public static void ANIMALDAMAGE(Packet _packet)
+        {
+            string guid = _packet.ReadString();
+            float damage = _packet.ReadFloat();
+            MyMod.DoAnimalDamage(guid, damage);
         }
     }
 }

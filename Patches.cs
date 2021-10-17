@@ -713,7 +713,16 @@ namespace SkyCoop
                 return false;
             }
         }
-
+        public static bool GarbadgeFilter(string GearName)
+        {
+            if (GearName == "GEAR_CrowFeather" 
+                || GearName == "GEAR_Stone" 
+                || GearName == "GEAR_Stick")
+            {
+                return true;
+            }
+            return false;
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessInspectablePickupItem")]
         private static class Inventory_Pickup
@@ -725,6 +734,10 @@ namespace SkyCoop
                     MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
                     pickupItem.m_BeenInPlayerInventory = true;
                     if(DuppableGearItem(pickupItem.m_GearName) == true)
+                    {
+                        return;
+                    }
+                    if (GarbadgeFilter(pickupItem.m_GearName))
                     {
                         return;
                     }
@@ -745,6 +758,10 @@ namespace SkyCoop
                     {
                         return;
                     }
+                    if (GarbadgeFilter(pickupItem.m_GearName))
+                    {
+                        return;
+                    }
                     MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, pickupItem.m_InstanceID, true);
                 }
             }
@@ -762,6 +779,10 @@ namespace SkyCoop
                         MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
                         pickupItem.m_BeenInPlayerInventory = true;
                         if (DuppableGearItem(pickupItem.m_GearName) == true)
+                        {
+                            return;
+                        }
+                        if (GarbadgeFilter(pickupItem.m_GearName))
                         {
                             return;
                         }
@@ -1133,61 +1154,86 @@ namespace SkyCoop
             }
         }
 
+        public static void SendDamageAnimal(MyMod.AnimalUpdates au, float damage)
+        {
+            if (MyMod.iAmHost == true)
+            {
+                ServerSend.ANIMALDAMAGE(0, au.gameObject.GetComponent<ObjectGuid>().Get(), damage, au.m_ClientController);
+            }
+            if(MyMod.sendMyPosition == true)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.ANIMALDAMAGE))
+                {
+                    _packet.Write(au.gameObject.GetComponent<ObjectGuid>().Get());
+                    _packet.Write(damage);
+                    _packet.Write(au.m_ClientController);
+                    SendTCPData(_packet);
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(BaseAi), "ApplyDamage", new System.Type[] { typeof(float), typeof(float), typeof(DamageSource), typeof(string) })]
         private static class AI_Hack_Damage
         {
-            internal static bool Prefix(BaseAi __instance)
+            internal static bool Prefix(BaseAi __instance, float damage)
             {
                 MyMod.AnimalUpdates au = __instance.gameObject.GetComponent<MyMod.AnimalUpdates>();
 
-                //if ((MyMod.AnimalsController == true || au.m_ClientController == MyMod.instance.myId))
-                if (MyMod.AnimalsController == true)
+                if ((MyMod.AnimalsController == true && au.m_ClientControlled == false) || au.m_ClientController == MyMod.instance.myId)
                 {
                     return true;
                 }else{
+                    SendDamageAnimal(au, damage);
                     return false;
                 }
             }
         }
 
-        //[HarmonyLib.HarmonyPatch(typeof(ArrowItem), "InflictDamage", new System.Type[] { typeof(GameObject), typeof(float), typeof(bool), typeof(string), typeof(Vector3) })]
-        //private static class ArrowItem_DamageFix
-        //{
-        //    internal static bool Prefix()
-        //    {
-        //        return false;
-        //    }
-        //    internal static BaseAi Postfix(ArrowItem __instance, GameObject victim, float damageScalar, bool stickIn, string collider, Vector3 collisionPoint)
-        //    {
-        //        BaseAi baseAi = (BaseAi)null;
-        //        if (victim.layer == 16)
-        //            baseAi = victim.GetComponent<BaseAi>();
-        //        else if (victim.layer == 27)
-        //            baseAi = victim.transform.GetComponentInParent<BaseAi>();
-        //        if ((UnityEngine.Object)baseAi == (UnityEngine.Object)null)
-        //            return (BaseAi)null;
-        //        LocalizedDamage component = victim.GetComponent<LocalizedDamage>();
-        //        double num = (double)StatsManager.IncrementValue(StatID.SuccessfulHits_Bow);
-        //        float bleedOutMinutes = component.GetBleedOutMinutes(BodyDamage.Weapon.Arrow);
-        //        float damage = __instance.m_VictimDamage * damageScalar * component.GetDamageScale(BodyDamage.Weapon.Arrow);
-        //        if (!baseAi.m_IgnoreCriticalHits && component.RollChanceToKill(BodyDamage.Weapon.Arrow))
-        //            damage = float.PositiveInfinity;
-        //        if (baseAi.GetAiMode() != AiMode.Dead)
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "InflictDamage", new System.Type[] { typeof(GameObject), typeof(float), typeof(bool), typeof(string), typeof(Vector3) })]
+        private static class ArrowItem_DamageFix
+        {
+            internal static bool Prefix()
+            {
+                return false;
+            }
+            internal static void Postfix(ArrowItem __instance, GameObject victim, float damageScalar, bool stickIn, string collider, Vector3 collisionPoint, BaseAi __result)
+            {
+                BaseAi baseAi = (BaseAi)null;
+                if (victim.layer == 16)
+                    baseAi = victim.GetComponent<BaseAi>();
+                else if (victim.layer == 27)
+                    baseAi = victim.transform.GetComponentInParent<BaseAi>();
+                if ((UnityEngine.Object)baseAi == (UnityEngine.Object)null)
+                {
+                    __result = null;
+                    return;
+                }
 
-        //            if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() == null)
-        //            {
-        //                MelonLogger.Msg("I am hit target with bow");
-        //                GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Archery, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-        //            }
-        //            else
-        //            {
-        //                MelonLogger.Msg("Other player hit targer with bow");
-        //            }
-        //        baseAi.SetupDamageForAnim(collisionPoint, GameManager.GetPlayerTransform().position, component);
-        //        baseAi.ApplyDamage(damage, !stickIn ? 0.0f : bleedOutMinutes, DamageSource.Player, collider);
-        //        return baseAi;
-        //    }
-        //}
+                LocalizedDamage component = victim.GetComponent<LocalizedDamage>();
+                double num = (double)StatsManager.IncrementValue(StatID.SuccessfulHits_Bow);
+                float bleedOutMinutes = component.GetBleedOutMinutes(BodyDamage.Weapon.Arrow);
+                float damage = __instance.m_VictimDamage * damageScalar * component.GetDamageScale(BodyDamage.Weapon.Arrow);
+                if (!baseAi.m_IgnoreCriticalHits && component.RollChanceToKill(BodyDamage.Weapon.Arrow))
+                {
+                    damage = float.PositiveInfinity;
+                }
+                    
+                if (baseAi.GetAiMode() != AiMode.Dead)
+                {
+                    if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() == null)
+                    {
+                        MelonLogger.Msg("I am hit target with bow");
+                        GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Archery, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+                    }else{
+                        MelonLogger.Msg("Other player hit targer with bow");
+                    }
+                }
+                baseAi.SetupDamageForAnim(collisionPoint, GameManager.GetPlayerTransform().position, component);
+                baseAi.ApplyDamage(damage, !stickIn ? 0.0f : bleedOutMinutes, DamageSource.Player, collider);
+                __result = baseAi;
+                return;
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(CarryableBody), "Update")]
         public class CarryableBody_Vzlom_Djopi
         {
@@ -1743,6 +1789,13 @@ namespace SkyCoop
                         }
                     }
                 }
+
+                if(breakGuid == "" && breakParentGuid == "")
+                {
+                    MelonLogger.Msg("Deny listing that furn, cause have not any GUIDs, so it should be duppable");
+                    return;
+                }
+
                 MyMod.OnFurnitureDestroyed(breakGuid, breakParentGuid, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
             }
         }
@@ -1818,116 +1871,116 @@ namespace SkyCoop
 
         public static void SaveBrokenFurtiture(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][BrokenFurnitureSync] Saving...");
+            //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Saving...");
             MyMod.BrokenFurnitureSync[] saveProxy = MyMod.BrokenFurniture.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_furns", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][BrokenFurnitureSync] Successfully!");
+                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][BrokenFurnitureSync] Fail!");
+                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Fail!");
             }
         }
         public static void SavePickedGears(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][PickedGearSync] Saving...");
+            //MelonLogger.Msg("[Saving][PickedGearSync] Saving...");
             MyMod.PickedGearSync[] saveProxy = MyMod.PickedGears.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_pickedgears", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][PickedGearSync] Successfully!");
+                //MelonLogger.Msg("[Saving][PickedGearSync] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][PickedGearSync] Fail!");
+                //MelonLogger.Msg("[Saving][PickedGearSync] Fail!");
             }
         }
 
         public static void SaveDeployedRopes(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][ClimbingRopeSync] Saving...");
+            //MelonLogger.Msg("[Saving][ClimbingRopeSync] Saving...");
             MyMod.ClimbingRopeSync[] saveProxy = MyMod.DeployedRopes.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_ropes", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][ClimbingRopeSync] Successfully!");
+                //MelonLogger.Msg("[Saving][ClimbingRopeSync] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][ClimbingRopeSync] Fail!");
+                //MelonLogger.Msg("[Saving][ClimbingRopeSync] Fail!");
             }
         }
 
         public static void SaveLootedBoxes(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][LootedContainers] Saving...");
+            //MelonLogger.Msg("[Saving][LootedContainers] Saving...");
             MyMod.ContainerOpenSync[] saveProxy = MyMod.LootedContainers.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_containers", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][LootedContainers] Successfully!");
+                //MelonLogger.Msg("[Saving][LootedContainers] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][LootedContainers] Fail!");
+                //MelonLogger.Msg("[Saving][LootedContainers] Fail!");
             }
         }
 
         public static void SaveServerConfig(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][ServerConfig] Saving...");
+            //MelonLogger.Msg("[Saving][ServerConfig] Saving...");
             if (MyMod.sendMyPosition == true)
             {
-                MelonLogger.Msg("[Saving][ServerConfig] You on server being client, not need save this.");
+                //MelonLogger.Msg("[Saving][ServerConfig] You on server being client, not need save this.");
                 return;
             }
             string data = JSON.Dump(MyMod.ServerConfig);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_cfg", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][ServerConfig] Successfully!");
+                //MelonLogger.Msg("[Saving][ServerConfig] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][ServerConfig] Fail!");
+                //MelonLogger.Msg("[Saving][ServerConfig] Fail!");
             }
         }
 
         public static void SavePlants(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][HarvestableSyncData] Saving...");
+            //MelonLogger.Msg("[Saving][HarvestableSyncData] Saving...");
             string[] saveProxy = MyMod.HarvestedPlants.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_plants", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][HarvestableSyncData] Successfully!");
+                //MelonLogger.Msg("[Saving][HarvestableSyncData] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][HarvestableSyncData] Fail!");
+                //MelonLogger.Msg("[Saving][HarvestableSyncData] Fail!");
             }
         }
 
         public static void SaveSnowShelters(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][SnowShelters] Saving...");
+            //MelonLogger.Msg("[Saving][SnowShelters] Saving...");
             MyMod.ShowShelterByOther[] saveProxy = MyMod.ShowSheltersBuilded.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_shelters", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][SnowShelters] Successfully!");
+                //MelonLogger.Msg("[Saving][SnowShelters] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][SnowShelters] Fail!");
+                //MelonLogger.Msg("[Saving][SnowShelters] Fail!");
             }
         }
         public static void SaveMPDeath(SaveSlotType gameMode, string name)
         {
-            MelonLogger.Msg("[Saving][MultiplayerDeath] Saving...");
+            //MelonLogger.Msg("[Saving][MultiplayerDeath] Saving...");
             bool[] saveProxy = { MyMod.IsDead };
             string data = JSON.Dump(saveProxy);
 
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_death", data);
             if (ok == true)
             {
-                MelonLogger.Msg("[Saving][MultiplayerDeath] Successfully!");
+                //MelonLogger.Msg("[Saving][MultiplayerDeath] Successfully!");
             }else{
-                MelonLogger.Msg("[Saving][MultiplayerDeath] Fail!");
+                //MelonLogger.Msg("[Saving][MultiplayerDeath] Fail!");
             }
         }
 
@@ -1949,7 +2002,7 @@ namespace SkyCoop
 
         public static void LoadBrokenFurtiture(string name)
         {
-            MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loading...");
+            //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_furns");
             if (data != null)
             {
@@ -1964,16 +2017,16 @@ namespace SkyCoop
                         MyMod.BrokenFurniture.Add(ToAdd);
                     }
                 }
-                MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loaded Entries: " + loadedData.Count);
-                MelonLogger.Msg("[Saving][BrokenFurnitureSync] Total Entries: " + MyMod.BrokenFurniture.Count);
+                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loaded Entries: " + loadedData.Count);
+                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Total Entries: " + MyMod.BrokenFurniture.Count);
             }else{
-                MelonLogger.Msg("[Saving][BrokenFurnitureSync] No saves found!");
+                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] No saves found!");
             }
         }
 
         public static void LoadPickedGears(string name)
         {
-            MelonLogger.Msg("[Saving][PickedGearSync] Loading...");
+            //MelonLogger.Msg("[Saving][PickedGearSync] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_pickedgears");
             if (data != null)
             {
@@ -1988,16 +2041,16 @@ namespace SkyCoop
                         MyMod.PickedGears.Add(ToAdd);
                     }
                 }
-                MelonLogger.Msg("[Saving][PickedGearSync] Loaded Entries: " + loadedData.Count);
-                MelonLogger.Msg("[Saving][PickedGearSync] Total Entries: " + MyMod.PickedGears.Count);
+                //MelonLogger.Msg("[Saving][PickedGearSync] Loaded Entries: " + loadedData.Count);
+                //MelonLogger.Msg("[Saving][PickedGearSync] Total Entries: " + MyMod.PickedGears.Count);
             }else{
-                MelonLogger.Msg("[Saving][PickedGearSync] No saves found!");
+                //MelonLogger.Msg("[Saving][PickedGearSync] No saves found!");
             }
         }
 
         public static void LoadDeployedRopes(string name)
         {
-            MelonLogger.Msg("[Saving][ClimbingRopeSync] Loading...");
+            //MelonLogger.Msg("[Saving][ClimbingRopeSync] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_ropes");
             if (data != null)
             {
@@ -2012,16 +2065,16 @@ namespace SkyCoop
                         MyMod.DeployedRopes.Add(ToAdd);
                     }
                 }
-                MelonLogger.Msg("[Saving][ClimbingRopeSync] Loaded Entries: " + loadedData.Count);
-                MelonLogger.Msg("[Saving][ClimbingRopeSync] Total Entries: " + MyMod.DeployedRopes.Count);
+                //MelonLogger.Msg("[Saving][ClimbingRopeSync] Loaded Entries: " + loadedData.Count);
+                //MelonLogger.Msg("[Saving][ClimbingRopeSync] Total Entries: " + MyMod.DeployedRopes.Count);
             }else{
-                MelonLogger.Msg("[Saving][ClimbingRopeSync] No saves found!");
+                //MelonLogger.Msg("[Saving][ClimbingRopeSync] No saves found!");
             }
         }
 
         public static void LoadLootedBoxes(string name)
         {
-            MelonLogger.Msg("[Saving][LootedContainers] Loading...");
+            //MelonLogger.Msg("[Saving][LootedContainers] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_containers");
             if (data != null)
             {
@@ -2036,16 +2089,16 @@ namespace SkyCoop
                         MyMod.LootedContainers.Add(ToAdd);
                     }
                 }
-                MelonLogger.Msg("[Saving][LootedContainers] Loaded Entries: " + loadedData.Count);
-                MelonLogger.Msg("[Saving][LootedContainers] Total Entries: " + MyMod.LootedContainers.Count);
+                //MelonLogger.Msg("[Saving][LootedContainers] Loaded Entries: " + loadedData.Count);
+                //MelonLogger.Msg("[Saving][LootedContainers] Total Entries: " + MyMod.LootedContainers.Count);
             }else{
-                MelonLogger.Msg("[Saving][LootedContainers] No saves found!");
+                //MelonLogger.Msg("[Saving][LootedContainers] No saves found!");
             }
         }
 
         public static void LoadPlants(string name)
         {
-            MelonLogger.Msg("[Saving][HarvestableSyncData] Loading...");
+            //MelonLogger.Msg("[Saving][HarvestableSyncData] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_plants");
             if (data != null)
             {
@@ -2060,16 +2113,16 @@ namespace SkyCoop
                         MyMod.HarvestedPlants.Add(ToAdd);
                     }
                 }
-                MelonLogger.Msg("[Saving][HarvestableSyncData] Loaded Entries: " + loadedData.Count);
-                MelonLogger.Msg("[Saving][HarvestableSyncData] Total Entries: " + MyMod.HarvestedPlants.Count);
+                //MelonLogger.Msg("[Saving][HarvestableSyncData] Loaded Entries: " + loadedData.Count);
+                //MelonLogger.Msg("[Saving][HarvestableSyncData] Total Entries: " + MyMod.HarvestedPlants.Count);
             }else{
-                MelonLogger.Msg("[Saving][HarvestableSyncData] No saves found!");
+                //MelonLogger.Msg("[Saving][HarvestableSyncData] No saves found!");
             }
         }
 
         public static void LoadSnowShelters(string name)
         {
-            MelonLogger.Msg("[Saving][SnowShelters] Loading...");
+            //MelonLogger.Msg("[Saving][SnowShelters] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_shelters");
             if (data != null)
             {
@@ -2084,20 +2137,20 @@ namespace SkyCoop
                         MyMod.ShowSheltersBuilded.Add(ToAdd);
                     }
                 }
-                MelonLogger.Msg("[Saving][SnowShelters] Loaded Entries: " + loadedData.Count);
-                MelonLogger.Msg("[Saving][SnowShelters] Total Entries: " + MyMod.ShowSheltersBuilded.Count);
+                //MelonLogger.Msg("[Saving][SnowShelters] Loaded Entries: " + loadedData.Count);
+                //MelonLogger.Msg("[Saving][SnowShelters] Total Entries: " + MyMod.ShowSheltersBuilded.Count);
             }else{
-                MelonLogger.Msg("[Saving][SnowShelters] No saves found!");
+                //MelonLogger.Msg("[Saving][SnowShelters] No saves found!");
             }
         }
 
         public static void LoadServerConfig(string name)
         {
-            MelonLogger.Msg("[Saving][ServerConfig] Loading...");
+            //MelonLogger.Msg("[Saving][ServerConfig] Loading...");
 
             if(MyMod.sendMyPosition == true)
             {
-                MelonLogger.Msg("[Saving][ServerConfig] You on server being client, not need load this.");
+                //MelonLogger.Msg("[Saving][ServerConfig] You on server being client, not need load this.");
                 return;
             }
 
@@ -2106,23 +2159,23 @@ namespace SkyCoop
             {
                 MyMod.ServerConfigData saveProxy = JSON.Load(data).Make<MyMod.ServerConfigData>();
                 MyMod.ServerConfig = saveProxy;
-                MelonLogger.Msg("[Saving][ServerConfig] m_FastConsumption: " + saveProxy.m_FastConsumption);
-                MelonLogger.Msg("[Saving][ServerConfig] m_DuppedSpawns: " + saveProxy.m_DuppedSpawns);
+                //MelonLogger.Msg("[Saving][ServerConfig] m_FastConsumption: " + saveProxy.m_FastConsumption);
+                //MelonLogger.Msg("[Saving][ServerConfig] m_DuppedSpawns: " + saveProxy.m_DuppedSpawns);
             }else{
-                MelonLogger.Msg("[Saving][ServerConfig] No saves found!");
+                //MelonLogger.Msg("[Saving][ServerConfig] No saves found!");
             }
         }
         public static void LoadMPDeath(string name)
         {
-            MelonLogger.Msg("[Saving][MultiplayerDeath] Loading...");
+            //MelonLogger.Msg("[Saving][MultiplayerDeath] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_death");
             if (data != null)
             {
                 bool[] saveProxy = JSON.Load(data).Make<bool[]>();
-                MelonLogger.Msg("[Saving][MultiplayerDeath] IsDead: " + saveProxy[0]);
+                //MelonLogger.Msg("[Saving][MultiplayerDeath] IsDead: " + saveProxy[0]);
                 MyMod.IsDead = saveProxy[0];
             }else{
-                MelonLogger.Msg("[Saving][MultiplayerDeath] No saves found!");
+                //MelonLogger.Msg("[Saving][MultiplayerDeath] No saves found!");
             }
         }
 
@@ -3079,7 +3132,7 @@ namespace SkyCoop
                         }
                         else if (PAction == "Revive")
                         {
-                            bool HaveMedkit = true; //GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
+                            bool HaveMedkit = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
 
                             if (HaveMedkit)
                             {
@@ -3580,12 +3633,18 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(Fire), "AddFuel")]
         public static class Fire_AddFuel
         {
-            public static void Postfix(Fire __instance)
+            public static void Postfix(Fire __instance, GearItem fuel)
             {
                 if(__instance.m_StartedByPlayer == false)
                 {
                     MelonLogger.Msg("Assign firesource of other player to myself");
                     __instance.m_StartedByPlayer = true;
+                    MyMod.SendMyFire(__instance);
+                }
+                if (__instance.m_StartedByPlayer == true)
+                {
+                    MelonLogger.Msg("Added fuel to fire " + fuel.m_GearName);
+                    MyMod.SendMyFire(__instance, fuel.m_GearName);
                 }
             }
         }
@@ -3971,6 +4030,151 @@ namespace SkyCoop
                 {
                     GameManager.m_IsPaused = false;
                 }
+            }
+        }
+        //[HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")]
+        //public static class BaseAiManager_Serialize
+        //{
+        //    public static void Prefix()
+        //    {
+        //        MelonLogger.Msg("[BaseAiManager][Serialize] Started");
+        //        BaseAiSaveList baseAiSaveList = new BaseAiSaveList();
+        //        baseAiSaveList.m_SerializedBaseAI.Clear();
+        //        for (int i = 0; i < BaseAiManager.m_BaseAis.Count; i++)
+        //        {
+        //            MelonLogger.Msg("[BaseAiManager][Serialize] Index "+ i);
+        //            BaseAi baseAi = BaseAiManager.m_BaseAis.get_Item(i);
+        //            if (baseAi && baseAi.GetAiMode() != AiMode.Dead && !(baseAi.GetSpawnRegionParent() != null) && (!baseAi.m_AiBear || ExperienceModeManager.GetCurrentExperienceModeType() != ExperienceModeType.ChallengeHunted) && (!baseAi.GetComponent<DisableObjectForXPMode>() || !baseAi.GetComponent<DisableObjectForXPMode>().ShouldDisableForCurrentMode()) && (!baseAi.GetComponent<EnableObjectForXPMode>() || !baseAi.GetComponent<EnableObjectForXPMode>().ShouldDisableForCurrentMode()) && (baseAi.gameObject.activeSelf || !baseAi.GetComponent<MissionObjectIdentifier>() || !baseAi.GetComponent<MissionObjectIdentifier>().m_BaseAiOnlySerializeIfActive))
+        //            {
+        //                BaseAiData baseAiData = baseAi.GetDeferredDeserializeData();
+        //                MelonLogger.Msg("[BaseAiManager][Serialize] Index " + i);
+        //                if (baseAiData == null)
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Null! Making new one");
+        //                    baseAiData = new BaseAiData();
+        //                    baseAiData.m_Position = baseAi.transform.position;
+        //                    baseAiData.m_Rotation = baseAi.transform.rotation;
+        //                    baseAiData.m_PrefabName = baseAi.name;
+        //                    baseAiData.m_BaseAiSerialized = baseAi.Serialize();
+        //                    baseAiData.m_Guid = Utils.GetGuidFromGameObject(baseAi.gameObject);
+        //                }else{
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Not null");
+        //                }
+        //                baseAiSaveList.m_SerializedBaseAI.Add(baseAiData);
+        //            }else{
+        //                if(baseAi == null)
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 1");
+        //                }
+        //                else if (baseAi.GetAiMode() == AiMode.Dead)
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 2");
+        //                }
+        //                else if (baseAi.GetSpawnRegionParent() != null)
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 3");
+        //                }
+        //                else if((baseAi.m_AiBear || ExperienceModeManager.GetCurrentExperienceModeType() == ExperienceModeType.ChallengeHunted))
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 4");
+        //                }
+        //                else if((baseAi.GetComponent<DisableObjectForXPMode>() || baseAi.GetComponent<DisableObjectForXPMode>().ShouldDisableForCurrentMode()))
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 5");
+        //                }
+        //                else if((baseAi.GetComponent<EnableObjectForXPMode>() || baseAi.GetComponent<EnableObjectForXPMode>().ShouldDisableForCurrentMode()))
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 6");
+        //                }
+        //                else if ((baseAi.gameObject.activeSelf == false || !baseAi.GetComponent<MissionObjectIdentifier>() || baseAi.GetComponent<MissionObjectIdentifier>().m_BaseAiOnlySerializeIfActive))
+        //                {
+        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 7");
+        //                }
+        //            }
+        //        }
+        //        MelonLogger.Msg("[BaseAiManager][Serialize] Final result " + Utils.SerializeObject(baseAiSaveList));
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(BaseAi), "Serialize")]
+        //public static class BaseAiManager_Serialize
+        //{
+        //    public static void Postfix(string __result)
+        //    {
+        //        MelonLogger.Msg("[BaseAi] Serialize result " + __result);
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawnRegionCloseEnoughForSpawning")]
+        public static class SpawnRegion_SpawnRegionCloseEnoughForSpawning
+        {
+            public static void Postfix(SpawnRegion __instance, bool __result)
+            {
+                float maxDis = __instance.m_Radius + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance;
+                bool AllPlayersAllowsIt = MyMod.CheckDistanceAgnistEveryPlayer(__instance.m_Center, maxDis, true);
+
+                if (AllPlayersAllowsIt == true)
+                {
+                    __result = true;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawnPositionOnScreenTooClose")]
+        public static class SpawnRegion_SpawnPositionOnScreenTooClose
+        {
+            public static void Postfix(SpawnRegion __instance, Vector3 spawnPos, bool __result)
+            {
+                bool AllPlayersAllowsIt = MyMod.CheckDistanceAgnistEveryPlayer(spawnPos, GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance, true);
+                if (AllPlayersAllowsIt == true)
+                {
+                    __result = true;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "RemoveActiveSpawns")]
+        public static class SpawnRegion_RemoveActiveSpawns
+        {
+            public static bool Prefix(SpawnRegion __instance, int numToDeActivate, WildlifeMode wildlifeMode, bool isAdjustingOtherWildlifeMode)
+            {
+                for (int index = 0; index < __instance.m_Spawns.Count && numToDeActivate != 0; ++index)
+                {
+                    if (__instance.m_Spawns.get_Item(index) && __instance.m_Spawns.get_Item(index).gameObject.activeSelf)
+                    {
+                        GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns.get_Item(index).m_PackAnimal, false);
+                        if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode)) && (__instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Flee && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Dead))
+                        {
+                            __instance.m_Spawns.get_Item(index).SetAiMode(AiMode.Flee);
+                        }
+                        Vector3 pos = __instance.m_Spawns.get_Item(index).m_CachedTransform.position;
+
+                        bool AllPlayersAllowsIt = false;
+
+                        //150 because GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance
+                        if (MyMod.CheckDistanceAgnistEveryPlayer(pos, 150, false))
+                        {
+                            AllPlayersAllowsIt = true;
+                        }else{
+                            //MelonLogger.Msg("Want to unload spawn area but can't cause any other player there");
+                        }
+                        if(MyMod.InOnline() == false)
+                        {
+                            AllPlayersAllowsIt = false;
+                        }
+
+                        if (AllPlayersAllowsIt == true && (Utils.DistanceToMainCamera(pos) >= GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance && (!Utils.PositionIsOnscreen(pos) || (double)Utils.DistanceToMainCamera(pos) >= (double)GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance) && !Utils.PositionIsInLOSOfPlayer(pos)))
+                        {
+                            if (isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode))
+                            {
+                                __instance.m_Spawns.get_Item(index).Despawn();
+                                --numToDeActivate;
+                            }
+                            else if ((!__instance.m_Spawns.get_Item(index).m_CurrentTarget || !__instance.m_Spawns.get_Item(index).m_CurrentTarget.IsPlayer()) && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Feeding && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Sleep && !__instance.m_Spawns.get_Item(index).IsBleedingOut() && (!__instance.m_Spawns.get_Item(index).m_AiWolf || __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.WanderPaused))
+                            {
+                                __instance.m_Spawns.get_Item(index).Despawn();
+                                numToDeActivate--;
+                            }
+                        }
+                    }
+                }
+                return false;
             }
         }
         //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]

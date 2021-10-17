@@ -342,26 +342,35 @@ namespace GameServer
             }
         }
 
-        public static void SendOnlyToClosePlayers(Packet _packet, int _From, int LevelID, Vector3 V3)
-        {
-            _packet.WriteLength();
-            for (int i = 1; i <= Server.MaxPlayers; i++)
-            {
-                float maxDis = MyMod.MaxAniamlsSyncDistance;
-                if (i != _From && Server.clients[i].IsBusy() == true && MyMod.players[i] != null && MyMod.playersData[i] != null && MyMod.playersData[i].m_Levelid == LevelID && Vector3.Distance(MyMod.playersData[i].m_Position, V3) < maxDis)
-                {
-                    Server.clients[i].udp.SendData(_packet);
-                }
-            }
-        }
+        //public static void SendOnlyToClosePlayers(Packet _packet, int _From, int LevelID, Vector3 V3)
+        //{
+        //    _packet.WriteLength();
+        //    for (int i = 1; i <= Server.MaxPlayers; i++)
+        //    {
+        //        float maxDis = MyMod.MaxAniamlsSyncDistance;
+        //        if (i != _From && Server.clients[i].IsBusy() == true && MyMod.players[i] != null && MyMod.playersData[i] != null && MyMod.playersData[i].m_Levelid == LevelID && Vector3.Distance(MyMod.playersData[i].m_Position, V3) < maxDis)
+        //        {
+        //            Server.clients[i].udp.SendData(_packet);
+        //        }
+        //    }
+        //}
 
-        public static void ANIMALSYNC(int _From, MyMod.AnimalSync _msg, bool toEveryOne, int LevelID, Vector3 AnimalV3)
+        //public static void ANIMALSYNC(int _From, MyMod.AnimalSync _msg, bool toEveryOne, int LevelID, Vector3 AnimalV3)
+        //{
+        //    using (Packet _packet = new Packet((int)ServerPackets.ANIMALSYNC))
+        //    {
+        //        _packet.Write(_msg);
+        //        _packet.Write(_From);
+        //        SendOnlyToClosePlayers(_packet, _From, LevelID, AnimalV3);
+        //    }
+        //}
+        public static void ANIMALSYNC(int _From, MyMod.AnimalSync _msg, int OnlyFor)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALSYNC))
             {
                 _packet.Write(_msg);
                 _packet.Write(_From);
-                SendOnlyToClosePlayers(_packet, _From, LevelID, AnimalV3);
+                SendUDPData(OnlyFor, _packet);
             }
         }
         public static void DARKWALKERREADY(int _toClient, bool _msg)
@@ -1553,6 +1562,33 @@ namespace GameServer
                 }
             }
         }
+        public static void FIREFUEL(int _From, MyMod.FireSourcesSync _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.FIREFUEL))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
 
         public static void SLEEPPOSE(int _From, Vector3 xyzui, Quaternion rotation, bool toEveryOne, int OnlyFor = -1)
         {
@@ -1651,6 +1687,19 @@ namespace GameServer
                 }
             }
         }
+
+        public static void ANIMALDAMAGE(int _From, string guid, float damage, int to)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ANIMALDAMAGE))
+            {
+                _packet.Write(guid);
+                _packet.Write(damage);
+                _packet.Write(to);
+                _packet.Write(_From);
+                SendUDPData(to, _packet);
+            }
+        }
+
         public static void SLICEDBYTES(int _From, MyMod.SlicedBytesData _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SLICEDBYTES))

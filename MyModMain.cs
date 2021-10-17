@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod"; 
             public const string Author = "Filigrani";
             public const string Company = null; 
-            public const string Version = "0.6.1";
+            public const string Version = "0.6.1b2";
             public const string DownloadLink = null;
         }
 
@@ -73,7 +73,6 @@ namespace SkyCoop
         public static Vector3 LastRecivedShatalkerVector = new Vector3(0, 0, 0);
         public static Vector3 LastRecivedOtherPlayerVector = new Vector3(0, 0, 0);
         public static Quaternion LastRecivedOtherPlayerQuatration = new Quaternion(0, 0, 0, 0);
-        public static bool ShiftPressed = false;
         public static bool NeedSyncTime = false;
         public static bool LightSource = false;
         public static bool PreviousLightSource = false;
@@ -173,6 +172,7 @@ namespace SkyCoop
         public static List<PickedGearSync> RecentlyPickedGears = new List<PickedGearSync>();
         public static List<ClimbingRopeSync> DeployedRopes = new List<ClimbingRopeSync>();
         public static List<ContainerOpenSync> LootedContainers = new List<ContainerOpenSync>();
+        public static Dictionary<string, Dictionary<string, string>> LootedContainersNew = new Dictionary<string, Dictionary<string, string>>();
         public static List<string> HarvestedPlants = new List<string>();
         public static List<ShowShelterByOther> ShowSheltersBuilded = new List<ShowShelterByOther>();
         public static bool IsDrinking = false;
@@ -407,6 +407,7 @@ namespace SkyCoop
             public bool m_DuppedSpawns = false;
             public bool m_DuppedContainers = false;
             public int m_PlayersSpawnType = 0;
+            public int m_FireSync = 2;
         }
         public class SlicedJsonData
         {
@@ -748,6 +749,7 @@ namespace SkyCoop
             public float m_Fuel = 0;
             public int m_RemoveIn = 0;
             public bool m_IsCampfire = false;
+            public string m_FuelName = "";
 
             public bool Equals(FireSourcesSync other)
             {
@@ -1275,7 +1277,11 @@ namespace SkyCoop
 
         public static void DestoryPickedGears()
         {
-            if(ServerConfig.m_DuppedSpawns == true)
+            MelonLogger.Msg("DestoryPickedGears called");
+            //float d = Time.time;
+            //MelonLogger.Msg("DestoryPickedGears Time before "+ d);
+
+            if (ServerConfig.m_DuppedSpawns == true)
             {
                 return;
             }
@@ -1310,10 +1316,13 @@ namespace SkyCoop
                     }
                 }
             }
+            //float r = Time.time - d;
+            //MelonLogger.Msg("[DestoryPickedGears] Time after: " + Time.time + " Result " + r + "ms");
         }
 
         public static void UpdateDeployedRopes()
         {
+            //MelonLogger.Msg("UpdateDeployedRopes called");
             for (int i = 0; i < RopeAnchorPoint.m_RopeAnchorPoints.Count; i++)
             {
                 RopeAnchorPoint rope = RopeAnchorPoint.m_RopeAnchorPoints.get_Item(i);
@@ -1444,6 +1453,7 @@ namespace SkyCoop
 
         public static void RemoveHarvastedPlants()
         {
+            //MelonLogger.Msg("RemoveHarvastedPlants called");
             if (HarvestableManager.m_Harvestables.Count == 0 || HarvestedPlants.Count == 0)
             {
                 return;
@@ -1530,6 +1540,7 @@ namespace SkyCoop
 
         public static void ApplyLootedContainers()
         {
+            //MelonLogger.Msg("ApplyLootedContainers called");
             if(ServerConfig.m_DuppedContainers == true)
             {
                 return;
@@ -1734,6 +1745,7 @@ namespace SkyCoop
 
         public static void LoadAllSnowSheltersByOther()
         {
+            //MelonLogger.Msg("LoadAllSnowSheltersByOther called");
             for (int i = 0; i < ShowSheltersBuilded.Count; i++)
             {
                 ShowShelterByOther shelter = ShowSheltersBuilded[i];
@@ -2269,28 +2281,28 @@ namespace SkyCoop
             {
                 GameObject m_Player = m_Animer.gameObject;
                 int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                MelonLogger.Msg("Player "+m_ID +" Picked up something");
+                //MelonLogger.Msg("Player "+m_ID +" Picked up something");
 
                 if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
                 {
                     return;
                 }
-                MelonLogger.Msg("You on same scene with  " + m_ID + " to play pickup");
+                //MelonLogger.Msg("You on same scene with  " + m_ID + " to play pickup");
 
                 string m_AnimState = playersData[m_ID].m_AnimState;
                 int armTagHash = m_Animer.GetCurrentAnimatorStateInfo(3).tagHash;
                 int armNeededTagHash = Animator.StringToHash("Pickup");
-                MelonLogger.Msg("Current state of  " + m_ID + " is "+ m_AnimState);
-                MelonLogger.Msg("ArmTagHash  " + armTagHash + " TagHash we need " + armNeededTagHash);
+                //MelonLogger.Msg("Current state of  " + m_ID + " is "+ m_AnimState);
+                //MelonLogger.Msg("ArmTagHash  " + armTagHash + " TagHash we need " + armNeededTagHash);
                 if (armTagHash != armNeededTagHash)
                 {
                     if (m_AnimState != "Ctrl")
                     {
                         m_Animer.Play("DoPickup", 3);
-                        MelonLogger.Msg("Playing DoPickup");
+                        //MelonLogger.Msg("Playing DoPickup");
                     }else{
                         m_Animer.Play("DoSitPickup", 3);
-                        MelonLogger.Msg("Playing DoSitPickup");
+                        //MelonLogger.Msg("Playing DoSitPickup");
                     }
                 }
             }
@@ -3124,6 +3136,61 @@ namespace SkyCoop
                 }
             }
 
+            public void SetupMapMarker()
+            {
+                int Markers = hand_l.transform.GetChild(2).GetChild(0).childCount;
+                Transform MakersRoot = hand_l.transform.GetChild(2).GetChild(0);
+                for (int i = 0; i < Markers; i++)
+                {
+                    MakersRoot.GetChild(i).gameObject.SetActive(false);
+                }
+                GameRegion Reg = RegionManager.GetCurrentRegion();
+                if(Reg == GameRegion.LakeRegion)
+                {
+                    MakersRoot.GetChild(0).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.RuralRegion)
+                {
+                    MakersRoot.GetChild(1).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.RiverValleyRegion)
+                {
+                    MakersRoot.GetChild(3).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.CoastalRegion)
+                {
+                    MakersRoot.GetChild(4).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.WhalingStationRegion)
+                {
+                    MakersRoot.GetChild(6).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.TracksRegion)
+                {
+                    MakersRoot.GetChild(7).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.MarshRegion)
+                {
+                    MakersRoot.GetChild(8).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.MountainTownRegion)
+                {
+                    MakersRoot.GetChild(9).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.MarshRegion)
+                {
+                    MakersRoot.GetChild(10).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.CrashMountainRegion)
+                {
+                    MakersRoot.GetChild(11).gameObject.SetActive(true);
+                }
+                if (Reg == GameRegion.AshCanyonRegion)
+                {
+                    MakersRoot.GetChild(12).gameObject.SetActive(true);
+                }
+            }
+
             public void UpdateHeldItem()
             {
                 //Flare
@@ -3202,6 +3269,8 @@ namespace SkyCoop
                     if (m_HoldingItem == "Map")
                     {
                         hand_l.transform.GetChild(2).gameObject.SetActive(true);
+                        SetupMapMarker();
+
                     }
                     if (m_HoldingItem == "GEAR_FlareGun")
                     {
@@ -3631,9 +3700,11 @@ namespace SkyCoop
 
         public static void DamageByBullet(float damage)
         {
-            GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.Player);
+            GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
             GameManager.GetBloodLossComponent().BloodLossStart("OtherPlayer", true, AfflictionOptions.PlayFX);
-            GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothing(damage);
+            var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
+            GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothing(clothingRNG);
+
             GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Voice.Priority.Critical, PlayerVoice.Options.None);
 
             Transform V3 = GameManager.GetPlayerTransform();
@@ -3744,20 +3815,19 @@ namespace SkyCoop
 
             //for (int i = 0; i < Regions.Count; i++)
             //{
-            //    if (Regions[i] != null)
+            //    if (Regions.get_Item(i) != null)
             //    {
-            //        SpawnRegion region = Regions[i];
+            //        SpawnRegion region = Regions.get_Item(i);
             //        region.SetActive(spawn);
             //    }
             //}
 
-            if (spawn == true)
-            {
-                //MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been activated");
-            }
-            else {
-                //MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been deactivated");
-            }
+            //if (spawn == true)
+            //{
+            //    MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been activated");
+            //}else{
+            //    MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been deactivated");
+            //}
         }
 
         public static int IntToTrigger(int i, BaseAi _AI)
@@ -3791,62 +3861,86 @@ namespace SkyCoop
             Vector3 V3 = animal.transform.position;
             BaseAi _AI = animal.GetComponent<BaseAi>();
             float MinimalDistance = 15;
-            float LastFoundDistance = 0;
-            int LastFoundID = 0;
-            bool FoundNewController = false;
+            float LastFoundDistance = float.PositiveInfinity;
+            int LastFoundID = -1;
 
             if (_AI.GetAiMode() == AiMode.Dead || _AI.GetAiMode() == AiMode.Struggle || _AI.m_CurrentHP <= 0 || _AI.m_HasEnteredStruggleOnLastAttack == true || ReTakeChill > 0)
             {
                 return CurrentController;
             }
 
-            for (int i = 0; i < MaxPlayers; i++)
+            for (int i = 0; i < playersData.Count; ++i)
             {
-                Vector3 otherPlayerV3 = new Vector3(0, 0, 0);
-                int otherPlayerLevel = 0;
+                Vector3 otherPlayerV3;
+                int otherPlayerLevel;
 
-                if(iAmHost && i == 0)
+                if(i != CurrentController)
                 {
-                    otherPlayerV3 = GameManager.GetPlayerTransform().position;
-                    otherPlayerLevel = levelid;
-                }else{
-                    otherPlayerV3 = playersData[i].m_Position;
-                    otherPlayerLevel = playersData[i].m_Levelid;
-                }
-                
-                if (playersData[i] != null)
-                {
-                    if (playersData[i].m_AnimState != "Knock" && otherPlayerLevel == LevelID_Controller && Vector3.Distance(V3_Controller, otherPlayerV3) < MinimalDistance)
+                    if (playersData[i] != null)
                     {
-                        if(LastFoundDistance == 0)
+                        if (iAmHost && i == 0)
                         {
-                            if(Vector3.Distance(V3, otherPlayerV3) < Vector3.Distance(V3, V3_Controller))
-                            {
-                                LastFoundDistance = Vector3.Distance(V3, otherPlayerV3);
-                                LastFoundID = i;
-                                FoundNewController = true;
-                            }
+                            otherPlayerV3 = GameManager.GetPlayerTransform().position;
+                            otherPlayerLevel = levelid;
+                        }else if (i == instance.myId){
+                            otherPlayerV3 = GameManager.GetPlayerTransform().position;
+                            otherPlayerLevel = levelid;
+                        }else{
+                            otherPlayerV3 = playersData[i].m_Position;
+                            otherPlayerLevel = playersData[i].m_Levelid;
                         }
-                        else
+
+                        if (Vector3.Distance(V3_Controller, otherPlayerV3) > MinimalDistance)
                         {
-                            if (Vector3.Distance(V3, otherPlayerV3) < LastFoundDistance)
+                            if (playersData[i].m_AnimState != "Knock" && otherPlayerLevel == LevelID_Controller)
                             {
-                                LastFoundDistance = Vector3.Distance(V3, otherPlayerV3);
-                                LastFoundID = i;
-                                FoundNewController = true;
+                                float PlayerDis = Vector3.Distance(V3, otherPlayerV3);
+                                if (PlayerDis < LastFoundDistance)
+                                {
+                                    LastFoundDistance = PlayerDis;
+                                    LastFoundID = i;
+                                }
                             }
                         }
                     }
                 }
             }
 
-            if(FoundNewController == true)
+            if(LastFoundID != -1)
             {
                 return LastFoundID;
-            }
-            else
-            {
+            }else{
                 return CurrentController;
+            }
+        }
+
+        public static void SendAnimalForValidPlayers(AnimalSync data, Vector3 v3)
+        {
+            for (int i = 0; i < playersData.Count; i++)
+            {
+                if(playersData[i] != null)
+                {
+                    if(i != instance.myId)
+                    {
+                        float dis = Vector3.Distance(v3, playersData[i].m_Position);
+                        if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid && dis < GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance)
+                        {
+                            if (iAmHost == true)
+                            {
+                                ServerSend.ANIMALSYNC(0, data, i);
+                            }
+                            if (sendMyPosition == true)
+                            {
+                                using (Packet _packet = new Packet((int)ClientPackets.ANIMALSYNC))
+                                {
+                                    _packet.Write(data);
+                                    _packet.Write(i);
+                                    SendTCPData(_packet);
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
 
@@ -3912,6 +4006,7 @@ namespace SkyCoop
             public bool m_DampingIgnore = true;
             public string m_PendingProxy = "";
             public bool m_WaitForAligment = false;
+            public int LastFoundPlayer = -1;
 
             void Start()
             {
@@ -3959,6 +4054,7 @@ namespace SkyCoop
                             sync.AP_DeadSide = AN.GetInteger(_AI.m_AnimParameter_DamageSide);
                             sync.AP_DamageBodyPart = AN.GetInteger(_AI.m_AnimParameter_DamageBodyPart);
                             sync.AP_AttackId = AN.GetInteger(_AI.m_AnimParameter_AttackId);
+                            
 
                             if(_AI.m_SpawnRegionParent != null && _AI.m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>() != null)
                             {
@@ -3975,8 +4071,10 @@ namespace SkyCoop
                                 if(m_ClientControlled == false)
                                 {
                                     NewController = GetClosestPlayerToAnimal(m_Animal, m_Animal.GetComponent<AnimalUpdates>().ReTakeCoolDown, instance.myId, GameManager.GetPlayerTransform().position, levelid);
+                                    LastFoundPlayer = NewController;
                                 }else{
                                     NewController = GetClosestPlayerToAnimal(m_Animal, m_Animal.GetComponent<AnimalUpdates>().ReTakeCoolDown, m_ClientController, playersData[m_ClientController].m_Position, playersData[m_ClientController].m_Levelid);
+                                    LastFoundPlayer = NewController;
                                 }
                                 if (NewController != instance.myId)
                                 {
@@ -4045,23 +4143,7 @@ namespace SkyCoop
                             }
                         }
                         sync.m_name = GetAnimalPrefabName(m_Animal.name);
-
-                        if (iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.ANIMALSYNC))
-                            {
-                                ServerSend.ANIMALSYNC(0, sync, true, levelid, m_Animal.transform.position);
-                            }
-                        }
-
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.ANIMALSYNC))
-                            {
-                                _packet.Write(sync);
-                                SendTCPData(_packet);
-                            }
-                        }
+                        SendAnimalForValidPlayers(sync, m_Animal.transform.position);
                     }
                 }
             }
@@ -4828,6 +4910,8 @@ namespace SkyCoop
             { (int)ServerPackets.VOICECHAT, ClientHandle.VOICECHAT},
             { (int)ServerPackets.SLICEDBYTES, ClientHandle.SLICEDBYTES},
             { (int)ServerPackets.SLEEPPOSE, ClientHandle.SLEEPPOSE},
+            { (int)ServerPackets.ANIMALDAMAGE, ClientHandle.ANIMALDAMAGE},
+            { (int)ServerPackets.FIREFUEL, ClientHandle.FIREFUEL},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -5350,6 +5434,25 @@ namespace SkyCoop
                 ObjectGuidManager.UnRegisterGuid(_guid);
             }
         }
+
+        public static void DoAnimalDamage(string guid, float damage)
+        {
+            GameObject animal = ObjectGuidManager.Lookup(guid);
+            if (animal)
+            {
+                AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
+
+                if (animal.GetComponent<AnimalUpdates>() != null)
+                {
+                    if(AnimalsController == true || au.m_ClientController == instance.myId)
+                    {
+                        animal.GetComponent<BaseAi>().ApplyDamage(damage, DamageSource.Player, "");
+                    }
+                }
+            }
+        }
+
+
         public static void DoAnimalSync(AnimalSync obj)
         {
             if(obj.m_LevelD != levelid)
@@ -5419,6 +5522,7 @@ namespace SkyCoop
                         au.AP_DamageBodyPart = obj.AP_DamageBodyPart;
                         au.AP_AttackId = obj.AP_AttackId;
 
+                        _AI.m_CurrentHP = obj.m_Hp;
                         au.m_Hp = obj.m_Hp;
                         au.m_Bleeding = obj.m_Bleeding;
                     }
@@ -5436,7 +5540,7 @@ namespace SkyCoop
 
             if (AnimalExists == false)
             {
-                SpawnAnimal(prefabName, obj.m_position, _guid, obj.m_SpawnRegionGUID, ShouldRecreate, obj.m_ProxySave);
+                SpawnAnimal(prefabName, obj.m_position, _guid, obj.m_SpawnRegionGUID, ShouldRecreate, obj.m_ProxySave, obj.m_Hp);
             }
         }
 
@@ -5583,7 +5687,8 @@ namespace SkyCoop
                     {
                         component1.m_GunType = component2.m_GunType;
                         component1.MinDistanceForAimAssist = component2.m_MinDistanceForAimAssist;
-                        component1.Damage = component2.m_DamageHP;
+                        //component1.Damage = component2.m_DamageHP;
+                        component1.Damage = 0;
                         component1.Accuracy = component1.m_GunType != GunType.Rifle ? component2.m_AccuracyRange : shoot.m_skill;
                         component1.m_ImpactAudio = component2.m_ImpactAudio;
                     }
@@ -5980,7 +6085,7 @@ namespace SkyCoop
         public static void ApplyOtherFireSource(FireSourcesSync SyncData)
         {
             //MelonLogger.Msg("[FireSourcesSync] ApplyOtherFireSource Should apply "+ ApplyOtherCampfires);
-            if (ApplyOtherCampfires == true)
+            if (ApplyOtherCampfires == true && ServerConfig.m_FireSync != 0)
             {
                 if (FireManager.m_Fires.Count > 0)
                 {
@@ -6038,6 +6143,83 @@ namespace SkyCoop
             }
         }
 
+        public static void AddFuelNoSync(Fire fire, GearItem fuel)
+        {
+            fire.OnFuelBurnt(fuel);
+            if (fire.IsEmbers())
+            {
+                fire.m_FX.TriggerStage(FireState.FullBurn, true);
+                fire.m_HeatSource.TurnOn();
+            }
+            float num1 = (float)((double)fuel.m_FuelSourceItem.GetModifiedBurnDurationHours(fuel.GetNormalizedCondition()) * 60.0 * 60.0);
+            if (!fire.m_IsPerpetual)
+            {
+                fire.m_MaxOnTODSeconds += num1;
+                float num2 = fire.m_MaxOnTODSeconds - (float)((double)GameManager.GetFireManagerComponent().m_MaxDurationHoursOfFire * 60.0 * 60.0);
+                if ((double)num2 > 0.0)
+                {
+                    fire.m_ElapsedOnTODSeconds -= num2;
+                    fire.m_ElapsedOnTODSeconds = Mathf.Clamp(fire.m_ElapsedOnTODSeconds, 0.0f, float.PositiveInfinity);
+                }
+                fire.m_MaxOnTODSeconds = Mathf.Clamp(fire.m_MaxOnTODSeconds, 0.0f, (float)((double)GameManager.GetFireManagerComponent().m_MaxDurationHoursOfFire * 60.0 * 60.0));
+            }
+            fire.m_FuelHeatIncrease += Mathf.Min(Mathf.Clamp(!false || (double)fuel.m_FuelSourceItem.m_FireAgeMinutesBeforeAdding <= 0.0 ? GameManager.GetFireManagerComponent().m_MaxHeatIncreaseOfFire - fire.m_FuelHeatIncrease : GameManager.GetFireManagerComponent().m_MaxHeatIncreaseOfFireInForge - fire.m_FuelHeatIncrease, 0.0f, float.PositiveInfinity), fuel.m_FuelSourceItem.m_HeatIncrease * fuel.GetNormalizedCondition());
+            if (fire.m_ApplyToHeatSource)
+            {
+                fire.m_HeatSource.m_MaxTempIncrease = fire.m_FuelHeatIncrease;
+                fire.m_HeatSource.m_MaxTempIncreaseInnerRadius = Mathf.Max(fuel.m_FuelSourceItem.m_HeatInnerRadius, fire.m_HeatSource.m_MaxTempIncreaseInnerRadius);
+                fire.m_HeatSource.m_MaxTempIncreaseOuterRadius = Mathf.Max(fuel.m_FuelSourceItem.m_HeatOuterRadius * fire.GetFireOuterRadiusScale(), fire.m_HeatSource.m_MaxTempIncreaseOuterRadius);
+            }
+            fire.m_FX.TriggerFlareupLarge();
+            fire.m_StartedByPlayer = true;
+        }
+
+
+        public static void AddOtherFuel(FireSourcesSync SyncData, string fuelName)
+        {
+            if (ApplyOtherCampfires == true)
+            {
+                if (FireManager.m_Fires.Count > 0)
+                {
+                    for (int i = 0; i < FireManager.m_Fires.Count; i++)
+                    {
+                        Fire curfire = FireManager.m_Fires.get_Item(i);
+                        if (curfire != null)
+                        {
+                            FireSourcesSync FindData = new FireSourcesSync();
+                            FindData.m_LevelId = levelid;
+                            FindData.m_LevelGUID = level_guid;
+                            FindData.m_Position = curfire.gameObject.transform.position;
+                            FindData.m_Rotation = curfire.gameObject.transform.rotation;
+                            FindData.m_Guid = "";
+
+                            if (curfire.gameObject.GetComponent<ObjectGuid>() != null)
+                            {
+                                FindData.m_Guid = curfire.gameObject.GetComponent<ObjectGuid>().Get();
+                            }
+
+                            if (IsSameFire(FindData, SyncData) == true)
+                            {
+                                if (curfire.m_FireState == FireState.FullBurn)
+                                {
+                                    GameObject gear = UnityEngine.Object.Instantiate(Resources.Load(fuelName)).Cast<GameObject>();
+                                    if (gear)
+                                    {
+                                        GearItem gearItem = gear.GetComponent<GearItem>();
+                                        if(gearItem)
+                                        {
+                                            AddFuelNoSync(curfire, gearItem);
+                                        }
+                                    }
+                                }
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public static List<FireSourcesSync> FireSources = new List<FireSourcesSync>();
         public static void MayAddFireSources(FireSourcesSync fire)
         {
@@ -6045,12 +6227,14 @@ namespace SkyCoop
             if(fire.m_LevelId != levelid || fire.m_LevelGUID != level_guid)
             {
                 return;
-            } 
-            
+            }
+            //MelonLogger.Msg("MayAddFireSources for SyncData " + fire.m_LevelId + " m_LevelGUID " + fire.m_LevelGUID + " m_Position" + fire.m_Position.x + " " + fire.m_Position.y + " " + fire.m_Position.z);
+            //MelonLogger.Msg("FireSources Size" + FireSources.Count);
             fire.m_RemoveIn = 5;
             for (int i = 0; i < FireSources.Count; i++)
             {
                 FireSourcesSync currFire = FireSources[i];
+                //MelonLogger.Msg("FireSources["+i+ "] m_LevelId" + currFire.m_LevelId + " m_LevelGUID "+ currFire.m_LevelGUID + " m_Position" + currFire.m_Position.x+" "+ currFire.m_Position.y+" "+ currFire.m_Position.z);
                 bool UpdateCurr = false;
                 if (currFire.m_LevelId == fire.m_LevelId && currFire.m_LevelGUID == fire.m_LevelGUID)
                 {
@@ -6077,8 +6261,19 @@ namespace SkyCoop
             FireSources.Add(fire);
         }
 
-        public static void SendMyFire(Fire fireTosend)
+        public static void SendMyFire(Fire fireTosend, string fuel = "")
         {
+            if(ServerConfig.m_FireSync == 0)
+            {
+                return;
+            }
+            if (fuel != "" && ServerConfig.m_FireSync == 1)
+            {
+                return;
+            }
+
+
+            //MelonLogger.Msg("SendMyFire");
             FireSourcesSync SendData = new FireSourcesSync();
             SendData.m_Fuel = fireTosend.GetRemainingLifeTimeSeconds();
             SendData.m_Guid = "";
@@ -6099,25 +6294,56 @@ namespace SkyCoop
                 SendData.m_Guid = "";
             }
 
-            if (sendMyPosition == true)
+            if(fuel == "")
             {
-                using (Packet _packet = new Packet((int)ClientPackets.FIRE))
+                if (sendMyPosition == true)
                 {
-                    _packet.Write(SendData);
-                    SendTCPData(_packet);
+                    using (Packet _packet = new Packet((int)ClientPackets.FIRE))
+                    {
+                        _packet.Write(SendData);
+                        SendTCPData(_packet);
+                    }
                 }
-            }
 
-            if (iAmHost == true)
-            {
-                ServerSend.FIRE(0, SendData, true);
+                if (iAmHost == true)
+                {
+                    ServerSend.FIRE(0, SendData, true);
+                }
+            }else{
+                SendData.m_FuelName = fuel;
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.FIREFUEL))
+                    {
+                        _packet.Write(SendData);
+                        SendTCPData(_packet);
+                    }
+                }
+
+                if (iAmHost == true)
+                {
+                    ServerSend.FIREFUEL(0, SendData, true);
+                }
             }
         }
 
         public static bool DsServerIsUp = false;
+        public static int SecondsWithoutSaving = 0;
 
         private static void EverySecond()
         {
+            if(DsServerIsUp == true)
+            {
+                SecondsWithoutSaving = SecondsWithoutSaving + 1;
+                if(SecondsWithoutSaving > 300)
+                {
+                    SecondsWithoutSaving = 0;
+                    ConsoleManager.CONSOLE_save();
+                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save 5 minutes later!");
+                }
+            }
+
+
             PlayersUpdateManager();
             for (int i = 0; i < FireSources.Count; i++)
             {
@@ -6137,7 +6363,7 @@ namespace SkyCoop
                 }
             }
 
-            if(FireManager.m_Fires.Count > 0)
+            if (FireManager.m_Fires.Count > 0)
             {
                 for (int i = 0; i < FireManager.m_Fires.Count; i++)
                 {
@@ -6149,7 +6375,6 @@ namespace SkyCoop
                             SendMyFire(fireCur);
                         }
                     }
-                    //MelonLogger.Msg("[FireManager] "+i+". "+ fireCur.gameObject.name+" Burning "+ fireCur.IsBurning());
                 }
             }
             if (iAmHost && SteamConnect.CanUseSteam && Server.UsingSteamWorks && IsPublicServer)
@@ -6268,12 +6493,14 @@ namespace SkyCoop
                     UpdateEverything = UpdateEverything - 1;
                     if(UpdateEverything == 0)
                     {
+                        UpdateEverything = -1;
                         Pathes.LoadEverything();
                     }
                 }
                 if (RemoveAttachedObjectsAfterSecond == true)
                 {
                     DestoryPickedGears();
+                    RemoveAttachedObjectsAfterSecond = false;
                 }
                 for (int n = 0; n < RecentlyPickedGears.Count; n++)
                 {
@@ -6473,21 +6700,21 @@ namespace SkyCoop
                 MaxAnimalsSyncNeed = MaxAnimalsSyncCount;
             }
 
-            if (sendMyPosition == true)
-            {
-                using (Packet _packet = new Packet((int)ClientPackets.CARRYBODY))
-                {
-                    _packet.Write(CarryingPlayer);
-                    SendTCPData(_packet);
-                }
-            }
-            if (iAmHost == true)
-            {
-                using (Packet _packet = new Packet((int)ServerPackets.CARRYBODY))
-                {
-                    ServerSend.CARRYBODY(1, CarryingPlayer);
-                }
-            }
+            //if (sendMyPosition == true)
+            //{
+            //    using (Packet _packet = new Packet((int)ClientPackets.CARRYBODY))
+            //    {
+            //        _packet.Write(CarryingPlayer);
+            //        SendTCPData(_packet);
+            //    }
+            //}
+            //if (iAmHost == true)
+            //{
+            //    using (Packet _packet = new Packet((int)ServerPackets.CARRYBODY))
+            //    {
+            //        ServerSend.CARRYBODY(1, CarryingPlayer);
+            //    }
+            //}
 
             //if (IamShatalker == true && anotherbutt != null)
             //{
@@ -6789,6 +7016,7 @@ namespace SkyCoop
             string prefab = GetAnimalPrefabName(animal.name);
             //MelonLogger.Msg("Trying re-create animal " + prefab + " " + _GUID);
             AnimalUpdates AU = animal.GetComponent<AnimalUpdates>();
+            float hp = animal.GetComponent<BaseAi>().m_CurrentHP;
 
             if(animal.GetComponent<BaseAi>().m_CurrentHP == 0 || AU.m_Hp == 0 && AU.AP_AiState == 2 || animal.GetComponent<Harvestable>() != null && (animal.GetComponent<Harvestable>().enabled == true))
             {
@@ -6814,7 +7042,7 @@ namespace SkyCoop
             }
             UnityEngine.Object.Destroy(animal);
             ObjectGuidManager.UnRegisterGuid(_GUID);
-            SpawnAnimal(prefab, pos, _GUID, regionGUID, true, JsonProx);
+            SpawnAnimal(prefab, pos, _GUID, regionGUID, true, JsonProx, hp);
             return;
         }
         public static void ReCreateAnimal_test_v2(GameObject animal, string proxy = "")
@@ -6951,7 +7179,7 @@ namespace SkyCoop
             }
         }
 
-        public static void SpawnAnimal(string prefabName, Vector3 v3spawn, string _guid, string sRegionGUID, bool recreateion = false, string prox = "")
+        public static void SpawnAnimal(string prefabName, Vector3 v3spawn, string _guid, string sRegionGUID, bool recreateion = false, string prox = "", float health = -1)
         {
             GameObject checkanimal = ObjectGuidManager.Lookup(_guid);
             if(checkanimal != null)
@@ -6995,6 +7223,10 @@ namespace SkyCoop
                 SpawnRegion sp = RegionSpawnObj.GetComponent<SpawnRegion>();
                 _AI.SetSpawnRegionParent(sp);
                 sp.m_Spawns.Add(animal.GetComponent<BaseAi>());
+                if(health != -1)
+                {
+                    _AI.m_CurrentHP = health;
+                }
             }
 
             AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
@@ -7006,6 +7238,11 @@ namespace SkyCoop
                 au = animal.GetComponent<AnimalUpdates>();
             }
             au.m_ToGo = v3spawn;
+            if (health != -1)
+            {
+                au.m_Hp = health;
+                _AI.m_CurrentHP = health;
+            }
 
             if (recreateion == true)
             {
@@ -7013,6 +7250,10 @@ namespace SkyCoop
                 {
                     //MelonLogger.Msg("Spawn Recreation deserialize " + prox);
                     _AI.Deserialize(prox);
+                    if (health != -1)
+                    {
+                        _AI.m_CurrentHP = health;
+                    }
                 }
 
                 if (AnimalsController == false)
@@ -7112,6 +7353,57 @@ namespace SkyCoop
             }
         }
 
+        public static bool CheckDistanceAgnistEveryPlayer(Vector3 pos, float dis, bool lesser)
+        {
+            for (int i = 0; i < MyMod.playersData.Count; i++)
+            {
+                if (MyMod.playersData[i] != null)
+                {
+                    if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid)
+                    {
+                        float plDis = Vector3.Distance(playersData[i].m_Position, pos);
+
+                        if (lesser)
+                        {
+                            if (plDis > dis)
+                            {
+                                return false;
+                            }
+                        }else{
+                            if (plDis < dis)
+                            {
+                                return false;
+                            }
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        //public static void SetAnimalsSpawns()
+        //{
+        //    if(GameManager.m_SpawnRegionManager != null)
+        //    {
+        //        if(InOnline() == false)
+        //        {
+        //            GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance = 200;
+        //            GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance = 150;
+        //            GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance = 250;
+        //            GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance = 175;
+        //        }else{
+        //            GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance = float.PositiveInfinity;
+        //            GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance = float.PositiveInfinity;
+        //            GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance = float.PositiveInfinity;
+        //            GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance = float.NegativeInfinity;
+        //        }
+        //        //MelonLogger.Msg("m_SpawnRegionDisableDistance " + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance); //200
+        //        //MelonLogger.Msg("m_DisallowDespawnBelowDistance " + GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance); //150
+        //        //MelonLogger.Msg("m_AllowDespawnOnscreenDistance " + GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance); //250
+        //        //MelonLogger.Msg("m_AllowSpawnOnscreenDistance " + GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance); //175
+        //    }
+        //}
+
         public static void SetAnimalControllers()
         {
             if(MaxPlayers > playersData.Count)
@@ -7132,10 +7424,12 @@ namespace SkyCoop
                         }else{
                             shouldBeController = false;
                         }
+                        if (shouldBeController != AnimalsController)
+                        {
+                            AllowSpawnAnimals(shouldBeController);
+                        }
                         AnimalsController = shouldBeController;
-                    }
-                    else
-                    {
+                    }else{
                         if (Server.clients[i].IsBusy() == true)
                         {
                             bool shouldBeController = false;
@@ -7525,42 +7819,31 @@ namespace SkyCoop
 
         public static void FindPlayerToTrade()
         {
+            if(GameManager.m_PlayerObject == null)
+            {
+                //MelonLogger.Msg("Gaben trade is over player object is null, are all is gonna sus till the death");
+                GiveItemTo = -1;
+                return;
+            }
+
             Vector3 myXYZ = GameManager.GetPlayerTransform().position;
-            float LastDistance = 0;
+
+            float LastDistance = float.PositiveInfinity;
             int LastPlayerFoundID = -1;
             for (int i = 0; i < playersData.Count; i++)
             {
-                if(playersData[i] != null && playersData[i].m_Levelid == levelid && Vector3.Distance(myXYZ,playersData[i].m_Position) < 15 && i != instance.myId)
+                if(playersData[i] != null && playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid && Vector3.Distance(myXYZ,playersData[i].m_Position) < 15 && i != instance.myId)
                 {
                     float checkDis = Vector3.Distance(myXYZ, playersData[i].m_Position);
 
-                    if(LastDistance == 0)
+                    if (checkDis < LastDistance)
                     {
                         LastPlayerFoundID = i;
                         LastDistance = checkDis;
-                    }else{
-                        if (checkDis < LastDistance)
-                        {
-                            LastPlayerFoundID = i;
-                            LastDistance = checkDis;
-                        }
                     }
                 }
             }
             GiveItemTo = LastPlayerFoundID;
-
-            if(GiveItemLableObj != null)
-            {
-                if(GiveItemTo != -1)
-                {
-                    //GiveItemLable.text = "PRESS G TO GIVE ITEM TO " + playersData[LastPlayerFoundID].m_Name.ToUpper();
-                    GiveItemLable.text = "ID " + LastPlayerFoundID;
-                }else{
-                    GiveItemLable.text = "";
-                }
-            }else{
-                //MelonLogger.Msg("GiveItemLableObj is null");
-            }
         }
 
         public static List<GameObject> StatusTexes = new List<GameObject>();
@@ -7680,6 +7963,33 @@ namespace SkyCoop
                     message.m_Message = "Server configuration parameter ServerConfig.m_DuppedContainers now is " + ServerConfig.m_DuppedContainers;
                     needSync = true;
                     ServerSend.SERVERCFGUPDATED();
+                }else{
+                    message.m_Type = 0;
+                    message.m_By = MyChatName;
+                    message.m_Message = "You not a host to change this!";
+                    needSync = false;
+                }
+            }
+            if (message.m_Message.StartsWith("!fire ") == true)
+            {
+                if (iAmHost == true)
+                {
+                    string text = message.m_Message;
+                    int fire = Convert.ToInt32(text.Replace("!fire ", ""));
+                    message.m_Type = 0;
+                    message.m_By = MyChatName;
+
+                    if(fire == 0 || fire == 1 || fire == 2)
+                    {
+                        ServerConfig.m_FireSync = fire;
+                        message.m_Message = "Server configuration parameter ServerConfig.m_FireSync now is " + ServerConfig.m_FireSync;
+                        needSync = true;
+                        ServerSend.SERVERCFGUPDATED();
+                    }
+                    else{
+                        message.m_Message = "ServerConfig.m_FireSync can't be  " + fire+". It can be only 0 or 1 or 2.";
+                        needSync = false;
+                    }
                 }else{
                     message.m_Type = 0;
                     message.m_By = MyChatName;
@@ -8257,6 +8567,7 @@ namespace SkyCoop
             }
         }
 
+
         public static void DedicatedServerUpdate()
         {
             if(GameManager.m_PlayerManager != null)
@@ -8270,8 +8581,38 @@ namespace SkyCoop
                 GameManager.m_PlayerObject.transform.position = new Vector3(0, -300, 0);
                 IsDead = true;
                 GameAudioManager.SetRTPCValue(AK.GAME_PARAMETERS.GLOBALVOLUME, 0 * 100f, (GameObject)null);
+
+                int onServer = 0;
+
+                for (int i = 1; i <= Server.MaxPlayers; i++)
+                {
+                    if (Server.clients[i].IsBusy() == true)
+                    {
+                        onServer = onServer + 1;
+                    }
+                }
+
+                if(m_InterfaceManager != null && InterfaceManager.m_Panel_Loading.IsLoading() == false)
+                {
+                    if (onServer == 0)
+                    {
+                        if (GameManager.m_IsPaused == false)
+                        {
+                            GameManager.m_IsPaused = true;
+                            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server goes to sleep mode while there is no players on the server. Waiting for the players...");
+                        }
+                    }else{
+                        if (GameManager.m_IsPaused == true)
+                        {
+                            GameManager.m_IsPaused = false;
+                            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Waking up! There someone join!");
+                        }
+                    }
+                }
             }
         }
+
+        public static FireSourcesSync DebugFireSource = null;
 
         public override void OnUpdate()
         {
@@ -9083,15 +9424,8 @@ namespace SkyCoop
                     MelonLogger.Msg("TOD is "+GameManager.GetTimeOfDayComponent().GetHoursPlayedNotPaused());
                 }
 
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.L))
-                {
-                    if (ALWAYS_FUCKING_CURSOR_ON == false)
-                    {
-                        ALWAYS_FUCKING_CURSOR_ON = true;
-                    }else{
-                        ALWAYS_FUCKING_CURSOR_ON = false;
-                    }
-                }
+                ALWAYS_FUCKING_CURSOR_ON = KeyboardUtilities.InputManager.GetKey(KeyCode.L);
+
                 if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.LeftAlt))
                 {
                     GameManager.GetVpFPSPlayer().Controller.Jump();
@@ -9099,8 +9433,11 @@ namespace SkyCoop
                 if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.P))
                 {
                     bool CampFireTest = true;
-                    MelonLogger.Msg("[DEBUG] Adding fire sync IsCampfire " + CampFireTest);
+                    bool KeepSendLastData = true;
+
                     FireSourcesSync Data = new FireSourcesSync();
+
+                    MelonLogger.Msg("[DEBUG] Adding fire sync IsCampfire " + CampFireTest);
                     Data.m_LevelId = levelid;
                     Data.m_LevelGUID = level_guid;
                     Data.m_Guid = "";
@@ -9114,15 +9451,26 @@ namespace SkyCoop
                         {
                             Data.m_Guid = dummyFire.gameObject.GetComponent<ObjectGuid>().Get();
                         }
-
                     }else{
-
                         Data.m_Position = GameManager.GetPlayerObject().transform.position;
                         Data.m_Rotation = GameManager.GetPlayerObject().transform.rotation;
                         Data.m_IsCampfire = true;
                     }
+                    if (KeepSendLastData == true)
+                    {
+                        if(DebugFireSource != null)
+                        {
+                            Data = DebugFireSource;
+                        }else{
+                            DebugFireSource = Data;
+                        }
+                    }
                     MayAddFireSources(Data);
                 }
+            }
+            if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.O))
+            {
+                DebugFireSource = null;
             }
 
             if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.G))
@@ -9351,8 +9699,6 @@ namespace SkyCoop
                     }
                 }
             }
-
-            ShiftPressed = InputManager.GetSprintDown(InputManager.m_CurrentContext);
 
             Transform target = null;
 
@@ -10600,6 +10946,7 @@ namespace SkyCoop
             if (UIHostMenu != null)
             {
                 UnityEngine.Object.Destroy(UIHostMenu);
+                HostMenuHints = new List<GameObject>();
             }
         }
 
@@ -10628,10 +10975,14 @@ namespace SkyCoop
                 GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
                 int PortToHost = Convert.ToInt32(PortsObject.GetComponent<UnityEngine.UI.InputField>().text);
 
+                GameObject FireSyncObj = UIHostMenu.transform.GetChild(9).gameObject;
+                int FireSyncMode = FireSyncObj.GetComponent<UnityEngine.UI.Dropdown>().m_Value;
+
                 IsPublicServer = IsPub;
                 ServerConfig.m_DuppedSpawns = DupesIsChecked;
                 ServerConfig.m_DuppedContainers = BoxDupesIsChecked;
                 ServerConfig.m_PlayersSpawnType = spawnStyle;
+                ServerConfig.m_FireSync = FireSyncMode;
                 MaxPlayers = slotsMax;
 
                 if (ShouldUseSteam == false)
@@ -10642,8 +10993,51 @@ namespace SkyCoop
                 }
 
                 UnityEngine.Object.Destroy(UIHostMenu);
+                HostMenuHints = new List<GameObject>();
             }
         }
+
+        public static void OpenHint(GameObject obj)
+        {
+            if (obj.activeSelf == false)
+            {
+                for (int i = 0; i < HostMenuHints.Count; i++)
+                {
+                    HostMenuHints[i].SetActive(false);
+                }
+                obj.SetActive(true);
+            }else{
+                obj.SetActive(false);
+            }
+        }
+
+        public static void AddHintScript(GameObject obj)
+        {
+            //MelonLogger.Msg("[AddHintScript] Started...");
+            if(obj == null)
+            {
+                MelonLogger.Msg("[AddHintScript] Got null object. Why?");
+                return;
+            }
+            GameObject hintButn = obj.transform.GetChild(0).gameObject;
+            if(hintButn == null)
+            {
+                MelonLogger.Msg("[AddHintScript] "+ obj.name + " have not hint button!");
+                return;
+            }
+            GameObject hintObj = hintButn.transform.GetChild(0).gameObject;
+            if(hintObj == null)
+            {
+                MelonLogger.Msg("[AddHintScript] " + obj.name + " have not hint panel!");
+                return;
+            }
+            //MelonLogger.Msg("[AddHintScript] No errors found! Adding hints for "+ obj.name);
+            HostMenuHints.Add(hintObj);
+            Action actHint = new Action(() => OpenHint(hintObj));
+            hintButn.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(actHint);
+        }
+
+        public static List<GameObject> HostMenuHints = new List<GameObject>();
 
         public static void HostMenu()
         {
@@ -10666,8 +11060,12 @@ namespace SkyCoop
                 GameObject SpawnStyleList = UIHostMenu.transform.GetChild(2).gameObject;
                 SpawnStyleList.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_PlayersSpawnType);
 
+
+                GameObject P2PtxBox = UIHostMenu.transform.GetChild(4).gameObject;
                 GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
                 GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
+                GameObject FireSyncObj = UIHostMenu.transform.GetChild(9).gameObject;
+                FireSyncObj.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_FireSync);
 
                 if (SteamConnect.CanUseSteam == false)
                 {
@@ -10682,6 +11080,14 @@ namespace SkyCoop
                     PortsObject.SetActive(true);
                 }
                 PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+
+                AddHintScript(dupesCheckbox);
+                AddHintScript(dupesBoxesCheckbox);
+                AddHintScript(SpawnStyleList);
+                AddHintScript(FireSyncObj);
+                AddHintScript(P2PtxBox);
+                AddHintScript(PublicSteamServer);
+                AddHintScript(PortsObject);
             }
         }
 
