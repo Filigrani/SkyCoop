@@ -766,31 +766,31 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InitializeObjecToPlace")]
-        private static class Inventory_Pickup3
-        {
-            public static void Prefix(PlayerManager __instance, GameObject go)
-            {
-                if(go.GetComponent<GearItem>() != null)
-                {
-                    GearItem pickupItem = go.GetComponent<GearItem>();
-                    if (pickupItem.m_BeenInPlayerInventory == false)
-                    {
-                        MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
-                        pickupItem.m_BeenInPlayerInventory = true;
-                        if (DuppableGearItem(pickupItem.m_GearName) == true)
-                        {
-                            return;
-                        }
-                        if (GarbadgeFilter(pickupItem.m_GearName))
-                        {
-                            return;
-                        }
-                        MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, pickupItem.m_InstanceID, true);
-                    }
-                }
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InitializeObjecToPlace")]
+        //private static class Inventory_Pickup3
+        //{
+        //    public static void Prefix(PlayerManager __instance, GameObject go)
+        //    {            
+        //        if (go != null  && go.GetComponent<GearItem>() != null)
+        //        {
+        //            GearItem pickupItem = go.GetComponent<GearItem>();
+        //            if (pickupItem.m_BeenInPlayerInventory == false)
+        //            {
+        //                MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
+        //                pickupItem.m_BeenInPlayerInventory = true;
+        //                if (DuppableGearItem(pickupItem.m_GearName) == true)
+        //                {
+        //                    return;
+        //                }
+        //                if (GarbadgeFilter(pickupItem.m_GearName))
+        //                {
+        //                    return;
+        //                }
+        //                MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, pickupItem.m_InstanceID, true);
+        //            }
+        //        }
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(BlueprintDisplayItem), "Setup")]
         private static class FixRecipeIcons
         {
@@ -1562,7 +1562,7 @@ namespace SkyCoop
         {
             public static void Postfix(UIButton __instance)
             {
-                if (__instance.gameObject.transform.parent != null && __instance.hoverSprite == "genericButton_over 1")
+                if (__instance.gameObject != null && __instance.gameObject.transform.parent != null && __instance.gameObject.transform.parent != null && __instance.hoverSprite == "genericButton_over 1")
                 {
                     if(__instance.gameObject.transform.parent.name == "WaitForEveryoneButton")
                     {

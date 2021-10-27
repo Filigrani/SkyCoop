@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod"; 
             public const string Author = "Filigrani";
             public const string Company = null; 
-            public const string Version = "0.6.1b2";
+            public const string Version = "0.6.1b3";
             public const string DownloadLink = null;
         }
 
@@ -3269,8 +3269,7 @@ namespace SkyCoop
                     if (m_HoldingItem == "Map")
                     {
                         hand_l.transform.GetChild(2).gameObject.SetActive(true);
-                        SetupMapMarker();
-
+                        //SetupMapMarker();
                     }
                     if (m_HoldingItem == "GEAR_FlareGun")
                     {
