@@ -29,10 +29,10 @@ namespace SkyCoop
         public static class BuildInfo
         {
             public const string Name = "Sky Co-op";
-            public const string Description = "Multiplayer mod"; 
+            public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
-            public const string Company = null; 
-            public const string Version = "0.6.1b3";
+            public const string Company = null;
+            public const string Version = "0.6.1b4";
             public const string DownloadLink = null;
         }
 
@@ -5353,11 +5353,10 @@ namespace SkyCoop
 
             if (watermode == false) // If this is water we not give new item, but just add to supply.
             {
-                
-                
                 GearItem closestMatchStackable = GameManager.GetInventoryComponent().GetClosestMatchStackable(give_name, itemSaveDataProxy.m_NormalizedCondition);
                 if(closestMatchStackable == null)
                 {
+                    MelonLogger.Msg("Not stack for item "+ give_name + ", creating new item");
                     GearItem new_gear = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory(give_name);
                     GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(gearData.m_DataProxy);
                     new_gear.m_LastUpdatedTODHours = 0;
@@ -5371,7 +5370,8 @@ namespace SkyCoop
                         }
                     }
                 }else{
-                    GameManager.GetPlayerManagerComponent().AddToExistingStackable(give_name, itemSaveDataProxy.m_NormalizedCondition, 1);
+                    closestMatchStackable.m_StackableItem.m_Units+=1;
+                    MelonLogger.Msg("Found stack for " + give_name + ", now units " + closestMatchStackable.m_StackableItem.m_Units);
                     if (GameManager.GetPlayerManagerComponent().m_ItemInHands == null)
                     {
                         if (IsEquippable(closestMatchStackable) == true)
@@ -6022,7 +6022,10 @@ namespace SkyCoop
         public static void MakeFakeFire(Fire fire)
         {
             fire.m_StartedByPlayer = false;
-            fire.FireStateSet(FireState.FullBurn);
+            if(fire.m_FireState != FireState.FullBurn)
+            {
+                fire.FireStateSet(FireState.FullBurn);
+            }
             fire.m_HeatSource.TurnOn();
             fire.m_FX.TriggerStage(FireState.FullBurn, true, true);
             fire.m_FuelHeatIncrease = fire.m_HeatSource.m_MaxTempIncrease;
@@ -6030,17 +6033,14 @@ namespace SkyCoop
             fire.m_ElapsedOnTODSecondsUnmodified = 0.0f;
             fire.ForceBurnTimeInMinutes(5);
             fire.PlayFireLoop(100f);
-            //EffectsControllerFire ecf = dummyFire.gameObject.GetComponent<EffectsControllerFire>();
-            //dummyFire.FireStateSet(FireState.FullBurn);
-            //dummyFire.ForceBurnTimeInMinutes(5);
-            //dummyFire.m_FullBurnTriggered = true;
-            //dummyFire.m_IsPerpetual = true;
-            //ecf.Initialize();
             
             if(fire.m_Campfire != null)
             {
                 Campfire campFire = fire.m_Campfire.GetComponent<Campfire>();
-                campFire.SetState(CampfireState.Lit);
+                if (campFire.m_State != CampfireState.Lit)
+                {
+                    campFire.SetState(CampfireState.Lit);
+                }
             }
         }
 
@@ -6053,7 +6053,10 @@ namespace SkyCoop
             Fire cfFire = campfireObj.GetComponent<Fire>();
             MakeFakeFire(cfFire);
             Campfire campFire = campfireObj.GetComponent<Campfire>();
-            campFire.SetState(CampfireState.Lit);
+            if(campFire.m_State != CampfireState.Lit)
+            {
+                campFire.SetState(CampfireState.Lit);
+            }
         }
 
         public static bool IsSameFire(FireSourcesSync FindData, FireSourcesSync SyncData)
@@ -6144,6 +6147,18 @@ namespace SkyCoop
 
         public static void AddFuelNoSync(Fire fire, GearItem fuel)
         {
+            if (fire.gameObject != null && fuel != null)
+            {
+                MelonLogger.Msg("[Fire][AddFuelNoSync] " + fire.gameObject.name + " fuel is " + fuel.m_GearName);
+            }
+            else if (fire.gameObject != null && fuel == null)
+            {
+                MelonLogger.Msg("[Fire][AddFuelNoSync] " + fire.gameObject.name + " fuel is null");
+            }
+            else if (fire.gameObject == null)
+            {
+                MelonLogger.Msg("[Fire][AddFuelNoSync] firesource is null");
+            }
             fire.OnFuelBurnt(fuel);
             if (fire.IsEmbers())
             {
@@ -8230,6 +8245,14 @@ namespace SkyCoop
         public static Panel_SelectSurvivor m_Panel_SelectSurvivor;
         public static Panel_MainMenu m_Panel_MainMenu;
         public static Panel_SelectRegion m_Panel_SelectRegion;
+
+        public static void NoCustomExp()
+        {
+            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            {
+                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "You can't use custom experience mode in online! This case to major desync!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+            }
+        }
 
         public static void DoWaitForConnect()
         {

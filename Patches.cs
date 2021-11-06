@@ -766,31 +766,31 @@ namespace SkyCoop
                 }
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InitializeObjecToPlace")]
-        //private static class Inventory_Pickup3
-        //{
-        //    public static void Prefix(PlayerManager __instance, GameObject go)
-        //    {            
-        //        if (go != null  && go.GetComponent<GearItem>() != null)
-        //        {
-        //            GearItem pickupItem = go.GetComponent<GearItem>();
-        //            if (pickupItem.m_BeenInPlayerInventory == false)
-        //            {
-        //                MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
-        //                pickupItem.m_BeenInPlayerInventory = true;
-        //                if (DuppableGearItem(pickupItem.m_GearName) == true)
-        //                {
-        //                    return;
-        //                }
-        //                if (GarbadgeFilter(pickupItem.m_GearName))
-        //                {
-        //                    return;
-        //                }
-        //                MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, pickupItem.m_InstanceID, true);
-        //            }
-        //        }
-        //    }
-        //}
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InitializeObjectToPlace")]
+        private static class Inventory_Pickup3
+        {
+            public static void Prefix(PlayerManager __instance, GameObject go)
+            {
+                if (go != null && go.GetComponent<GearItem>() != null)
+                {
+                    GearItem pickupItem = go.GetComponent<GearItem>();
+                    if (pickupItem.m_BeenInPlayerInventory == false)
+                    {
+                        MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
+                        pickupItem.m_BeenInPlayerInventory = true;
+                        if (DuppableGearItem(pickupItem.m_GearName) == true)
+                        {
+                            return;
+                        }
+                        if (GarbadgeFilter(pickupItem.m_GearName))
+                        {
+                            return;
+                        }
+                        MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, pickupItem.m_InstanceID, true);
+                    }
+                }
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(BlueprintDisplayItem), "Setup")]
         private static class FixRecipeIcons
         {
@@ -3635,6 +3635,19 @@ namespace SkyCoop
         {
             public static void Postfix(Fire __instance, GearItem fuel)
             {
+                if(__instance.gameObject != null && fuel != null)
+                {
+                    MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name+" fuel is "+fuel.m_GearName);
+                }
+                else if(__instance.gameObject != null && fuel == null)
+                {
+                    MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name + " fuel is null");
+                }
+                else if (__instance.gameObject == null)
+                {
+                    MelonLogger.Msg("[Fire][AddFuel] firesource is null");
+                }
+
                 if(__instance.m_StartedByPlayer == false)
                 {
                     MelonLogger.Msg("Assign firesource of other player to myself");
@@ -4175,6 +4188,23 @@ namespace SkyCoop
                     }
                 }
                 return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnExperienceClicked")]
+        public static class Panel_SelectExperience_OnExperienceClicked
+        {
+            public static bool Prefix(Panel_SelectExperience __instance)
+            {
+                Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
+                if (selectedMenuItem == null)
+                    return false;
+                ExperienceModeType _type = selectedMenuItem.m_Type;
+                if(_type == ExperienceModeType.Custom)
+                {
+                    MyMod.NoCustomExp();
+                    return false;
+                }
+                return true;
             }
         }
         //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]
