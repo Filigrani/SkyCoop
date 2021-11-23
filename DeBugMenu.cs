@@ -57,6 +57,21 @@ namespace SkyCoop
                         MyMod.AnimalUpdates _AU = MyMod.DebugLastAnimal.GetComponent<MyMod.AnimalUpdates>();
                         BaseAi _AI = MyMod.DebugLastAnimal.GetComponent<BaseAi>();
 
+                        string spawnRegionString = "";
+
+                        if(_AI.m_SpawnRegionParent != null)
+                        {
+                            string spGUID = "NONE";
+                            if(_AI.m_SpawnRegionParent.GetComponent<ObjectGuid>() != null)
+                            {
+                                spGUID = _AI.m_SpawnRegionParent.GetComponent<ObjectGuid>().Get();
+                            }
+                            bool spActive = _AI.m_SpawnRegionParent.gameObject.activeSelf;
+                            spawnRegionString = spActive + " (" + spGUID + ") "+ _AI.m_SpawnRegionParent.gameObject.name;
+                        }else{
+                            spawnRegionString = "Null";
+                        }
+
                         if (_AU != null)
                         {
                             GUI.Label(new Rect(700, 10 + offset * 4, 500, 100), "m_ClientController " + _AU.m_ClientController);
@@ -71,14 +86,16 @@ namespace SkyCoop
                             GUI.Label(new Rect(700, 10 + offset * 13, 500, 100), "Ai Mode " + _AI.GetAiMode());
                             GUI.Label(new Rect(700, 10 + offset * 14, 500, 100), "HP " + _AI.m_CurrentHP);
                             GUI.Label(new Rect(700, 10 + offset * 15, 500, 100), "m_HasEnteredStruggleOnLastAttack " + _AI.m_HasEnteredStruggleOnLastAttack);
+                            GUI.Label(new Rect(700, 10 + offset * 16, 500, 100), "SpawnRegion " + spawnRegionString);
+
                             if (GameManager.m_PlayerObject != null)
                             {
-                                GUI.Label(new Rect(700, 10 + offset * 17, 500, 100), "My Distance " + Vector3.Distance(MyMod.DebugLastAnimal.transform.position, GameManager.GetPlayerObject().transform.position));
+                                GUI.Label(new Rect(700, 10 + offset * 18, 500, 100), "My Distance " + Vector3.Distance(MyMod.DebugLastAnimal.transform.position, GameManager.GetPlayerObject().transform.position));
                                 for (int i = 0; i < MyMod.playersData.Count; i++)
                                 {
                                     if(MyMod.playersData[i] != null)
                                     {
-                                        int mult = 18 + i;
+                                        int mult = 19 + i;
                                         GUI.Label(new Rect(700, 10 + offset * mult, 500, 100), "Player[" + i + "] Distance " + Vector3.Distance(MyMod.DebugLastAnimal.transform.position, MyMod.playersData[i].m_Position));
                                     }
                                 }

@@ -32,9 +32,12 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.6.1b4";
+            public const string Version = "0.7.0";
             public const string DownloadLink = null;
+            public const int RandomGenVersion = 2;
         }
+        public static int LastLoadedGenVersion = 0;
+        public static bool CantBeUsedForMP = false;
 
         //VARS
         #region VARS
@@ -116,9 +119,6 @@ namespace SkyCoop
         public static GameObject MenuStuffSpawned = null;
         public static bool AnimalsController = true;
         public static int MyTicksOnScene = 0;
-        public static int previous_anotherplayer_levelid = 0;
-        public static int previous_levelid = 0;
-        //public static UnhollowerBaseLib.Il2CppArrayBase<BaseAi> animals = Resources.FindObjectsOfTypeAll<BaseAi>();
         public static float MaxAniamlsSyncDistance = 245f;
         public static int MaxAnimalsSyncCount = 11;
         public static int MaxAnimalsSyncCountOnConnect = 2;
@@ -167,6 +167,7 @@ namespace SkyCoop
         public static string MyBottom = "";
         public static string MyBoots = "";
         public static string MyScarf = "";
+        public static string MyBalaclava = "";
         public static List<BrokenFurnitureSync> BrokenFurniture = new List<BrokenFurnitureSync>();
         public static List<PickedGearSync> PickedGears = new List<PickedGearSync>();
         public static List<PickedGearSync> RecentlyPickedGears = new List<PickedGearSync>();
@@ -200,6 +201,8 @@ namespace SkyCoop
         public static int UpdateCampfires = -1;
         public static int UpdateEverything = -1;
         public static int StartDSAfterLoad = -1;
+        public static int SendAfterLoadingFinished = -1;
+        public static int RegularUpdateSeconds = 7;
         public static bool SkipEverythingForConnect = false;
         public static GameObject UISteamFreindsMenuObj = null;
         public static int PlayersOnServer = 0;
@@ -226,6 +229,26 @@ namespace SkyCoop
         public static Vector3 OutOfBedPosition = new Vector3(0, 0, 0);
 
         public static Dictionary<string, int> GearIDList = new Dictionary<string, int>();
+        //public static bool AntiCheat = false;
+
+        public static void KillConsole()
+        {
+            if(ServerConfig.m_CheatsMode == 2 || (iAmHost == true && ServerConfig.m_CheatsMode == 1))
+            {
+                return;
+            }
+                        
+            if(uConsole.m_CommandsDict.Count > 0)
+            {
+                uConsole.m_CommandsDict.Clear();
+                uConsole.m_CommandsList.Clear();
+                uConsole.m_CommandsHelp.Clear();
+            }
+            if(uConsole.m_Instance != null)
+            {
+                uConsole.m_Instance.m_Activate = KeyCode.None;
+            }
+        }
 
         public static void InitGearsIDS()
         {
@@ -408,6 +431,7 @@ namespace SkyCoop
             public bool m_DuppedContainers = false;
             public int m_PlayersSpawnType = 0;
             public int m_FireSync = 2;
+            public int m_CheatsMode = 2;
         }
         public class SlicedJsonData
         {
@@ -447,6 +471,7 @@ namespace SkyCoop
             public string m_Bottom = "";
             public string m_Boots = "";
             public string m_Scarf = "";
+            public string m_Balaclava = "";
         }
         public class MultiPlayerClientData //: MelonMod
         {
@@ -713,32 +738,6 @@ namespace SkyCoop
                 }
             }
         }
-
-        public static class JsonNullsRemover //http://www.java2s.com/Code/CSharp/Network/RemovesJsonnullobjectsfromtheserializedstringandreturnanewstringExtentionMethod.htm
-        {
-            public static string JsonNullRegEx = "[\"][a-zA-Z0-9_]*[\"]:null[ ]*[,]?";
-            public static string JsonNullArrayRegEx = "\\[( *null *,? *)*]";
-
-            public static bool IsEmptyOrNull(string str)
-            {
-                if (str == null || str == string.Empty)
-                {
-                    return true;
-                }
-                return false;
-            }
-            public static string RemoveJsonNulls(string str)
-            {
-                if (!IsEmptyOrNull(str))
-                {
-                    Regex regex = new Regex(JsonNullRegEx);
-                    string data = regex.Replace(str, string.Empty);
-                    regex = new Regex(JsonNullArrayRegEx);
-                    return regex.Replace(data, "[]");
-                }
-                return null;
-            }
-        }
         public class FireSourcesSync : IEquatable<FireSourcesSync>
         {
             public string m_Guid = "";
@@ -826,8 +825,6 @@ namespace SkyCoop
             public int m_Samples = 0;
         }
         #endregion
-
-
 
         public static void LoadChatName(string _name = "")
         {
@@ -1031,22 +1028,6 @@ namespace SkyCoop
             MelonLogger.Msg("Level name: " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             level_name = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             MyTicksOnScene = 0;
-
-            if (iAmHost == true)
-            {
-                using (Packet _packet = new Packet((int)ServerPackets.LEVELID))
-                {
-                    ServerSend.LEVELID(0, level, true);
-                }
-            }
-            if (sendMyPosition == true)
-            {
-                using (Packet _packet = new Packet((int)ClientPackets.LEVELID))
-                {
-                    _packet.Write(level);
-                    SendTCPData(_packet);
-                }
-            }
             if (ShatalkerModeClient == true || ServerHandle.DarkShatalkerMode == true || IamShatalker == true)
             {
                 ShatalkerObject = Resources.FindObjectsOfTypeAll<InvisibleEntityManager>().First();
@@ -2218,7 +2199,7 @@ namespace SkyCoop
                         {
                             m_AnimStateFingers = "HoldRevolver";
                         }
-                        else if (HoldingItem == "GEAR_Stone" || HoldingItem == "GEAR_FlareA" || HoldingItem == "GEAR_BlueFlare" || HoldingItem == "GEAR_Torch")
+                        else if (HoldingItem == "GEAR_Stone" || HoldingItem == "GEAR_FlareA" || HoldingItem == "GEAR_BlueFlare" || HoldingItem == "GEAR_Torch" || HoldingItem == "GEAR_NoiseMaker")
                         {
                             m_AnimStateFingers = "Hold";
                         }
@@ -2383,6 +2364,7 @@ namespace SkyCoop
             public string m_Bottom = "";
             public string m_Boots = "";
             public string m_Scarf = "";
+            public string m_Balaclava = "";
             public int m_DebugB = 0;
             public int m_DebugT = 0;
             public bool m_Debug = false;
@@ -2412,13 +2394,14 @@ namespace SkyCoop
                     }
                     int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
                     PlayerClothingData Cdata = playersData[m_ID].m_PlayerClothingData;
-                    if ((Cdata.m_Hat != m_Hat) || (Cdata.m_Top != m_Top) || (Cdata.m_Bottom != m_Bottom) || (Cdata.m_Boots != m_Boots) || (Cdata.m_Scarf != m_Scarf) || firstUpdate == true)
+                    if ((Cdata.m_Hat != m_Hat) || (Cdata.m_Top != m_Top) || (Cdata.m_Bottom != m_Bottom) || (Cdata.m_Boots != m_Boots) || (Cdata.m_Scarf != m_Scarf) || (Cdata.m_Balaclava != m_Balaclava) || firstUpdate == true)
                     {
                         m_Hat = Cdata.m_Hat;
                         m_Top = Cdata.m_Top;
                         m_Bottom = Cdata.m_Bottom;
                         m_Boots = Cdata.m_Boots;
                         m_Scarf = Cdata.m_Scarf;
+                        m_Balaclava = Cdata.m_Balaclava;
 
                         //MelonLogger.Msg("[Clothing] Updating model of client " + m_ID);
                         //MelonLogger.Msg("[Clothing] Client Model " + m_ID + " Hat " + m_Hat);
@@ -2443,6 +2426,7 @@ namespace SkyCoop
                     int Pants = 0;
                     int Boots = 0;
                     int Scarf = 0;
+                    bool Balaclava = false;
                     string ArmsType = "";
                     string HairVariant = "Full";
                     bool nakedBodyAtBottom = false;
@@ -2600,6 +2584,16 @@ namespace SkyCoop
                         Top = 16;
                         ArmsType = "Tiny";
                     }
+                    else if (m_Top.Contains("MooseHideCloak"))
+                    {
+                        Top = 17;
+                        ArmsType = "Tiny";
+                    }
+                    else if (m_Top.Contains("WolfSkinCape"))
+                    {
+                        Top = 18;
+                        ArmsType = "Tiny";
+                    }
                     else // If missing clotching
                     {
                         Top = 7;
@@ -2734,6 +2728,11 @@ namespace SkyCoop
                         Scarf = -1;
                     }
 
+                    if(m_Balaclava != "")
+                    {
+                        HairVariant = "Balaclava";
+                    }
+
                     if (Hat != -1)
                     {
                         clothing.transform.GetChild(0).transform.GetChild(Hat).gameObject.SetActive(true);
@@ -2755,7 +2754,7 @@ namespace SkyCoop
                         {
                             HairShort.SetActive(false);
                             HairLong.SetActive(true);
-                        }else{
+                        }else if(HairVariant == "Short") {
                             HairShort.SetActive(true);
                             HairLong.SetActive(false);
                         }
@@ -3213,6 +3212,8 @@ namespace SkyCoop
                 hand_r.transform.GetChild(8).gameObject.SetActive(false);
                 //Flaregun
                 hand_r.transform.GetChild(9).gameObject.SetActive(false);
+                //NoiseMaker
+                hand_r.transform.GetChild(10).gameObject.SetActive(false);
                 //Map
                 hand_l.transform.GetChild(2).gameObject.SetActive(false);
                 //Bow
@@ -3274,6 +3275,10 @@ namespace SkyCoop
                     if (m_HoldingItem == "GEAR_FlareGun")
                     {
                         hand_r.transform.GetChild(9).gameObject.SetActive(true);
+                    }
+                    if (m_HoldingItem == "GEAR_NoiseMaker")
+                    {
+                        hand_r.transform.GetChild(10).gameObject.SetActive(true);
                     }
                 }else{
                     
@@ -3860,8 +3865,12 @@ namespace SkyCoop
             Vector3 V3 = animal.transform.position;
             BaseAi _AI = animal.GetComponent<BaseAi>();
             float MinimalDistance = 15;
-            float LastFoundDistance = float.PositiveInfinity;
-            int LastFoundID = -1;
+            //float LastFoundDistance = float.PositiveInfinity;
+            //int LastFoundID = -1;
+
+            //Need input current controller data as last found, because we gonna skip current controller when search new one! This what was previous mistake.
+            float LastFoundDistance = Vector3.Distance(V3, V3_Controller);
+            int LastFoundID = CurrentController;
 
             if (_AI.GetAiMode() == AiMode.Dead || _AI.GetAiMode() == AiMode.Struggle || _AI.m_CurrentHP <= 0 || _AI.m_HasEnteredStruggleOnLastAttack == true || ReTakeChill > 0)
             {
@@ -3889,15 +3898,18 @@ namespace SkyCoop
                             otherPlayerLevel = playersData[i].m_Levelid;
                         }
 
-                        if (Vector3.Distance(V3_Controller, otherPlayerV3) > MinimalDistance)
+                        float distanceToCurrentController = Vector3.Distance(V3_Controller, otherPlayerV3);
+                        float distanceToAnimal = Vector3.Distance(V3, otherPlayerV3);
+
+                        if(distanceToCurrentController > MinimalDistance)
                         {
-                            if (playersData[i].m_AnimState != "Knock" && otherPlayerLevel == LevelID_Controller)
+                            if(playersData[i].m_AnimState != "Knock" && otherPlayerLevel == LevelID_Controller && otherPlayerV3 != new Vector3(0, 0, 0))
                             {
-                                float PlayerDis = Vector3.Distance(V3, otherPlayerV3);
-                                if (PlayerDis < LastFoundDistance)
+                                if (distanceToAnimal < LastFoundDistance)
                                 {
-                                    LastFoundDistance = PlayerDis;
+                                    LastFoundDistance = distanceToAnimal;
                                     LastFoundID = i;
+                                    MelonLogger.Msg("Pick nearest player " + LastFoundID + " " + otherPlayerV3.x + " " + otherPlayerV3.y + " " + otherPlayerV3.z);
                                 }
                             }
                         }
@@ -3905,12 +3917,7 @@ namespace SkyCoop
                 }
             }
 
-            if(LastFoundID != -1)
-            {
-                return LastFoundID;
-            }else{
-                return CurrentController;
-            }
+            return LastFoundID;
         }
 
         public static void SendAnimalForValidPlayers(AnimalSync data, Vector3 v3)
@@ -4147,17 +4154,6 @@ namespace SkyCoop
                 }
             }
 
-            //void SetTrigger(int trigger)
-            //{
-            //    BaseAi _AI = m_Animal.GetComponent<BaseAi>();
-
-            //    if (_AI != null)
-            //    {
-            //        Animator AN = _AI.m_Animator;
-            //        AN.SetTrigger(IntToTrigger(trigger, _AI));
-            //    }
-            //}
-
             void Update()
             {                
                 if (m_Animal != null)
@@ -4289,12 +4285,6 @@ namespace SkyCoop
                         }
                     }
 
-                    float dis = MaxAniamlsSyncDistance;
-                    if (players[0] != null)
-                    {
-                        dis = Vector3.Distance(players[0].transform.position, m_Animal.transform.position);
-                    }
-
                     if (AnimalsController == true || m_ClientController == instance.myId)
                     {
                         m_CanSync = true;
@@ -4379,74 +4369,6 @@ namespace SkyCoop
                     }
                 }
             }
-        }
-
-        public static AiMode IntToAiMode(int i)
-        {
-            if (i == 0) { return AiMode.None; }
-            if (i == 1) { return AiMode.Attack; }
-            if (i == 2) { return AiMode.Dead; }
-            if (i == 3) { return AiMode.Feeding; }
-            if (i == 4) { return AiMode.Flee; }
-            if (i == 5) { return AiMode.FollowWaypoints; }
-            if (i == 6) { return AiMode.HoldGround; }
-            if (i == 7) { return AiMode.Idle; }
-            if (i == 8) { return AiMode.Investigate; }
-            if (i == 9) { return AiMode.InvestigateFood; }
-            if (i == 10) { return AiMode.InvestigateSmell; }
-            if (i == 11) { return AiMode.Rooted; }
-            if (i == 12) { return AiMode.Sleep; }
-            if (i == 13) { return AiMode.Stalking; }
-            if (i == 14) { return AiMode.Struggle; }
-            if (i == 15) { return AiMode.Wander; }
-            if (i == 16) { return AiMode.WanderPaused; }
-            if (i == 17) { return AiMode.GoToPoint; }
-            if (i == 18) { return AiMode.InteractWithProp; }
-            if (i == 19) { return AiMode.ScriptedSequence; }
-            if (i == 20) { return AiMode.Stunned; }
-            if (i == 21) { return AiMode.ScratchingAntlers; }
-            if (i == 22) { return AiMode.PatrolPointsOfInterest; }
-            if (i == 23) { return AiMode.HideAndSeek; }
-            if (i == 24) { return AiMode.JoinPack; }
-            if (i == 25) { return AiMode.PassingAttack; }
-            if (i == 26) { return AiMode.Howl; }
-            if (i == 27) { return AiMode.Disabled; }
-
-            return AiMode.None;
-        }
-
-        public static int AiModeToInt(AiMode i)
-        {
-            if (i == AiMode.None) { return 0; }
-            if (i == AiMode.Attack) { return 1; }
-            if (i == AiMode.Dead) { return 2; }
-            if (i == AiMode.Feeding) { return 3; }
-            if (i == AiMode.Flee) { return 4; }
-            if (i == AiMode.FollowWaypoints) { return 5; }
-            if (i == AiMode.HoldGround) { return 6; }
-            if (i == AiMode.Idle) { return 7; }
-            if (i == AiMode.Investigate) { return 8; }
-            if (i == AiMode.InvestigateFood) { return 9; }
-            if (i == AiMode.InvestigateSmell) { return 10; }
-            if (i == AiMode.Rooted) { return 11; }
-            if (i == AiMode.Sleep) { return 12; }
-            if (i == AiMode.Stalking) { return 13; }
-            if (i == AiMode.Struggle) { return 14; }
-            if (i == AiMode.Wander) { return 15; }
-            if (i == AiMode.WanderPaused) { return 16; }
-            if (i == AiMode.GoToPoint) { return 17; }
-            if (i == AiMode.InteractWithProp) { return 18; }
-            if (i == AiMode.ScriptedSequence) { return 19; }
-            if (i == AiMode.Stunned) { return 20; }
-            if (i == AiMode.ScratchingAntlers) { return 21; }
-            if (i == AiMode.PatrolPointsOfInterest) { return 22; }
-            if (i == AiMode.HideAndSeek) { return 23; }
-            if (i == AiMode.JoinPack) { return 24; }
-            if (i == AiMode.PassingAttack) { return 25; }
-            if (i == AiMode.Howl) { return 26; }
-            if (i == AiMode.Disabled) { return 27; }
-
-            return 0;
         }
 
         public static void ExitHarvesting()
@@ -5439,6 +5361,7 @@ namespace SkyCoop
             GameObject animal = ObjectGuidManager.Lookup(guid);
             if (animal)
             {
+                MelonLogger.Msg("Other player damage animal "+ guid+" on "+ damage);
                 AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
 
                 if (animal.GetComponent<AnimalUpdates>() != null)
@@ -5446,6 +5369,7 @@ namespace SkyCoop
                     if(AnimalsController == true || au.m_ClientController == instance.myId)
                     {
                         animal.GetComponent<BaseAi>().ApplyDamage(damage, DamageSource.Player, "");
+                        MelonLogger.Msg("After apply damage current HP Is " + animal.GetComponent<BaseAi>().m_CurrentHP);
                     }
                 }
             }
@@ -5644,6 +5568,39 @@ namespace SkyCoop
                 gameObject.AddComponent<DestoryStoneOnStop>();
                 gameObject.GetComponent<DestoryStoneOnStop>().m_Obj = gameObject;
                 gameObject.GetComponent<DestoryStoneOnStop>().m_RB = component2;
+            }
+            else if (shoot.m_projectilename == "GEAR_NoiseMaker")
+            {
+                GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject("GEAR_NoiseMaker"), shoot.m_position, shoot.m_rotation);
+                float throwForce = GameManager.m_PlayerManager.m_ThrowForce;
+                float num = GameManager.m_PlayerManager.m_ThrowTorque;
+                GearItem component = gameObject.GetComponent<GearItem>();
+                component.m_NoiseMakerItem.m_CanThrow = false;
+                NoiseMakerItem component1 = component.m_NoiseMakerItem;
+                component1.Ignite();
+
+                if(shoot.m_skill == 0)
+                {
+                    component1.PrepareForThrow();
+                    component1.m_Thrown = true;
+                    throwForce = component1.m_ThrowForce;
+                    num = component1.m_ThrowTorque;
+                    Rigidbody component2 = component.GetComponent<Rigidbody>();
+                    if (component2 == null)
+                    {
+                        return;
+                    }
+                    Utils.SetIsKinematic(component2, false);
+                    component2.velocity = shoot.m_camera_forward * throwForce;
+                    Rigidbody rigidbody = component2;
+                    Vector3 vector3 = shoot.m_camera_right + UnityEngine.Random.Range(-0.2f, 0.2f) * shoot.m_camera_up;
+                    vector3.Normalize();
+                    component2.angularVelocity = vector3 * num;
+                    component2.angularDrag = 0.0f;
+                    component2.drag = 0.0f;
+                }else{
+                    component1.PerformDetonation((ContactPoint[])null);
+                }
             }
             else
             {
@@ -6357,7 +6314,24 @@ namespace SkyCoop
                 }
             }
 
+            if(RegularUpdateSeconds > 0)
+            {
+                RegularUpdateSeconds = RegularUpdateSeconds - 1;
 
+                if(RegularUpdateSeconds == 0)
+                {
+                    RegularUpdateSeconds = 7;
+                    SendRegularAlignData();
+                }
+            }
+            if(SendAfterLoadingFinished > 0)
+            {
+                SendAfterLoadingFinished = SendAfterLoadingFinished - 1;
+                if(SendAfterLoadingFinished == 0)
+                {
+                    FinishedLoading();
+                }
+            }
             PlayersUpdateManager();
             for (int i = 0; i < FireSources.Count; i++)
             {
@@ -6993,9 +6967,7 @@ namespace SkyCoop
                 if (_name.StartsWith("WILDLIFE_Bear_Aurora"))
                 {
                     return "WILDLIFE_Bear_Aurora";
-                }
-                else
-                {
+                }else{
                     return "WILDLIFE_Bear";
                 }
             }
@@ -7031,6 +7003,7 @@ namespace SkyCoop
             //MelonLogger.Msg("Trying re-create animal " + prefab + " " + _GUID);
             AnimalUpdates AU = animal.GetComponent<AnimalUpdates>();
             float hp = animal.GetComponent<BaseAi>().m_CurrentHP;
+            AiMode LastAiState = (AiMode)AU.AP_AiState;
 
             if(animal.GetComponent<BaseAi>().m_CurrentHP == 0 || AU.m_Hp == 0 && AU.AP_AiState == 2 || animal.GetComponent<Harvestable>() != null && (animal.GetComponent<Harvestable>().enabled == true))
             {
@@ -7056,7 +7029,8 @@ namespace SkyCoop
             }
             UnityEngine.Object.Destroy(animal);
             ObjectGuidManager.UnRegisterGuid(_GUID);
-            SpawnAnimal(prefab, pos, _GUID, regionGUID, true, JsonProx, hp);
+            MelonLogger.Msg("Recreating animal with state "+ LastAiState);
+            SpawnAnimal(prefab, pos, _GUID, regionGUID, true, JsonProx, hp, LastAiState);
             return;
         }
         public static void ReCreateAnimal_test_v2(GameObject animal, string proxy = "")
@@ -7193,7 +7167,7 @@ namespace SkyCoop
             }
         }
 
-        public static void SpawnAnimal(string prefabName, Vector3 v3spawn, string _guid, string sRegionGUID, bool recreateion = false, string prox = "", float health = -1)
+        public static void SpawnAnimal(string prefabName, Vector3 v3spawn, string _guid, string sRegionGUID, bool recreateion = false, string prox = "", float health = -1, AiMode state = AiMode.Idle)
         {
             GameObject checkanimal = ObjectGuidManager.Lookup(_guid);
             if(checkanimal != null)
@@ -7453,10 +7427,7 @@ namespace SkyCoop
                             }else{
                                 shouldBeController = false;
                             }
-                            using (Packet _packet = new Packet((int)ServerPackets.ANIMALROLE))
-                            {
-                                ServerSend.ANIMALROLE(i, shouldBeController);
-                            }
+                            ServerSend.ANIMALROLE(i, shouldBeController);
                         }
                     }
                 }
@@ -8589,6 +8560,30 @@ namespace SkyCoop
             }
         }
 
+        public static void FinishedLoading()
+        {
+            //if (iAmHost == true)
+            //{
+            //    ServerSend.LEVELID(0, levelid, true);
+            //    ServerSend.LEVELGUID(0, level_guid, true);
+            //}
+            //if (sendMyPosition == true)
+            //{
+            //    using (Packet _packet = new Packet((int)ClientPackets.LEVELID))
+            //    {
+            //        _packet.Write(levelid);
+            //        SendTCPData(_packet);
+            //    }
+            //    using (Packet _packet = new Packet((int)ClientPackets.LEVELGUID))
+            //    {
+            //        _packet.Write(level_guid);
+            //        SendTCPData(_packet);
+            //    }
+            //}
+            RegularUpdateSeconds = 2;
+            MelonLogger.Msg("Sending my level id");
+        }
+
 
         public static void DedicatedServerUpdate()
         {
@@ -8646,6 +8641,10 @@ namespace SkyCoop
             {
                 DedicatedServerUpdate();
             }
+            if(InOnline() == true)
+            {
+                KillConsole();   
+            }
 
             if(iAmHost == true)
             {
@@ -8673,20 +8672,6 @@ namespace SkyCoop
                 {
                     previous_level_guid = level_guid;
                     MelonLogger.Msg("Scene GUID " + GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
-
-                    if (sendMyPosition == true)
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.LEVELGUID))
-                        {
-                            _packet.Write(level_guid);
-                            SendTCPData(_packet);
-                        }
-                    }
-
-                    if (iAmHost == true)
-                    {
-                        ServerSend.LEVELGUID(0, level_guid, true);
-                    }
                 }
             }
 
@@ -8904,19 +8889,19 @@ namespace SkyCoop
                 if(UIHostMenu != null)
                 {
                     GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
-                    GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                    //GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
                     GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
                     if(IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn == true)
                     {
-                        if(PublicSteamServer.activeSelf == false)
-                        {
-                            PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
-                        }
-                        PublicSteamServer.SetActive(true);
+                        //if(PublicSteamServer.activeSelf == false)
+                        //{
+                        //    PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                        //}
+                        //PublicSteamServer.SetActive(true);
                         PortsObject.SetActive(false);
                     }else{
-                        PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
-                        PublicSteamServer.SetActive(false);
+                        //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                        //PublicSteamServer.SetActive(false);
                         PortsObject.SetActive(true);
                     }
                 }
@@ -9113,7 +9098,11 @@ namespace SkyCoop
             //        UnityEngine.Object.DestroyImmediate(MenuErjan2.gameObject);
             //    }
             //}
-            TrackWhenRecordOver();
+
+            if(SteamServerWorks != "" || Server.UsingSteamWorks == true)
+            {
+                TrackWhenRecordOver();
+            }
 
             if (levelid > 3)
             {
@@ -9390,7 +9379,13 @@ namespace SkyCoop
 
             if (RealTimeCycleSpeed == true && InOnline() == true)
             {
-                uConsole.RunCommandSilent("set_time " + OveridedTime);
+                //uConsole.RunCommandSilent("set_time " + OveridedTime);
+                string todString = OveridedTime;
+                float normalizedTOD = 0.0f;
+                if(Utils.TryParseTOD(todString, out normalizedTOD))
+                {
+                    GameManager.GetTimeOfDayComponent().SetNormalizedTime(normalizedTOD);
+                }
             }
 
             //if (IamShatalker == true || ((ShatalkerModeClient == true || ServerHandle.DarkShatalkerMode == true) && levelid != anotherplayer_levelid))
@@ -10672,22 +10667,76 @@ namespace SkyCoop
 
         public static void ResetDataForSlot(int _from)
         {
-            if(playersData[_from] != null)
+            if(_from != 0)
             {
-                playersData[_from] = new MultiPlayerClientData();
+                if (playersData[_from] != null)
+                {
+                    playersData[_from] = new MultiPlayerClientData();
+                }
+                ServerSend.EQUIPMENT(_from, new PlayerEquipmentData(), false);
+                ServerSend.LIGHTSOURCE(_from, false, false);
+                ServerSend.LIGHTSOURCENAME(_from, "", false);
+                ServerSend.XYZ(_from, new Vector3(0, 0, 0), false);
+                ServerSend.XYZW(_from, new Quaternion(0, 0, 0, 0), false);
+                ServerSend.ANIMSTATE(_from, "Idle", false);
+                ServerSend.LEVELID(_from, 0, false);
             }
-            ServerSend.EQUIPMENT(_from, playersData[_from].m_PlayerEquipmentData, false);
-            ServerSend.LIGHTSOURCE(_from, false, false);
-            ServerSend.LIGHTSOURCENAME(_from, playersData[_from].m_PlayerEquipmentData.m_HoldingItem, false);
-            ServerSend.XYZ(_from, new Vector3(0,0,0), false);
-            ServerSend.XYZW(_from, new Quaternion(0,0,0,0), false);
-            ServerSend.ANIMSTATE(_from, "Idle", false);
-            ServerSend.LEVELID(_from, 0, false);
+        }
+
+        public static bool LoadingScreenIsOn = true;
+
+        public static void SendRegularAlignData()
+        {
+            if (level_name == "Empty" || level_name == "Boot" || level_name == "MainMenu" || LoadingScreenIsOn == true)
+            {
+                return;
+            }
+            
+            if (iAmHost == true)
+            {
+                ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, true);
+                ServerSend.XYZW(0, GameManager.GetPlayerTransform().rotation, true);
+                ServerSend.LEVELID(0, levelid, true);
+                ServerSend.LEVELGUID(0, level_guid, true);
+                ServerSend.ANIMSTATE(0, MyAnimState, true);
+            }
+            if(sendMyPosition == true)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.XYZ))
+                {
+                    _packet.Write(GameManager.GetPlayerTransform().position);
+                    SendTCPData(_packet);
+                }
+                using (Packet _packet = new Packet((int)ClientPackets.XYZW))
+                {
+                    _packet.Write(GameManager.GetPlayerTransform().rotation);
+                    SendTCPData(_packet);
+                }
+                using (Packet _packet = new Packet((int)ClientPackets.LEVELID))
+                {
+                    _packet.Write(levelid);
+                    SendTCPData(_packet);
+                }
+                using (Packet _packet = new Packet((int)ClientPackets.LEVELGUID))
+                {
+                    _packet.Write(level_guid);
+                    SendTCPData(_packet);
+                }
+                using (Packet _packet = new Packet((int)ClientPackets.ANIMSTATE))
+                {
+                    _packet.Write(MyAnimState);
+                    SendTCPData(_packet);
+                }
+            }
         }
 
         public static void SendSpawnData(bool AskResponce = false)
         {
             if (Application.isBatchMode)
+            {
+                return;
+            }
+            if(LoadingScreenIsOn == false)
             {
                 return;
             }
@@ -10955,7 +11004,16 @@ namespace SkyCoop
 
         public static bool IsScarf(string name)
         {
-            if(name.Contains("Scarf") || name.Contains("GEAR_Balaclava"))
+            if(name.Contains("Scarf"))
+            {
+                return true;
+            }else{
+                return false;
+            }
+        }
+        public static bool IsBalaclava(string name)
+        {
+            if (name.Contains("Balaclava"))
             {
                 return true;
             }else{
@@ -10991,8 +11049,8 @@ namespace SkyCoop
                 GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
                 bool ShouldUseSteam = IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn;
 
-                GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
-                bool IsPub = PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().isOn;
+                //GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                //bool IsPub = PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().isOn;
 
                 GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
                 int PortToHost = Convert.ToInt32(PortsObject.GetComponent<UnityEngine.UI.InputField>().text);
@@ -11000,12 +11058,17 @@ namespace SkyCoop
                 GameObject FireSyncObj = UIHostMenu.transform.GetChild(9).gameObject;
                 int FireSyncMode = FireSyncObj.GetComponent<UnityEngine.UI.Dropdown>().m_Value;
 
-                IsPublicServer = IsPub;
+                GameObject CheatsListObj = UIHostMenu.transform.GetChild(10).gameObject;
+                int CheatsMode = CheatsListObj.GetComponent<UnityEngine.UI.Dropdown>().m_Value;
+
+                IsPublicServer = false;
                 ServerConfig.m_DuppedSpawns = DupesIsChecked;
                 ServerConfig.m_DuppedContainers = BoxDupesIsChecked;
                 ServerConfig.m_PlayersSpawnType = spawnStyle;
                 ServerConfig.m_FireSync = FireSyncMode;
+                ServerConfig.m_CheatsMode = CheatsMode;
                 MaxPlayers = slotsMax;
+                ApplyOtherCampfires = true;
 
                 if (ShouldUseSteam == false)
                 {
@@ -11063,6 +11126,37 @@ namespace SkyCoop
 
         public static void HostMenu()
         {
+            if (CantBeUsedForMP == true || LastLoadedGenVersion != BuildInfo.RandomGenVersion || SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
+            {
+                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                {
+                    string textToShow = "";
+
+                    if (LastLoadedGenVersion == 0)
+                    {
+                        textToShow = "You can't use this save file for hosting multiplayer! Because this save file has been created before mod has been installed, or on old version of the mod that isn't compatible with current one!";
+                    }else{
+                        textToShow = "You can't use this save file for hosting multiplayer! Because this save file has been created on old version of the mod that isn't compatible with current one! Save file Generation version " + LastLoadedGenVersion + ". Current one mod use now " + BuildInfo.RandomGenVersion + "!";
+                    }
+
+                    if (SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
+                    {
+                        textToShow = "Story mode never has been planned to be synced. Mod works only in SANDBOX game mode. I not know why you even try to host story mode, we never announced it will ever work! Please play regular sandbox!";
+                    }
+
+                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, textToShow, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                }
+                MelonLogger.Msg("CantBeUsedForMP "+ CantBeUsedForMP+ " LastLoadedGenVersion "+ LastLoadedGenVersion+ " RandomGenVersion "+ BuildInfo.RandomGenVersion);
+                return;
+            }
+
+
+            if (GameManager.GetExperienceModeManagerComponent().GetCurrentExperienceMode().m_ModeType == ExperienceModeType.Custom)
+            {
+                NoCustomExp();
+                return;
+            }
+
             if (UiCanvas != null && UIHostMenu == null)
             {
                 UIHostMenu = MakeModObject("MP_HostSettings", UiCanvas.transform);
@@ -11084,10 +11178,12 @@ namespace SkyCoop
 
 
                 GameObject P2PtxBox = UIHostMenu.transform.GetChild(4).gameObject;
-                GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                //GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
                 GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
                 GameObject FireSyncObj = UIHostMenu.transform.GetChild(9).gameObject;
+                GameObject CheatModeListObj = UIHostMenu.transform.GetChild(10).gameObject;
                 FireSyncObj.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_FireSync);
+                CheatModeListObj.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_CheatsMode);
 
                 if (SteamConnect.CanUseSteam == false)
                 {
@@ -11095,21 +11191,22 @@ namespace SkyCoop
                     IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                     IsSteamHost.SetActive(false);
 
-                    PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
-                    PublicSteamServer.SetActive(false);
+                    //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                    //PublicSteamServer.SetActive(false);
                     PortsObject.SetActive(false);
                 }else{
                     PortsObject.SetActive(true);
                 }
-                PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
 
                 AddHintScript(dupesCheckbox);
                 AddHintScript(dupesBoxesCheckbox);
                 AddHintScript(SpawnStyleList);
                 AddHintScript(FireSyncObj);
                 AddHintScript(P2PtxBox);
-                AddHintScript(PublicSteamServer);
+                //AddHintScript(PublicSteamServer);
                 AddHintScript(PortsObject);
+                AddHintScript(CheatModeListObj);
             }
         }
 
@@ -11121,6 +11218,7 @@ namespace SkyCoop
             string m_Bottom = "";
             string m_Boots = "";
             string m_Scarf = "";
+            string m_Balaclava = "";
             bool NeedUpdate = true;
 
             //MelonLogger.Msg("UpdateMyClothing");
@@ -11137,14 +11235,23 @@ namespace SkyCoop
             if (IsScarf(Hat1))
             {
                 m_Scarf = Hat1;
-                m_Hat = Hat2;
+                if (IsBalaclava(Hat2))
+                {
+                    m_Balaclava = Hat2;
+                }else{
+                    m_Hat = Hat2;
+                }
             }
             else if (IsScarf(Hat2))
             {
                 m_Scarf = Hat2;
-                m_Hat = Hat1;
-            }
-            else{
+                if (IsBalaclava(Hat1))
+                {
+                    m_Balaclava = Hat1;
+                }else{
+                    m_Hat = Hat1;
+                }
+            }else{
                 m_Hat = GetClothToDisplay(Hat1, Hat2);
             }
 
@@ -11181,6 +11288,7 @@ namespace SkyCoop
                 MyBottom = m_Bottom;
                 MyBoots = m_Boots;
                 MyScarf = m_Scarf;
+                MyBalaclava = m_Balaclava;
                 //MelonLogger.Msg("[MyClothing] Hat " + m_Hat);
                 //MelonLogger.Msg("[MyClothing] Torso " + m_Top);
                 //MelonLogger.Msg("[MyClothing] Legs " + m_Bottom);
@@ -11192,6 +11300,7 @@ namespace SkyCoop
                 Cdata.m_Bottom = MyBottom;
                 Cdata.m_Boots = MyBoots;
                 Cdata.m_Scarf = MyScarf;
+                Cdata.m_Balaclava = MyBalaclava;
 
                 if (sendMyPosition == true) // CLIENT
                 {

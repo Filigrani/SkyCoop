@@ -569,6 +569,7 @@ namespace GameServer
             Write(obj.m_Bottom);
             Write(obj.m_Boots);
             Write(obj.m_Scarf);
+            Write(obj.m_Balaclava);
         }
         public void Write(MyMod.BrokenFurnitureSync obj)
         {
@@ -599,6 +600,7 @@ namespace GameServer
             Write(obj.m_DuppedContainers);
             Write(obj.m_PlayersSpawnType);
             Write(obj.m_FireSync);
+            Write(obj.m_CheatsMode);
         }
         public void Write(MyMod.HarvestableSyncData obj)
         {
@@ -1072,6 +1074,7 @@ namespace GameServer
             obj.m_Bottom = ReadString();
             obj.m_Boots = ReadString();
             obj.m_Scarf = ReadString();
+            obj.m_Balaclava = ReadString();
 
             return obj;
         }
@@ -1118,6 +1121,7 @@ namespace GameServer
             obj.m_DuppedContainers = ReadBool();
             obj.m_PlayersSpawnType = ReadInt();
             obj.m_FireSync = ReadInt();
+            obj.m_CheatsMode = ReadInt();
 
             return obj;
         }

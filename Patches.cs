@@ -473,21 +473,28 @@ namespace SkyCoop
                                     bool underMyControl = false;
                                     bool clientControl = false;
 
+                                    //if (MyBullet == true)
+                                    //{
+                                    //    if (MyMod.AnimalsController == true || au.m_ClientController == MyMod.instance.myId)
+                                    //    {
+                                    //        NeedPipSkills = true;
+                                    //    }
+                                    //    else
+                                    //    {
+                                    //        NeedPipSkills = false;
+                                    //    }
+                                    //}
+                                    //else
+                                    //{
+                                    //    NeedPipSkills = false;
+                                    //}
                                     if (MyBullet == true)
                                     {
-                                        if (MyMod.AnimalsController == true || au.m_ClientController == MyMod.instance.myId)
-                                        {
-                                            NeedPipSkills = true;
-                                        }
-                                        else
-                                        {
-                                            NeedPipSkills = false;
-                                        }
-                                    }
-                                    else
-                                    {
+                                        NeedPipSkills = true;
+                                    }else{
                                         NeedPipSkills = false;
                                     }
+
 
 
                                     if (NeedPipSkills == true)
@@ -505,40 +512,43 @@ namespace SkyCoop
                                     }
                                     else
                                     {
-                                        if (MyBullet == false && ((MyMod.AnimalsController == true && clientControl == false) || (MyMod.AnimalsController == false && underMyControl == true)))
-                                        {
-                                            MelonLogger.Msg("Remote shoot hit the animal, sending responce to client.");
-                                            int SkillTypeId = 0;
+                                        //if (MyBullet == false && ((MyMod.AnimalsController == true && clientControl == false) || (MyMod.AnimalsController == false && underMyControl == true)))
+                                        //{
+                                        //    MelonLogger.Msg("Remote shoot hit the animal, sending responce to client.");
+                                        //    int SkillTypeId = 0;
 
-                                            if (__instance.m_GunType == GunType.Rifle)
-                                            {
-                                                SkillTypeId = 1;
-                                            }
-                                            else if (__instance.m_GunType == GunType.Revolver)
-                                            {
-                                                SkillTypeId = 2;
-                                            }
+                                        //    if (__instance.m_GunType == GunType.Rifle)
+                                        //    {
+                                        //        SkillTypeId = 1;
+                                        //    }
+                                        //    else if (__instance.m_GunType == GunType.Revolver)
+                                        //    {
+                                        //        SkillTypeId = 2;
+                                        //    }
 
-                                            if (MyMod.sendMyPosition == true)
-                                            {
-                                                using (Packet _packet = new Packet((int)ClientPackets.PIMPSKILL))
-                                                {
-                                                    _packet.Write(SkillTypeId);
-                                                    SendTCPData(_packet);
-                                                }
-                                            }
-                                            if (MyMod.iAmHost == true)
-                                            {
-                                                using (Packet _packet = new Packet((int)ServerPackets.PIMPSKILL))
-                                                {
-                                                    ServerSend.PIMPSKILL(1, SkillTypeId);
-                                                }
-                                            }
-                                        }
+                                        //    if (MyMod.sendMyPosition == true)
+                                        //    {
+                                        //        using (Packet _packet = new Packet((int)ClientPackets.PIMPSKILL))
+                                        //        {
+                                        //            _packet.Write(SkillTypeId);
+                                        //            SendTCPData(_packet);
+                                        //        }
+                                        //    }
+                                        //    if (MyMod.iAmHost == true)
+                                        //    {
+                                        //        using (Packet _packet = new Packet((int)ServerPackets.PIMPSKILL))
+                                        //        {
+                                        //            ServerSend.PIMPSKILL(1, SkillTypeId);
+                                        //        }
+                                        //    }
+                                        //}
                                     }
                                 }
-                                baseAiFromObject.SetupDamageForAnim(hit.collider.transform.position, GameManager.GetPlayerTransform().position, component);
-                                baseAiFromObject.ApplyDamage(num4, bleedOutMinutes, DamageSource.Player, hit.collider.name);
+                                if(MyBullet == true)
+                                {
+                                    baseAiFromObject.SetupDamageForAnim(hit.collider.transform.position, GameManager.GetPlayerTransform().position, component);
+                                    baseAiFromObject.ApplyDamage(num4, bleedOutMinutes, DamageSource.Player, hit.collider.name);
+                                }
                             }
                         }
                         else if (PlayerDamage != null && MyBullet == true)
@@ -1040,11 +1050,9 @@ namespace SkyCoop
                         }
                         if (au == null)
                         {
-                            //MelonLogger.Msg("Added AnimalUpdates");
                             animal.AddComponent<MyMod.AnimalUpdates>();
                             au = animal.GetComponent<MyMod.AnimalUpdates>();
                             au.m_Animal = __instance.gameObject;
-                            //animal.name = animal.name + "_MULTIPLAYER_" + _guid;
                         }
                     }
                 }
@@ -1178,14 +1186,36 @@ namespace SkyCoop
             internal static bool Prefix(BaseAi __instance, float damage)
             {
                 MyMod.AnimalUpdates au = __instance.gameObject.GetComponent<MyMod.AnimalUpdates>();
-
-                if ((MyMod.AnimalsController == true && au.m_ClientControlled == false) || au.m_ClientController == MyMod.instance.myId)
+                bool NeedSendDamage = false;
+                bool NeedApplyDamage = false;
+                if(MyMod.AnimalsController == true && au.m_ClientControlled == false)
                 {
-                    return true;
-                }else{
-                    SendDamageAnimal(au, damage);
-                    return false;
+                    NeedApplyDamage = true;
+                    NeedSendDamage = false;
                 }
+                if (MyMod.AnimalsController == true && au.m_ClientControlled == true)
+                {
+                    NeedApplyDamage = false;
+                    NeedSendDamage = true;
+                }
+                if (MyMod.AnimalsController == false && au.m_ClientController == MyMod.instance.myId)
+                {
+                    NeedApplyDamage = true;
+                    NeedSendDamage = false;
+                }
+                if (MyMod.AnimalsController == false && au.m_ClientController != MyMod.instance.myId)
+                {
+                    NeedApplyDamage = false;
+                    NeedSendDamage = true;
+                }
+
+                if (NeedSendDamage == true)
+                {
+                    SendDamageAnimal(au, damage);
+                }
+
+
+                return NeedApplyDamage;
             }
         }
 
@@ -1307,9 +1337,13 @@ namespace SkyCoop
                 {
                     GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = __instance.gameObject.transform.position;
                     GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = sceneName + "_" + __instance.m_GUID;
-                }
-                else
+                }else{
                     GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = sceneName;
+                }
+
+                MelonLogger.Msg(ConsoleColor.Yellow, "GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad " + GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad);
+
+
                 GameManager.LoadScene(sceneName, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
                 return false;
             }
@@ -1425,7 +1459,7 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("[PlayerManager][Postfix] ReleaseThrownObject SaveThrowingItem " + MyMod.SaveThrowingItem.name);
 
-                    if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_Stone"))
+                    if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_Stone") || MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
                     {
                         Vector3 V3 = MyMod.SaveThrowingItem.transform.position;
                         Quaternion Qu = MyMod.SaveThrowingItem.transform.rotation;
@@ -1435,7 +1469,14 @@ namespace SkyCoop
                         MyMod.ShootSync stone = new MyMod.ShootSync();
                         stone.m_position = V3;
                         stone.m_rotation = Qu;
-                        stone.m_projectilename = "GEAR_Stone";
+                        if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_Stone"))
+                        {
+                            stone.m_projectilename = "GEAR_Stone";
+                        }
+                        if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
+                        {
+                            stone.m_projectilename = "GEAR_NoiseMaker";
+                        }
                         stone.m_skill = 0;
                         stone.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
                         stone.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
@@ -1463,6 +1504,37 @@ namespace SkyCoop
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(NoiseMakerItem), "ProcessItemInHandDetonated")]
+        public class NoiseMakerItem_ProcessItemInHandDetonated
+        {
+            public static void Postfix(NoiseMakerItem __instance)
+            {
+                MyMod.ShootSync bomb = new MyMod.ShootSync();
+                bomb.m_position = GameManager.GetPlayerObject().transform.position;
+                bomb.m_rotation = GameManager.GetPlayerObject().transform.rotation;
+                bomb.m_projectilename = "GEAR_NoiseMaker";
+                bomb.m_skill = 1; //Will make it blow in hands
+                bomb.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
+                bomb.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
+                bomb.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+
+                if (MyMod.sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.SHOOTSYNC))
+                    {
+                        _packet.Write(bomb);
+                        SendTCPData(_packet);
+                    }
+                }
+                if (MyMod.iAmHost == true)
+                {
+                    ServerSend.SHOOTSYNC(0, bomb, true);
+                }
+            }
+        }
+
+        
         //[HarmonyLib.HarmonyPatch(typeof(Condition), "ForceStartEarRinging")]
         //public class Condition_EarRining
         //{
@@ -1741,7 +1813,6 @@ namespace SkyCoop
 
                     if (OldPostLoadActionType == true)
                     {
-                        MyMod.SendSpawnData();
                         MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateRopesAndFurnsAndCampfires in 2 seconds!");
                         MyMod.UpdateRopesAndFurns = 2;
                         MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateLootedContainers in 3 seconds!");
@@ -1984,6 +2055,22 @@ namespace SkyCoop
             }
         }
 
+        public static void SaveGenVersion(SaveSlotType gameMode, string name)
+        {
+            //MelonLogger.Msg("[Saving][MultiplayerDeath] Saving...");
+            int[] saveProxy = { MyMod.BuildInfo.RandomGenVersion };
+            string data = JSON.Dump(saveProxy);
+
+            if(MyMod.CantBeUsedForMP == false)
+            {
+                bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_genversion", data);
+                if (ok == true)
+                {
+                    MyMod.LastLoadedGenVersion = MyMod.BuildInfo.RandomGenVersion;
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")]
         public static class SaveGameSystemPatch_SaveSceneData
         {
@@ -1997,6 +2084,7 @@ namespace SkyCoop
                 SavePlants(gameMode, name);
                 SaveSnowShelters(gameMode, name);
                 SaveMPDeath(gameMode, name);
+                SaveGenVersion(gameMode, name);
             }
         }
 
@@ -2178,6 +2266,25 @@ namespace SkyCoop
                 //MelonLogger.Msg("[Saving][MultiplayerDeath] No saves found!");
             }
         }
+        public static void LoadGenVersion(string name)
+        {
+            //MelonLogger.Msg("[Saving][MultiplayerDeath] Loading...");
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_genversion");
+            if (data != null)
+            {
+                int[] saveProxy = JSON.Load(data).Make<int[]>();
+                MyMod.LastLoadedGenVersion = saveProxy[0];
+                if(MyMod.LastLoadedGenVersion != MyMod.BuildInfo.RandomGenVersion)
+                {
+                    MyMod.CantBeUsedForMP = true;
+                    MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because we created on old version of the mod, with Generation version "+ MyMod.LastLoadedGenVersion + ". Release of mod you using right now has Generation version "+ MyMod.BuildInfo.RandomGenVersion);
+                }
+            }else{
+                MyMod.LastLoadedGenVersion = 0;
+                MyMod.CantBeUsedForMP = true;
+                MelonLogger.Msg(ConsoleColor.DarkRed,"This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "RestoreGlobalData")]
         public static class SaveGameSystemPatch_RestoreGlobalData
@@ -2193,8 +2300,11 @@ namespace SkyCoop
                 LoadPlants(name);
                 LoadSnowShelters(name);
                 LoadMPDeath(name);
+                LoadGenVersion(name);
             }
         }
+
+
         public static void FlushAllSavable()
         {
             MelonLogger.Msg("[Saving] Wipe all savables cause of quit");
@@ -2202,7 +2312,9 @@ namespace SkyCoop
             MyMod.BrokenFurniture = new List<MyMod.BrokenFurnitureSync>();
             MyMod.PickedGears = new List<MyMod.PickedGearSync>();
             MyMod.DeployedRopes = new List<MyMod.ClimbingRopeSync>();
-            if(MyMod.sendMyPosition == true)
+            MyMod.CantBeUsedForMP = false;
+            MyMod.LastLoadedGenVersion = 0;
+            if (MyMod.sendMyPosition == true)
             {
                 MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
                 MyMod.Disconnect();
@@ -2561,8 +2673,8 @@ namespace SkyCoop
                 int _x = (int)go.transform.position.x;
                 int _y = (int)go.transform.position.y;
                 int _z = (int)go.transform.position.z;
-
-                int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + _x + _y + _z;
+                //int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + _x + _y + _z;
+                int seed = GameManager.GetRandomSeed(_x + _y + _z);
                 spawnChance = Mathf.Clamp(spawnChance, 0.0f, 100f);
 
                 System.Random RNG = new System.Random(seed);
@@ -2574,6 +2686,10 @@ namespace SkyCoop
                 //MelonLogger.Msg("[RollSpawnChance Seeded] Gear " + go.name + " Chance " + spawnChance + "% " + " Success " + __result + " Position: X " + _x + " Y " + _y + " Z " + _z);
             }
         }
+
+        public static int EmuGenVersion = -1;
+        public static bool EmulateOldRandom = false;
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "GetRandomSeed")]
         public static class GameManager_GetRandomSeed
         {
@@ -2583,7 +2699,51 @@ namespace SkyCoop
             }
             public static void Postfix(int seed, ref int __result)
             {
-                __result = seed ^ GameManager.m_SceneTransitionData.m_GameRandomSeed;
+                //MelonLogger.Msg("Getting random seed for "+ GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+                //GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent
+
+                if (EmulateOldRandom)
+                {
+                    if (EmuGenVersion == 1)
+                    {
+                        __result = seed ^ GameManager.m_SceneTransitionData.m_GameRandomSeed;
+                    }
+                }else{
+                    string UseString = "";
+
+                    if(GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != null && (GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != "" || GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != ""))
+                    {
+                        if (GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != "")
+                        {
+                            if (GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad)
+                            {
+                                UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad;
+                            }
+                            else if (GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent == GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad)
+                            {
+                                UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                            }
+                        }else{
+                            UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                        }
+                    }else{
+                        if(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != null)
+                        {
+                            UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                        }else{
+
+                            if (UnityEngine.SceneManagement.SceneManager.GetActiveScene() != null)
+                            {
+                                UseString = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                            }else{
+                                UseString = "SomethingWrong!!!";
+                            }
+                        }
+                    }
+                    //MelonLogger.Msg("RANDOMFORLOAD        "+ UseString);
+                    int DuppableSceneHash = UseString.GetHashCode();
+                    __result = seed + GameManager.m_SceneTransitionData.m_GameRandomSeed + DuppableSceneHash;
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(RandomSpawnObject), "ActivateRandomObject")]
@@ -2747,7 +2907,9 @@ namespace SkyCoop
                 }
 
                 CallCounter = CallCounter + 1;
-                int seedminMax = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash + CallCounter;
+                
+                //int seedminMax = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash + CallCounter;
+                int seedminMax = GameManager.GetRandomSeed(GuidHash + CallCounter);
                 System.Random RNGminMax = new System.Random(seedminMax);
                 int num4 = RNGminMax.Next(__instance.m_NumToSpawnMin, __instance.m_NumToSpawnMax + 1);
                 int num5 = Mathf.Min(num1 == 0 ? __instance.m_PrefabList.Length : elementListList.Count, num4);
@@ -2765,7 +2927,8 @@ namespace SkyCoop
                     percent = (float)(100.0 - (100.0 - (double)percent) * (double)GameManager.GetExperienceModeManagerComponent().GetGearSpawnChanceScale());
                 }
 
-                int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash;
+                //int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash;
+                int seed = GameManager.GetRandomSeed(GuidHash);
                 System.Random RNG = new System.Random(seed);
 
                 if (MyMod.RollChanceSeeded(percent, RNG))
@@ -2777,7 +2940,8 @@ namespace SkyCoop
                 for (; num6 > 0; --num6)
                 {
                     CallCounter = CallCounter + 1;
-                    int seedNum3 = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash + CallCounter;
+                    //int seedNum3 = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash + CallCounter;
+                    int seedNum3 = GameManager.GetRandomSeed(GuidHash + CallCounter);
                     System.Random RNGnum3 = new System.Random(seedNum3);                              
                     int num3 = RNGnum3.Next(0, num2);
                     int num7 = 0;
@@ -4022,9 +4186,21 @@ namespace SkyCoop
                 if(enable == false)
                 {
                     MelonLogger.Msg(ConsoleColor.Yellow, "[Scene Load] Everything finished loading!");
+                    MyMod.SendAfterLoadingFinished = 2;
                 }
+                MyMod.LoadingScreenIsOn = enable;
             }
         }
+        
+        [HarmonyLib.HarmonyPatch(typeof(MissionServicesManager), "SceneLoadCompleted")]
+        public static class MissionServicesManager_Loaded
+        {
+            public static void Postfix()
+            {
+                MelonLogger.Msg(ConsoleColor.Yellow, "[MissionServicesManager] SceneLoadCompleted!");
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")]
         public static class SaveGameSystemPatch_LoadSceneData
         {
@@ -4121,12 +4297,33 @@ namespace SkyCoop
         {
             public static void Postfix(SpawnRegion __instance, bool __result)
             {
-                float maxDis = __instance.m_Radius + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance;
-                bool AllPlayersAllowsIt = MyMod.CheckDistanceAgnistEveryPlayer(__instance.m_Center, maxDis, true);
-
-                if (AllPlayersAllowsIt == true)
+                if (__result == false)
                 {
-                    __result = true;
+                    bool SomeoneSeeThisSpawn = false;
+                    float maxDis = __instance.m_Radius + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance;
+                    Vector3 pos = __instance.m_Center;
+                    float dis = maxDis;
+
+                    for (int i = 0; i < MyMod.playersData.Count; i++)
+                    {
+                        if (MyMod.playersData[i] != null)
+                        {
+                            if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+                            {
+                                float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+                                if (plDis < maxDis)
+                                {
+                                    SomeoneSeeThisSpawn = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+
+                    if (SomeoneSeeThisSpawn == true)
+                    {
+                        __result = true;
+                    }
                 }
             }
         }
@@ -4135,13 +4332,39 @@ namespace SkyCoop
         {
             public static void Postfix(SpawnRegion __instance, Vector3 spawnPos, bool __result)
             {
-                bool AllPlayersAllowsIt = MyMod.CheckDistanceAgnistEveryPlayer(spawnPos, GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance, true);
-                if (AllPlayersAllowsIt == true)
-                {
-                    __result = true;
-                }
+                //if(__result == false)
+                //{
+                //    bool SomeoneTooClose = false;
+                //    float maxDis = GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance;
+                //    Vector3 pos = spawnPos;
+                //    float dis = maxDis;
+
+                //    for (int i = 0; i < MyMod.playersData.Count; i++)
+                //    {
+                //        if (MyMod.playersData[i] != null)
+                //        {
+                //            if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+                //            {
+                //                float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+                //                if (plDis < maxDis)
+                //                {
+                //                    SomeoneTooClose = true;
+                //                    MelonLogger.Msg("Other player too close for spawn " + MyMod.playersData[i].m_Name);
+                //                    break;
+                //                }
+                //            }
+                //        }
+                //    }
+
+                //    if (SomeoneTooClose == true)
+                //    {
+                //        __result = true;
+                //    }
+                //}
+                __result = false;
             }
         }
+
         [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "RemoveActiveSpawns")]
         public static class SpawnRegion_RemoveActiveSpawns
         {
@@ -4151,29 +4374,77 @@ namespace SkyCoop
                 {
                     if (__instance.m_Spawns.get_Item(index) && __instance.m_Spawns.get_Item(index).gameObject.activeSelf)
                     {
-                        GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns.get_Item(index).m_PackAnimal, false);
-                        if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode)) && (__instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Flee && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Dead))
-                        {
-                            __instance.m_Spawns.get_Item(index).SetAiMode(AiMode.Flee);
-                        }
                         Vector3 pos = __instance.m_Spawns.get_Item(index).m_CachedTransform.position;
 
                         bool AllPlayersAllowsIt = false;
+                        bool SomeoneSeeThisSpawn = false;
+                        bool IallowDespawn = false;
+                        string viewerName = "";
+                        float minimalDistance = GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance;
 
-                        //150 because GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance
-                        if (MyMod.CheckDistanceAgnistEveryPlayer(pos, 150, false))
+                        if (Utils.DistanceToMainCamera(pos) > minimalDistance)
                         {
-                            AllPlayersAllowsIt = true;
+                            IallowDespawn = true;
+                        }
+
+                        for (int i = 0; i < MyMod.playersData.Count; i++)
+                        {
+                            if (MyMod.playersData[i] != null)
+                            {
+                                if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+                                {
+                                    float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+                                    if (plDis < minimalDistance)
+                                    {
+                                        SomeoneSeeThisSpawn = true;
+                                        viewerName = MyMod.playersData[i].m_Name;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        string animalName = __instance.m_Spawns.get_Item(index).gameObject.name;
+                        string animalGUID = "";
+                        if (__instance.m_Spawns.get_Item(index).gameObject.GetComponent<ObjectGuid>() != null)
+                        {
+                            animalGUID = __instance.m_Spawns.get_Item(index).gameObject.GetComponent<ObjectGuid>().Get();
                         }else{
-                            //MelonLogger.Msg("Want to unload spawn area but can't cause any other player there");
-                        }
-                        if(MyMod.InOnline() == false)
-                        {
-                            AllPlayersAllowsIt = false;
+                            animalGUID = "HAS_NO_GUID";
                         }
 
-                        if (AllPlayersAllowsIt == true && (Utils.DistanceToMainCamera(pos) >= GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance && (!Utils.PositionIsOnscreen(pos) || (double)Utils.DistanceToMainCamera(pos) >= (double)GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance) && !Utils.PositionIsInLOSOfPlayer(pos)))
+                        if (MyMod.InOnline() == false)
                         {
+                            AllPlayersAllowsIt = IallowDespawn;
+                        }else{
+                            if (IallowDespawn == true && SomeoneSeeThisSpawn == false)
+                            {
+                                AllPlayersAllowsIt = true;
+                                MelonLogger.Msg("Unloading animel because no one see this " + animalGUID + " " + animalName);
+                            }
+                            else
+                            {
+
+                                if (IallowDespawn == false)
+                                {
+                                    MelonLogger.Msg("Can't unload animal because I am see this animal " + animalGUID + " " + animalName);
+                                }
+                                else if (SomeoneSeeThisSpawn == true)
+                                {
+                                    MelonLogger.Msg("Can't unload animal because other player " + viewerName + " see this animal " + animalGUID + " " + animalName);
+                                }
+
+                                AllPlayersAllowsIt = false;
+                            }
+                        }
+
+                        if (AllPlayersAllowsIt == true)
+                        {
+                            GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns.get_Item(index).m_PackAnimal, false);
+                            if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode)) && (__instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Flee && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Dead))
+                            {
+                                __instance.m_Spawns.get_Item(index).SetAiMode(AiMode.Flee);
+                            }
                             if (isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode))
                             {
                                 __instance.m_Spawns.get_Item(index).Despawn();
@@ -4188,6 +4459,46 @@ namespace SkyCoop
                     }
                 }
                 return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "MaybeSetAiModeWhenInactiveOrDisabled")]
+        internal static class BaseAiManager_MaybeSetAiModeWhenInactiveOrDisabled
+        {
+            private static bool Prefix(BaseAiManager __instance, BaseAi bai)
+            {
+                Vector3 pos = bai.gameObject.transform.position;
+                bool SomeoneSeeThisSpawn = false;
+                string viewerName = "";
+                float minimalDistance = GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance;
+
+                for (int i = 0; i < MyMod.playersData.Count; i++)
+                {
+                    if (MyMod.playersData[i] != null)
+                    {
+                        if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+                        {
+                            float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+                            if (plDis < minimalDistance)
+                            {
+                                SomeoneSeeThisSpawn = true;
+                                viewerName = MyMod.playersData[i].m_Name;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (MyMod.InOnline() == false)
+                {
+                    return true;
+                }else{
+                    if (SomeoneSeeThisSpawn == true)
+                    {
+                        return false;
+                    }else{
+                        return true;
+                    }
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnExperienceClicked")]
@@ -4205,6 +4516,53 @@ namespace SkyCoop
                     return false;
                 }
                 return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "CanQuarter")]
+        internal static class Panel_BodyHarvest_NoQuatrate
+        {
+            private static void Postfix(Panel_BodyHarvest __instance, bool __result)
+            {
+                __result = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "DecayOverTODHours")]
+        internal static class GearItem_DecayOverTODHours
+        {
+            private static bool Prefix(GearItem __instance, float deltaTODHours, float scale)
+            {
+                if(MyMod.InOnline() == true)
+                {
+                    return false;
+                }else{
+                    return true;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "Spawn")]
+        internal static class SpawnRegion_Spawn
+        {
+            private static bool Prefix(SpawnRegion __instance, WildlifeMode wildlifeMode)
+            {
+                if(MyMod.InOnline() == false)
+                {
+                    return true;
+                }else{
+                    return MyMod.AnimalsController;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(ConsoleManager), "spawn_common")]
+        internal static class ConsoleManager_Spawn
+        {
+            private static bool Prefix(ConsoleManager __instance, string prefabName, float dist)
+            {
+                if (MyMod.InOnline() == false)
+                {
+                    return true;
+                }else{
+                    return MyMod.AnimalsController;
+                }
             }
         }
         //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]

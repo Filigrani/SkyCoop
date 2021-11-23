@@ -199,11 +199,14 @@ namespace GameServer
         public static void LEVELID(int _fromClient, Packet _packet)
         {
             int lel = _packet.ReadInt();
-            MelonLoader.MelonLogger.Msg("Player " + _fromClient + "  transition to level " + lel);
 
             if (MyMod.playersData[_fromClient] != null)
             {
                 MyMod.playersData[_fromClient].m_Levelid = lel;
+                if(MyMod.playersData[_fromClient].m_Levelid != lel)
+                {
+                    MelonLogger.Msg("Player " + _fromClient + "  transition to level " + lel);
+                }
             }
             ServerSend.LEVELID(_fromClient, lel, false);
         }
@@ -214,8 +217,11 @@ namespace GameServer
             if (MyMod.playersData[_fromClient] != null)
             {
                 MyMod.playersData[_fromClient].m_LevelGuid = lel;
+                if (MyMod.playersData[_fromClient].m_LevelGuid != lel)
+                {
+                    MelonLogger.Msg("Player " + _fromClient + "  transition to level with GUID " + lel);
+                }
             }
-            MelonLoader.MelonLogger.Msg("Player " + _fromClient + "  transition to level with GUID " + lel);
             ServerSend.LEVELGUID(_fromClient, lel, false);
         }
         public static void GOTITEM(int _fromClient, Packet _packet)

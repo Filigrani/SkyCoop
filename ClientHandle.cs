@@ -110,9 +110,13 @@ namespace SkyCoop
 
             if (MyMod.playersData.Count > 0 && MyMod.playersData[from] != null)
             {
-                MyMod.playersData[from].m_Levelid = lel;
+                if(MyMod.playersData[from].m_Levelid != lel)
+                {
+                    MyMod.playersData[from].m_Levelid = lel;
+                    MelonLogger.Msg("Player " + from + "  transition to level " + lel);
+                }    
             }
-            MelonLogger.Msg("Player " + from + "  transition to level " + lel);
+            
         }
         public static void LEVELGUID(Packet _packet)
         {
@@ -121,9 +125,12 @@ namespace SkyCoop
 
             if (MyMod.playersData[from] != null)
             {
-                MyMod.playersData[from].m_LevelGuid = lel;
+                if(MyMod.playersData[from].m_LevelGuid != lel)
+                {
+                    MyMod.playersData[from].m_LevelGuid = lel;
+                    //MelonLogger.Msg("Player " + from + "  transition to level with GUID " + lel);
+                }
             }
-            MelonLogger.Msg("Player " + from + "  transition to level with GUID " + lel);
         }
         public static void GOTITEM(Packet _packet)
         {
@@ -490,6 +497,7 @@ namespace SkyCoop
         {
             MyMod.SaveSlotSync SaveData = _packet.ReadSaveSlot();
             MyMod.RemoveWaitForConnect();
+            MyMod.ApplyOtherCampfires = true;
 
             if (InterfaceManager.IsMainMenuEnabled() == false)
             {
@@ -657,6 +665,7 @@ namespace SkyCoop
             MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedContainers: " + MyMod.ServerConfig.m_DuppedContainers);
             MelonLogger.Msg(ConsoleColor.Blue, "m_PlayersSpawnType: " + MyMod.ServerConfig.m_PlayersSpawnType);
             MelonLogger.Msg(ConsoleColor.Blue, "m_FireSync: " + MyMod.ServerConfig.m_FireSync);
+            MelonLogger.Msg(ConsoleColor.Blue, "m_CheatsMode: " + MyMod.ServerConfig.m_CheatsMode);
         }
         public static void STOPCONSUME(Packet _packet)
         {
