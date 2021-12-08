@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Text;
 using System.Net;
 using System.Net.Sockets;
+using SkyCoop;
 
 namespace GameServer
 {
@@ -124,6 +125,11 @@ namespace GameServer
                         using (Packet _packet = new Packet(_packetBytes))
                         {
                             int _packetId = _packet.ReadInt();
+                            if (MyMod.DebugTrafficCheck == true)
+                            {
+                                MelonLoader.MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
+                                MelonLoader.MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize() + " bytes");
+                            }
                             Server.packetHandlers[_packetId](id, _packet);
                         }
                     });
@@ -206,7 +212,11 @@ namespace GameServer
                     using (Packet _packet = new Packet(_packetBytes))
                     {
                         int _packetId = _packet.ReadInt();
-                        //MelonLoader.MelonLogger.Msg(ConsoleColor.Cyan, "Handle Packet with ID " + _packetId);
+                        if (MyMod.DebugTrafficCheck == true)
+                        {
+                            MelonLoader.MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
+                            MelonLoader.MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet contains " + _packet.ReturnSize() + " bytes");
+                        }
                         Server.packetHandlers[_packetId](id, _packet); // Call appropriate method to handle the packet
                     }
                 });

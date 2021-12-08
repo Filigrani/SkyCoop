@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.0";
+            public const string Version = "0.7.1";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -214,6 +214,7 @@ namespace SkyCoop
         public static bool HadEverPingedMaster = false;
         public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
         public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
+        public static bool DebugTrafficCheck = false;
         //Voice chat
         public static int VoiceChatFrequencyHz = 19000;
         public static int MyMicrophoneID = 0;
@@ -2862,7 +2863,7 @@ namespace SkyCoop
             }
             else if (ActionType == "Revive")
             {
-                //GameManager.GetInventoryComponent().RemoveGearFromInventory("GEAR_MedicalSupplies_hangar", 1);
+                GameManager.GetInventoryComponent().RemoveGearFromInventory("GEAR_MedicalSupplies_hangar", 1);
             }
             else if(ActionType == "Stim")
             {
@@ -5014,9 +5015,18 @@ namespace SkyCoop
                         using (Packet _packet = new Packet(_packetBytes))
                         {
                             int _packetId = _packet.ReadInt();
+                            if (DebugTrafficCheck == true)
+                            {
+                                MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
+                            }
+                            
 
                             if(packetHandlers[_packetId] != null)
                             {
+                                if (DebugTrafficCheck == true)
+                                {
+                                    MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet contains " + _packet.ReturnSize() + " bytes");
+                                }
                                 packetHandlers[_packetId](_packet);
                             }else{
                                 MelonLogger.Msg("Got unregisted _packetId"+ _packetId);
@@ -5132,7 +5142,11 @@ namespace SkyCoop
                     using (Packet _packet = new Packet(_data))
                     {
                         int _packetId = _packet.ReadInt();
-                        //MelonLogger.Msg(ConsoleColor.Cyan, "Handle Packet with ID "+ _packetId);
+                        if (DebugTrafficCheck == true)
+                        {
+                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
+                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize()+" bytes");
+                        }
                         packetHandlers[_packetId](_packet); // Call appropriate method to handle the packet
                     }
                 });
@@ -7716,7 +7730,9 @@ namespace SkyCoop
             MelonLogger.Msg("Save slot created!");
             MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
 
-            InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = Region;
+            GameManager.m_StartRegion = Region;
+
+            //InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = Region;
             GameManager.Instance().LaunchSandbox();
             GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
             MyMod.PendingSave = null;
@@ -8609,23 +8625,23 @@ namespace SkyCoop
                     }
                 }
 
-                if(m_InterfaceManager != null && InterfaceManager.m_Panel_Loading.IsLoading() == false)
-                {
-                    if (onServer == 0)
-                    {
-                        if (GameManager.m_IsPaused == false)
-                        {
-                            GameManager.m_IsPaused = true;
-                            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server goes to sleep mode while there is no players on the server. Waiting for the players...");
-                        }
-                    }else{
-                        if (GameManager.m_IsPaused == true)
-                        {
-                            GameManager.m_IsPaused = false;
-                            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Waking up! There someone join!");
-                        }
-                    }
-                }
+                //if(m_InterfaceManager != null && InterfaceManager.m_Panel_Loading.IsLoading() == false)
+                //{
+                //    if (onServer == 0)
+                //    {
+                //        if (GameManager.m_IsPaused == false)
+                //        {
+                //            GameManager.m_IsPaused = true;
+                //            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server goes to sleep mode while there is no players on the server. Waiting for the players...");
+                //        }
+                //    }else{
+                //        if (GameManager.m_IsPaused == true)
+                //        {
+                //            GameManager.m_IsPaused = false;
+                //            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Waking up! There someone join!");
+                //        }
+                //    }
+                //}
             }
         }
 

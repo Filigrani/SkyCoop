@@ -902,7 +902,8 @@ namespace SkyCoop
             {
                 if (MyMod.PendingSave != null)
                 {
-                    InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = __instance.m_SelectedItem.m_Region;
+                    //InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = __instance.m_SelectedItem.m_Region;
+                    GameManager.m_StartRegion = __instance.m_SelectedItem.m_Region;
                     MyMod.PendingSave.m_Location = (int)__instance.m_SelectedItem.m_Region;
                     __instance.Enable(false);
                     MyMod.SelectGenderForConnection();
