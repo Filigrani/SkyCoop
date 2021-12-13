@@ -745,7 +745,7 @@ namespace SkyCoop
             Il2CppSystem.Collections.Generic.List<GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
             for (int i = 0; i < invItems.Count; i++)
             {
-                GearItemObject currGear = invItems.get_Item(i);
+                GearItemObject currGear = invItems[i];
                 if (currGear != null)
                 {
                     if(currGear.m_GearItem.m_InstanceID == _IID)
@@ -760,7 +760,7 @@ namespace SkyCoop
 
             for (int i = 0; i < GearManager.m_Gear.Count; i++)
             {
-                GearItem currentGear = GearManager.m_Gear.get_Item(i);
+                GearItem currentGear = GearManager.m_Gear[i];
                 if (currentGear.m_InstanceID == _IID)
                 {
                     currentGear.gameObject.SetActive(false);

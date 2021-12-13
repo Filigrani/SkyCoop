@@ -530,7 +530,7 @@ namespace SkyCoop
                 {
                     for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
                     {
-                        GameObject animal = BaseAiManager.m_BaseAis.get_Item(index).gameObject;
+                        GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
                         if (animal != null)
                         {
                             ObjectGuidManager.UnRegisterGuid(animal.GetComponent<ObjectGuid>().Get());

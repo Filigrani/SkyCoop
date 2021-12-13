@@ -24,8 +24,8 @@ namespace SkyCoop
             mainMenuItem.m_Type = Panel_MainMenu.MainMenuItem.MainMenuItemType.Story + plus;
             __instance.m_MenuItems.Insert(order, mainMenuItem);
 
-            string id = __instance.m_MenuItems.get_Item(order).m_Type.ToString();
-            int type = (int)__instance.m_MenuItems.get_Item(order).m_Type;
+            string id = __instance.m_MenuItems[order].m_Type.ToString();
+            int type = (int)__instance.m_MenuItems[order].m_Type;
 
             __instance.m_BasicMenu.AddItem(id, type, order, name, "", "", new Action(__instance.OnSandbox), Color.gray, Color.white);
         }
@@ -58,25 +58,25 @@ namespace SkyCoop
                             if(i == 0)
                             {
                                 text = "HOST";
-                                if(__instance.m_BasicMenu.m_ItemModelList.get_Item(0) != null)
+                                if(__instance.m_BasicMenu.m_ItemModelList[0] != null)
                                 {
                                     if (MyMod.iAmHost == false && MyMod.sendMyPosition == false)
                                     {
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(0).m_Selectable = true;
+                                        __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = true;
                                     }else{
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(0).m_Selectable = false;
+                                        __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = false;
                                     }
                                 }
                             }else if(i == 1)
                             {
                                 text = "RECONNECT";
-                                if (__instance.m_BasicMenu.m_ItemModelList.get_Item(1) != null)
+                                if (__instance.m_BasicMenu.m_ItemModelList[1] != null)
                                 {
                                     if (MyMod.iAmHost == false && MyMod.sendMyPosition == false)
                                     {
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(1).m_Selectable = true;
+                                        __instance.m_BasicMenu.m_ItemModelList[1].m_Selectable = true;
                                     }else{
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(1).m_Selectable = false;
+                                        __instance.m_BasicMenu.m_ItemModelList[1].m_Selectable = false;
                                     }
                                 }
                             }
@@ -84,13 +84,13 @@ namespace SkyCoop
                             {
                                 text = "DISCONNECT";
 
-                                if(__instance.m_BasicMenu.m_ItemModelList.get_Item(2) != null)
+                                if(__instance.m_BasicMenu.m_ItemModelList[2] != null)
                                 {
                                     if (MyMod.sendMyPosition == true)
                                     {
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(2).m_Selectable = true;
+                                        __instance.m_BasicMenu.m_ItemModelList[2].m_Selectable = true;
                                     }else{
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(2).m_Selectable = false;
+                                        __instance.m_BasicMenu.m_ItemModelList[2].m_Selectable = false;
                                     }
                                 }
                             }else if (i == 3)
@@ -98,19 +98,19 @@ namespace SkyCoop
                                 if(SteamConnect.CanUseSteam == false)
                                 {
                                     text = "INVITE (ONLY STEAM)";
-                                    if (__instance.m_BasicMenu.m_ItemModelList.get_Item(3) != null)
+                                    if (__instance.m_BasicMenu.m_ItemModelList[3] != null)
                                     {
-                                        __instance.m_BasicMenu.m_ItemModelList.get_Item(3).m_Selectable = false;
+                                        __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = false;
                                     }
                                 }else{
                                     text = "INVITE";
-                                    if(__instance.m_BasicMenu.m_ItemModelList.get_Item(3) != null)
+                                    if(__instance.m_BasicMenu.m_ItemModelList[3] != null)
                                     {
                                         if (MyMod.iAmHost == true && Server.UsingSteamWorks == true)
                                         {
-                                            __instance.m_BasicMenu.m_ItemModelList.get_Item(3).m_Selectable = true;
+                                            __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = true;
                                         }else{
-                                            __instance.m_BasicMenu.m_ItemModelList.get_Item(3).m_Selectable = false;
+                                            __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = false;
                                         }
                                     }
                                 }
@@ -148,8 +148,8 @@ namespace SkyCoop
             __instance.m_MenuItems.Insert(order, mainMenuItem-order);
             Action act = new Action(() => CustomButtonClick(order));
             //__instance.m_BasicMenu.AddItem("", 0, order, name, "", "", new Action(act), Color.gray, Color.white);
-            string id = __instance.m_MenuItems.get_Item(order).ToString();
-            int menuItem = (int)__instance.m_MenuItems.get_Item(order);
+            string id = __instance.m_MenuItems[order].ToString();
+            int menuItem = (int)__instance.m_MenuItems[order];
 
             __instance.m_BasicMenu.AddItem(id, menuItem, order, name, name, (string)null, act, Color.green, Color.white);
         }
@@ -201,11 +201,11 @@ namespace SkyCoop
             {
                 IL2CPP.List<BasicMenu.BasicMenuItemModel> list = __instance.m_ItemModelList;
 
-                if (list.get_Item(index).m_LabelText == "Donaters")
+                if (list[index].m_LabelText == "Donaters")
                 {
                     Application.OpenURL("https://filigrani.github.io/SkyCoop/");
                 }
-                if (list.get_Item(index).m_LabelText == "Connect")
+                if (list[index].m_LabelText == "Connect")
                 {
                     //For Debug Alone
                     bool DebugAlone = false;
@@ -246,7 +246,7 @@ namespace SkyCoop
                 {
                     int CustomId = __instance.gameObject.GetComponent<MyMod.UiButtonPressHook>().m_CustomId;
 
-                    if(InterfaceManager.m_Panel_PauseMenu.m_BasicMenu.m_ItemModelList.get_Item(CustomId).m_Selectable == false)
+                    if(InterfaceManager.m_Panel_PauseMenu.m_BasicMenu.m_ItemModelList[CustomId].m_Selectable == false)
                     {
                         return false;
                     }

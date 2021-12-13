@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.1";
+            public const string Version = "0.7.2";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -255,14 +255,14 @@ namespace SkyCoop
         {
             for (int index = 0; index < ConsoleManager.m_AllGearItemNames.Count; ++index)
             {
-                GearIDList.Add(ConsoleManager.m_AllGearItemNames.get_Item(index), index);
+                GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
             }
         }
         public static string GetGearNameByID(int index)
         {
             if (index >= 0 && index < ConsoleManager.m_AllGearItemNames.Count - 1)
             {
-                return ConsoleManager.m_AllGearItemNames.get_Item(index);
+                return ConsoleManager.m_AllGearItemNames[index];
             }
             return "";
         }
@@ -897,7 +897,7 @@ namespace SkyCoop
 
             for (int i = 0; i < Slots.Count; i++)
             {
-                SaveSlotInfo Slot = Slots.get_Item(i);
+                SaveSlotInfo Slot = Slots[i];
 
                 if (Slot.m_UserDefinedName == searchname)
                 {
@@ -1275,7 +1275,7 @@ namespace SkyCoop
 
             for (int i = 0; i < GearManager.m_Gear.Count; i++)
             {
-                GearItem currentGear = GearManager.m_Gear.get_Item(i);
+                GearItem currentGear = GearManager.m_Gear[i];
                 PickedGearSync FindData = new PickedGearSync();
                 FindData.m_LevelID = levelid;
                 FindData.m_LevelGUID = level_guid;
@@ -1307,7 +1307,7 @@ namespace SkyCoop
             //MelonLogger.Msg("UpdateDeployedRopes called");
             for (int i = 0; i < RopeAnchorPoint.m_RopeAnchorPoints.Count; i++)
             {
-                RopeAnchorPoint rope = RopeAnchorPoint.m_RopeAnchorPoints.get_Item(i);
+                RopeAnchorPoint rope = RopeAnchorPoint.m_RopeAnchorPoints[i];
                 ClimbingRopeSync FindData = new ClimbingRopeSync();
                 FindData.m_LevelID = levelid;
                 FindData.m_LevelGUID = level_guid;
@@ -1443,7 +1443,7 @@ namespace SkyCoop
 
             for (int i = 0; i < HarvestableManager.m_Harvestables.Count; i++)
             {
-                Harvestable currentPlant = HarvestableManager.m_Harvestables.get_Item(i);
+                Harvestable currentPlant = HarvestableManager.m_Harvestables[i];
                 string harvGUID = "";
 
                 if(currentPlant.gameObject != null && currentPlant.gameObject.GetComponent<ObjectGuid>() != null)
@@ -1503,7 +1503,7 @@ namespace SkyCoop
                 Il2CppSystem.Collections.Generic.List<GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
                 for (int i = 0; i < invItems.Count; i++)
                 {
-                    GearItemObject currGear = invItems.get_Item(i);
+                    GearItemObject currGear = invItems[i];
                     if (currGear != null)
                     {
                         if (currGear.m_GearItem.m_InstanceID == _IID)
@@ -1533,9 +1533,9 @@ namespace SkyCoop
             }
             for (int i = 0; i < ContainerManager.m_Containers.Count; i++)
             {
-                if (ContainerManager.m_Containers.get_Item(i) != null)
+                if (ContainerManager.m_Containers[i] != null)
                 {
-                    Container currentBox = ContainerManager.m_Containers.get_Item(i);
+                    Container currentBox = ContainerManager.m_Containers[i];
 
                     if (currentBox.m_Inspected == false && currentBox.m_SearchInProgress == false)
                     {
@@ -1712,7 +1712,7 @@ namespace SkyCoop
             }
             for (int i = 0; i < SnowShelterManager.m_SnowShelters.Count; i++)
             {
-                GameObject shelter = SnowShelterManager.m_SnowShelters.get_Item(i).gameObject;
+                GameObject shelter = SnowShelterManager.m_SnowShelters[i].gameObject;
                 if (shelter != null)
                 {
                     if (shelter.transform.position == shelterData.m_Position)
@@ -3728,7 +3728,7 @@ namespace SkyCoop
 
             for (int index = 0; index < ArrowsList.Count; ++index)
             {
-                if (ArrowsList.get_Item(index) != null && ArrowsList.get_Item(index).InFlight(false))
+                if (ArrowsList[index] != null && ArrowsList[index].InFlight(false))
                 {
                     IsNeedToBeTrigger = false;
                     break;
@@ -5708,7 +5708,7 @@ namespace SkyCoop
 
             for (int i = 0; i < Boxes.Count; i++)
             {
-                Container box = Boxes.get_Item(i);
+                Container box = Boxes[i];
                 if (box != null && box.GetComponent<ContainersSync>() != null && box.GetComponent<ContainersSync>().m_Guid == sync.m_Guid)
                 {
                     if (sync.m_State == true)
@@ -6065,7 +6065,7 @@ namespace SkyCoop
                     bool FoundSource = false;
                     for (int i = 0; i < FireManager.m_Fires.Count; i++)
                     {
-                        Fire curfire = FireManager.m_Fires.get_Item(i);
+                        Fire curfire = FireManager.m_Fires[i];
                         //MelonLogger.Msg("[FireSourcesSync] ApplyOtherFireSource index " + i+"/"+ FireManager.m_Fires.Count);
                         if (curfire != null)
                         {
@@ -6168,7 +6168,7 @@ namespace SkyCoop
                 {
                     for (int i = 0; i < FireManager.m_Fires.Count; i++)
                     {
-                        Fire curfire = FireManager.m_Fires.get_Item(i);
+                        Fire curfire = FireManager.m_Fires[i];
                         if (curfire != null)
                         {
                             FireSourcesSync FindData = new FireSourcesSync();
@@ -6369,7 +6369,7 @@ namespace SkyCoop
             {
                 for (int i = 0; i < FireManager.m_Fires.Count; i++)
                 {
-                    Fire fireCur = FireManager.m_Fires.get_Item(i);
+                    Fire fireCur = FireManager.m_Fires[i];
                     if (fireCur != null)
                     {
                         if (fireCur.m_FireState == FireState.FullBurn && fireCur.m_StartedByPlayer == true)
@@ -7652,7 +7652,7 @@ namespace SkyCoop
 
             for (int i = 0; i < Slots.Count; i++)
             {
-                SaveSlotInfo Slot = Slots.get_Item(i);
+                SaveSlotInfo Slot = Slots[i];
 
                 if (Slot.m_UserDefinedName == Seed+"")
                 {
@@ -7675,14 +7675,14 @@ namespace SkyCoop
                 MelonLogger.Msg("Selecting slot " + SaveGameSystem.GetCurrentSaveName());
                 GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
             }else{
-                LetChooseSpawnForClient(PendingSave);
+                LetChooseSpawnForClient(Data);
             }
         }
 
         public static void LetChooseSpawnForClient(SaveSlotSync Data)
         {
-            
-            if(ServerConfig.m_PlayersSpawnType == 0) // Same as host.
+            MelonLogger.Msg("Prepare ui for creating save slot");
+            if (ServerConfig.m_PlayersSpawnType == 0) // Same as host.
             {
                 SelectGenderForConnection();
             }
@@ -7693,10 +7693,7 @@ namespace SkyCoop
                     Data.m_Location = (int)GameRegion.RandomRegion;
                     SelectGenderForConnection();
                 }else{
-                    if (m_Panel_SelectRegion != null)
-                    {
-                        m_Panel_SelectRegion.Enable(true);
-                    }
+                    InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
                 }
             }
             else if (ServerConfig.m_PlayersSpawnType == 2) // Random
@@ -7883,13 +7880,13 @@ namespace SkyCoop
 
         public static void SendMessageToChat(MultiplayerChatMessage message, bool needSync = true)
         {
-            if(HasNonASCIIChars(message.m_Message) == true)
-            {
-                message.m_Type = 0;
-                message.m_By = MyChatName;
-                message.m_Message = "Please use only english! Other languages are not supported!";
-                needSync = false;
-            }
+            //if(HasNonASCIIChars(message.m_Message) == true)
+            //{
+            //    message.m_Type = 0;
+            //    message.m_By = MyChatName;
+            //    message.m_Message = "Please use only english! Other languages are not supported!";
+            //    needSync = false;
+            //}
             if(message.m_By.Contains("Filigrani") || message.m_By.Contains("REDcat"))
             {
                 if (message.m_Message == "!debug")
@@ -9477,7 +9474,7 @@ namespace SkyCoop
                     Data.m_Fuel = 5;
                     if (CampFireTest == false)
                     {
-                        Fire dummyFire = FireManager.m_Fires.get_Item(0);
+                        Fire dummyFire = FireManager.m_Fires[0];
                         Data.m_Position = dummyFire.gameObject.transform.position;
                         Data.m_Rotation = dummyFire.gameObject.transform.rotation;
                         if (dummyFire.gameObject.GetComponent<ObjectGuid>() != null)
@@ -9516,11 +9513,11 @@ namespace SkyCoop
 
                     for (int i = 0; i < items.Count; i++)
                     {
-                        GearItem gear_ = items.get_Item(i).m_GearItem;
+                        GearItem gear_ = items[i].m_GearItem;
 
                         if (gear_ == LastSelectedGear)
                         {                            
-                            _gear = items.get_Item(i).m_GearItem;
+                            _gear = items[i].m_GearItem;
                             //saveProxyData = _gear.Serialize();
                             //GameObject cloneObj = UnityEngine.Object.Instantiate(_gear.gameObject);
                             //float randomY = -1000;

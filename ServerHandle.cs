@@ -420,12 +420,12 @@ namespace GameServer
             string Proxy = "";
             for (int i = 0; i < BaseAiManager.m_BaseAis.Count; i++)
             {
-                if (BaseAiManager.m_BaseAis.get_Item(i) != null && BaseAiManager.m_BaseAis.get_Item(i).gameObject != null)
+                if (BaseAiManager.m_BaseAis[i] != null && BaseAiManager.m_BaseAis[i].gameObject != null)
                 {
-                    GameObject animal = BaseAiManager.m_BaseAis.get_Item(i).gameObject;
+                    GameObject animal = BaseAiManager.m_BaseAis[i].gameObject;
                     if (animal.GetComponent<ObjectGuid>() != null && animal.GetComponent<ObjectGuid>().Get() == _guid)
                     {
-                        Proxy = BaseAiManager.m_BaseAis.get_Item(i).Serialize();
+                        Proxy = BaseAiManager.m_BaseAis[i].Serialize();
                         break;
                     }
                 }

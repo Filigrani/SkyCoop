@@ -333,6 +333,12 @@ namespace GameServer
             Write(_value.Length);
             buffer.AddRange(Encoding.UTF8.GetBytes(_value));
         }
+        public void WriteUnicodeString(string _value)
+        {
+            Write(Encoding.Unicode.GetBytes(_value).Length);
+            buffer.AddRange(Encoding.Unicode.GetBytes(_value));
+        }
+        
         public void Write(Vector3 _value)
         {
             Write(_value.x);
@@ -551,8 +557,10 @@ namespace GameServer
         }
         public void Write(MyMod.MultiplayerChatMessage obj)
         {
-            Write(obj.m_By);//WriteUnicodeString(obj.m_By);
-            Write(obj.m_Message);//WriteUnicodeString(obj.m_Message);
+            //Write(obj.m_By);
+            //Write(obj.m_Message);
+            WriteUnicodeString(obj.m_By);
+            WriteUnicodeString(obj.m_Message);
             Write(obj.m_Type);
         }
         public void Write(MyMod.MultiPlayerClientStatus obj)
@@ -1049,8 +1057,8 @@ namespace GameServer
         public MyMod.MultiplayerChatMessage ReadChat()
         {
             MyMod.MultiplayerChatMessage obj = new MyMod.MultiplayerChatMessage();
-            obj.m_By = ReadString();
-            obj.m_Message = ReadString();
+            obj.m_By = ReadUnicodeString();
+            obj.m_Message = ReadUnicodeString();
             obj.m_Type = ReadInt();
 
             return obj;

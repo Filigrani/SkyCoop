@@ -56,7 +56,7 @@ namespace SkyCoop
 
                         if (__instance.m_FilteredInventoryList.Count > 0)
                         {
-                            GearItem gear = __instance.m_FilteredInventoryList.get_Item(seelecteditem);
+                            GearItem gear = __instance.m_FilteredInventoryList[seelecteditem];
 
                             if (gear != null)
                             {
@@ -162,7 +162,7 @@ namespace SkyCoop
                         bool found = false;
                         for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
                         {
-                            GameObject animal = BaseAiManager.m_BaseAis.get_Item(index).gameObject;
+                            GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
 
                             if (animal != null && animal.GetComponent<ObjectGuid>() != null)
                             {
@@ -205,7 +205,7 @@ namespace SkyCoop
                         bool found = false;
                         for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
                         {
-                            GameObject animal = BaseAiManager.m_BaseAis.get_Item(index).gameObject;
+                            GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
 
                             if (animal != null && animal.GetComponent<ObjectGuid>() != null)
                             {
@@ -242,7 +242,7 @@ namespace SkyCoop
                     Weather wea = GameManager.GetWeatherComponent();
                     for (int index = 0; index < wea.m_WeatherSetsForScene.Count; ++index)
                     {
-                        WeatherSet ForweatherSet = wea.m_WeatherSetsForScene.get_Item(index);
+                        WeatherSet ForweatherSet = wea.m_WeatherSetsForScene[index];
                         if (ForweatherSet == __result)
                         {
                             MelonLogger.Msg("New Weather Stage with set [ID " + index + "]" + __result.name);
@@ -874,7 +874,7 @@ namespace SkyCoop
                         for (int index2 = 0; index2 < GameManager.GetFeatsManager().GetNumFeats(); ++index2)
                         {
                             Feat featFromIndex = GameManager.GetFeatsManager().GetFeatFromIndex(index2);
-                            if (__instance.m_SelectedFeats.get_Item(index1) == featFromIndex.m_LocalizedDisplayName.m_LocalizationID)
+                            if (__instance.m_SelectedFeats[index1] == featFromIndex.m_LocalizedDisplayName.m_LocalizationID)
                             {
                                 FeatEnabledTracker.m_FeatsEnabledThisSandbox.Add(featFromIndex.m_FeatType);
                             }
@@ -911,20 +911,20 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion), "OnSelectRegionContinue")]
-        internal class Panel_SelectRegion_Done
-        {
-            public static bool Prefix(Panel_SelectRegion __instance)
-            {
-                if (MyMod.PendingSave != null)
-                {
-                    __instance.Enable(false);
-                    MyMod.SelectGenderForConnection();
-                    return false;
-                }
-                return true;
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion), "OnSelectRegionContinue")]
+        //internal class Panel_SelectRegion_Done
+        //{
+        //    public static bool Prefix(Panel_SelectRegion __instance)
+        //    {
+        //        if (MyMod.PendingSave != null)
+        //        {
+        //            __instance.Enable(false);
+        //            MyMod.SelectGenderForConnection();
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion_Map), "OnClickBack")]
         internal class Panel_SelectRegion_Map_OnClickBack
@@ -3370,7 +3370,7 @@ namespace SkyCoop
 
                         for (int index = 0; index < __instance.m_Items.Count; ++index)
                         {
-                            GearItem gearItem = __instance.m_Items.get_Item(index);
+                            GearItem gearItem = __instance.m_Items[index];
                             if (gearItem != null)
                             {
                                 if(gearItem.m_GearName.Contains("MountainTownFarmKey") == true)
@@ -3954,18 +3954,6 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion), "Initialize")]
-        public static class UI_Panel_SelectRegion
-        {
-            public static void Prefix(Panel_SelectRegion __instance)
-            {
-                if (__instance != null)
-                {
-                    MyMod.m_Panel_SelectRegion = __instance;
-                    MelonLogger.Msg("[Legacy UIs] Captured link on Panel_SelectRegion!");
-                }
-            }
-        }
 
         //[HarmonyLib.HarmonyPatch(typeof(LootTable), "GetRandomGearPrefab")]
         //public static class LootTable_SeededRandom
@@ -4373,9 +4361,9 @@ namespace SkyCoop
             {
                 for (int index = 0; index < __instance.m_Spawns.Count && numToDeActivate != 0; ++index)
                 {
-                    if (__instance.m_Spawns.get_Item(index) && __instance.m_Spawns.get_Item(index).gameObject.activeSelf)
+                    if (__instance.m_Spawns[index] && __instance.m_Spawns[index].gameObject.activeSelf)
                     {
-                        Vector3 pos = __instance.m_Spawns.get_Item(index).m_CachedTransform.position;
+                        Vector3 pos = __instance.m_Spawns[index].m_CachedTransform.position;
 
                         bool AllPlayersAllowsIt = false;
                         bool SomeoneSeeThisSpawn = false;
@@ -4405,11 +4393,11 @@ namespace SkyCoop
                             }
                         }
 
-                        string animalName = __instance.m_Spawns.get_Item(index).gameObject.name;
+                        string animalName = __instance.m_Spawns[index].gameObject.name;
                         string animalGUID = "";
-                        if (__instance.m_Spawns.get_Item(index).gameObject.GetComponent<ObjectGuid>() != null)
+                        if (__instance.m_Spawns[index].gameObject.GetComponent<ObjectGuid>() != null)
                         {
-                            animalGUID = __instance.m_Spawns.get_Item(index).gameObject.GetComponent<ObjectGuid>().Get();
+                            animalGUID = __instance.m_Spawns[index].gameObject.GetComponent<ObjectGuid>().Get();
                         }else{
                             animalGUID = "HAS_NO_GUID";
                         }
@@ -4441,19 +4429,19 @@ namespace SkyCoop
 
                         if (AllPlayersAllowsIt == true)
                         {
-                            GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns.get_Item(index).m_PackAnimal, false);
-                            if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode)) && (__instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Flee && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Dead))
+                            GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns[index].m_PackAnimal, false);
+                            if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode)) && (__instance.m_Spawns[index].GetAiMode() != AiMode.Flee && __instance.m_Spawns[index].GetAiMode() != AiMode.Dead))
                             {
-                                __instance.m_Spawns.get_Item(index).SetAiMode(AiMode.Flee);
+                                __instance.m_Spawns[index].SetAiMode(AiMode.Flee);
                             }
-                            if (isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns.get_Item(index), wildlifeMode))
+                            if (isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode))
                             {
-                                __instance.m_Spawns.get_Item(index).Despawn();
+                                __instance.m_Spawns[index].Despawn();
                                 --numToDeActivate;
                             }
-                            else if ((!__instance.m_Spawns.get_Item(index).m_CurrentTarget || !__instance.m_Spawns.get_Item(index).m_CurrentTarget.IsPlayer()) && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Feeding && __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.Sleep && !__instance.m_Spawns.get_Item(index).IsBleedingOut() && (!__instance.m_Spawns.get_Item(index).m_AiWolf || __instance.m_Spawns.get_Item(index).GetAiMode() != AiMode.WanderPaused))
+                            else if ((!__instance.m_Spawns[index].m_CurrentTarget || !__instance.m_Spawns[index].m_CurrentTarget.IsPlayer()) && __instance.m_Spawns[index].GetAiMode() != AiMode.Feeding && __instance.m_Spawns[index].GetAiMode() != AiMode.Sleep && !__instance.m_Spawns[index].IsBleedingOut() && (!__instance.m_Spawns[index].m_AiWolf || __instance.m_Spawns[index].GetAiMode() != AiMode.WanderPaused))
                             {
-                                __instance.m_Spawns.get_Item(index).Despawn();
+                                __instance.m_Spawns[index].Despawn();
                                 numToDeActivate--;
                             }
                         }
@@ -4519,12 +4507,17 @@ namespace SkyCoop
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "CanQuarter")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "OnQuarter")]
         internal static class Panel_BodyHarvest_NoQuatrate
         {
-            private static void Postfix(Panel_BodyHarvest __instance, bool __result)
+            private static bool Prefix(Panel_BodyHarvest __instance)
             {
-                __result = false;
+                if(MyMod.InOnline() == true)
+                {
+                    __instance.DisplayErrorMessage("You can't quarter in multiplayer!");
+                    return false;
+                }
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(GearItem), "DecayOverTODHours")]
