@@ -39,13 +39,17 @@ namespace GameServer
 
             MelonLoader.MelonLogger.Msg($"Server started on port {Port}.");
         }
-        public static void StartSteam(int _maxPlayers)
+        public static void StartSteam(int _maxPlayers, string[] whitelist = null)
         {
             MaxPlayers = _maxPlayers;
             MyMod.MaxPlayers = MaxPlayers;
             MelonLoader.MelonLogger.Msg("Starting server...");
             InitializeServerData();
             MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Server started!");
+            if(whitelist != null)
+            {
+                SteamConnect.Main.ProcessWhitelist(whitelist);
+            }
             UsingSteamWorks = true;
             MyMod.iAmHost = true;
             MyMod.OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
@@ -54,6 +58,8 @@ namespace GameServer
             MyMod.NeedSyncTime = true;
             MyMod.RealTimeCycleSpeed = true;
             MyMod.HadEverPingedMaster = false;
+            MyMod.LoadAllDropsForScene();
+            MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
         }
 
         private static void TCPConnectCallback(IAsyncResult _result)
@@ -267,6 +273,14 @@ namespace GameServer
                 { (int)ClientPackets.SLEEPPOSE, ServerHandle.SLEEPPOSE},
                 { (int)ClientPackets.ANIMALDAMAGE, ServerHandle.ANIMALDAMAGE},
                 { (int)ClientPackets.FIREFUEL, ServerHandle.FIREFUEL},
+                { (int)ClientPackets.DROPITEM, ServerHandle.DROPITEM},
+                { (int)ClientPackets.GOTDROPSLICE, ServerHandle.GOTDROPSLICE},
+                { (int)ClientPackets.REQUESTPICKUP, ServerHandle.REQUESTPICKUP},
+                { (int)ClientPackets.REQUESTDROPSFORSCENE, ServerHandle.REQUESTDROPSFORSCENE},
+                { (int)ClientPackets.REQUESTPLACE, ServerHandle.REQUESTPLACE},
+                { (int)ClientPackets.GOTCONTAINERSLICE, ServerHandle.GOTCONTAINERSLICE},
+                { (int)ClientPackets.REQUESTOPENCONTAINER, ServerHandle.REQUESTOPENCONTAINER},
+                { (int)ClientPackets.CHANGEAIM, ServerHandle.CHANGEAIM},
             };
             Console.WriteLine("Initialized packets.");
         }

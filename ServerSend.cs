@@ -228,11 +228,73 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void GOTCONTAINERSLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.GOTCONTAINERSLICE))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                int pSize = _packet.Length();
+
+                if (pSize > 1500)
+                {
+                    MelonLoader.MelonLogger.Msg("Packet reached limiet! Size of packet is " + pSize + "bytes");
+                }else{
+                    //MelonLoader.MelonLogger.Msg("Packet sent "+ pSize + "bytes");
+                }
+
+                //MelonLoader.MelonLogger.Msg("Limit is 1500bytes, slice split size is 1000bytes, final packet size is " + _packet.Length()+"bytes");
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void OPENEMPTYCONTAINER(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.OPENEMPTYCONTAINER))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+
+        public static void GETREQUESTEDITEMSLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.GETREQUESTEDITEMSLICE))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void GETREQUESTEDFORPLACESLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.GETREQUESTEDFORPLACESLICE))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void MARKSEARCHEDCONTAINERS(int _toClient, string _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.MARKSEARCHEDCONTAINERS))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
         public static void GAMETIME(string _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GAMETIME))
             {
                 _packet.Write(_msg);
+                _packet.Write(MyMod.MinutesFromStartServer);
                 _packet.Write(0);
 
                 SendUDPDataToAll(_packet);
@@ -515,12 +577,12 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void BULLETDAMAGE(int _toClient, float _msg)
+        public static void BULLETDAMAGE(int _toClient, float _msg, int _From)
         {
             using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
             {
                 _packet.Write(_msg);
-                _packet.Write(_toClient);
+                _packet.Write(_From);
 
                 SendTCPData(_toClient, _packet);
             }
@@ -1590,6 +1652,62 @@ namespace GameServer
             }
         }
 
+        public static void DROPITEM(int _From, MyMod.DroppedGearItemDataPacket _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.DROPITEM))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+
+        public static void PICKDROPPEDGEAR(int _From, int _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.PICKDROPPEDGEAR))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+
         public static void SLEEPPOSE(int _From, Vector3 xyzui, Quaternion rotation, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SLEEPPOSE))
@@ -1703,6 +1821,54 @@ namespace GameServer
         public static void SLICEDBYTES(int _From, MyMod.SlicedBytesData _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SLICEDBYTES))
+            {
+                if (toEveryOne == true)
+                {
+                    _packet.Write(_msg);
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPDataToAllButNotSender(_packet, _From);
+                    }
+                    else
+                    {
+                        _packet.Write(_msg);
+                        _packet.Write(_From);
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+
+        public static void READYSENDNEXTSLICE(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.READYSENDNEXTSLICE))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void LOADINGSCENEDROPSDONE(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.LOADINGSCENEDROPSDONE))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void CHANGEAIM(int _From, bool _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHANGEAIM))
             {
                 if (toEveryOne == true)
                 {

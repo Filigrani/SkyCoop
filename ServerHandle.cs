@@ -382,9 +382,9 @@ namespace GameServer
             int _for = _packet.ReadInt();
             if(_for == 0)
             {
-                MyMod.DamageByBullet(damage);
+                MyMod.DamageByBullet(damage, _fromClient);
             }else{
-                ServerSend.BULLETDAMAGE(_for, damage);
+                ServerSend.BULLETDAMAGE(_for, damage, _fromClient);
             }
         }
         public static void MULTISOUND(int _fromClient, Packet _packet)
@@ -823,7 +823,6 @@ namespace GameServer
             }
             
             ServerSend.FIREFUEL(_fromClient, FireSource, false);
-
         }
         public static void CUSTOM(int _fromClient, Packet _packet)
         {
@@ -872,6 +871,114 @@ namespace GameServer
             }else{
                 ServerSend.ANIMALDAMAGE(_fromClient, guid, damage, to);
             }
+        }
+        public static void DROPITEM(int _fromClient, Packet _packet)
+        {
+            MyMod.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
+            if (GearData.m_LevelID == MyMod.levelid && GearData.m_LevelGUID == MyMod.level_guid)
+            {
+                MyMod.FakeDropItem(GearData.m_GearID, GearData.m_Position, GearData.m_Rotation, GearData.m_Hash, GearData.m_Extra);
+            }
+
+            ServerSend.DROPITEM(_fromClient, GearData, true);
+        }
+        public static void GOTDROPSLICE(int _fromClient, Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            MyMod.AddSlicedJsonDataForDrop(got);
+        }
+        public static void REQUESTPICKUP(int _fromClient, Packet _packet)
+        {
+            int Hash = _packet.ReadInt();
+            string lvlKey = _packet.ReadString();
+            MelonLogger.Msg("Client "+ _fromClient+" trying to pickup gear with hash "+ Hash);
+            MyMod.ClientTryPickupItem(Hash, _fromClient, lvlKey, false);
+        }
+        public static void REQUESTPLACE(int _fromClient, Packet _packet)
+        {
+            int Hash = _packet.ReadInt();
+            string lvlKey = _packet.ReadString();
+            MelonLogger.Msg("Client " + _fromClient + " trying to place gear with hash " + Hash);
+            MyMod.ClientTryPickupItem(Hash, _fromClient, lvlKey, true);
+        }
+        public static void REQUESTDROPSFORSCENE(int _fromClient, Packet _packet)
+        {
+            int lvl = _packet.ReadInt();
+            string lvlGUID = _packet.ReadString();
+            string lvlKey = lvl+lvlGUID;
+            Dictionary<int, MyMod.SlicedJsonDroppedGear> LevelDrops;
+            MelonLogger.Msg("Client "+ _fromClient+" request all drops for scene "+ lvlKey);
+
+            MyMod.MarkSearchedContainers(lvlKey, _fromClient);
+
+
+            if (MyMod.DroppedGears.ContainsKey(lvlKey) == false)
+            {
+                bool FoundSaves = MyMod.LoadDropsForScene(lvlKey);
+                if (FoundSaves == false)
+                {
+                    MelonLogger.Msg("Requested scene has no drops " + lvlKey);
+                    ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
+                    return;
+                }
+            }
+
+            if (MyMod.DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
+            {
+                MelonLogger.Msg("Sending... ");
+                int index = 0;
+                foreach (var cur in LevelDrops)
+                {
+                    index++;
+                    int currentKey = cur.Key;
+                    MyMod.SlicedJsonDroppedGear currentValue = cur.Value;
+                    MyMod.DroppedGearItemDataPacket SyncData = new MyMod.DroppedGearItemDataPacket();
+                    GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(currentValue.m_Json);
+
+                    SyncData.m_GearID = MyMod.GetGearIDByName(currentValue.m_GearName);
+                    SyncData.m_Position = DummyGear.m_Position;
+                    SyncData.m_Rotation = DummyGear.m_Rotation;
+                    SyncData.m_LevelID = lvl;
+                    SyncData.m_LevelGUID = lvlGUID;
+                    SyncData.m_Hash = cur.Key;
+                    SyncData.m_Extra = currentValue.m_Extra;
+                    ServerSend.DROPITEM(_fromClient, SyncData, true);
+                }
+                MelonLogger.Msg("Sending done, "+ index+" packets has been sent");
+                ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
+            }else{
+                MelonLogger.Msg("Requested scene has no drops "+ lvlKey);
+                ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
+            }
+        }
+        public static void GOTCONTAINERSLICE(int _fromClient, Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            MyMod.AddSlicedJsonDataForContainer(got, _fromClient);
+        }
+        public static void REQUESTOPENCONTAINER(int _fromClient, Packet _packet)
+        {
+            string LevelKey = _packet.ReadString();
+            string boxGUID = _packet.ReadString();
+            string CompressedData = MyMod.LoadFakeContainer(boxGUID, LevelKey);
+
+            if (CompressedData == "")
+            {
+                MelonLogger.Msg("Send to client this is empty");
+                ServerSend.OPENEMPTYCONTAINER(_fromClient, true);
+            }else{
+                MelonLogger.Msg("Send to client data about container");
+                MyMod.SendContainerData(CompressedData, LevelKey, boxGUID, _fromClient);
+            }
+        }
+        public static void CHANGEAIM(int _fromClient, Packet _packet)
+        {
+            bool IsAiming = _packet.ReadBool();
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_Aiming = IsAiming;
+            }
+            ServerSend.CHANGEAIM(_fromClient, IsAiming, false);
         }
     }
 }

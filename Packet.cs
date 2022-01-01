@@ -95,6 +95,21 @@ namespace GameServer
         SLEEPPOSE,
         ANIMALDAMAGE,
         FIREFUEL,
+        DROPITEM,
+        GOTDROPSLICE,
+        PICKDROPPEDGEAR,
+        REQUESTPICKUP,
+        GETREQUESTEDITEMSLICE,
+        REQUESTDROPSFORSCENE,
+        REQUESTPLACE,
+        GETREQUESTEDFORPLACESLICE,
+        GOTCONTAINERSLICE,
+        REQUESTOPENCONTAINER,
+        OPENEMPTYCONTAINER,
+        MARKSEARCHEDCONTAINERS,
+        READYSENDNEXTSLICE,
+        CHANGEAIM,
+        LOADINGSCENEDROPSDONE,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -185,6 +200,21 @@ namespace GameServer
         SLEEPPOSE,
         ANIMALDAMAGE,
         FIREFUEL,
+        DROPITEM,
+        GOTDROPSLICE,
+        PICKDROPPEDGEAR,
+        REQUESTPICKUP,
+        GETREQUESTEDITEMSLICE,
+        REQUESTDROPSFORSCENE,
+        REQUESTPLACE,
+        GETREQUESTEDFORPLACESLICE,
+        GOTCONTAINERSLICE,
+        REQUESTOPENCONTAINER,
+        OPENEMPTYCONTAINER,
+        MARKSEARCHEDCONTAINERS,
+        READYSENDNEXTSLICE,
+        CHANGEAIM,
+        LOADINGSCENEDROPSDONE,
     }
 
     public class Packet : IDisposable
@@ -402,6 +432,16 @@ namespace GameServer
             Write(gear.m_DataProxy);
             Write(gear.m_Water);
             Write(gear.m_SendedTo);
+        }
+        public void Write(MyMod.DroppedGearItemDataPacket gear)
+        {
+            Write(gear.m_GearID);
+            Write(gear.m_Position);
+            Write(gear.m_Rotation);
+            Write(gear.m_LevelID);
+            Write(gear.m_LevelGUID);
+            Write(gear.m_Hash);
+            Write(gear.m_Extra);
         }
         public void Write(MyMod.ShowShelterByOther shelter)
         {
@@ -632,6 +672,7 @@ namespace GameServer
             Write(obj.m_Str);
             Write(obj.m_SendTo);
             Write(obj.m_Last);
+            Write(obj.m_Extra);
         }
         public void Write(MyMod.SlicedBytesData obj)
         {
@@ -642,6 +683,14 @@ namespace GameServer
             Write(obj.m_Length);
             Write(obj.m_ExtraInt);
             Write(obj.m_Data);
+        }
+        public void Write(MyMod.ExtraDataForDroppedGear obj)
+        {
+            Write(obj.m_DroppedTime);
+            Write(obj.m_GoalTime);
+            Write(obj.m_Dropper);
+            Write(obj.m_Variant);
+            Write(obj.m_GearName);
         }
         #endregion
 
@@ -1152,6 +1201,19 @@ namespace GameServer
             
             return obj;
         }
+        public MyMod.DroppedGearItemDataPacket ReadDroppedGearData()
+        {
+            MyMod.DroppedGearItemDataPacket obj = new MyMod.DroppedGearItemDataPacket();
+            obj.m_GearID = ReadInt();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_LevelID = ReadInt();
+            obj.m_LevelGUID = ReadString();
+            obj.m_Hash = ReadInt();
+            obj.m_Extra = ReadExtraDataForDropperGear();
+
+            return obj;
+        }
         public MyMod.ShowShelterByOther ReadShelter()
         {
             MyMod.ShowShelterByOther obj = new MyMod.ShowShelterByOther();
@@ -1184,6 +1246,7 @@ namespace GameServer
             obj.m_Str = ReadString();
             obj.m_SendTo = ReadInt();
             obj.m_Last = ReadBool();
+            obj.m_Extra = ReadExtraDataForDropperGear();
             return obj;
         }
         public MyMod.SlicedBytesData ReadSlicedBytes()
@@ -1197,8 +1260,21 @@ namespace GameServer
             obj.m_ExtraInt = ReadInt();
             obj.m_Data = ReadBytes(obj.m_Length);
             return obj;
-
         }
+
+        public MyMod.ExtraDataForDroppedGear ReadExtraDataForDropperGear()
+        {
+            MyMod.ExtraDataForDroppedGear obj = new MyMod.ExtraDataForDroppedGear();
+            obj.m_DroppedTime = ReadInt();
+            obj.m_GoalTime = ReadInt();
+            obj.m_Dropper = ReadString();
+            obj.m_Variant = ReadInt();
+            obj.m_GearName = ReadString();
+            return obj;
+        }
+
+
+
         #endregion
 
         private bool disposed = false;

@@ -26,14 +26,220 @@ namespace SkyCoop
         {
             MyMod.SendUDPData(_packet);
         }
+        //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")]
+        //public class GearItemDrop
+        //{
+        //    public static void Prefix(GearItem __instance)
+        //    {
+        //        MelonLogger.Msg("Item dropped " + __instance.m_GearName);
+
+        //        if (MyMod.InOnline() == true)
+        //        {
+        //            MyMod.SendDropItem(__instance);
+        //            //return false;
+        //        }
+        //        //return true;
+        //    }
+        //    public static void Postfix(GearItem __instance, GearItem __result)
+        //    {
+        //        if (MyMod.InOnline() == true)
+        //        {
+        //            if(__result != null && __result.gameObject != null)
+        //            {
+        //                UnityEngine.Object.DestroyImmediate(__result.gameObject);
+        //            }
+        //        }
+        //        //return true;
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")]
         public class GearItemDrop
         {
-            public static void Prefix(GearItem __instance)
+            private static int ShouldDrop = 0;
+            private static int Had = 0;
+            public static void Prefix(GearItem __instance, int numUnits)
             {
                 MelonLogger.Msg("Item dropped " + __instance.m_GearName);
+                if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() == null)
+                {
+                    ShouldDrop = numUnits;
+
+                    if(__instance.m_StackableItem != null)
+                    {
+                        Had = __instance.m_StackableItem.m_Units;
+                    }else{
+                        Had = 1;
+                    }
+                }
+            }
+            public static void Postfix(GearItem __instance, int numUnits, GearItem __result)
+            {
+                if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() == null)
+                {
+                    if(__instance.gameObject.GetComponent<Bed>() != null && __instance.gameObject.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
+                    {
+                        return;
+                    }
+                    int variant = 0;
+                    if ((__instance.gameObject.GetComponent<FoodItem>() != null && __instance.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
+                        (__instance.gameObject.GetComponent<SmashableItem>() != null && __instance.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                    {
+                        variant = 1;
+                    }
+
+                    int left = Had-ShouldDrop;
+                    if(left > 0)
+                    {
+                        MyMod.SendDropItem(__instance, ShouldDrop, Had, false, variant);
+                    }else{
+                        MyMod.SendDropItem(__instance, 0, 0, false, variant);
+                    }
+                    
+                    if (__result != null && __result.gameObject != null && __result != __instance)
+                    {
+                        UnityEngine.Object.DestroyImmediate(__result.gameObject);
+                    }
+                }else{
+                    if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() != null)
+                    {
+                        MelonLogger.Msg("[Postfix]Gear has IgnoreDropOverride doing drop without sync");
+                        UnityEngine.Object.DestroyImmediate(__instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>());
+                    }
+                }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_GearSelect), "DoFirePickerAction")]
+        private static class Panel_GearSelect_DoFirePickerAction
+        {
+            internal static void Prefix(Panel_GearSelect __instance)
+            {
+                GearItem selectedItem = __instance.GetSelectedItem();
+                if (selectedItem != null)
+                {
+                    MelonLogger.Msg("Gear going to be placed adding IgnoreDropOverride");
+                    selectedItem.gameObject.AddComponent<MyMod.IgnoreDropOverride>();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "StartCooking")]
+        private static class CookingPotItem_StartCooking
+        {
+            internal static void Prefix(CookingPotItem __instance, GearItem gearItemToCook)
+            {
+                if (gearItemToCook != null)
+                {
+                    MelonLogger.Msg("Going to cook "+ gearItemToCook.m_GearName+ " IgnoreDropOverride");
+                    gearItemToCook.gameObject.AddComponent<MyMod.IgnoreDropOverride>();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "RestoreTransform")]
+        private static class PlayerManager_RestoreTransform
+        {
+            private static GameObject saveObj;
+            internal static void Prefix(PlayerManager __instance)
+            {
+                if (MyMod.InOnline() == true)
+                {
+                    MelonLogger.Msg("Going to cancle placement");
+                    if (__instance.m_ObjectToPlace != null)
+                    {
+                        if (__instance.m_ObjectToPlace.GetComponent<MyMod.DropFakeOnLeave>() != null)
+                        {
+                            saveObj = __instance.m_ObjectToPlace;
+                        }
+                    }
+                }
+            }
+            internal static void Postfix(PlayerManager __instance)
+            {
+                if (MyMod.InOnline() == true)
+                {
+                    if (MyMod.InOnline() == true)
+                    {
+                        if (saveObj != null)
+                        {
+                            MelonLogger.Msg("Return gear to fake one");
+                            int variant = 0;
+                            if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
+                            {
+                                variant = 1;
+                            }
+                            if ((saveObj.gameObject.GetComponent<FoodItem>() != null && saveObj.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
+                                (saveObj.gameObject.GetComponent<SmashableItem>() != null && saveObj.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                            {
+                                variant = 1;
+                            }
+                            MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "PlaceMeshInWorld")]
+        private static class PlayerManager_PlaceMeshInWorld
+        {
+            private static GameObject saveObj;
+            internal static void Prefix(PlayerManager __instance)
+            {
+                if(MyMod.InOnline() == true)
+                {
+                    if (__instance.m_ObjectToPlace != null)
+                    {
+                        MelonLogger.Msg("Going to place mesh!");
+                        saveObj = __instance.m_ObjectToPlace;
+                    }
+                }
+            }
+            internal static void Postfix(PlayerManager __instance)
+            {
+                if (MyMod.InOnline() == true)
+                {
+                    if (saveObj != null)
+                    {
+                        MelonLogger.Msg("Gear placed!");
+                        int variant = 0;
+                        if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
+                        {
+                            variant = 1;
+                        }
+                        if ((saveObj.gameObject.GetComponent<FoodItem>() != null && saveObj.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
+                            (saveObj.gameObject.GetComponent<SmashableItem>() != null && saveObj.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                        {
+                            variant = 1;
+                        }
+                        MyMod.DropFakeOnLeave DFL = saveObj.GetComponent<MyMod.DropFakeOnLeave>();
+                        if(DFL != null)
+                        {
+                            DFL.m_OldPossition = saveObj.transform.position;
+                            DFL.m_OldRotation = saveObj.transform.rotation;
+                            MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
+                        }else{
+                            GearItem gi = saveObj.gameObject.GetComponent<GearItem>();
+                            if (gi.m_Cookable == null || gi.m_Cookable.IsNearFire() == false)
+                            {
+                                DFL = saveObj.AddComponent<MyMod.DropFakeOnLeave>();
+                                DFL.m_OldPossition = saveObj.transform.position;
+                                DFL.m_OldRotation = saveObj.transform.rotation;
+                                MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
+                            }else{
+
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessAltFire")]
+        private static class PlayerManager_InteractiveObjectsProcessAltFire
+        {
+            internal static void Prefix(PlayerManager __instance)
+            {
+                MelonLogger.Msg("Going to place object");
+                MyMod.PlaceDroppedGear(__instance.m_InteractiveObjectUnderCrosshair);
+            }
+        }
+        
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "Awake")]
         public class GameManager_Awake
         {
@@ -116,11 +322,30 @@ namespace SkyCoop
                     {
                         MyMod.WaitForSleepLable.SetActive(false);
                     }
+                    if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
+                    }
                 }
             }
             [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnPickUp")]
             private static class Panel_Rest_Close2
             {
+                internal static bool Prefix(Panel_Rest __instance)
+                {
+                    if(__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                    {
+                        if (__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject != null)
+                        {
+                            MyMod.PickupDroppedGear(__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject);
+                        }
+                        UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
+                        __instance.m_Bed = null;
+                        __instance.Enable(false);
+                        return false;
+                    }
+                    return true;
+                }
                 internal static void Postfix(Panel_Rest __instance)
                 {
                     MelonLogger.Msg("Sleeping menu close.");
@@ -129,17 +354,36 @@ namespace SkyCoop
             [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnRest")]
             private static class Panel_Rest_Close3
             {
+                public static Bed saveObj;
+                internal static void Prefix(Panel_Rest __instance)
+                {
+                    saveObj = __instance.m_Bed;
+                }
                 internal static void Postfix(Panel_Rest __instance)
                 {
                     MelonLogger.Msg("Sleeping menu close.");
+                    if (saveObj != null && saveObj.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(saveObj.gameObject);
+                        MelonLogger.Msg("Dummy bed removed");
+                    }
                 }
             }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnPassTime")]
+            [HarmonyLib.HarmonyPatch(typeof(PassTime), "End")]
             private static class Panel_Rest_Close4
             {
-                internal static void Postfix(Panel_Rest __instance)
+                public static Bed saveObj;
+                internal static void Prefix(PassTime __instance)
                 {
-                    MelonLogger.Msg("Sleeping menu close.");
+                    saveObj = __instance.m_Bed;
+                }
+                internal static void Postfix(PassTime __instance)
+                {
+                    if (saveObj != null && saveObj.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                    {
+                        UnityEngine.Object.DestroyImmediate(saveObj.gameObject);
+                        MelonLogger.Msg("Dummy bed removed");
+                    }
                 }
             }
             [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnConfirm")]
@@ -568,7 +812,7 @@ namespace SkyCoop
                             {
                                 using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
                                 {
-                                    ServerSend.BULLETDAMAGE(PlayerDamage.m_ClientId, (float)PlayerDamage.m_Damage);
+                                    ServerSend.BULLETDAMAGE(PlayerDamage.m_ClientId, (float)PlayerDamage.m_Damage, 0);
                                 }
                             }
                         }
@@ -673,6 +917,19 @@ namespace SkyCoop
                         if (__instance.ProjectilePrefab.name == "PistolBullet")
                         {
                             shoot.m_skill = GameManager.GetSkillRifle().GetEffectiveRange();
+                            if (MyMod.playersData[0].m_Mimic == true && MyMod.players[0] != null)
+                            {
+                                if (MyMod.players[0] != null && MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                                {
+                                    string shootStrhing = "RifleShoot";
+                                    if (MyMod.playersData[0] != null && MyMod.playersData[0].m_AnimState == "Ctrl")
+                                    {
+                                        shootStrhing = "RifleShoot_Sit";
+                                    }
+
+                                    MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_PreAnimStateHands = shootStrhing;
+                                }
+                            }
                         }
 
                         if (MyMod.sendMyPosition == true)
@@ -752,6 +1009,30 @@ namespace SkyCoop
                         return;
                     }
                     MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent,MyMod.instance.myId, pickupItem.m_InstanceID, true);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UpdateInspectGear")]
+        private static class Inventory_LeaveIt
+        {
+            internal static void Prefix(PlayerManager __instance)
+            {
+                if(__instance.m_Gear != null && __instance.m_InspectModeActive == true)
+                {
+                    if (InputManager.GetPutBackPressed(InputManager.m_CurrentContext) == true)
+                    {
+                        if(__instance.m_Gear.gameObject.GetComponent<MyMod.DropFakeOnLeave>() != null)
+                        {
+                            MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
+                            int variant = 0;
+                            if ((__instance.m_Gear.gameObject.GetComponent<FoodItem>() != null && __instance.m_Gear.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
+                                (__instance.m_Gear.gameObject.GetComponent<SmashableItem>() != null && __instance.m_Gear.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                            {
+                                variant = 1;
+                            }
+                            MyMod.SendDropItem(__instance.m_Gear, 0, 0, true, variant);
+                        }
+                    }
                 }
             }
         }
@@ -2058,7 +2339,6 @@ namespace SkyCoop
 
         public static void SaveGenVersion(SaveSlotType gameMode, string name)
         {
-            //MelonLogger.Msg("[Saving][MultiplayerDeath] Saving...");
             int[] saveProxy = { MyMod.BuildInfo.RandomGenVersion };
             string data = JSON.Dump(saveProxy);
 
@@ -2070,6 +2350,20 @@ namespace SkyCoop
                     MyMod.LastLoadedGenVersion = MyMod.BuildInfo.RandomGenVersion;
                 }
             }
+        }
+        public static void SaveSeedInt(SaveSlotType gameMode, string name)
+        {
+            int[] saveProxy = { GameManager.m_SceneTransitionData.m_GameRandomSeed };
+            string data = JSON.Dump(saveProxy);
+
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_seed", data);
+        }
+        public static void SaveRealtimeTime(SaveSlotType gameMode, string name)
+        {
+            int[] saveProxy = { MyMod.MinutesFromStartServer };
+            string data = JSON.Dump(saveProxy);
+
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_rtt", data);
         }
 
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")]
@@ -2086,6 +2380,9 @@ namespace SkyCoop
                 SaveSnowShelters(gameMode, name);
                 SaveMPDeath(gameMode, name);
                 SaveGenVersion(gameMode, name);
+                SaveSeedInt(gameMode, name);
+                MyMod.SaveAllLoadedDrops();
+                SaveRealtimeTime(gameMode, name);
             }
         }
 
@@ -2286,6 +2583,65 @@ namespace SkyCoop
                 MelonLogger.Msg(ConsoleColor.DarkRed,"This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
             }
         }
+        public static int LoadSeedInt(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_seed");
+            if (data != null)
+            {
+                int[] saveProxy = JSON.Load(data).Make<int[]>();
+                return saveProxy[0];
+            }
+            else{
+                return 0;
+            }
+        }
+
+        public static void LoadRealtimeTime(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_rtt");
+            if (data != null)
+            {
+                int[] saveProxy = JSON.Load(data).Make<int[]>();
+                MyMod.MinutesFromStartServer = saveProxy[0];
+            }
+        }
+
+        public static void clearFolder(string FolderName)
+        {
+            System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(FolderName);
+
+            foreach (System.IO.FileInfo fi in dir.GetFiles())
+            {
+                fi.Delete();
+            }
+
+            foreach (System.IO.DirectoryInfo di in dir.GetDirectories())
+            {
+                clearFolder(di.FullName);
+                di.Delete();
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "DeleteSaveFiles")]
+        public static class SaveGameSystemPatch_DeleteSaveFiles
+        {
+            public static void Prefix(string name)
+            {
+                //MelonLogger.Msg("[DroppedGearsUnloader] Wiping unloads data before delete file " + name + "...");
+                int seed = LoadSeedInt(name);
+                string dir = @"Mods\Unloads\" + seed;
+                bool exists = System.IO.Directory.Exists(dir);
+                if (exists)
+                {
+                    clearFolder(dir);
+
+                    System.IO.Directory.Delete(dir);
+                    //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " has been deleted");
+                }else{
+                    //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " not exist, so doing nothing");
+                }
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "RestoreGlobalData")]
         public static class SaveGameSystemPatch_RestoreGlobalData
@@ -2302,6 +2658,7 @@ namespace SkyCoop
                 LoadSnowShelters(name);
                 LoadMPDeath(name);
                 LoadGenVersion(name);
+                LoadRealtimeTime(name);
             }
         }
 
@@ -2313,8 +2670,10 @@ namespace SkyCoop
             MyMod.BrokenFurniture = new List<MyMod.BrokenFurnitureSync>();
             MyMod.PickedGears = new List<MyMod.PickedGearSync>();
             MyMod.DeployedRopes = new List<MyMod.ClimbingRopeSync>();
+            MyMod.LootedContainers = new List<MyMod.ContainerOpenSync>();
             MyMod.CantBeUsedForMP = false;
             MyMod.LastLoadedGenVersion = 0;
+            MyMod.IsDead = false;
             if (MyMod.sendMyPosition == true)
             {
                 MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
@@ -3103,6 +3462,65 @@ namespace SkyCoop
                         }
                         __result = actString;
                     }
+                    else if(interactiveObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    {
+                        MyMod.DroppedGearDummy DGD = interactiveObject.GetComponent<MyMod.DroppedGearDummy>();
+                        string DroppedString = " Dropped by "+DGD.m_Extra.m_Dropper;
+                        if (DGD.m_Extra.m_GoalTime == 0)
+                        {
+                            if(DroppedString != "")
+                            {
+                                __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
+                            }else{
+                                __result = DGD.m_LocalizedDisplayName;
+                            }
+                        }
+                        else if (DGD.m_Extra.m_GoalTime == -1)
+                        {
+                            __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
+                        }else{
+                            int minutesOnDry = MyMod.MinutesFromStartServer-DGD.m_Extra.m_DroppedTime;
+                            int minutesLeft = MyMod.TimeToDry(interactiveObject.name)-minutesOnDry+1;
+                            int hours = minutesLeft / 60;
+
+                            string str = DGD.m_LocalizedDisplayName + "\n" + "Cures in: ";
+
+                            if(hours >= 24)
+                            {
+                                int days = hours / 24;
+                                if (days != 1)
+                                {
+                                    str = str + days + " days";
+                                }else{
+                                    str = str + days + " day";
+                                }
+                                
+                            }else{
+                                if (hours >= 1)
+                                {
+                                    if(hours != 1)
+                                    {
+                                        str = str + hours + " hours";
+                                    }else{
+                                        str = str + hours + " hour";
+                                    }
+                                }else{
+                                    if (minutesLeft >= 1)
+                                    {
+                                        if (minutesLeft != 1)
+                                        {
+                                            str = str + minutesLeft + " minutes";
+                                        }else{
+                                            str = str + minutesLeft + " minute";
+                                        }
+                                    }else{
+                                        str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
+                                    }
+                                }
+                            }
+                            __result = str + DroppedString;
+                        }
+                    }
                 }
             }
         }
@@ -3118,7 +3536,6 @@ namespace SkyCoop
                 {
                     if(hit.collider.gameObject != null)
                     {
-                        
                         GameObject hitObj = hit.collider.transform.gameObject;
                         //MelonLogger.Msg("Found something "+ hitObj.name);
                         if(hitObj.GetComponent<MyMod.PlayerBulletDamage>() != null)
@@ -3138,12 +3555,210 @@ namespace SkyCoop
                                 }
                             }
                         }
+                        else if(hitObj.GetComponent<MyMod.DroppedGearDummy>() != null)
+                        {
+                            __result = hitObj;
+                        }
                     }
                 }
             }
         }
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
+        //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs2
+        //{
+        //    internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
+        //    {
+        //        int layerMask = vp_Layer.Default;
+        //        RaycastHit hit;
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "IsClickHoldActive")]
+        //        if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange))
+        //        {
+        //            if (hit.collider.gameObject != null)
+        //            {
+        //                GameObject hitObj = hit.collider.transform.gameObject;
+        //                if (hitObj.GetComponent<MyMod.DroppedGearDummy>() != null)
+        //                {
+        //                    __result = hitObj;
+        //                }
+        //                else
+        //                {
+        //                    MelonLogger.Msg("Hit object "+hitObj.name);
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "FindInteractiveObject")]
+        internal class PlayerManager_FindInteractiveObject
+        {
+            internal static void Postfix(RaycastHit hit, ref GearItem gi, ref GameObject interactiveObj)
+            {
+                if (hit.transform.gameObject != null && hit.transform.gameObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                {
+                    gi = new GearItem();
+                    interactiveObj = hit.transform.gameObject;
+                }
+            }
+        }
+      //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
+      //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs2
+      //{
+      //    internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
+      //    {
+      //        if (__instance.ShouldSuppressCrosshairs())
+      //        {
+      //            __result = null;
+      //        }
+      //        int num = 138383360;
+      //        RaycastHit hit;
+      //        bool flag = Utils.RaycastNearest(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, num);
+      //        if (!flag)
+      //        {
+      //            flag = Physics.Raycast(GameManager.GetWeaponCamera().transform.position, GameManager.GetWeaponCamera().transform.forward, out hit, maxRange, num);
+      //            if (flag && Utils.GetTopParentWithLayer(hit.collider.gameObject, 23) == hit.collider.gameObject)
+      //            {
+      //                flag = false;
+      //            }
+      //        }
+      //        GameObject gameObject = null;
+      //        GearItem gearItem = null;
+      //        if (flag)
+      //        {
+      //            __instance.FindInteractiveObject(hit, ref gearItem, ref gameObject);
+      //        }
+      //        if (!gearItem && !gameObject)
+      //        {
+      //            num |= 16777216;
+      //            flag = Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, num);
+      //            if (!flag)
+      //            {
+      //                flag = Physics.Raycast(GameManager.GetWeaponCamera().transform.position, GameManager.GetWeaponCamera().transform.forward, out hit, maxRange, num);
+      //                if (flag && Utils.GetTopParentWithLayer(hit.collider.gameObject, 23) == hit.collider.gameObject)
+      //                {
+      //                    flag = false;
+      //                }
+      //            }
+      //            if (flag)
+      //            {
+      //                __instance.FindInteractiveObject(hit, ref gearItem, ref gameObject);
+      //            }
+      //        }
+      //        if (!flag || !gameObject)
+      //        {
+      //            __result = null;
+      //        }
+      //        if (gearItem)
+      //        {
+      //            if (gearItem.m_InPlayerInventory)
+      //            {
+      //                __result = null;
+      //            }
+      //            if (gearItem.m_NonInteractive)
+      //            {
+      //                __result = null;
+      //            }
+      //        }
+      //        float distance = hit.distance;
+      //        __instance.m_LocationOfLastInteractHit = hit.point;
+      //        Rigidbody rigidbody;
+      //        if (gameObject.TryGetComponent<Rigidbody>(out rigidbody))
+      //        {
+      //            if (rigidbody.velocity.sqrMagnitude > 25f)
+      //            {
+      //                __result = null;
+      //            }
+      //            ArrowItem arrowItem;
+      //            if (gameObject.TryGetComponent<ArrowItem>(out arrowItem) && arrowItem.InFlight(true))
+      //            {
+      //                __result = null;
+      //            }
+      //        }
+      //        int num2 = Utils.m_PhysicalCollisionLayerMask | 131072 | 1048576 | 134217728 | 16777216 | 32768;
+      //        num2 &= -67108865;
+      //        flag = Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, num2);
+      //        if (!flag)
+      //        {
+      //            flag = Physics.Raycast(GameManager.GetWeaponCamera().transform.position, GameManager.GetWeaponCamera().transform.forward, out hit, maxRange, num2);
+      //            if (flag && Utils.GetTopParentWithLayer(hit.collider.gameObject, 23) == hit.collider.gameObject)
+      //            {
+      //                flag = false;
+      //            }
+      //        }
+      //        if (!flag)
+      //        {
+      //            __result = null;
+      //        }
+      //        GearItem gearItem2;
+      //        if (hit.collider && hit.transform.gameObject && hit.transform.gameObject.TryGetComponent<GearItem>(out gearItem2) && gearItem2.m_InPlayerInventory && gameObject.layer == 21)
+      //        {
+      //            gameObject = hit.transform.gameObject;
+      //        }
+      //        if (hit.distance > distance)
+      //        {
+      //            __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //        }
+      //        GameObject gameObject2 = hit.transform.gameObject;
+      //        if (gameObject2 == gameObject)
+      //        {
+      //            if (gameObject.layer == 27)
+      //            {
+      //                BaseAi componentInParent = gameObject.GetComponentInParent<BaseAi>();
+      //                if (!componentInParent)
+      //                {
+      //                    __result = Utils.GetTopParentWithLayer(gameObject, gameObject.transform.parent.gameObject.layer);
+      //                }
+      //                __result = componentInParent.gameObject;
+      //            }
+      //            else
+      //            {
+      //                if (gameObject.layer == 18)
+      //                {
+      //                    for (int i = 0; i < gameObject.transform.childCount; i++)
+      //                    {
+      //                        Transform child = gameObject.transform.GetChild(i);
+      //                        if (child != null && child.gameObject.activeInHierarchy)
+      //                        {
+      //                            child.GetComponentsInChildren<MeshCollider>(false, __instance.m_MeshColliders);
+      //                            if (__instance.m_MeshColliders.Count > 0)
+      //                            {
+      //                                __result = null;
+      //                            }
+      //                        }
+      //                    }
+      //                    __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //                }
+      //                __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //            }
+      //        }else{
+      //            if (Utils.Approximately(hit.distance, distance, 0.0001f))
+      //            {
+      //                __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //            }
+      //            gameObject.GetComponentsInChildren<Transform>(__instance.m_Transforms);
+
+
+      //            __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //            //using (Il2CppSystem.Collections.Generic.List<Transform>.Enumerator enumerator = __instance.m_Transforms.GetEnumerator())
+      //            //{
+      //            //    while (enumerator.MoveNext())
+      //            //    {
+      //            //        if (enumerator.Current == gameObject2.transform)
+      //            //        {
+      //            //            __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //            //        }
+      //            //    }
+      //            //}
+      //            //if (gameObject2.layer == 24)
+      //            //{
+      //            //    __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
+      //            //}
+      //            //__result = null;
+      //        }
+      //    }
+      //}
+
+      [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "IsClickHoldActive")]
         internal class PlayerManager_IsClickHoldActive
         {
             internal static void Postfix(ref bool __result)
@@ -3227,6 +3842,10 @@ namespace SkyCoop
             {
                 act = MyMod.GetActionForOtherPlayer("Stim");
             }
+            else if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.PlayerHoldingTorchThatCanBeLit() == true && mP.m_TorchIgniter != null && mP.m_LightSourceOn == true)
+            {
+                act = MyMod.GetActionForOtherPlayer("Lit");
+            }
             else if (mP.m_BloodLosts > 0)
             {
                 act = MyMod.GetActionForOtherPlayer("Bandage");
@@ -3295,6 +3914,15 @@ namespace SkyCoop
                                 __result = true;
                             }
                         }
+                        else if (PAction == "Lit")
+                        {
+                            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.PlayerHoldingTorchThatCanBeLit() == true && mP.m_TorchIgniter != null && mP.m_LightSourceOn == true)
+                            {
+                                GameManager.GetPlayerManagerComponent().m_ItemInHands.m_TorchItem.IgniteDelayed(2f, "", true);
+                                GameManager.GetPlayerAnimationComponent().LookAt(mP.m_TorchIgniter.transform.position);
+                                __result = true;
+                            }
+                        }
                         else if (PAction == "Revive")
                         {
                             bool HaveMedkit = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
@@ -3310,6 +3938,17 @@ namespace SkyCoop
                                 GameAudioManager.PlayGUIError();
                                 __result = false;
                             }
+                        }
+                    }else if (obj.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    {
+                        if(obj.GetComponent<MyMod.FakeBed>() == null)
+                        {
+                            MelonLogger.Msg("Trying pickup fake drop");
+                            MyMod.PickupDroppedGear(obj);
+                            __result = true;
+                        }else{
+                            MyMod.UseFakeBed(obj);
+                            __result = true;
                         }
                     }
                 } 
@@ -4152,6 +4791,16 @@ namespace SkyCoop
         //    }
         //}
 
+        public static void RequestDropsForScene()
+        {
+            using (Packet _packet = new Packet((int)ClientPackets.REQUESTDROPSFORSCENE))
+            {
+                _packet.Write(MyMod.levelid);
+                _packet.Write(MyMod.level_guid);
+                SendTCPData(_packet);
+            }
+        }
+
         public static void LoadEverything()
         {
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading everything...");
@@ -4164,6 +4813,18 @@ namespace SkyCoop
             MyMod.DestoryPickedGears();
             MyMod.ApplyOtherCampfires = true;
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading done!");
+            MyMod.DroppedGearsObjs.Clear();
+
+            if(MyMod.iAmHost == true)
+            {
+                MyMod.LoadAllDropsForScene();
+                MyMod.MarkSearchedContainers(MyMod.levelid+MyMod.level_guid);
+            }
+            if(MyMod.sendMyPosition == true)
+            {
+                MyMod.DoPleaseWait("Please wait...", "Downloading scene drops...");
+                RequestDropsForScene();
+            }
         }
 
 
@@ -4559,6 +5220,106 @@ namespace SkyCoop
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(Container), "OnOpenComplete")]
+        internal static class Container_OnOpenComplete
+        {
+            private static bool Prefix(Container __instance)
+            {
+                if (MyMod.InOnline() == true)
+                {
+                    MelonLogger.Msg("Opening container, request fake container");
+                    MyMod.OpenFakeContainer(__instance);
+                    return false;
+                }
+                return true;
+            }
+        }
+        //[HarmonyLib.HarmonyPatch(typeof(Container), "GetInteractiveDisplayText")]
+        //internal static class Container_GetInteractiveDisplayText
+        //{
+        //    private static bool Prefix(Container __instance)
+        //    {
+        //        if (MyMod.InOnline() == true)
+        //        {
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //    private static void Postfix(Container __instance, string __result)
+        //    {
+        //        if (MyMod.InOnline() == true)
+        //        {
+        //            if(__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.ContainerLootedText>() != null)
+        //            {
+        //                __result = __instance.GetInteractiveActionText()+"\n"+Localization.Get("GAMEPLAY_SearchedPostfix");
+        //            }
+        //        }
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Container), "OnDone")]
+        internal static class Panel_Container_Close
+        {            
+            private static bool Prefix(Panel_Container __instance)
+            {
+                Container box = __instance.m_Container;
+                if(MyMod.InOnline() == true)
+                {
+                    if (__instance.ShouldEnterSectionNav() && __instance.m_Container != null && !__instance.m_Container.m_FilterLocked)
+                    {
+                        __instance.EnterSectionNav();
+                    }
+                    else
+                    {
+                        if (__instance.m_DraggedItem != null)
+                        {
+                            __instance.m_DraggedItem.TryForceDrop(false);
+                            __instance.FinishDragDrop();
+                        }
+                        MyMod.CloseFakeContainer(box);
+                    }
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(GameObject), typeof(int) })]
+        internal static class PlayerManager_InstantiateItemAtPlayersFeet
+        {
+            private static void Postfix(GameObject prefab, int numUnits, GearItem __result)
+            {
+                if(MyMod.InOnline() == true)
+                {
+                    MyMod.SendDropItem(__result, 0, 0, false);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "OnBack")]
+        internal static class Panel_Log_Dead
+        {
+            private static void Prefix(Panel_Log __instance)
+            {
+                if (MyMod.InOnline() == true)
+                {
+                    Application.Quit();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "DoQuitGame")]
+        internal static class Panel_PauseMenu_Quit
+        {
+            private static void Prefix(Panel_PauseMenu __instance)
+            {
+                if (MyMod.InOnline() == true)
+                {
+                    Application.Quit();
+                }
+            }
+        }
+        
+
+
         //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]
         //public class GearItem_LoadDebug
         //{

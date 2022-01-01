@@ -73,6 +73,16 @@ namespace SkyCoop
                 }
                 return str;
             }
+            public static void ProcessWhitelist(string[] whitelist)
+            {
+                for (int i = 0; i < whitelist.Length; i++)
+                {
+                    ulong id = Convert.ToUInt64(whitelist[i]);
+                    CSteamID sid = new CSteamID(id);
+                    SteamNetworking.AcceptP2PSessionWithUser(sid);
+                    MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] Adding user with SID "+ id+" to the whitelist!");
+                }
+            }
 
             public static void ClickInvitePerson(CSteamID sid)
             {

@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.2";
+            public const string Version = "0.7.3";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -97,6 +97,7 @@ namespace SkyCoop
         public static bool PreviousHasAxe = false;
         public static bool PreviousHasMedkit = false;
         public static bool MyHasMedkit = false;
+        public static bool MyIsAiming = false;
         public static int CycleSkip = 0;
         public static int MyCycleSkip = 0;
         public static bool IsSleeping = false;
@@ -203,6 +204,7 @@ namespace SkyCoop
         public static int StartDSAfterLoad = -1;
         public static int SendAfterLoadingFinished = -1;
         public static int RegularUpdateSeconds = 7;
+        public static int MinutesFromStartServer = 0;
         public static bool SkipEverythingForConnect = false;
         public static GameObject UISteamFreindsMenuObj = null;
         public static int PlayersOnServer = 0;
@@ -215,6 +217,9 @@ namespace SkyCoop
         public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
         public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
         public static bool DebugTrafficCheck = false;
+        public static Dictionary<int, SlicedJsonDroppedGear> DroppedGearsOld = new Dictionary<int, SlicedJsonDroppedGear>();
+        public static Dictionary<string, Dictionary<int, SlicedJsonDroppedGear>> DroppedGears = new Dictionary<string, Dictionary<int, SlicedJsonDroppedGear>>();
+        public static Dictionary<int, GameObject> DroppedGearsObjs = new Dictionary<int, GameObject>();
         //Voice chat
         public static int VoiceChatFrequencyHz = 19000;
         public static int MyMicrophoneID = 0;
@@ -255,7 +260,14 @@ namespace SkyCoop
         {
             for (int index = 0; index < ConsoleManager.m_AllGearItemNames.Count; ++index)
             {
-                GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
+                int exist;
+                if(GearIDList.TryGetValue(ConsoleManager.m_AllGearItemNames[index], out exist) == false)
+                {
+                    GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
+                    //MelonLogger.Msg("[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ID " + index);
+                }else{
+                    //MelonLogger.Msg(ConsoleColor.Red, "[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ALREADY EXIST");
+                }
             }
         }
         public static string GetGearNameByID(int index)
@@ -310,6 +322,192 @@ namespace SkyCoop
                     gData.m_DataProxy = finalJsonData;
                     MyMod.GiveRecivedItem(gData);
                 }
+            }
+        }
+
+        public static void AddSlicedJsonDataForDrop(SlicedJsonData jData)
+        {
+            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Dropped Item Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
+            if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
+            {
+                string previousString = "";
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
+                {
+                    string wholeString = previousString + jData.m_Str;
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
+                }
+                else
+                {
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+                }
+            }else{
+                SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+            }
+
+            if (jData.m_Last)
+            {
+                string finalJsonData = "";
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
+                {
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    AddDroppedGear(jData.m_SendTo, jData.m_Hash, finalJsonData, jData.m_GearName, jData.m_Extra);
+                    MelonLogger.Msg(ConsoleColor.Green, "Finished adding data for:" + jData.m_Hash);
+                }
+            }
+        }
+
+        public static void AddSlicedJsonDataForPicker(SlicedJsonData jData, bool place)
+        {
+            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Requested Item Slice for hash:" + jData.m_Hash + " DATA: " + jData.m_Str);
+            if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
+            {
+                string previousString = "";
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
+                {
+                    string wholeString = previousString + jData.m_Str;
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
+                }else{
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+                }
+            }else{
+                SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+            }
+
+            if (jData.m_Last)
+            {
+                string finalJsonData = "";
+                RemovePleaseWait();
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
+                {
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    MelonLogger.Msg(ConsoleColor.Green, "Finished getting data for:" + jData.m_Hash);
+
+                    string gearName = "";
+
+                    if(jData.m_SendTo != -1)
+                    {
+                        gearName = GetGearNameByID(jData.m_SendTo);
+                    }else{
+                        gearName = jData.m_Extra.m_GearName;
+                    }
+
+                    GameObject reference = GetGearItemObject(gearName);
+
+                    if (reference == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        return;
+                    }
+
+
+                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, new Vector3(0,0,0), new Quaternion(0,0,0,0));
+
+                    if(newGear == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        return;
+                    }
+
+                    newGear.name = CloneTrimer(newGear.name);
+                    newGear.GetComponent<GearItem>().Deserialize(finalJsonData);
+                    newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+
+                    DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
+                    DFL.m_OldPossition = newGear.gameObject.transform.position;
+                    DFL.m_OldRotation = newGear.gameObject.transform.rotation;
+
+                    DroppedGearDummy DGD = newGear.gameObject.GetComponent<DroppedGearDummy>();
+                    if (DGD != null)
+                    {
+                        if (DGD.m_Extra.m_GoalTime != 0 && DGD.m_Extra.m_GoalTime != -1)
+                        {
+                            GearItem gear = newGear.GetComponent<GearItem>();
+                            int days = Convert.ToInt32(gear.m_EvolveItem.m_TimeToEvolveGameDays);
+                            int hours = days * 24;
+                            int minutes = hours * 60;
+
+                            int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+
+                            gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = (float)minutesOnDry / 60;
+                            MelonLogger.Msg(ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
+                            MelonLogger.Msg(ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                        }
+                    }
+
+                    if (place == false)
+                    {
+                        bool skipPickup = false;
+                        if (newGear.GetComponent<GearItem>().m_Bed != null)
+                        {
+                            if(newGear.GetComponent<GearItem>().m_Bed.GetState() == BedRollState.Placed)
+                            {
+                                newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Rolled);
+                                skipPickup = true;
+                            }
+                        }
+                        if(skipPickup == false)
+                        {
+                            GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
+                        }else{
+                            GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(newGear.GetComponent<GearItem>(), false, false);
+                        }
+                        
+                    }else{
+                        newGear.GetComponent<GearItem>().PlayPickUpClip();
+                        GameManager.GetPlayerManagerComponent().StartPlaceMesh(newGear, PlaceMeshFlags.None);
+                    }
+                }
+            }
+        }
+
+        public static void AddSlicedJsonDataForContainer(SlicedJsonData jData, int From = -1)
+        {
+            if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
+            {
+                string previousString = "";
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
+                {
+                    string wholeString = previousString + jData.m_Str;
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
+                }
+                else
+                {
+                    SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+                }
+            }else{
+                SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+            }
+
+            if (jData.m_Last)
+            {
+                string finalJsonData = "";
+                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
+                {
+                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
+
+                    string OriginalData = jData.m_GearName;
+                    string LevelKey = OriginalData.Split(Convert.ToChar("|"))[0];
+                    string GUID = OriginalData.Split(Convert.ToChar("|"))[1];
+
+                    if(iAmHost == true)
+                    {
+                        SaveFakeContainer(GUID, LevelKey, finalJsonData, false);
+                    }
+                    if(sendMyPosition == true)
+                    {
+                        FinishOpeningFakeContainer(finalJsonData);
+                    }
+
+                    MelonLogger.Msg(ConsoleColor.Green, "Finished loading container data for " + jData.m_Hash);
+                }
+            }
+
+            if(From != -1)
+            {
+                ServerSend.READYSENDNEXTSLICE(From, true);
             }
         }
 
@@ -441,6 +639,7 @@ namespace SkyCoop
             public int m_Hash = 0;
             public string m_GearName = "";
             public int m_SendTo = 0;
+            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
         }
         public class SlicedBytesData
         {
@@ -451,6 +650,20 @@ namespace SkyCoop
             public int m_SendTo = 0;
             public string m_Action = "";
             public int m_ExtraInt = 0;
+        }
+        public class SlicedJsonDroppedGear
+        {
+            public string m_GearName = "";
+            public string m_Json = "";
+            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
+        }
+        public class ExtraDataForDroppedGear
+        {
+            public int m_DroppedTime = 0;
+            public int m_GoalTime = 0;
+            public string m_Dropper = "";
+            public int m_Variant = 0;
+            public string m_GearName = "";
         }
 
         public class PlayerEquipmentData //: MelonMod
@@ -503,6 +716,7 @@ namespace SkyCoop
             public ShowShelterByOther m_Shelter = null;
             public Vector3 m_SleepV3 = new Vector3(0, 0, 0);
             public Quaternion m_SleepQuat = new Quaternion(0, 0, 0, 0);
+            public bool m_Aiming = false;
         }
         public class MultiPlayerClientStatus //: MelonMod
         {
@@ -634,6 +848,16 @@ namespace SkyCoop
             public string m_DataProxy = "";
             public float m_Water = 0;
             public int m_SendedTo = -1;
+        }
+        public class DroppedGearItemDataPacket
+        {
+            public int m_GearID = -1;
+            public Vector3 m_Position;
+            public Quaternion m_Rotation;
+            public int m_LevelID = 0;
+            public string m_LevelGUID = "";
+            public int m_Hash = 0;
+            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
         }
         public class BrokenFurnitureSync : IEquatable<BrokenFurnitureSync>
         {
@@ -811,6 +1035,14 @@ namespace SkyCoop
                 act.m_CancleOnMove = true;
                 act.m_ActionDuration = 3;
             }
+            else if (ActName == "Lit")
+            {
+                act.m_Action = "Lit";
+                act.m_DisplayText = "Ignite from player's fire";
+                act.m_ProcessText = "";
+                act.m_CancleOnMove = false;
+                act.m_ActionDuration = 0;
+            }
             else
             {
                 act.m_Action = "Look";
@@ -881,11 +1113,11 @@ namespace SkyCoop
             public bool ContainersDupes;
             public int SpawnStyle;
             public int MaxPlayers;
-            public bool P2P;
-            public bool Public;
+            public bool UsingSteam;
             public int Ports;
             public string[] WhiteList;
             public string ServerName;
+            public int Cheats;
         }
 
         public static void ForceLoadSlotForDs(string searchname)
@@ -927,38 +1159,39 @@ namespace SkyCoop
                 MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Reading server.json...");
                 string readText = System.IO.File.ReadAllText("Mods\\server.json");
                 DedicatedServerData ServerData = JSON.Load(readText).Make<DedicatedServerData>();
-                //MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server settings: ");
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] SaveSlot: "+ ServerData.SaveSlot);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] ItemDupes: " + ServerData.ItemDupes);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] ContainersDupes: " + ServerData.ContainersDupes);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] SpawnStyle: " + ServerData.SpawnStyle);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] MaxPlayers: " + ServerData.MaxPlayers);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] P2P: " + ServerData.P2P);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] Public: " + ServerData.Public);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] Ports: " + ServerData.Ports);
+                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server settings: ");
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] SaveSlot: " + ServerData.SaveSlot);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] ItemDupes: " + ServerData.ItemDupes);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] ContainersDupes: " + ServerData.ContainersDupes);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] SpawnStyle: " + ServerData.SpawnStyle);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] MaxPlayers: " + ServerData.MaxPlayers);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] P2P: " + ServerData.UsingSteam);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] Ports: " + ServerData.Ports);
+                MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] Cheats: " + ServerData.Cheats);
                 MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] No problems with server.json found!");
                 MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Trying to load save file...");
 
                 ServerConfig.m_DuppedContainers = ServerData.ContainersDupes;
                 ServerConfig.m_DuppedSpawns = ServerData.ItemDupes;
                 ServerConfig.m_PlayersSpawnType = ServerData.SpawnStyle;
+                ServerConfig.m_CheatsMode = ServerData.Cheats;
                 MaxPlayers = ServerData.MaxPlayers;
                 MyChatName = "DedicatedServer";
 
-                if(SteamConnect.CanUseSteam == false && ServerData.P2P == true)
+                if(SteamConnect.CanUseSteam == false && ServerData.UsingSteam == true)
                 {
-                    ServerData.P2P = false;
-                    MelonLogger.Msg(ConsoleColor.Red, "[Dedicated server] In server.json 'P2P' set to true, but you using version of the game that not support Steam P2P! If you use licence version of the game, but still see this, reboot steam.");
-                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Forced changing 'P2P' to false, and running regular server.");
+                    ServerData.UsingSteam = false;
+                    MelonLogger.Msg(ConsoleColor.Red, "[Dedicated server] In server.json 'UsingSteam' set to true, but you using version of the game that not support Hosting with using Steam! If you use licence version of the game, but still see this, reboot steam.");
+                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Forced changing 'UsingSteam' to false, and running regular server.");
                 }
 
-                if (ServerData.P2P == false)
+                if (ServerData.UsingSteam == false)
                 {
                     HostAServer(ServerData.Ports);
                 }else{
-                    IsPublicServer = ServerData.Public;
+                    IsPublicServer = false;
                     CustomServerName = ServerData.ServerName;
-                    Server.StartSteam(MaxPlayers);
+                    Server.StartSteam(MaxPlayers, ServerData.WhiteList);
                 }
 
                 ForceLoadSlotForDs(ServerData.SaveSlot);
@@ -988,6 +1221,11 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<FakeFireLight>();
             ClassInjector.RegisterTypeInIl2Cpp<DoNotSerializeThis>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerVoiceChatPlayer>();
+            ClassInjector.RegisterTypeInIl2Cpp<DroppedGearDummy>();
+            ClassInjector.RegisterTypeInIl2Cpp<IgnoreDropOverride>();
+            ClassInjector.RegisterTypeInIl2Cpp<DropFakeOnLeave>();
+            ClassInjector.RegisterTypeInIl2Cpp<FakeBed>();
+            ClassInjector.RegisterTypeInIl2Cpp<FakeBedDummy>();
 
             if (instance == null)
             {
@@ -1809,6 +2047,62 @@ namespace SkyCoop
             }
         }
 
+        public class DroppedGearDummy : MonoBehaviour
+        {
+            public DroppedGearDummy(IntPtr ptr) : base(ptr) { }
+
+            public string m_LocalizedDisplayName;
+            public int m_SearchKey = 0;
+            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
+            void Update()
+            {
+
+            }
+        }
+        public class IgnoreDropOverride : MonoBehaviour
+        {
+            public IgnoreDropOverride(IntPtr ptr) : base(ptr) { }
+            void Update()
+            {
+
+            }
+        }
+        public class DropFakeOnLeave : MonoBehaviour
+        {
+            public DropFakeOnLeave(IntPtr ptr) : base(ptr) { }
+            public Vector3 m_OldPossition = new Vector3(0, 0, 0);
+            public Quaternion m_OldRotation = new Quaternion(0, 0, 0, 0);
+
+            void Update()
+            {
+
+            }
+        }
+        public class FakeBed : MonoBehaviour
+        {
+            public FakeBed(IntPtr ptr) : base(ptr) { }
+
+            void Update()
+            {
+
+            }
+            public void ProcessPickup()
+            {
+
+            }
+        }
+        public class FakeBedDummy : MonoBehaviour
+        {
+            public FakeBedDummy(IntPtr ptr) : base(ptr) { }
+            public GameObject m_LinkedFakeObject;
+
+            void Update()
+            {
+
+            }
+        }
+        
+
         public class DestoryArrowOnHit : MonoBehaviour
         {
             public DestoryArrowOnHit(IntPtr ptr) : base(ptr) { }
@@ -2121,17 +2415,27 @@ namespace SkyCoop
                         {
                             if (m_AnimState != "Ctrl")
                             {
-                                if (m_AnimStateHands != "Rifle" && m_AnimStateHands != "Rifle_Sit")
+                                if (m_AnimStateHands != "Rifle" && m_AnimStateHands != "Rifle_Sit" && m_AnimStateHands != "RifleAim")
                                 {
                                     m_PreAnimStateHands = "Pick";
                                 }
-                                m_AnimStateHands = "Rifle";
+                                if(playersData[m_ID].m_Aiming == true)
+                                {
+                                    m_AnimStateHands = "RifleAim";
+                                }else{
+                                    m_AnimStateHands = "Rifle";
+                                }
                             }else{
-                                if (m_AnimStateHands != "Rifle" && m_AnimStateHands != "Rifle_Sit")
+                                if (m_AnimStateHands != "Rifle" && m_AnimStateHands != "Rifle_Sit" && m_AnimStateHands != "RifleAim_Sit")
                                 {
                                     m_PreAnimStateHands = "Pick_Sit";
                                 }
-                                m_AnimStateHands = "Rifle_Sit";
+                                if (playersData[m_ID].m_Aiming == true)
+                                {
+                                    m_AnimStateHands = "RifleAim_Sit";
+                                }else{
+                                    m_AnimStateHands = "Rifle_Sit";
+                                }
                             }
                         }
                         else if (HoldingItem.StartsWith("GEAR_Revolver"))
@@ -2183,8 +2487,22 @@ namespace SkyCoop
                     if (handsTagHash != handsNeededTagHash)
                     {
                         if (m_PreAnimStateHands == "")
-                        {
-                            m_Animer.Play(m_AnimStateHands, 1);
+                        {                        
+                            if(handsTagHash == Animator.StringToHash("Rifle") && m_AnimStateHands == "RifleAim")
+                            {
+                                m_Animer.Play("StartRifleAim", 1);
+                            }else if(handsTagHash == Animator.StringToHash("RifleAim") && m_AnimStateHands == "Rifle")
+                            {
+                                m_Animer.Play("EndRifleAim", 1);
+                            }else if(handsTagHash == Animator.StringToHash("Rifle_Sit") && m_AnimStateHands == "RifleAim_Sit")
+                            {
+                                m_Animer.Play("StartRifleAim_Sit", 1);
+                            }else if(handsTagHash == Animator.StringToHash("RifleAim_Sit") && m_AnimStateHands == "Rifle_Sit")
+                            {
+                                m_Animer.Play("EndRifleAim_Sit", 1);
+                            }else{
+                                m_Animer.Play(m_AnimStateHands, 1);
+                            }
                         }else{
                             m_Animer.Play(m_PreAnimStateHands, 1);
                             m_PreAnimStateHands = "";
@@ -2427,7 +2745,6 @@ namespace SkyCoop
                     int Pants = 0;
                     int Boots = 0;
                     int Scarf = 0;
-                    bool Balaclava = false;
                     string ArmsType = "";
                     string HairVariant = "Full";
                     bool nakedBodyAtBottom = false;
@@ -2436,7 +2753,25 @@ namespace SkyCoop
                     GameObject HairShort = null;
                     GameObject HairLong = null;
 
-                    if(HeadVariant == 0)
+                    if(m_Balaclava != "")
+                    {
+                        if(HeadVariant == 0)
+                        {
+                            HeadVariant = 2;
+                        }
+                        else if (HeadVariant == 1)
+                        {
+                            HeadVariant = 3;
+                        }
+                    }
+
+                    for (int i = 0; i < m_Player.transform.GetChild(1).GetChild(1).childCount; i++)
+                    {
+                        m_Player.transform.GetChild(1).GetChild(1).GetChild(i).gameObject.SetActive(false);
+                    }
+                    m_Player.transform.GetChild(1).GetChild(1).GetChild(HeadVariant).gameObject.SetActive(true);
+
+                    if (HeadVariant == 0)
                     {
                         HairLong = m_Player.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(2).gameObject;
                         HairShort = m_Player.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(3).gameObject;
@@ -2729,11 +3064,6 @@ namespace SkyCoop
                         Scarf = -1;
                     }
 
-                    if(m_Balaclava != "")
-                    {
-                        HairVariant = "Balaclava";
-                    }
-
                     if (Hat != -1)
                     {
                         clothing.transform.GetChild(0).transform.GetChild(Hat).gameObject.SetActive(true);
@@ -2993,6 +3323,7 @@ namespace SkyCoop
             public bool m_NeedAntiseptic = false;
             public uint m_HeavyBreathSoundReference = 0U;
             public int m_Character = -1;
+            public GameObject m_TorchIgniter = null;
 
             //Shortcuts for optimized  
             public GameObject hand_r = null;
@@ -3409,7 +3740,6 @@ namespace SkyCoop
                     }
                 }
             }
-
             void Update()
             {
                 if(m_Player != null)
@@ -3446,7 +3776,7 @@ namespace SkyCoop
 
                     BloodLostUpdate();
                     UpdateOtherAffictions();
-                    UpdateHead();
+                    //UpdateHead();
 
                     if (m_IsBeingInteractedWith == true)
                     {
@@ -3703,10 +4033,17 @@ namespace SkyCoop
             }
         }
 
-        public static void DamageByBullet(float damage)
+        public static void DamageByBullet(float damage, int from)
         {
+            string DamageCase = "Other player";
+            if(playersData[from] != null)
+            {
+                DamageCase = playersData[from].m_Name + " shoot you";
+            }
+
             GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
-            GameManager.GetBloodLossComponent().BloodLossStart("OtherPlayer", true, AfflictionOptions.PlayFX);
+
+            GameManager.GetBloodLossComponent().BloodLossStart(DamageCase, true, AfflictionOptions.PlayFX);
             var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
             GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothing(clothingRNG);
 
@@ -3781,7 +4118,7 @@ namespace SkyCoop
                         {
                             using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
                             {
-                                ServerSend.BULLETDAMAGE(m_ClientId, (float)m_Damage);
+                                ServerSend.BULLETDAMAGE(m_ClientId, (float)m_Damage, 0);
                             }
                         }
                     }
@@ -4407,7 +4744,18 @@ namespace SkyCoop
         }
 
         public static GearItem GetGearItemPrefab(string name) => Resources.Load(name).Cast<GameObject>().GetComponent<GearItem>();
-        public static GameObject GetGearItemObject(string name) => Resources.Load(name).Cast<GameObject>();
+        public static GameObject GetGearItemObject(string name)
+        {
+            if(Resources.Load(name) == null)
+            {
+                return null;
+            }
+            if(Resources.Load(name).Cast<GameObject>() != null)
+            {
+                return Resources.Load(name).Cast<GameObject>();
+            }
+            return null;
+        }
 
         //Part of code for working with Outlines.cs by Chris Nolet
         public static List<Vector3> SmoothNormals(Mesh mesh)
@@ -4834,6 +5182,16 @@ namespace SkyCoop
             { (int)ServerPackets.SLEEPPOSE, ClientHandle.SLEEPPOSE},
             { (int)ServerPackets.ANIMALDAMAGE, ClientHandle.ANIMALDAMAGE},
             { (int)ServerPackets.FIREFUEL, ClientHandle.FIREFUEL},
+            { (int)ServerPackets.DROPITEM, ClientHandle.DROPITEM},
+            { (int)ServerPackets.PICKDROPPEDGEAR, ClientHandle.PICKDROPPEDGEAR},
+            { (int)ServerPackets.GETREQUESTEDITEMSLICE, ClientHandle.GETREQUESTEDITEMSLICE},
+            { (int)ServerPackets.GETREQUESTEDFORPLACESLICE, ClientHandle.GETREQUESTEDFORPLACESLICE},
+            { (int)ServerPackets.GOTCONTAINERSLICE, ClientHandle.GOTCONTAINERSLICE},
+            { (int)ServerPackets.OPENEMPTYCONTAINER, ClientHandle.OPENEMPTYCONTAINER},
+            { (int)ServerPackets.MARKSEARCHEDCONTAINERS, ClientHandle.MARKSEARCHEDCONTAINERS},
+            { (int)ServerPackets.READYSENDNEXTSLICE, ClientHandle.READYSENDNEXTSLICE},
+            { (int)ServerPackets.CHANGEAIM, ClientHandle.CHANGEAIM},
+            { (int)ServerPackets.LOADINGSCENEDROPSDONE, ClientHandle.LOADINGSCENEDROPSDONE},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -5631,6 +5989,15 @@ namespace SkyCoop
                     ClientProjectile ClientP = gameObject.GetComponent<ClientProjectile>();
                     PlayMultiplayer3dAduio("PLAY_RIFLE_SHOOT_3D", from);
                     DoShootFX(shoot.m_position);
+                    if (players[from] != null && players[from].GetComponent<MultiplayerPlayerAnimator>() != null)
+                    {
+                        string shootStrhing = "RifleShoot";
+                        if(playersData[from] != null && playersData[from].m_AnimState == "Ctrl")
+                        {
+                            shootStrhing = "RifleShoot_Sit";
+                        }
+                        players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_PreAnimStateHands = shootStrhing;
+                    }
                 }
                 else if (shoot.m_projectilename == "RevolverBullet")
                 {
@@ -5847,6 +6214,7 @@ namespace SkyCoop
             }else{
                 OverridedHourse = OverridedHourse + h;
             }
+            MinutesFromStartServer = MinutesFromStartServer + h*60;
             MelonLogger.Msg("Skipping "+ h+" hour(s) now should be "+ OverridedHourse);
             MyMod.EveryInGameMinute();
         }
@@ -6326,6 +6694,11 @@ namespace SkyCoop
                     ConsoleManager.CONSOLE_save();
                     MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save 5 minutes later!");
                 }
+            }
+
+            if (InOnline() == true && iAmHost == true)
+            {
+                ManageDropsLoads();
             }
 
             if(RegularUpdateSeconds > 0)
@@ -6821,6 +7194,12 @@ namespace SkyCoop
         private static void EveryInGameMinute()
         {
             OverridedMinutes = OverridedMinutes + 1;
+
+            if (iAmHost == true) 
+            {
+                MinutesFromStartServer = MinutesFromStartServer + 1;
+            }
+
             if (OverridedMinutes > 59)
             {
                 OverridedMinutes = 0;
@@ -8020,20 +8399,20 @@ namespace SkyCoop
                 needSync = false;
                 SaveNewName(MyChatName);
             }
-            //if (message.m_Message.StartsWith("!hz ") == true)
-            //{
-            //    string text = message.m_Message;
-            //    VoiceChatFrequencyHz = Convert.ToInt32(text.Replace("!hz ", ""));
-            //    message.m_Type = 0;
-            //    message.m_By = MyChatName;
-            //    message.m_Message = "Your new name " + MyChatName;
-            //    needSync = true;
-            //    MultiplayerChatMessage NewMsg = new MultiplayerChatMessage();
-            //    message.m_Type = 0;
-            //    message.m_By = MyChatName;
-            //    message.m_Message = "New voice chat frequency is " + VoiceChatFrequencyHz+"hz now!";
-            //    SendMessageToChat(NewMsg, false);
-            //}
+            if (message.m_Message.StartsWith("!hz ") == true)
+            {
+                string text = message.m_Message;
+                VoiceChatFrequencyHz = Convert.ToInt32(text.Replace("!hz ", ""));
+                message.m_Type = 0;
+                message.m_By = MyChatName;
+                message.m_Message = "Your new name " + MyChatName;
+                needSync = true;
+                MultiplayerChatMessage NewMsg = new MultiplayerChatMessage();
+                message.m_Type = 0;
+                message.m_By = MyChatName;
+                message.m_Message = "New voice chat frequency is " + VoiceChatFrequencyHz + "hz now!";
+                SendMessageToChat(NewMsg, false);
+            }
             if (message.m_Message.StartsWith("!mic ") == true)
             {
                 string text = message.m_Message;
@@ -8217,6 +8596,8 @@ namespace SkyCoop
                     }
                     ApplyDamageZones(m_Player, mP);
                     m_Player.SetActive(false);
+
+                    mP.m_TorchIgniter = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(8).GetChild(1).gameObject; //Tourch Fire
                 }
             }
         }
@@ -8256,6 +8637,22 @@ namespace SkyCoop
                 }
             }
         }
+
+        public static void DoPleaseWait(string title, string text)
+        {
+            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            {
+                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n"+text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+            }
+        }
+        public static void RemovePleaseWait()
+        {
+            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            {
+                InterfaceManager.m_Panel_Confirmation.OnCancel();
+            }
+        }
+
         public static void RemoveWaitForConnect()
         {
             HasWaitForConnect = false;
@@ -8493,6 +8890,7 @@ namespace SkyCoop
                 //MelonLogger.Msg("BytesBuffer contains " + BytesBuffer.Count + " bytes");
 
                 byte[] compressedArray = Compress(BytesBuffer.ToArray());
+
                 //MelonLogger.Msg("CompressedArray contains " + compressedArray.Length + " bytes");
                 if (iAmHost == true)
                 {
@@ -8519,22 +8917,27 @@ namespace SkyCoop
                     }
                 }
 
-                //if (VoiceTestDummy == null)
-                //{
-                //    VoiceTestDummy = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                //    VoiceTestDummy.transform.position = GameManager.GetPlayerObject().transform.position;
-                //    VoiceTestDummy.AddComponent<AudioSource>();
-                //    VoiceTestDummy.GetComponent<AudioSource>().loop = false;
-                //    //VoiceTestDummy.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
-                //    //VoiceTestDummy.GetComponent<AudioSource>().dopplerLevel = 0;
-                //    //VoiceTestDummy.GetComponent<AudioSource>().spatialBlend = 1;
-                //}
-                //if (VoiceTestDummy.GetComponent<AudioSource>() != null)
-                //{
-                //    byte[] decompressedData = MyMod.Decompress(compressedArray);
-                //    MelonLogger.Msg("Decompressed bytes array contains " + decompressedData.Length + " elements!");
-                //    PlayVoiceFromPlayerObject(VoiceTestDummy, decompressedData, audioSource.clip.samples);
-                //}
+                bool Debug = false;
+
+                if(Debug == true)
+                {
+                    if (VoiceTestDummy == null)
+                    {
+                        VoiceTestDummy = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        VoiceTestDummy.transform.position = GameManager.GetPlayerObject().transform.position;
+                        VoiceTestDummy.AddComponent<AudioSource>();
+                        VoiceTestDummy.GetComponent<AudioSource>().loop = false;
+                        //VoiceTestDummy.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
+                        //VoiceTestDummy.GetComponent<AudioSource>().dopplerLevel = 0;
+                        //VoiceTestDummy.GetComponent<AudioSource>().spatialBlend = 1;
+                    }
+                    if (VoiceTestDummy.GetComponent<AudioSource>() != null)
+                    {
+                        byte[] decompressedData = MyMod.Decompress(compressedArray);
+                        MelonLogger.Msg("Decompressed bytes array contains " + decompressedData.Length + " elements!");
+                        PlayVoiceFromPlayerObject(VoiceTestDummy, decompressedData, audioSource.clip.samples);
+                    }
+                }
             }
         }
 
@@ -8570,6 +8973,14 @@ namespace SkyCoop
                 {
                     con.m_NeverDie = false;
                 }
+            }
+            if(IsDead == true && InterfaceManager.m_Panel_Log.IsEnabled() == false)
+            {
+                FakeDeathScreen();
+            }
+            if(IsDead == false && InterfaceManager.m_Panel_Log.IsEnabled() == true)
+            {
+                InterfaceManager.m_Panel_Log.Enable(false);
             }
         }
 
@@ -8644,11 +9055,1276 @@ namespace SkyCoop
 
         public static FireSourcesSync DebugFireSource = null;
 
+        public static string CloneTrimer(string name)
+        {
+            if (name.Contains("(Clone)")) //If it has ugly (Clone), cutting it.
+            {
+                int L = name.Length - 7;
+                return name.Remove(L, 7);
+            }else{
+                return name;
+            }
+            
+        }
+
+        public static void FakeDropItem(int GearID, Vector3 v3, Quaternion rot, int Hash, ExtraDataForDroppedGear extra)
+        {
+            string gearName = "";
+            if (GearID == -1)
+            {
+                gearName = extra.m_GearName;
+            }else{
+                gearName = GetGearNameByID(GearID);
+            }
+
+            if(DroppedGearsObjs.ContainsKey(Hash) == true)
+            {
+                MelonLogger.Msg(ConsoleColor.Red,"Gear with hash " + Hash + " already exist!");
+                return;
+            }
+
+            GameObject reference = GetGearItemObject(gearName);
+
+            if(reference == null)
+            {
+                MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                return;
+            }
+
+            GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
+
+            if (obj != null)
+            {
+                DroppedGearDummy DGD = obj.AddComponent<DroppedGearDummy>();
+                DGD.m_SearchKey = Hash;
+                DGD.m_Extra = extra;
+                GearItem GI = obj.GetComponent<GearItem>();
+                if (GI != null)
+                {
+                    if(GI.m_FoodItem != null)
+                    {
+                        if (extra.m_Variant == 1)
+                        {
+                            if(obj.GetComponent<MeshSwapItem>() != null)
+                            {
+                                obj.GetComponent<MeshSwapItem>().m_MeshObjOpened.SetActive(true);
+                                obj.GetComponent<MeshSwapItem>().m_MeshObjUnopened.SetActive(false);
+                                UnityEngine.Object.Destroy(obj.GetComponent<MeshSwapItem>());
+                            }
+                        }
+                    }
+                    DGD.m_LocalizedDisplayName = GI.m_LocalizedDisplayName.Text();
+                    UnityEngine.Object.Destroy(obj.GetComponent<GearItem>());
+                }
+                if (obj.GetComponent<Bed>() != null)
+                {
+                    if(extra.m_Variant == 1)
+                    {
+                        obj.GetComponent<Bed>().SetState(BedRollState.Placed);
+                        obj.AddComponent<MyMod.FakeBed>();
+                    }
+                    UnityEngine.Object.Destroy(obj.GetComponent<Bed>());
+                }
+                if (obj.GetComponent<CookingPotItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(obj.GetComponent<CookingPotItem>());
+                }
+                if (obj.GetComponent<EvolveItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(obj.GetComponent<EvolveItem>());
+                }
+                if (obj.GetComponent<FlareGunRoundItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(obj.GetComponent<FlareGunRoundItem>());
+                }
+                DroppedGearsObjs.Add(Hash, obj);
+            }
+            else
+            {
+                MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+            }
+        }
+
+        public static void AddDroppedGear(int GearID, int SearchKey, string DataProxy, string lvlKey, ExtraDataForDroppedGear extra)
+        {        
+            if (DroppedGears.ContainsKey(lvlKey) == false)
+            {
+                LoadDropsForScene(lvlKey);
+            }
+
+            Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
+
+            if (DroppedGears.TryGetValue(lvlKey, out LevelDrops) == false)
+            {
+                DroppedGears.Add(lvlKey, new Dictionary<int, SlicedJsonDroppedGear>());
+                if (DroppedGears.TryGetValue(lvlKey, out LevelDrops) == false)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Idk why, but can't create dictionary for "+ lvlKey);
+                }
+            }
+            SlicedJsonDroppedGear exist;
+            if (LevelDrops.TryGetValue(SearchKey, out exist) == false)
+            {
+                SlicedJsonDroppedGear element = new SlicedJsonDroppedGear();
+                if (GearID == -1)
+                {
+                    element.m_GearName = extra.m_GearName;
+                }else{
+                    element.m_GearName = GetGearNameByID(GearID);
+                }
+                
+                element.m_Json = DataProxy;
+                element.m_Extra = extra;
+                LevelDrops.Add(SearchKey, element);
+            }
+        }
+
+        public static void PlaceDroppedGear(GameObject obj)
+        {
+            string OriginalName = obj.name;
+            string GearName = CloneTrimer(OriginalName).ToLower();
+            int GearID = GetGearIDByName(GearName);
+            string GiveGear = "";
+            if(GearID == -1)
+            {
+                GiveGear = CloneTrimer(OriginalName);
+            }
+
+
+            Vector3 v3 = obj.transform.position;
+            Quaternion rot = obj.transform.rotation;
+            int SearchKey = 0;
+            string lvlKey = levelid+level_guid;
+
+            if (obj.GetComponent<DroppedGearDummy>() != null)
+            {
+                SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                return;
+            }
+
+            MelonLogger.Msg("Searching for "+ GearName +" with hash "+ SearchKey +" ID "+ GearID);
+
+            if (sendMyPosition == true)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTPLACE))
+                {
+                    _packet.Write(SearchKey);
+                    _packet.Write(lvlKey);
+                    SendTCPData(_packet);
+                }
+                return;
+            }
+
+            Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
+            if (DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
+            {
+                SlicedJsonDroppedGear DataProxy;
+                if (LevelDrops.TryGetValue(SearchKey, out DataProxy) == true)
+                {
+                    MelonLogger.Msg("Found " + SearchKey);
+                    LevelDrops.Remove(SearchKey);
+                    string gearName = "";
+
+                    if(GearID == -1)
+                    {
+                        gearName = GiveGear;
+                    }else{
+                        gearName = GetGearNameByID(GearID);
+                    }
+
+                    GameObject reference = GetGearItemObject(gearName);
+
+                    if (reference == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        return;
+                    }
+
+                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
+
+                    if(newGear == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        return;
+                    }
+
+                    newGear.name = CloneTrimer(newGear.name);
+                    newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
+                    newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+
+                    DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
+                    DFL.m_OldPossition = newGear.gameObject.transform.position;
+                    DFL.m_OldRotation = newGear.gameObject.transform.rotation;
+                    newGear.GetComponent<GearItem>().PlayPickUpClip();
+                    GameManager.GetPlayerManagerComponent().StartPlaceMesh(newGear, PlaceMeshFlags.None);
+                    DroppedGearsObjs.Remove(SearchKey);
+                    UnityEngine.Object.DestroyImmediate(obj);
+                    ServerSend.PICKDROPPEDGEAR(0, SearchKey, true);
+                }else{
+                    MelonLogger.Msg("Gear with hash " + SearchKey + " is missing!");
+                }
+            }
+        }
+
+        public static void UseFakeBed(GameObject obj)
+        {
+            string OriginalName = obj.name;
+            string GearName = CloneTrimer(OriginalName).ToLower();
+            int GearID = GetGearIDByName(GearName);
+            Vector3 v3 = obj.transform.position;
+            Quaternion rot = obj.transform.rotation;
+            int SearchKey = 0;
+            string lvlKey = levelid + level_guid;
+
+            if (obj.GetComponent<DroppedGearDummy>() != null)
+            {
+                SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                return;
+            }
+
+            MelonLogger.Msg("Searching for " + GearName + " with hash " + SearchKey + " ID " + GearID);
+
+            if (sendMyPosition == true)
+            {
+                string gearName = GetGearNameByID(GearID);
+                GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject(gearName), v3, rot);
+                newGear.name = CloneTrimer(newGear.name);
+                newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+                newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Placed);
+                newGear.AddComponent<FakeBedDummy>().m_LinkedFakeObject = obj;
+                GameManager.GetPlayerManagerComponent().ProcessBedInteraction(newGear.GetComponent<GearItem>().m_Bed);
+                return;
+            }
+
+            Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
+            if (DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
+            {
+                SlicedJsonDroppedGear DataProxy;
+                if (LevelDrops.TryGetValue(SearchKey, out DataProxy) == true)
+                {
+                    MelonLogger.Msg("Found " + SearchKey);
+                    string gearName = GetGearNameByID(GearID);
+                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject(gearName), v3, rot);
+                    newGear.name = CloneTrimer(newGear.name);
+                    newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+                    newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Placed);
+                    newGear.AddComponent<FakeBedDummy>().m_LinkedFakeObject = obj;
+                    GameManager.GetPlayerManagerComponent().ProcessBedInteraction(newGear.GetComponent<GearItem>().m_Bed);
+                }else{
+                    MelonLogger.Msg("Gear with hash " + SearchKey + " is missing!");
+                }
+            }
+        }
+
+        public static void PickupDroppedGear(GameObject obj)
+        {
+            string OriginalName = obj.name;
+            string GearName = CloneTrimer(OriginalName).ToLower();
+            int GearID = GetGearIDByName(GearName);
+            string GearToGive = "";
+
+            if(GearID == -1)
+            {
+                GearToGive = CloneTrimer(OriginalName);
+            }
+
+            Vector3 v3 = obj.transform.position;
+            Quaternion rot = obj.transform.rotation;
+            int SearchKey = 0;
+            string lvlKey = levelid+level_guid;
+
+            if (obj.GetComponent<DroppedGearDummy>() != null)
+            {
+                SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                return;
+            }
+
+            MelonLogger.Msg("Searching for "+ GearName + " with hash " + SearchKey + " ID " + GearID);
+
+            if (sendMyPosition == true)
+            {
+                DoPleaseWait("Please wait...", "Downloading gear...");
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTPICKUP))
+                {
+                    _packet.Write(SearchKey);
+                    _packet.Write(lvlKey);
+                    SendTCPData(_packet);
+                }
+                return;
+            }
+
+            Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
+            if (DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
+            {
+                SlicedJsonDroppedGear DataProxy;
+                if (LevelDrops.TryGetValue(SearchKey, out DataProxy) == true)
+                {
+                    MelonLogger.Msg("Found " + SearchKey);
+                    LevelDrops.Remove(SearchKey);
+                    string gearName = "";
+
+                    if(GearID == -1)
+                    {
+                        gearName = GearToGive;
+                    }else{
+                        gearName = GetGearNameByID(GearID);
+                    }
+
+                    GameObject reference = GetGearItemObject(gearName);
+
+                    if (reference == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        return;
+                    }
+
+                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
+
+                    if(newGear == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        return;
+                    }
+
+                    newGear.name = CloneTrimer(newGear.name);
+                    newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
+                    newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+
+                    DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
+                    DFL.m_OldPossition = newGear.gameObject.transform.position;
+                    DFL.m_OldRotation = newGear.gameObject.transform.rotation;
+
+                    DroppedGearDummy DGD = obj.GetComponent<DroppedGearDummy>();
+                    if(DGD != null)
+                    {
+                        if(DGD.m_Extra.m_GoalTime != 0 && DGD.m_Extra.m_GoalTime != -1)
+                        {
+                            GearItem gear = newGear.GetComponent<GearItem>();
+                            int days = Convert.ToInt32(gear.m_EvolveItem.m_TimeToEvolveGameDays);
+                            int hours = days * 24;
+                            int minutes = hours * 60;
+
+                            int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+
+                            gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = (float)minutesOnDry / 60;
+                            MelonLogger.Msg(ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
+                            MelonLogger.Msg(ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                        }
+                    }
+
+                    bool SkipPickup = false;
+
+                    if(newGear.GetComponent<GearItem>().m_Bed != null)
+                    {
+                        newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Rolled);
+                        SkipPickup = true;
+                    }
+
+                    if(SkipPickup == false)
+                    {
+                        GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
+                    }else{
+                        GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(newGear.GetComponent<GearItem>(), false, false);
+                    }
+
+                    
+                    DroppedGearsObjs.Remove(SearchKey);
+                    UnityEngine.Object.DestroyImmediate(obj);
+                    ServerSend.PICKDROPPEDGEAR(0, SearchKey, true);
+                }else{
+                    MelonLogger.Msg("Gear with hash " + SearchKey + " is missing!");
+                }
+            }
+        }
+
+        public static void PickDroppedItem(int Hash, int Picker)
+        {
+            GameObject gearObj;
+            DroppedGearsObjs.TryGetValue(Hash, out gearObj);
+            if(gearObj != null)
+            {
+                DroppedGearsObjs.Remove(Hash);
+                UnityEngine.Object.DestroyImmediate(gearObj);
+            }
+            if (players[Picker] != null && players[Picker].GetComponent<MultiplayerPlayerAnimator>() != null)
+            {
+                players[Picker].GetComponent<MultiplayerPlayerAnimator>().Pickup();
+            }
+        }
+
+        public static void SendDroppedItemToPicker(string DataProxy, int GiveItemTo, int SearchKey, int GearID, bool place, ExtraDataForDroppedGear Extra)
+        {
+            byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
+            MelonLogger.Msg("Going to send gear "+ GearID + " to client "+ GiveItemTo +" bytes: "+ bytesToSlice.Length);
+
+            if (bytesToSlice.Length > 500)
+            {
+                List<byte> BytesBuffer = new List<byte>();
+                BytesBuffer.AddRange(bytesToSlice);
+
+                while (BytesBuffer.Count >= 500)
+                {
+                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
+                    BytesBuffer.RemoveRange(0, 499);
+
+                    string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                    SlicedJsonData SlicedPacket = new SlicedJsonData();
+                    SlicedPacket.m_GearName = levelid+level_guid;
+                    SlicedPacket.m_SendTo = GearID;
+                    SlicedPacket.m_Hash = SearchKey;
+                    SlicedPacket.m_Str = jsonStringSlice;
+
+                    if (BytesBuffer.Count != 0)
+                    {
+                        SlicedPacket.m_Last = false;
+                    }else{
+                        SlicedPacket.m_Last = true;
+                    }
+
+                    if(place == false)
+                    {
+                        ServerSend.GETREQUESTEDITEMSLICE(GiveItemTo, SlicedPacket);
+                    }else{
+                        ServerSend.GETREQUESTEDFORPLACESLICE(GiveItemTo, SlicedPacket);
+                    }
+                }
+
+                if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
+                {
+                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                    string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
+                    SlicedJsonData SlicedPacket = new SlicedJsonData();
+                    SlicedPacket.m_GearName = levelid+level_guid;
+                    SlicedPacket.m_SendTo = GearID;
+                    SlicedPacket.m_Hash = SearchKey;
+                    SlicedPacket.m_Str = jsonStringSlice;
+                    SlicedPacket.m_Last = true;
+                    SlicedPacket.m_Extra = Extra;
+                    if (place == false)
+                    {
+                        ServerSend.GETREQUESTEDITEMSLICE(GiveItemTo, SlicedPacket);
+                    }else{
+                        ServerSend.GETREQUESTEDFORPLACESLICE(GiveItemTo, SlicedPacket);
+                    }
+                }
+            }
+        }
+
+        public static void ClientTryPickupItem(int Hash, int sendTo, string lvlKey, bool place)
+        {
+            GameObject gearObj;
+            DroppedGearsObjs.TryGetValue(Hash, out gearObj);
+            if (gearObj != null)
+            {
+                DroppedGearsObjs.Remove(Hash);
+                UnityEngine.Object.DestroyImmediate(gearObj);
+            }
+            ServerSend.PICKDROPPEDGEAR(sendTo, Hash, true);
+
+            Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
+            if (DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
+            {
+                MelonLogger.Msg("Found scene, looking for gear...");
+                SlicedJsonDroppedGear DataProxy;
+                if (LevelDrops.TryGetValue(Hash, out DataProxy) == true)
+                {
+                    MelonLogger.Msg("Found gear with hash "+ Hash);
+                    LevelDrops.Remove(Hash);
+                    SendDroppedItemToPicker(DataProxy.m_Json, sendTo, Hash, GetGearIDByName(DataProxy.m_GearName), place, DataProxy.m_Extra);
+                }
+                if(players[sendTo] != null && players[sendTo].GetComponent<MultiplayerPlayerAnimator>() != null)
+                {
+                    players[sendTo].GetComponent<MultiplayerPlayerAnimator>().Pickup();
+                }
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "Requested gear locates on unsaved scene! Scene key"+ lvlKey);
+            }
+        }
+
+        public static void MarkSearchedContainers(string LevelKey, int SendTo = 0)
+        {
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\Containers" ;
+
+            bool exists = System.IO.Directory.Exists(dir);
+
+            if (!exists)
+            {
+                return;
+            }else{
+                string[] fileEntries = Directory.GetFiles(dir);
+                foreach (string fileName in fileEntries)
+                {
+                    string step1 = fileName;
+                    string[] sArray = fileName.Split(Convert.ToChar(@"\"));
+                    string step2 = sArray[sArray.Length-1];
+                    int L = step2.Length - 5;
+                    string step3 = step2.Remove(L, 5);
+
+                    MelonLogger.Msg("Container GUID should be searched "+ step3);
+
+                    if(SendTo == 0)
+                    {
+                        GameObject box = ObjectGuidManager.Lookup(step3);
+                        if (box != null)
+                        {
+                            GameObject reference = GetGearItemObject("GEAR_SoftWood");
+                            GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, box.transform.position, box.transform.rotation);
+                            box.GetComponent<Container>().AddGear(newGear.GetComponent<GearItem>());
+                        }
+                    }else{
+                        ServerSend.MARKSEARCHEDCONTAINERS(SendTo, step3);
+                    }
+                }
+            }
+        }
+
+        public static bool LoadDropsForScene(string LevelKey)
+        {
+            //MelonLogger.Msg("[DroppedGearsUnloader] Going to load drops for " + LevelKey);
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\" + "drops.json";
+
+            bool exists = System.IO.File.Exists(dir);
+            string data = "";
+
+            if (!exists)
+            {
+                return false;
+            }else{
+                try
+                {
+                    using (var sr = new StreamReader(dir))
+                    {
+                        data = sr.ReadToEnd();
+                    }
+                }
+                catch (IOException e)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "[DroppedGearsUnloader] The file could not be read:" + e.Message);
+                    return false;
+                }
+
+                Dictionary<int, SlicedJsonDroppedGear> LoadedData = JSON.Load(data).Make<Dictionary<int, SlicedJsonDroppedGear>>();
+                DroppedGears.Add(LevelKey, LoadedData);
+                return true;
+            }
+        }
+
+        public static void SaveAllLoadedDrops()
+        {
+            foreach (var cur in DroppedGears)
+            {
+                string currentKey = cur.Key;
+                string data = JSON.Dump(cur.Value);
+
+                string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+                string dir = @"Mods\Unloads\" + seed + @"\" + currentKey + @"\" + "drops.json";
+
+                CreateFolderIfNotExist(@"Mods\Unloads");
+                CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
+                CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + currentKey);
+
+                using (FileStream fs = File.Create(dir))
+                {
+                    byte[] info = new UTF8Encoding(true).GetBytes(data);
+                    fs.Write(info, 0, info.Length);
+                }
+            }
+        }
+
+
+        public static void UnloadDropsForScene(string LevelKey)
+        {
+            string data = "";
+
+            //MelonLogger.Msg("[DroppedGearsUnloader] Going to unload " + LevelKey);
+            Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
+            if (DroppedGears.TryGetValue(LevelKey, out LevelDrops) == true)
+            {
+                data = JSON.Dump(LevelDrops);
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "[DroppedGearsUnloader] Can't get dictionary with key " + LevelKey);
+                return;
+            }
+
+            DroppedGears.Remove(LevelKey);
+
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\" + "drops.json";
+
+            CreateFolderIfNotExist(@"Mods\Unloads");
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey);
+
+            using (FileStream fs = File.Create(dir))
+            {
+                byte[] info = new UTF8Encoding(true).GetBytes(data);
+                fs.Write(info, 0, info.Length);
+            }
+        }
+
+        public static void ManageDropsLoads()
+        {
+            bool Dedicated = Application.isBatchMode;
+
+            foreach (var cur in DroppedGears)
+            {
+                string currentKey = cur.Key;
+                bool found = false;
+                if(Dedicated == false) //If not dedicated server, then host can load drops too.
+                {
+                    string MyKey = levelid+level_guid;
+
+                    if(currentKey == MyKey)
+                    {
+                        found = true;
+                    }
+                }
+
+                if(found == false) //If host not on that scene, checking every player.
+                {
+                    for (int i = 0; i < playersData.Count; i++)
+                    {
+                        if (playersData[i] != null)
+                        {
+                            string LevelKey = playersData[i].m_Levelid + playersData[i].m_LevelGuid;
+                            if (LevelKey == currentKey)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (found == false) //If no one on this scene unloading this.
+                {
+                    UnloadDropsForScene(currentKey);
+                    return;
+                }
+            }
+        }
+
+        public static int TimeToDry(string gearName)
+        {
+            if (gearName.Contains("GEAR_WolfPelt"))
+            {
+                return 10080;
+            }
+            else if (gearName.Contains("GEAR_BearHide"))
+            {
+                return 17280;
+            }
+            else if (gearName.Contains("GEAR_Gut"))
+            {
+                return 7200;
+            }
+            else if (gearName.Contains("GEAR_MooseHide"))
+            {
+                return 14400;
+            }
+            else if (gearName.Contains("GEAR_LeatherHide"))
+            {
+                return 7200;
+            }
+            else if (gearName.Contains("GEAR_RabbitPelt"))
+            {
+                return 4320;
+            }
+            else if (gearName.Contains("GEAR_Leather"))
+            {
+                return 7200;
+            }
+            else if (gearName.Contains("GEAR_MapleSapling"))
+            {
+                return 8640;
+            }
+            else if (gearName.Contains("GEAR_BirchSapling"))
+            {
+                return 5760;
+            }
+
+            return 7200;
+        }
+
+        public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0)
+        {            
+            if(gear != null && gear.gameObject != null)
+            {
+                GameObject obj = gear.gameObject;
+
+                if (samepose == false)
+                {
+                    gear.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
+                }else{
+                    if(obj.GetComponent<DropFakeOnLeave>() != null)
+                    {
+                        DropFakeOnLeave DFL = obj.GetComponent<DropFakeOnLeave>();
+                        obj.transform.position = DFL.m_OldPossition;
+                        obj.transform.rotation = DFL.m_OldRotation;
+                    }
+                }
+
+                Vector3 v3 = gear.gameObject.transform.position;
+                Quaternion rot = gear.gameObject.transform.rotation;
+
+                string OriginalName = obj.name;
+                string GearName = CloneTrimer(OriginalName).ToLower();
+                int GearID = GetGearIDByName(GearName);
+                string GearGiveName = "";
+                if(GearID == -1)
+                {
+                    GearGiveName = CloneTrimer(OriginalName);
+                }
+
+                int hashGearID = GearID.GetHashCode();
+                int hashV3 = v3.GetHashCode();
+                int hashRot = rot.GetHashCode();
+                int hashLvl = levelid.GetHashCode();
+                int hashLvlGUID = level_guid.GetHashCode();
+
+                int SearchKey = hashGearID + hashV3 + hashRot + hashLvl + hashLvlGUID;
+                string LevelKey = levelid+level_guid;
+
+                //MelonLogger.Msg("hashGearID " + hashGearID);
+                //MelonLogger.Msg("hashV3 " + hashV3);
+                //MelonLogger.Msg("hashRot " + hashRot);
+                //MelonLogger.Msg("hashLvl " + hashLvl);
+                //MelonLogger.Msg("hashLvlGUID " + hashLvlGUID);
+                string DataProxy;
+                if (nums > 0)
+                {
+                    if(gear.m_StackableItem != null)
+                    {
+                        gear.m_StackableItem.m_Units = nums;
+                    }
+                }
+
+                DataProxy = gear.Serialize();
+
+                int NeedToDry = 0;
+                int MinuteToSkip = 0;
+
+                if(gear.m_EvolveItem != null)
+                {
+                    if(gear.m_EvolveItem.CanEvolve() == true)
+                    {
+                        int days = Convert.ToInt32(gear.m_EvolveItem.m_TimeToEvolveGameDays);
+                        int hours = days * 24;
+                        int minutes = hours * 60;
+
+                        if (gear.m_EvolveItem.m_TimeSpentEvolvingGameHours != 0)
+                        {
+                            MinuteToSkip = (int)gear.m_EvolveItem.m_TimeSpentEvolvingGameHours * 60;
+                        }
+                        MelonLogger.Msg("m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                        MelonLogger.Msg("MinuteToSkip " + MinuteToSkip);
+
+                        NeedToDry = minutes;
+                    }else{
+                        NeedToDry = -1;
+                    }
+                }
+
+                MelonLogger.Msg("Dropping "+ GearName + " ID "+ GearID +" Hash "+ SearchKey+" variant "+ variant);
+
+                if (nums == 0)
+                {
+                    UnityEngine.Object.Destroy(obj);
+                }else{
+                    if (gear.m_StackableItem != null)
+                    {
+                        gear.m_StackableItem.m_Units = total-nums;
+                        GameManager.GetInventoryComponent().AddGear(obj);
+                    }
+                }
+
+                DroppedGearItemDataPacket SyncData = new DroppedGearItemDataPacket();
+                SyncData.m_GearID = GearID;
+                SyncData.m_Position = v3;
+                SyncData.m_Rotation = rot;
+                SyncData.m_LevelID = levelid;
+                SyncData.m_LevelGUID = level_guid;
+                SyncData.m_Hash = SearchKey;
+
+                ExtraDataForDroppedGear Extra = new ExtraDataForDroppedGear();
+                Extra.m_Dropper = MyChatName;
+                Extra.m_DroppedTime = MinutesFromStartServer-MinuteToSkip;
+                Extra.m_Variant = variant;
+                if(GearGiveName != "")
+                {
+                    Extra.m_GearName = GearGiveName;
+                }
+
+                if (NeedToDry != 0 && NeedToDry != -1)
+                {
+                    Extra.m_GoalTime = MinutesFromStartServer + NeedToDry;
+                }else{
+                    Extra.m_GoalTime = NeedToDry;
+                }
+
+                SyncData.m_Extra = Extra;
+
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.DROPITEM))
+                    {
+                        _packet.Write(SyncData);
+                        SendTCPData(_packet);
+                    }
+
+                    byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
+
+                    if (bytesToSlice.Length > 500)
+                    {
+                        List<byte> BytesBuffer = new List<byte>();
+                        BytesBuffer.AddRange(bytesToSlice);
+
+                        while (BytesBuffer.Count >= 500)
+                        {
+                            byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
+                            BytesBuffer.RemoveRange(0, 499);
+
+                            string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                            SlicedJsonData SlicedPacket = new SlicedJsonData();
+                            SlicedPacket.m_GearName = LevelKey;
+                            SlicedPacket.m_SendTo = GearID;
+                            SlicedPacket.m_Hash = SearchKey;
+                            SlicedPacket.m_Str = jsonStringSlice;
+
+                            if (BytesBuffer.Count != 0)
+                            {
+                                SlicedPacket.m_Last = false;
+                            }else{
+                                SlicedPacket.m_Last = true;
+                            }
+                            using (Packet _packet = new Packet((int)ClientPackets.GOTDROPSLICE))
+                            {
+                                _packet.Write(SlicedPacket);
+                                SendTCPData(_packet);
+                            }
+                        }
+
+                        if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
+                        {
+                            byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                            BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                            string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
+                            SlicedJsonData SlicedPacket = new SlicedJsonData();
+                            SlicedPacket.m_GearName = LevelKey;
+                            SlicedPacket.m_SendTo = GearID;
+                            SlicedPacket.m_Hash = SearchKey;
+                            SlicedPacket.m_Str = jsonStringSlice;
+                            SlicedPacket.m_Last = true;
+                            SlicedPacket.m_Extra = Extra;
+
+                            //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                            if (sendMyPosition == true)
+                            {
+                                using (Packet _packet = new Packet((int)ClientPackets.GOTDROPSLICE))
+                                {
+                                    _packet.Write(SlicedPacket);
+                                    SendTCPData(_packet);
+                                }
+                            }
+                        }
+                    }
+                }
+                if(iAmHost == true)
+                {
+                    AddDroppedGear(GearID, SearchKey, DataProxy, LevelKey, Extra);
+                    ServerSend.DROPITEM(0, SyncData, true);
+                    FakeDropItem(GearID, v3, rot, SearchKey, Extra);
+                }
+            }
+        }
+
+        public static string CompressString(string text)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(text);
+            var memoryStream = new MemoryStream();
+            using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true))
+            {
+                gZipStream.Write(buffer, 0, buffer.Length);
+            }
+
+            memoryStream.Position = 0;
+
+            var compressedData = new byte[memoryStream.Length];
+            memoryStream.Read(compressedData, 0, compressedData.Length);
+
+            var gZipBuffer = new byte[compressedData.Length + 4];
+            Buffer.BlockCopy(compressedData, 0, gZipBuffer, 4, compressedData.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(buffer.Length), 0, gZipBuffer, 0, 4);
+            return Convert.ToBase64String(gZipBuffer);
+        }
+
+        public static string DecompressString(string compressedText)
+        {
+            byte[] gZipBuffer = Convert.FromBase64String(compressedText);
+            using (var memoryStream = new MemoryStream())
+            {
+                int dataLength = BitConverter.ToInt32(gZipBuffer, 0);
+                memoryStream.Write(gZipBuffer, 4, gZipBuffer.Length - 4);
+
+                var buffer = new byte[dataLength];
+
+                memoryStream.Position = 0;
+                using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                {
+                    gZipStream.Read(buffer, 0, buffer.Length);
+                }
+
+                return Encoding.UTF8.GetString(buffer);
+            }
+        }
+
+        public static void CreateFolderIfNotExist(string path)
+        {
+            bool exists = System.IO.Directory.Exists(path);
+            if (!exists)
+            {
+                System.IO.Directory.CreateDirectory(path);
+            }
+        }
+
+        public static void SaveFakeContainer(string GUID, string LevelKey, string data, bool needCompress = true)
+        {
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\Containers\" + GUID + ".json";
+
+            CreateFolderIfNotExist(@"Mods\Unloads");
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey);
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey + @"\Containers");
+
+            using (FileStream fs = File.Create(dir))
+            {
+                string compressed = "";
+                if (needCompress == true)
+                {
+                    compressed = CompressString(data);
+                }else{
+                    compressed = data;
+                }
+                 
+                byte[] info = new UTF8Encoding(true).GetBytes(compressed);
+                fs.Write(info, 0, info.Length);
+            }
+        }
+        public static string LoadFakeContainer(string GUID, string LevelKey)
+        {
+            MelonLogger.Msg("[DroppedGearsUnloader] Going to load container " + GUID);
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\Containers\" + GUID + ".json";
+
+            bool exists = System.IO.File.Exists(dir);
+            string data = "";
+
+            if (!exists)
+            {
+                return "";
+            }else{
+                try
+                {
+                    using (var sr = new StreamReader(dir))
+                    {
+                        data = sr.ReadToEnd();
+                    }
+                }
+                catch (IOException e)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "[DroppedGearsUnloader] The file could not be read:" + e.Message);
+                    return "";
+                }
+
+                return data;
+            }
+        }
+
+        //public class LazyPacketStruct
+        //{
+        //    Packet pak;
+        //    int client;
+        //}
+
+        public static List<SlicedJsonData> CarefulSlicesBuffer = new List<SlicedJsonData>();
+
+        public static void AddCarefulSlice(SlicedJsonData slice)
+        {
+            CarefulSlicesBuffer.Add(slice);
+        }
+        public static int CarefulSlicesSent = 0;
+        public static void SendNextCarefulSlice()
+        {
+            if(CarefulSlicesBuffer.Count > 0)
+            {
+                SlicedJsonData slice = CarefulSlicesBuffer[0];
+                using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
+                {
+                    _packet.Write(slice);
+                    SendUDPData(_packet);
+                }
+                CarefulSlicesBuffer.Remove(CarefulSlicesBuffer[0]);
+                CarefulSlicesSent = CarefulSlicesSent + 1;
+            }else{
+                MelonLogger.Msg("Finished sending all "+ CarefulSlicesSent+" slices");
+                Container box = InterfaceManager.m_Panel_Container.m_Container;
+                if (box != null)
+                {
+                    if (!box.Close())
+                        return;
+                    if (box.m_CloseAudio.Length == 0)
+                        GameAudioManager.PlayGUIButtonBack();
+                }
+                RemovePleaseWait();
+                GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
+                InterfaceManager.m_Panel_Container.Enable(false);
+            }
+        }
+
+        public static void SendContainerData(string DataProxy, string LevelKey, string GUID, int SendTo = 0)
+        {
+            byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
+            int Hash = GUID.GetHashCode();
+            MelonLogger.Msg("Going to sent " + bytesToSlice.Length+"bytes"); 
+
+            int CHUNK_SIZE = 1000;
+            int SlicesSent = 0;
+
+            //if((iAmHost == true && Server.UsingSteamWorks == true) || (sendMyPosition == true && ConnectedSteamWorks == true))
+            //{
+            //    CHUNK_SIZE = 1000;
+            //}else{
+            //    CHUNK_SIZE = 500;
+            //}
+
+            if (bytesToSlice.Length > CHUNK_SIZE)
+            {
+                List<byte> BytesBuffer = new List<byte>();
+                BytesBuffer.AddRange(bytesToSlice);
+
+                while (BytesBuffer.Count >= CHUNK_SIZE)
+                {
+                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, CHUNK_SIZE-1).ToArray();
+                    BytesBuffer.RemoveRange(0, CHUNK_SIZE-1);
+
+                    string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                    SlicedJsonData SlicedPacket = new SlicedJsonData();
+                    SlicedPacket.m_GearName = LevelKey+"|"+GUID;
+                    SlicedPacket.m_SendTo = 0;
+                    SlicedPacket.m_Hash = Hash;
+                    SlicedPacket.m_Str = jsonStringSlice;
+
+                    if (BytesBuffer.Count != 0)
+                    {
+                        SlicedPacket.m_Last = false;
+                    }else{
+                        SlicedPacket.m_Last = true;
+                    }
+
+                    if(SendTo == 0)
+                    {
+                        //using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
+                        //{
+                        //    _packet.Write(SlicedPacket);
+                        //    SendUDPData(_packet);
+                        //}
+                        AddCarefulSlice(SlicedPacket);
+                    }
+                    else{
+                        ServerSend.GOTCONTAINERSLICE(SendTo, SlicedPacket);
+                    }
+                    SlicesSent = SlicesSent + 1;
+                }
+
+                if (BytesBuffer.Count < CHUNK_SIZE && BytesBuffer.Count != 0)
+                {
+                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                    string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
+                    SlicedJsonData SlicedPacket = new SlicedJsonData();
+                    SlicedPacket.m_GearName = LevelKey+"|"+GUID;
+                    SlicedPacket.m_SendTo = 0;
+                    SlicedPacket.m_Hash = Hash;
+                    SlicedPacket.m_Str = jsonStringSlice;
+                    SlicedPacket.m_Last = true;
+
+                    if (SendTo == 0)
+                    {
+                        //using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
+                        //{
+                        //    _packet.Write(SlicedPacket);
+                        //    SendUDPData(_packet);
+                        //} 
+                        AddCarefulSlice(SlicedPacket);
+                    }else{
+                        ServerSend.GOTCONTAINERSLICE(SendTo, SlicedPacket);
+                    }
+                    SlicesSent = SlicesSent + 1;
+                }
+            }else{
+                SlicedJsonData SlicedPacket = new SlicedJsonData();
+                SlicedPacket.m_GearName = LevelKey + "|" + GUID;
+                SlicedPacket.m_SendTo = 0;
+                SlicedPacket.m_Hash = Hash;
+                SlicedPacket.m_Str = DataProxy;
+                SlicedPacket.m_Last = true;
+
+                if (SendTo == 0)
+                {
+                    //using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
+                    //{
+                    //    _packet.Write(SlicedPacket);
+                    //    SendUDPData(_packet);
+                    //}
+                    AddCarefulSlice(SlicedPacket);
+                }else{
+                    ServerSend.GOTCONTAINERSLICE(SendTo, SlicedPacket);
+                }
+                SlicesSent = SlicesSent + 1;
+            }
+
+            if(iAmHost == true)
+            {
+                MelonLogger.Msg("Slices sent " + SlicesSent);
+            }else{
+                MelonLogger.Msg("Prepared " + SlicesSent+ " slices to send");
+                MelonLogger.Msg("Starting send slices");
+                SendNextCarefulSlice();
+            }
+        }
+
+        public static void FinishOpeningFakeContainer(string CompressedData)
+        {
+            string Data = "";
+            if(CompressedData != "")
+            {
+                Data = DecompressString(CompressedData);
+            }
+
+            Container box = GoingToOpenContinaer;
+
+            if (box.m_RestoreControlMode != null)
+            {
+                GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
+            }
+            GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched = null;
+            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            box.m_SearchInProgress = false;
+            box.m_OpenInProgress = false;
+            box.m_Inspected = true;
+            if (Data == "")
+            {
+                box.DestroyAllGear();
+            }else{
+                Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
+                box.Deserialize(Data, loadedlist);
+            }
+            //box.m_CapacityKG = 1000f;
+            RemovePleaseWait();
+            InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
+            InterfaceManager.m_Panel_Container.Enable(true);
+            GoingToOpenContinaer = null;
+        }
+
+        public static Container GoingToOpenContinaer = null;
+
+        public static void OpenFakeContainer(Container box)
+        {
+            string levelKey = levelid + level_guid;
+            string boxGUID = box.GetComponent<ObjectGuid>().Get();
+            if (sendMyPosition == true)
+            {
+                GoingToOpenContinaer = box;
+                DoPleaseWait("Please wait...", "Downloading container data...");
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTOPENCONTAINER))
+                {
+                    _packet.Write(levelKey);
+                    _packet.Write(boxGUID);
+                    SendTCPData(_packet);
+                }
+                return;
+            }
+
+            string CompressedData = LoadFakeContainer(boxGUID, levelKey);
+            string Data = "";
+            if (CompressedData != "")
+            {
+                Data = DecompressString(CompressedData);
+            }
+
+            GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
+            GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched = null;
+            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            box.m_SearchInProgress = false;
+            box.m_OpenInProgress = false;
+            box.m_Inspected = true;
+
+            if (Data == "")
+            {
+                box.DestroyAllGear();
+            }else{
+                Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
+                box.Deserialize(Data, loadedlist);
+            }
+            //box.m_CapacityKG = 1000f;
+            InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
+            InterfaceManager.m_Panel_Container.Enable(true);
+        }
+
+        public static void CloseFakeContainer(Container box)
+        {
+            string Data = box.Serialize();
+            string CompressedData = CompressString(Data);
+            string levelKey = levelid + level_guid;
+            string boxGUID = box.GetComponent<ObjectGuid>().Get();
+            box.DestroyAllGear();
+            GameObject reference = GetGearItemObject("GEAR_SoftWood");
+            GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, box.transform.position, box.transform.rotation);
+            box.GetComponent<Container>().AddGear(newGear.GetComponent<GearItem>());
+            if (sendMyPosition == true)
+            {
+                DoPleaseWait("Please wait...", "Sending container data...");
+                SendContainerData(CompressedData, levelKey, boxGUID);
+                return;
+            }
+            if (box != null)
+            {
+                if (!box.Close())
+                    return;
+                if (box.m_CloseAudio.Length == 0)
+                    GameAudioManager.PlayGUIButtonBack();
+            }
+            GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
+            InterfaceManager.m_Panel_Container.Enable(false);
+            SaveFakeContainer(boxGUID, levelKey, CompressedData, false);
+        }
+
+        public static GameObject PingElement = null;
+
         public override void OnUpdate()
         {
             FakeDeath();
             UpdateMain();
             GameLogic.Update();
+
+            if (level_name == "MainMenu" && GearIDList.Count == 0)
+            {
+                InitGearsIDS();
+                MelonLogger.Msg("[GearIDList] Loaded with "+ GearIDList.Count+" elements!");
+            }
 
             if (Application.isBatchMode)
             {
@@ -8856,8 +10532,16 @@ namespace SkyCoop
                         MelonLogger.Msg("[UI] Microphone Indicator created!");
                         MicrophoneIdicator.SetActive(false);
                     }
+
+                    //GameObject PanelHUD = InterfaceManager.m_Panel_HUD.m_EssentialHud;
+                    //GameObject Sprite = GameObject.Instantiate(new GameObject(), PanelHUD.transform);
+                    //UISprite sp = PingElement.AddComponent<UISprite>();
+                    //sp.mSpriteName = "ico_Radial_firstAid";
+                    //sp.mChanged = true;
+                    //PingElement = Sprite;
                 }
-            }else{
+            }
+            else{
                 if(m_InterfaceManager != null && uConsole.m_Instance != null && uConsole.m_On == false && Cursor.visible == false)
                 {
                     if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Return))
@@ -8896,6 +10580,27 @@ namespace SkyCoop
                             StatusObject.SetActive(true);
                         }else{
                             StatusObject.SetActive(false);
+                        }
+                    }
+                    if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Alpha7))
+                    {
+                        Il2CppSystem.Collections.Generic.List<GearItem> GearList = new Il2CppSystem.Collections.Generic.List<GearItem>();
+                        GearList = Panel_WeaponPicker.GetPrioritizedWeaponList();
+                        
+                        for (int i = 0; i < GearList.Count; i++)
+                        {
+                            if(GearList[i].m_GearName == "GEAR_Revolver")
+                            {
+                                GearList.Remove(GearList[i]);
+                            }
+                        }
+                        if (GearList.Count > 0)
+                        {
+                            InterfaceManager.m_Panel_WeaponPicker.Enable(true, GearList, 1000);
+                        }
+                        else
+                        {
+                            HUDMessage.AddMessage("YOU HAVE NOT ANY MELEE WEAPONS!");
                         }
                     }
                 }
@@ -9217,6 +10922,32 @@ namespace SkyCoop
                     PreviousBlueFlares = MyBlueFlares;
                     SendMyEQ();
                 }
+                bool IsAiming = false;
+                if(GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_GunItem != null && GameManager.m_PlayerManager.m_ItemInHands.m_GunItem.IsAiming() == true)
+                {
+                    IsAiming = true;
+                }
+
+                if(MyIsAiming != IsAiming)
+                {
+                    MyIsAiming = IsAiming;
+                    if (playersData[0].m_Mimic == true && players[0] != null)
+                    {
+                        playersData[0].m_Aiming = MyIsAiming;
+                    }
+                    if (sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.CHANGEAIM))
+                        {
+                            _packet.Write(MyIsAiming);
+                            SendTCPData(_packet);
+                        }
+                    }
+                    if(iAmHost == true)
+                    {
+                        ServerSend.CHANGEAIM(0, MyIsAiming, true);
+                    }
+                }
 
                 if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
                 {
@@ -9416,6 +11147,7 @@ namespace SkyCoop
             //        ShatalkerObject.m_WorldPosition = LastRecivedShatalkerVector;
             //    }
             //}
+
             if (DebugBind == true)
             {
                 if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.B))
@@ -10258,6 +11990,35 @@ namespace SkyCoop
 
         public static bool AtHostMenu = false;
 
+        public static void LoadAllDropsForScene()
+        {
+            string lvlKey = MyMod.levelid+MyMod.level_guid;
+
+            if (MyMod.DroppedGears.ContainsKey(lvlKey) == false)
+            {
+                bool FoundSaves = LoadDropsForScene(lvlKey);
+                if(FoundSaves == false)
+                {
+                    return;
+                }
+            }
+
+            Dictionary<int, MyMod.SlicedJsonDroppedGear> LevelDrops;
+
+            if (MyMod.DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
+            {
+                int index = 0;
+                foreach (var cur in LevelDrops)
+                {
+                    index++;
+                    int currentKey = cur.Key;
+                    MyMod.SlicedJsonDroppedGear currentValue = cur.Value;
+                    GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(currentValue.m_Json);
+                    MyMod.FakeDropItem(GetGearIDByName(currentValue.m_GearName), DummyGear.m_Position, DummyGear.m_Rotation, cur.Key, currentValue.m_Extra);
+                }
+            }
+        }
+
         public static void HostAServer(int port = 26950)
         {
             if (iAmHost != true)
@@ -10275,9 +12036,9 @@ namespace SkyCoop
                 OveridedTime = OverridedHourse + ":" + OverridedMinutes;
                 NeedSyncTime = true;
                 RealTimeCycleSpeed = true;
-            }
-            else
-            {
+                LoadAllDropsForScene();
+                MarkSearchedContainers(levelid+level_guid);
+            }else{
                 HUDMessage.AddMessage("YOU ALREADY HOSING!!!!!!");
             }
         }
@@ -11139,7 +12900,8 @@ namespace SkyCoop
 
         public static void HostMenu()
         {
-            if (CantBeUsedForMP == true || LastLoadedGenVersion != BuildInfo.RandomGenVersion || SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
+            //if (CantBeUsedForMP == true || LastLoadedGenVersion != BuildInfo.RandomGenVersion || SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
+            if (CantBeUsedForMP == true || LastLoadedGenVersion != BuildInfo.RandomGenVersion)
             {
                 if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
                 {
@@ -11152,10 +12914,10 @@ namespace SkyCoop
                         textToShow = "You can't use this save file for hosting multiplayer! Because this save file has been created on old version of the mod that isn't compatible with current one! Save file Generation version " + LastLoadedGenVersion + ". Current one mod use now " + BuildInfo.RandomGenVersion + "!";
                     }
 
-                    if (SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
-                    {
-                        textToShow = "Story mode never has been planned to be synced. Mod works only in SANDBOX game mode. I not know why you even try to host story mode, we never announced it will ever work! Please play regular sandbox!";
-                    }
+                    //if (SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
+                    //{
+                    //    textToShow = "Story mode never has been planned to be synced. Mod works only in SANDBOX game mode. I not know why you even try to host story mode, we never announced it will ever work! Please play regular sandbox!";
+                    //}
 
                     InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, textToShow, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                 }
@@ -11245,28 +13007,28 @@ namespace SkyCoop
             string Hat1 = GetClothForSlot(ClothingRegion.Head, ClothingLayer.Base);
             string Hat2 = GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid);
 
-            if (IsScarf(Hat1))
+            string hatCandidat1 = "";
+            string hatCandidat2 = "";
+
+            if (IsBalaclava(Hat1) == true)
+            {
+                m_Balaclava = Hat1;
+            }
+            else if (IsScarf(Hat1))
             {
                 m_Scarf = Hat1;
-                if (IsBalaclava(Hat2))
-                {
-                    m_Balaclava = Hat2;
-                }else{
-                    m_Hat = Hat2;
-                }
+            }else{
+                hatCandidat1 = Hat1;
             }
-            else if (IsScarf(Hat2))
+
+            if (IsScarf(Hat2))
             {
                 m_Scarf = Hat2;
-                if (IsBalaclava(Hat1))
-                {
-                    m_Balaclava = Hat1;
-                }else{
-                    m_Hat = Hat1;
-                }
             }else{
-                m_Hat = GetClothToDisplay(Hat1, Hat2);
+                hatCandidat2 = Hat2;
             }
+
+            m_Hat = GetClothToDisplay(hatCandidat1, hatCandidat2);
 
             //Selecting Top
             string Shirt1 = GetClothForSlot(ClothingRegion.Chest, ClothingLayer.Base);
@@ -11330,6 +13092,38 @@ namespace SkyCoop
                         ServerSend.CLOTH(0, Cdata, true);
                     }
                 }
+            }
+        }
+
+        public static void FakeDeathScreen()
+        {
+            //6 background
+            //3,1
+            if(m_InterfaceManager != null) 
+            {
+                if(InterfaceManager.m_Panel_Log.m_Button_Back != null)
+                {
+                    InterfaceManager.m_Panel_Log.m_Button_Back.GetComponent<GenericButtonMouseSpawner>().SetText("GIVE UP");
+                    InterfaceManager.m_Panel_Log.m_Button_Back.GetComponentInChildren<UILabel>().text = "GIVE UP";
+                }
+                InterfaceManager.m_Panel_Log.Enable(true);
+                InterfaceManager.m_Panel_Log.m_MainLogObject.SetActive(false);
+                InterfaceManager.m_Panel_Log.DisableAllMouseButtons();
+                InterfaceManager.m_Panel_Log.m_ExamineObject.SetActive(false);
+                InterfaceManager.m_Panel_Log.gameObject.transform.GetChild(12).gameObject.SetActive(false);
+                InterfaceManager.m_Panel_Log.gameObject.transform.GetChild(13).gameObject.SetActive(false);
+                //string causeOfDeathString = GameManager.GetConditionComponent().GetCauseOfDeathString();
+                //if (!string.IsNullOrEmpty(GameManager.m_OverridenCauseOfDeath))
+                //{
+                //    causeOfDeathString = Localization.Get(GameManager.m_OverridenCauseOfDeath);
+                //}
+                //InterfaceManager.m_Panel_Log.m_Label_CauseOfDeath.text = causeOfDeathString;
+                //InterfaceManager.m_Panel_Log.m_Label_CauseOfDeath.gameObject.SetActive(true);
+                UILabel UILab = InterfaceManager.m_Panel_Log.gameObject.transform.GetChild(3).GetChild(1).gameObject.GetComponent<UILabel>();
+                string text = "YOU ARE KNOCKED\nMaybe someone will rescue you...";
+                UILab.mText = text;
+                UILab.text = text;
+                UILab.ProcessText();
             }
         }
     }

@@ -147,6 +147,8 @@ namespace SkyCoop
         public static void GAMETIME(Packet _packet)
         {
             MyMod.OveridedTime = _packet.ReadString();
+            MyMod.MinutesFromStartServer = _packet.ReadInt();
+
             //MelonLogger.Msg("Time: " + OveridedTime);
         }
         public static void LIGHTSOURCENAME(Packet _packet)
@@ -470,7 +472,8 @@ namespace SkyCoop
         public static void BULLETDAMAGE(Packet _packet)
         {
             float damage = _packet.ReadFloat();
-            MyMod.DamageByBullet(damage);
+            int from = _packet.ReadInt();
+            MyMod.DamageByBullet(damage, from);
         }
         public static void MULTISOUND(Packet _packet)
         {
@@ -960,6 +963,70 @@ namespace SkyCoop
             string guid = _packet.ReadString();
             float damage = _packet.ReadFloat();
             MyMod.DoAnimalDamage(guid, damage);
+        }
+        public static void DROPITEM(Packet _packet)
+        {
+            MyMod.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
+            if (GearData.m_LevelID != MyMod.levelid || GearData.m_LevelGUID != MyMod.level_guid)
+            {
+                return;
+            }
+            int from = _packet.ReadInt();
+            MyMod.FakeDropItem(GearData.m_GearID, GearData.m_Position, GearData.m_Rotation, GearData.m_Hash, GearData.m_Extra);
+        }
+        public static void PICKDROPPEDGEAR(Packet _packet)
+        {
+            int ItemHash = _packet.ReadInt();
+            int from = _packet.ReadInt();
+            MyMod.PickDroppedItem(ItemHash, from);
+        }
+        public static void GETREQUESTEDITEMSLICE(Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            MyMod.AddSlicedJsonDataForPicker(got, false);
+        }
+        public static void GETREQUESTEDFORPLACESLICE(Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            MyMod.AddSlicedJsonDataForPicker(got, true);
+        }
+        public static void GOTCONTAINERSLICE(Packet _packet)
+        {
+            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            MyMod.AddSlicedJsonDataForContainer(got);
+        }
+        public static void OPENEMPTYCONTAINER(Packet _packet)
+        {
+            MyMod.FinishOpeningFakeContainer("");
+        }
+        public static void MARKSEARCHEDCONTAINERS(Packet _packet)
+        {
+            string _GUID = _packet.ReadString();
+            GameObject box = ObjectGuidManager.Lookup(_GUID);
+            if (box != null)
+            {
+                GameObject reference = MyMod.GetGearItemObject("GEAR_SoftWood");
+                GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, box.transform.position, box.transform.rotation);
+                box.GetComponent<Container>().AddGear(newGear.GetComponent<GearItem>());
+            }
+        }
+        public static void READYSENDNEXTSLICE(Packet _packet)
+        {
+            MyMod.SendNextCarefulSlice();
+        }
+        public static void CHANGEAIM(Packet _packet)
+        {
+            bool IsAiming = _packet.ReadBool();
+            int from = _packet.ReadInt();
+
+            if (MyMod.playersData[from] != null)
+            {
+                MyMod.playersData[from].m_Aiming = IsAiming;
+            }
+        }
+        public static void LOADINGSCENEDROPSDONE(Packet _packet)
+        {
+            MyMod.RemovePleaseWait();
         }
     }
 }
