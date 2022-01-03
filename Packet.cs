@@ -110,6 +110,7 @@ namespace GameServer
         READYSENDNEXTSLICE,
         CHANGEAIM,
         LOADINGSCENEDROPSDONE,
+        GEARNOTEXIST,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -215,6 +216,7 @@ namespace GameServer
         READYSENDNEXTSLICE,
         CHANGEAIM,
         LOADINGSCENEDROPSDONE,
+        GEARNOTEXIST,
     }
 
     public class Packet : IDisposable

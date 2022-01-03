@@ -5300,7 +5300,7 @@ namespace SkyCoop
         {
             private static void Prefix(Panel_Log __instance)
             {
-                if (MyMod.InOnline() == true)
+                if (MyMod.InOnline() == true && MyMod.IsDead == true)
                 {
                     Application.Quit();
                 }
@@ -5317,7 +5317,32 @@ namespace SkyCoop
                 }
             }
         }
-        
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]
+        internal static class GameManager_OnApplicationFocus
+        {
+            private static bool Prefix(bool focusStatus)
+            {
+                //MelonLogger.Msg("[GameManager] GameManager.OnApplicationFocus(" + focusStatus + ")");
+                return false;
+            }
+        }
+        //[HarmonyLib.HarmonyPatch(typeof(TLD_TimelineDirector), "HandleGamePause")]
+        //internal static class TLD_TimelineDirector_HandleGamePause
+        //{
+        //    private static bool Prefix()
+        //    {
+        //        return false;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(TLD_TimelineDirector), "OnPause")]
+        //internal static class TLD_TimelineDirector_OnPause
+        //{
+        //    private static bool Prefix()
+        //    {
+        //        return false;
+        //    }
+        //}
 
 
         //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Deserialize")]

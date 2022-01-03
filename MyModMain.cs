@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.3";
+            public const string Version = "0.7.4";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -264,8 +264,15 @@ namespace SkyCoop
                 if(GearIDList.TryGetValue(ConsoleManager.m_AllGearItemNames[index], out exist) == false)
                 {
                     GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
+
+                    //if(ConsoleManager.m_AllGearItemNames[index].Contains(" ") == true)
+                    //{
+                    //    MelonLogger.Msg(ConsoleColor.Red,"[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ID " + index+" invalid");
+                    //}
+
                     //MelonLogger.Msg("[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ID " + index);
-                }else{
+                }
+                else{
                     //MelonLogger.Msg(ConsoleColor.Red, "[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ALREADY EXIST");
                 }
             }
@@ -492,6 +499,8 @@ namespace SkyCoop
                     string LevelKey = OriginalData.Split(Convert.ToChar("|"))[0];
                     string GUID = OriginalData.Split(Convert.ToChar("|"))[1];
 
+                    MelonLogger.Msg(ConsoleColor.Green, "Finished loading container data for " + jData.m_Hash);
+
                     if(iAmHost == true)
                     {
                         SaveFakeContainer(GUID, LevelKey, finalJsonData, false);
@@ -500,8 +509,6 @@ namespace SkyCoop
                     {
                         FinishOpeningFakeContainer(finalJsonData);
                     }
-
-                    MelonLogger.Msg(ConsoleColor.Green, "Finished loading container data for " + jData.m_Hash);
                 }
             }
 
@@ -2136,30 +2143,6 @@ namespace SkyCoop
             public AudioSource aSource;
             public List<VoiceChatQueueElement> VoiceQueue = new List<VoiceChatQueueElement>();
 
-            void VolumeSetup()
-            {
-                Vector3 myV3 = new Vector3(0, 0, 0);
-
-                if (GameManager.m_PlayerObject != null)
-                {
-                    myV3 = GameManager.m_PlayerObject.transform.position;
-                }
-
-                float dis = Vector3.Distance(myV3, aSource.gameObject.transform.position);
-                float disFactor = dis / 700;
-                if (disFactor < 0)
-                {
-                    disFactor = 0;
-                }
-                float vo = 1 - disFactor;
-
-                if (vo < 0)
-                {
-                    vo = 0;
-                }
-
-                aSource.volume = vo;
-            }
             void Update()
             {
                 if (aSource != null)
@@ -5192,6 +5175,7 @@ namespace SkyCoop
             { (int)ServerPackets.READYSENDNEXTSLICE, ClientHandle.READYSENDNEXTSLICE},
             { (int)ServerPackets.CHANGEAIM, ClientHandle.CHANGEAIM},
             { (int)ServerPackets.LOADINGSCENEDROPSDONE, ClientHandle.LOADINGSCENEDROPSDONE},
+            { (int)ServerPackets.GEARNOTEXIST, ClientHandle.GEARNOTEXIST},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -5694,6 +5678,7 @@ namespace SkyCoop
 
         public static void SimRevive()
         {
+            InterfaceManager.m_Panel_Log.Enable(false);
             SetRevivedStats();
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
         }
@@ -6966,9 +6951,9 @@ namespace SkyCoop
                     {
                         //if(Server.UsingSteamWorks == false)
                         //{
-                            Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
+                        Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
                         //}
-                        if(Server.clients[i].TimeOutTime > 10)
+                        if (Server.clients[i].TimeOutTime > 10)
                         {
                             MelonLogger.Msg("Client " + i + " no responce time " + Server.clients[i].TimeOutTime);
                         }
@@ -8580,9 +8565,12 @@ namespace SkyCoop
                     m_Player.AddComponent<MultiplayerPlayerAnimator>().m_Animer = m_Player.GetComponent<Animator>();
                     m_Player.AddComponent<MultiplayerPlayerClothingManager>().m_Player = m_Player;
                     m_Player.AddComponent<MultiplayerPlayerVoiceChatPlayer>().aSource = m_Player.GetComponent<AudioSource>();
-                    //m_Player.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
-                    //m_Player.GetComponent<AudioSource>().dopplerLevel = 0;
-                    //m_Player.GetComponent<AudioSource>().spatialBlend = 1;
+                    m_Player.GetComponent<AudioSource>().loop = false;
+                    m_Player.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
+                    m_Player.GetComponent<AudioSource>().dopplerLevel = 0;
+                    m_Player.GetComponent<AudioSource>().spatialBlend = 1;
+                    m_Player.GetComponent<AudioSource>().minDistance = 13f;
+
                     MultiplayerPlayer mP = m_Player.AddComponent<MultiplayerPlayer>();
                     mP.m_Player = m_Player;
                     mP.m_ID = i;
@@ -8927,9 +8915,10 @@ namespace SkyCoop
                         VoiceTestDummy.transform.position = GameManager.GetPlayerObject().transform.position;
                         VoiceTestDummy.AddComponent<AudioSource>();
                         VoiceTestDummy.GetComponent<AudioSource>().loop = false;
-                        //VoiceTestDummy.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
-                        //VoiceTestDummy.GetComponent<AudioSource>().dopplerLevel = 0;
-                        //VoiceTestDummy.GetComponent<AudioSource>().spatialBlend = 1;
+                        VoiceTestDummy.GetComponent<AudioSource>().rolloffMode = AudioRolloffMode.Logarithmic;
+                        VoiceTestDummy.GetComponent<AudioSource>().dopplerLevel = 0;
+                        VoiceTestDummy.GetComponent<AudioSource>().spatialBlend = 1;
+                        VoiceTestDummy.GetComponent<AudioSource>().minDistance = 13f;
                     }
                     if (VoiceTestDummy.GetComponent<AudioSource>() != null)
                     {
@@ -8959,6 +8948,7 @@ namespace SkyCoop
                     {
                         con.MaybePlayPlayerInjuredVoiceOver();
                         IsDead = true;
+                        FakeDeathScreen();
                         ConsoleManager.CONSOLE_save();
                     }
                     IsDead = true;
@@ -8973,14 +8963,6 @@ namespace SkyCoop
                 {
                     con.m_NeverDie = false;
                 }
-            }
-            if(IsDead == true && InterfaceManager.m_Panel_Log.IsEnabled() == false)
-            {
-                FakeDeathScreen();
-            }
-            if(IsDead == false && InterfaceManager.m_Panel_Log.IsEnabled() == true)
-            {
-                InterfaceManager.m_Panel_Log.Enable(false);
             }
         }
 
@@ -9057,14 +9039,19 @@ namespace SkyCoop
 
         public static string CloneTrimer(string name)
         {
+            string r = name;
             if (name.Contains("(Clone)")) //If it has ugly (Clone), cutting it.
             {
                 int L = name.Length - 7;
-                return name.Remove(L, 7);
-            }else{
-                return name;
+                r = name.Remove(L, 7);
             }
-            
+            if (name.Contains(" ")) //If it has ugly (1) (2) (3), cause of hinderlands's copypaste, cutting it.
+            {
+                char sperator = Convert.ToChar(" ");
+                string[] slices = name.Split(sperator);
+                r = slices[0];
+            }
+            return r;
         }
 
         public static void FakeDropItem(int GearID, Vector3 v3, Quaternion rot, int Hash, ExtraDataForDroppedGear extra)
@@ -9200,7 +9187,7 @@ namespace SkyCoop
             {
                 SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
             }else{
-                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy is not exist by somereason...");
                 return;
             }
 
@@ -9539,13 +9526,17 @@ namespace SkyCoop
                     MelonLogger.Msg("Found gear with hash "+ Hash);
                     LevelDrops.Remove(Hash);
                     SendDroppedItemToPicker(DataProxy.m_Json, sendTo, Hash, GetGearIDByName(DataProxy.m_GearName), place, DataProxy.m_Extra);
+                }else{
+                    MelonLogger.Msg("Client requested gear we have not data for, so gear most likely is missing. Gear hash "+ Hash);
+                    ServerSend.GEARNOTEXIST(sendTo, true);
                 }
-                if(players[sendTo] != null && players[sendTo].GetComponent<MultiplayerPlayerAnimator>() != null)
+                if (players[sendTo] != null && players[sendTo].GetComponent<MultiplayerPlayerAnimator>() != null)
                 {
                     players[sendTo].GetComponent<MultiplayerPlayerAnimator>().Pickup();
                 }
             }else{
                 MelonLogger.Msg(ConsoleColor.Red, "Requested gear locates on unsaved scene! Scene key"+ lvlKey);
+                ServerSend.GEARNOTEXIST(sendTo, true);
             }
         }
 
@@ -10029,17 +10020,18 @@ namespace SkyCoop
             string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\Containers\" + GUID + ".json";
 
             bool exists = System.IO.File.Exists(dir);
-            string data = "";
 
             if (!exists)
             {
+                MelonLogger.Msg("[DroppedGearsUnloader] Saves not found");
                 return "";
             }else{
                 try
                 {
                     using (var sr = new StreamReader(dir))
                     {
-                        data = sr.ReadToEnd();
+                        MelonLogger.Msg("[DroppedGearsUnloader] Saves found");
+                        return sr.ReadToEnd();
                     }
                 }
                 catch (IOException e)
@@ -10047,8 +10039,6 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Red, "[DroppedGearsUnloader] The file could not be read:" + e.Message);
                     return "";
                 }
-
-                return data;
             }
         }
 
@@ -10208,6 +10198,7 @@ namespace SkyCoop
 
         public static void FinishOpeningFakeContainer(string CompressedData)
         {
+            MelonLogger.Msg("Finish Opening Fake Container");
             string Data = "";
             if(CompressedData != "")
             {
@@ -10227,11 +10218,14 @@ namespace SkyCoop
             box.m_Inspected = true;
             if (Data == "")
             {
+                MelonLogger.Msg("Opening empty");
                 box.DestroyAllGear();
             }else{
+                MelonLogger.Msg("Opening with loot, loading loot to the container");
                 Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
                 box.Deserialize(Data, loadedlist);
             }
+            MelonLogger.Msg("All done, removing hint");
             //box.m_CapacityKG = 1000f;
             RemovePleaseWait();
             InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
@@ -10314,11 +10308,33 @@ namespace SkyCoop
 
         public static GameObject PingElement = null;
 
+
+        public static void InitAudio()
+        {
+            Camera Cam = GameManager.GetMainCamera();
+
+            if (Cam != null)
+            {
+                AudioListener pListener = Cam.GetComponent<AudioListener>();
+
+                if (pListener == null)
+                {
+                    pListener = Cam.gameObject.AddComponent<AudioListener>();
+                }
+            }
+        }
+
         public override void OnUpdate()
         {
             FakeDeath();
             UpdateMain();
             GameLogic.Update();
+
+            if(Application.runInBackground == false)
+            {
+                Application.runInBackground = true;
+            }
+            InitAudio();
 
             if (level_name == "MainMenu" && GearIDList.Count == 0)
             {

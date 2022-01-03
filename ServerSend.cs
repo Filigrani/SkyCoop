@@ -1866,6 +1866,16 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void GEARNOTEXIST(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.GEARNOTEXIST))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
         public static void CHANGEAIM(int _From, bool _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CHANGEAIM))

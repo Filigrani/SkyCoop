@@ -960,6 +960,7 @@ namespace GameServer
         {
             string LevelKey = _packet.ReadString();
             string boxGUID = _packet.ReadString();
+            MelonLogger.Msg("Client " + _fromClient + " request container data for " + boxGUID);
             string CompressedData = MyMod.LoadFakeContainer(boxGUID, LevelKey);
 
             if (CompressedData == "")
