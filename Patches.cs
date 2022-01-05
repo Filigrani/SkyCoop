@@ -362,11 +362,6 @@ namespace SkyCoop
                 internal static void Postfix(Panel_Rest __instance)
                 {
                     MelonLogger.Msg("Sleeping menu close.");
-                    if (saveObj != null && saveObj.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
-                    {
-                        UnityEngine.Object.DestroyImmediate(saveObj.gameObject);
-                        MelonLogger.Msg("Dummy bed removed");
-                    }
                 }
             }
             [HarmonyLib.HarmonyPatch(typeof(PassTime), "End")]
@@ -2382,6 +2377,7 @@ namespace SkyCoop
                 SaveGenVersion(gameMode, name);
                 SaveSeedInt(gameMode, name);
                 MyMod.SaveAllLoadedDrops();
+                MyMod.SaveAllLoadedOpenables();
                 SaveRealtimeTime(gameMode, name);
             }
         }
@@ -4770,8 +4766,23 @@ namespace SkyCoop
                 }
             }
         }
+        public static GameObject FakeBedRoll = null;
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "DoRest")]
+        private static class Panel_Rest_DoRest
+        {
+            internal static void Prefix(Panel_Rest __instance)
+            {
+                MelonLogger.Msg("[Panel_Rest] DoRest");
+                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                {
+                    MelonLogger.Msg("[Rest] Saving link on fake bed");
+                    FakeBedRoll = __instance.m_Bed.gameObject;
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(Rest), "EndSleeping")]
-        public class Rest_StopGod
+        public class Rest_StopSleep
         {
             public static void Postfix(Rest __instance)
             {
@@ -4779,6 +4790,11 @@ namespace SkyCoop
                 if(MyMod.IsDead == true)
                 {
                     GameManager.GetPlayerManagerComponent().m_God = false;
+                }
+                if (FakeBedRoll != null)
+                {
+                    MelonLogger.Msg("Dummy bed removed");
+                    UnityEngine.Object.DestroyImmediate(FakeBedRoll);
                 }
             }
         }
@@ -4819,6 +4835,7 @@ namespace SkyCoop
             {
                 MyMod.LoadAllDropsForScene();
                 MyMod.MarkSearchedContainers(MyMod.levelid+MyMod.level_guid);
+                MyMod.LoadAllOpenableThingsForScene();
             }
             if(MyMod.sendMyPosition == true)
             {
@@ -5323,8 +5340,67 @@ namespace SkyCoop
         {
             private static bool Prefix(bool focusStatus)
             {
-                //MelonLogger.Msg("[GameManager] GameManager.OnApplicationFocus(" + focusStatus + ")");
                 return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Open", new System.Type[] { typeof(bool), typeof(bool) })]
+        internal static class OpenClose_Open
+        {
+            private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
+            {
+                if(isImmediate == true)
+                {
+                    return;
+                }
+                
+                string _GUID = "";
+
+                if(__instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null)
+                {
+                    _GUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
+                }
+
+                if(MyMod.InOnline() == true)
+                {
+                    if (MyMod.iAmHost == true)
+                    {
+                        MyMod.ChangeOpenableThingState(MyMod.levelid + MyMod.level_guid, _GUID, true);
+                    }
+                    else
+                    {
+                        MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Close", new System.Type[] { typeof(bool), typeof(bool) })]
+        internal static class OpenClose_Close   
+        {
+            private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
+            {
+                if (isImmediate == true)
+                {
+                    return;
+                }
+
+                string _GUID = "";
+
+                if (__instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null)
+                {
+                    _GUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
+                }
+
+                if(MyMod.InOnline() == true)
+                {
+                    if (MyMod.iAmHost == true)
+                    {
+                        MyMod.ChangeOpenableThingState(MyMod.levelid + MyMod.level_guid, _GUID, false);
+                    }
+                    else
+                    {
+                        MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, false);
+                    }
+                }  
             }
         }
         //[HarmonyLib.HarmonyPatch(typeof(TLD_TimelineDirector), "HandleGamePause")]

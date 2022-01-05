@@ -217,8 +217,8 @@ namespace SkyCoop
         public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
         public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
         public static bool DebugTrafficCheck = false;
-        public static Dictionary<int, SlicedJsonDroppedGear> DroppedGearsOld = new Dictionary<int, SlicedJsonDroppedGear>();
         public static Dictionary<string, Dictionary<int, SlicedJsonDroppedGear>> DroppedGears = new Dictionary<string, Dictionary<int, SlicedJsonDroppedGear>>();
+        public static Dictionary<string, Dictionary<string, bool>> OpenableThings = new Dictionary<string, Dictionary<string, bool>>();
         public static Dictionary<int, GameObject> DroppedGearsObjs = new Dictionary<int, GameObject>();
         //Voice chat
         public static int VoiceChatFrequencyHz = 19000;
@@ -1268,7 +1268,7 @@ namespace SkyCoop
 
         public override void OnLevelWasInitialized(int level)
         {
-
+            OpenablesObjs.Clear();
             MelonLogger.Msg("Level initialized: " + level);
             levelid = level;
             MelonLogger.Msg("Level name: " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
@@ -5176,6 +5176,7 @@ namespace SkyCoop
             { (int)ServerPackets.CHANGEAIM, ClientHandle.CHANGEAIM},
             { (int)ServerPackets.LOADINGSCENEDROPSDONE, ClientHandle.LOADINGSCENEDROPSDONE},
             { (int)ServerPackets.GEARNOTEXIST, ClientHandle.GEARNOTEXIST},
+            { (int)ServerPackets.USEOPENABLE, ClientHandle.USEOPENABLE},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -6510,6 +6511,11 @@ namespace SkyCoop
             }
             fire.m_FX.TriggerFlareupLarge();
             fire.m_StartedByPlayer = true;
+
+            if(fuel != null && fuel.gameObject)
+            {
+                UnityEngine.Object.DestroyImmediate(fuel.gameObject);
+            }
         }
 
 
@@ -6770,8 +6776,9 @@ namespace SkyCoop
             {
                 //MelonLogger.Msg("Trying call UpdateMyClothing");
                 UpdateMyClothing();
+                ApplyOpenables();
 
-                if(Application.isBatchMode && DsServerIsUp == false)
+                if (Application.isBatchMode && DsServerIsUp == false)
                 {
                     DsServerIsUp = true;
                     MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server is ready! Have fun!");
@@ -9612,6 +9619,11 @@ namespace SkyCoop
 
         public static void SaveAllLoadedDrops()
         {
+            if (iAmHost == false)
+            {
+                return;
+            }
+
             foreach (var cur in DroppedGears)
             {
                 string currentKey = cur.Key;
@@ -9619,6 +9631,34 @@ namespace SkyCoop
 
                 string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
                 string dir = @"Mods\Unloads\" + seed + @"\" + currentKey + @"\" + "drops.json";
+
+                CreateFolderIfNotExist(@"Mods\Unloads");
+                CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
+                CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + currentKey);
+
+                using (FileStream fs = File.Create(dir))
+                {
+                    byte[] info = new UTF8Encoding(true).GetBytes(data);
+                    fs.Write(info, 0, info.Length);
+                }
+            }
+        }
+
+        public static void SaveAllLoadedOpenables()
+        {
+            if(iAmHost == false)
+            {
+                return;
+            }
+            
+            
+            foreach (var cur in OpenableThings)
+            {
+                string currentKey = cur.Key;
+                string data = JSON.Dump(cur.Value);
+
+                string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+                string dir = @"Mods\Unloads\" + seed + @"\" + currentKey + @"\" + "openablethings.json";
 
                 CreateFolderIfNotExist(@"Mods\Unloads");
                 CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
@@ -9651,6 +9691,35 @@ namespace SkyCoop
 
             string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
             string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\" + "drops.json";
+
+            CreateFolderIfNotExist(@"Mods\Unloads");
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
+            CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey);
+
+            using (FileStream fs = File.Create(dir))
+            {
+                byte[] info = new UTF8Encoding(true).GetBytes(data);
+                fs.Write(info, 0, info.Length);
+            }
+        }
+
+        public static void UnloadOpenableThingsForScene(string LevelKey)
+        {
+            string data = "";
+
+            //MelonLogger.Msg("[DroppedGearsUnloader] Going to unload " + LevelKey);
+            Dictionary<string, bool> LevelOpenables;
+            if (OpenableThings.TryGetValue(LevelKey, out LevelOpenables) == true)
+            {
+                data = JSON.Dump(LevelOpenables);
+            }else{
+                return;
+            }
+
+            OpenableThings.Remove(LevelKey);
+
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\openablethings.json";
 
             CreateFolderIfNotExist(@"Mods\Unloads");
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
@@ -9700,6 +9769,42 @@ namespace SkyCoop
                 if (found == false) //If no one on this scene unloading this.
                 {
                     UnloadDropsForScene(currentKey);
+                    return;
+                }
+            }
+            foreach (var cur in OpenableThings)
+            {
+                string currentKey = cur.Key;
+                bool found = false;
+                if (Dedicated == false) //If not dedicated server, then host can load drops too.
+                {
+                    string MyKey = levelid + level_guid;
+
+                    if (currentKey == MyKey)
+                    {
+                        found = true;
+                    }
+                }
+
+                if (found == false) //If host not on that scene, checking every player.
+                {
+                    for (int i = 0; i < playersData.Count; i++)
+                    {
+                        if (playersData[i] != null)
+                        {
+                            string LevelKey = playersData[i].m_Levelid + playersData[i].m_LevelGuid;
+                            if (LevelKey == currentKey)
+                            {
+                                found = true;
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if (found == false) //If no one on this scene unloading this.
+                {
+                    UnloadOpenableThingsForScene(currentKey);
                     return;
                 }
             }
@@ -10042,11 +10147,218 @@ namespace SkyCoop
             }
         }
 
-        //public class LazyPacketStruct
-        //{
-        //    Packet pak;
-        //    int client;
-        //}
+        public static void FakeClose(OpenClose OpCl)
+        {
+            if (OpCl.IsOpen() == false)
+                return;
+            if (OpCl.m_Animator != null)
+            {
+                OpCl.SetAnimationSpeed(OpCl.m_DefaultOpenCloseSpeedMultiplierValue);
+                OpCl.AnimateOpen(false);
+            }
+            if (OpCl.m_ObjectAnim != null)
+            {
+                if (!OpCl.m_ObjectAnim.Play(OpCl.m_AnimsReversed ? "open" : "close"))
+                    return;
+                OpCl.m_Animating = true;
+                if (OpCl.m_DisableCollisionDuringAnimation)
+                    OpCl.SetCollisionEnabled(false);
+            }
+
+            bool sound = true;
+            if (OpCl.gameObject != null)
+            {
+                Vector3 doorV3 = OpCl.gameObject.transform.position;
+                Vector3 playerV3 = GameManager.GetPlayerObject().transform.position;
+                float dis = Vector3.Distance(playerV3, doorV3);
+                if (dis > 50)
+                {
+                    sound = false;
+                }
+            }
+
+            if (sound == true)
+            {
+                int num = (int)GameAudioManager.PlaySound(OpCl.m_CloseAudio, OpCl.gameObject);
+            }
+            OpCl.m_IsOpen = false;
+            MelonLogger.Msg("Forcing openable thing to close");
+        }
+
+        public static void FakeOpen(OpenClose OpCl)
+        {
+            if (OpCl.IsOpen())
+                return;
+            if (OpCl.m_Safe != null && !OpCl.m_Safe.m_Cracked)
+            {
+                OpCl.m_Safe.EnableSafeCrackingInterface();
+            }
+            else
+            {
+                if (OpCl.m_Animator != null)
+                {
+                    OpCl.SetAnimationSpeed(OpCl.m_DefaultOpenCloseSpeedMultiplierValue);
+                    OpCl.AnimateOpen(true);
+                }
+                if (OpCl.m_ObjectAnim != null)
+                {
+                    OpCl.m_AnimsReversed = OpCl.PlayAnimInReverse();
+                    if (!OpCl.m_ObjectAnim.Play(OpCl.m_AnimsReversed ? "close" : "open"))
+                        return;
+                    OpCl.m_Animating = true;
+                    if (OpCl.m_DisableCollisionDuringAnimation)
+                        OpCl.SetCollisionEnabled(false);
+                }
+
+                bool sound = true;
+                if(OpCl.gameObject != null)
+                {
+                    Vector3 doorV3 = OpCl.gameObject.transform.position;
+                    Vector3 playerV3 = GameManager.GetPlayerObject().transform.position;
+                    float dis = Vector3.Distance(playerV3, doorV3);
+                    if(dis > 50)
+                    {
+                        sound = false;
+                    }
+                }
+
+                if (sound == true)
+                {
+                    int num = (int)GameAudioManager.PlaySound(OpCl.m_OpenAudio, OpCl.gameObject);
+                }
+                OpCl.m_IsOpen = true;
+            }
+            MelonLogger.Msg("Forcing openable thing to open");
+        }
+
+
+        public static Dictionary<string, GameObject> OpenablesObjs = new Dictionary<string, GameObject>();
+        public static void ApplyOpenables()
+        {
+            if(OpenCloseManager.s_ActiveOpenClosers != null && OpenablesObjs.Count < OpenCloseManager.s_ActiveOpenClosers.Count)
+            {
+                OpenablesObjs.Clear();
+                for (int i = 0; i < OpenCloseManager.s_ActiveOpenClosers.Count; i++)
+                {
+                    GameObject curObj;
+                    OpenClose OpCl = OpenCloseManager.s_ActiveOpenClosers[i];
+                    string _Guid = "";
+                    if (OpCl != null && OpCl.gameObject != null)
+                    {
+                        curObj = OpCl.gameObject;
+                        if(curObj.GetComponent<ObjectGuid>() != null)
+                        {
+                            _Guid = curObj.GetComponent<ObjectGuid>().Get();
+                            
+                            if(OpenablesObjs.ContainsKey(_Guid) == false)
+                            {
+                                MelonLogger.Msg(ConsoleColor.Yellow, "[OpenableThingsUnloader] Added " + _Guid);
+                                OpenablesObjs.Add(_Guid, curObj);
+                            }
+                        }
+                    }
+                }
+                MelonLogger.Msg(ConsoleColor.Blue, "[OpenableThingsUnloader] Finished convert list to dictionary List("+ OpenCloseManager.s_ActiveOpenClosers.Count+ ") Dictionary(" + OpenablesObjs.Count+")");
+            }
+            Dictionary<string, bool> LevelOpenables;
+            string LevelKey = levelid + level_guid;
+            if (OpenableThings.TryGetValue(LevelKey, out LevelOpenables) == true)
+            {
+                foreach (var cur in LevelOpenables)
+                {
+                    GameObject Openable;
+                    if(OpenablesObjs.TryGetValue(cur.Key, out Openable) == true)
+                    {
+                        if(Openable != null)
+                        {
+                            OpenClose OpCl = Openable.GetComponent<OpenClose>();
+                            if (OpCl.IsOpen() != cur.Value)
+                            {
+                                if(cur.Value == false)
+                                {
+                                    FakeClose(OpCl);
+                                }else{
+                                    FakeOpen(OpCl);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void SendOpenableThing(string LevelKey, string GUID, bool state)
+        {
+            using (Packet _packet = new Packet((int)ClientPackets.USEOPENABLE))
+            {
+                _packet.Write(LevelKey);
+                _packet.Write(GUID);
+                _packet.Write(state);
+
+                SendTCPData(_packet);
+            }
+        }
+
+        public static void ChangeOpenableThingState(string LevelKey, string GUID, bool state)
+        {
+            if(InOnline() == false)
+            {
+                return;
+            }
+            
+            Dictionary<string, bool> LevelOpenables;
+            if (OpenableThings.TryGetValue(LevelKey, out LevelOpenables) == false)
+            {
+                OpenableThings.Add(LevelKey, new Dictionary<string, bool>());
+                if (OpenableThings.TryGetValue(LevelKey, out LevelOpenables) == false)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Can't create dictionary for openables by some reason...");
+                }
+            }
+
+            if(LevelOpenables.ContainsKey(GUID) == true)
+            {
+                LevelOpenables.Remove(GUID);
+            }
+            LevelOpenables.Add(GUID, state);
+            MelonLogger.Msg(ConsoleColor.Blue, "Openable things "+ GUID + " changed state to OpenIs="+ state);
+
+            if(iAmHost == true)
+            {
+                ServerSend.USEOPENABLE(0, GUID, state, true);
+            }
+        }
+
+        public static bool LoadOpenables(string LevelKey)
+        {
+            string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
+            string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\openablethings.json";
+
+            bool exists = System.IO.File.Exists(dir);
+
+            if (!exists)
+            {
+                MelonLogger.Msg("[OpenableThingsUnloader] Saves not found for "+ LevelKey);
+                return false;
+            }else{
+                try
+                {
+                    using (var sr = new StreamReader(dir))
+                    {
+                        MelonLogger.Msg("[OpenableThingsUnloader] Saves found "+ LevelKey);
+                        string data = sr.ReadToEnd();
+                        Dictionary<string, bool> LoadedData = JSON.Load(data).Make<Dictionary<string, bool>>();
+                        OpenableThings.Add(LevelKey, LoadedData);
+                        return true;
+                    }
+                }
+                catch (IOException e)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "[OpenableThingsUnloader] The file could not be read:" + e.Message);
+                    return false;
+                }
+            }
+        }
 
         public static List<SlicedJsonData> CarefulSlicesBuffer = new List<SlicedJsonData>();
 
@@ -12035,6 +12347,25 @@ namespace SkyCoop
             }
         }
 
+        public static void LoadAllOpenableThingsForScene()
+        {
+            string lvlKey = MyMod.levelid+MyMod.level_guid;
+
+            if (OpenableThings.ContainsKey(lvlKey) == false)
+            {
+                bool Found = LoadOpenables(lvlKey);
+                if (Found == false)
+                {
+                    MelonLogger.Msg("[OpenableThingsUnloader] No openables saves found for " + lvlKey);
+                    return;
+                }
+            }
+            else
+            {
+                MelonLogger.Msg("[OpenableThingsUnloader] Dictionary for " + lvlKey+" already loaded");
+            }
+        }
+
         public static void HostAServer(int port = 26950)
         {
             if (iAmHost != true)
@@ -12053,6 +12384,7 @@ namespace SkyCoop
                 NeedSyncTime = true;
                 RealTimeCycleSpeed = true;
                 LoadAllDropsForScene();
+                LoadAllOpenableThingsForScene();
                 MarkSearchedContainers(levelid+level_guid);
             }else{
                 HUDMessage.AddMessage("YOU ALREADY HOSING!!!!!!");

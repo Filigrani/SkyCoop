@@ -5,6 +5,7 @@ using UnhollowerBaseLib;
 using Steamworks;
 using System.IO;
 using System.Net;
+using System.Runtime.InteropServices;
 
 using GameServer;
 
@@ -42,22 +43,25 @@ namespace SkyCoop
             //public delegate void P2PRQ_Delegate(P2PSessionRequest_t request);
             //public static P2PRQ_Delegate del = new P2PRQ_Delegate(OnP2PSessionRequest);
 
+            //public static void OnP2PSessionRequest(P2PSessionRequest_t request)
+            //{
+            //    CSteamID clientId = request.m_steamIDRemote;
+            //}
+
+            //public static void AllDels()
+            //{
+            //    IntPtr point = del.Method.MethodHandle.GetFunctionPointer();
+            //    Callback<P2PSessionRequest_t>.DispatchDelegate del_ = new Callback<P2PSessionRequest_t>.DispatchDelegate(point);
+            //    _p2PSessionRequestCallback = Callback<P2PSessionRequest_t>.Create(del_);
+            //}
 
             public static void Run()
             {
                 string name = SteamFriends.GetPersonaName();
-                //_p2PSessionRequestCallback = Steamworks.Callback<P2PSessionRequest_t>.Create()
 
-                //SteamNetworking.AllowP2PPacketRelay(true);
-                //IntPtr point = del.Method.MethodHandle.GetFunctionPointer();
-                //Il2CppSystem.Type _Type = new Il2CppSystem.Type(point);
-                //Il2CppSystem.Object _Obj = new Il2CppSystem.Object(point);
-                //Il2CppSystem.Reflection.MethodInfo _Method = new Il2CppSystem.Reflection.MethodInfo(point);
-                //MelonLogger.Msg("[SteamWorks.NET] Creating Delecate...");
-                //Callback<P2PSessionRequest_t>.DispatchDelegate del_ = new Callback<P2PSessionRequest_t>.DispatchDelegate(_Obj, point);
-                //Callback<P2PSessionRequest_t>.Create(del_);
                 MelonLogger.Msg("[SteamWorks.NET] Logins as " + name + " SteamID " + SteamUser.GetSteamID().ToString());
                 MyMod.LoadChatName(name);
+                //AllDels();
             }
 
             public static string GetFriends()
@@ -240,17 +244,6 @@ namespace SkyCoop
                 //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Pinging...");
                 web.DownloadStringCompleted += new DownloadStringCompletedEventHandler(Detail_DownloadStringCompleted);
                 web.DownloadStringAsync(uri);
-            }
-
-            public static void OnP2PSessionRequest(P2PSessionRequest_t request)
-            {
-                if (CanUseSteam == false)
-                {
-                    return;
-                }
-                CSteamID clientId = request.m_steamIDRemote;
-
-                MelonLogger.Msg("[SteamWorks.NET] Client " + clientId.ToString() + " sent to you session invite");
             }
             public static void OnP2PSessionRequest_Fail(P2PSessionConnectFail_t request)
             {

@@ -60,6 +60,7 @@ namespace GameServer
             MyMod.HadEverPingedMaster = false;
             MyMod.LoadAllDropsForScene();
             MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
+            MyMod.LoadAllOpenableThingsForScene();
         }
 
         private static void TCPConnectCallback(IAsyncResult _result)
@@ -281,6 +282,7 @@ namespace GameServer
                 { (int)ClientPackets.GOTCONTAINERSLICE, ServerHandle.GOTCONTAINERSLICE},
                 { (int)ClientPackets.REQUESTOPENCONTAINER, ServerHandle.REQUESTOPENCONTAINER},
                 { (int)ClientPackets.CHANGEAIM, ServerHandle.CHANGEAIM},
+                { (int)ClientPackets.USEOPENABLE, ServerHandle.USEOPENABLE},
             };
             Console.WriteLine("Initialized packets.");
         }

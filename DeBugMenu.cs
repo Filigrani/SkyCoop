@@ -241,27 +241,26 @@ namespace SkyCoop
                     //    MelonLogger.Msg(ConsoleColor.Blue, "Microphone: " + device);
                     //}
 
-                    if (GameManager.GetPlayerManagerComponent().IsInPlacementMode())
-                    {
-                        GameManager.GetPlayerManagerComponent().StowOrDropPlaceMesh();
-                    }
-                    string LoadSceneSTR = "BlackrockPrisonZone";
-                    GameManager.GetPlayerManagerComponent().m_SceneTransitionStarted = true;
-                    string str = (string)null;
-                    UnityEngine.SceneManagement.Scene activeScene;
-                    activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
-                    str = GameManager.StripOptFromSceneName(activeScene.name);
-                    GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = (string)null;
-                    GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = str;
-                    GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "Cheating!";
-                    GameManager.m_SceneTransitionData.m_Location = (string)null;
-                    if (RegionManager.GetRegionFromString(activeScene.name, out GameRegion _))
-                    {
-                        GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = GameManager.GetPlayerTransform().position;
-                    }
-                    GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = LoadSceneSTR;
-                    GameManager.LoadScene(LoadSceneSTR, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
-
+                    //if (GameManager.GetPlayerManagerComponent().IsInPlacementMode())
+                    //{
+                    //    GameManager.GetPlayerManagerComponent().StowOrDropPlaceMesh();
+                    //}
+                    //string LoadSceneSTR = "BlackrockPrisonZone";
+                    //GameManager.GetPlayerManagerComponent().m_SceneTransitionStarted = true;
+                    //string str = (string)null;
+                    //UnityEngine.SceneManagement.Scene activeScene;
+                    //activeScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene();
+                    //str = GameManager.StripOptFromSceneName(activeScene.name);
+                    //GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = (string)null;
+                    //GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = str;
+                    //GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "Cheating!";
+                    //GameManager.m_SceneTransitionData.m_Location = (string)null;
+                    //if (RegionManager.GetRegionFromString(activeScene.name, out GameRegion _))
+                    //{
+                    //    GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = GameManager.GetPlayerTransform().position;
+                    //}
+                    //GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = LoadSceneSTR;
+                    //GameManager.LoadScene(LoadSceneSTR, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {

@@ -111,6 +111,7 @@ namespace GameServer
         CHANGEAIM,
         LOADINGSCENEDROPSDONE,
         GEARNOTEXIST,
+        USEOPENABLE,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -217,6 +218,7 @@ namespace GameServer
         CHANGEAIM,
         LOADINGSCENEDROPSDONE,
         GEARNOTEXIST,
+        USEOPENABLE,
     }
 
     public class Packet : IDisposable

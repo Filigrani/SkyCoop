@@ -1866,6 +1866,22 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void USEOPENABLE(int _toClient, string _GUID, bool state, bool toAll = false)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.USEOPENABLE))
+            {
+                _packet.Write(_GUID);
+                _packet.Write(state);
+                _packet.Write(_toClient);
+
+                if (toAll == false)
+                {
+                    SendTCPData(_toClient, _packet);
+                }else{
+                    SendUDPDataToAll(_packet);
+                }
+            }
+        }
         public static void GEARNOTEXIST(int _toClient, bool _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GEARNOTEXIST))

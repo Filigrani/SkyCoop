@@ -901,6 +901,32 @@ namespace GameServer
             MelonLogger.Msg("Client " + _fromClient + " trying to place gear with hash " + Hash);
             MyMod.ClientTryPickupItem(Hash, _fromClient, lvlKey, true);
         }
+
+        public static void SendAllOpenables(int _fromClient, string lvlKey)
+        {
+            if (MyMod.OpenableThings.ContainsKey(lvlKey) == false)
+            {
+                bool FoundSaves = MyMod.LoadOpenables(lvlKey);
+                if (FoundSaves == false)
+                {
+                    return;
+                }
+            }
+            Dictionary<string, bool> LevelOpenables;
+            if (MyMod.OpenableThings.TryGetValue(lvlKey, out LevelOpenables) == true)
+            {
+                int index = 0;
+                foreach (var cur in LevelOpenables)
+                {
+                    index++;
+                    string currentKey = cur.Key;
+                    bool currentValue = cur.Value;
+                    ServerSend.USEOPENABLE(_fromClient, currentKey, currentValue);
+                }
+            }
+        }
+
+
         public static void REQUESTDROPSFORSCENE(int _fromClient, Packet _packet)
         {
             int lvl = _packet.ReadInt();
@@ -910,6 +936,7 @@ namespace GameServer
             MelonLogger.Msg("Client "+ _fromClient+" request all drops for scene "+ lvlKey);
 
             MyMod.MarkSearchedContainers(lvlKey, _fromClient);
+            SendAllOpenables(_fromClient, lvlKey);
 
 
             if (MyMod.DroppedGears.ContainsKey(lvlKey) == false)
@@ -980,6 +1007,13 @@ namespace GameServer
                 MyMod.playersData[_fromClient].m_Aiming = IsAiming;
             }
             ServerSend.CHANGEAIM(_fromClient, IsAiming, false);
+        }
+        public static void USEOPENABLE(int _fromClient, Packet _packet)
+        {
+            string LevelKey = _packet.ReadString();
+            string _GUID = _packet.ReadString();
+            bool state = _packet.ReadBool();
+            MyMod.ChangeOpenableThingState(LevelKey, _GUID, state);
         }
     }
 }

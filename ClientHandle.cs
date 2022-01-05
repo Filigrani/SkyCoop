@@ -1035,5 +1035,11 @@ namespace SkyCoop
             MelonLogger.Msg("Gear I requested is not exist!");
             MyMod.RemovePleaseWait();
         }
+        public static void USEOPENABLE(Packet _packet)
+        {
+            string _GUID = _packet.ReadString();
+            bool state = _packet.ReadBool();
+            MyMod.ChangeOpenableThingState(MyMod.levelid+MyMod.level_guid, _GUID, state);
+        }
     }
 }
