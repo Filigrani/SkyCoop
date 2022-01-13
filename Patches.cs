@@ -4832,7 +4832,7 @@ namespace SkyCoop
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading done!");
             MyMod.DroppedGearsObjs.Clear();
 
-            if(MyMod.iAmHost == true)
+            if(MyMod.iAmHost == true || MyMod.InOnline() == false)
             {
                 MyMod.LoadAllDropsForScene();
                 MyMod.MarkSearchedContainers(MyMod.levelid+MyMod.level_guid);
@@ -5404,6 +5404,25 @@ namespace SkyCoop
                 }  
             }
         }
+
+        [HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen")]
+        private static class GameManager_LoadSceneWithLoadingScreen
+        {
+            private static void Prefix(ref string sceneName)
+            {
+                if (MyMod.InterloperHook == false)
+                {
+                    return;
+                }
+                MyMod.InterloperHook = false;
+                GameRegion startRegion = GameManager.m_StartRegion;
+                if (startRegion != GameRegion.RandomRegion && startRegion != GameRegion.FutureRegion)
+                {
+                    sceneName = GameManager.m_StartRegion.ToString();
+                }
+            }
+        }
+
         //[HarmonyLib.HarmonyPatch(typeof(TLD_TimelineDirector), "HandleGamePause")]
         //internal static class TLD_TimelineDirector_HandleGamePause
         //{

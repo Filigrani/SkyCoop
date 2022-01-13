@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.6";
+            public const string Version = "0.7.6b";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -236,6 +236,7 @@ namespace SkyCoop
 
         public static Dictionary<string, int> GearIDList = new Dictionary<string, int>();
         //public static bool AntiCheat = false;
+        public static bool InterloperHook = false;
 
         public static void KillConsole()
         {
@@ -7268,7 +7269,7 @@ namespace SkyCoop
             {
                 MinutesFromStartServer = MinutesFromStartServer + 1;
             }
-            if (InOnline() == true && iAmHost == true)
+            if (InOnline() == false || iAmHost == true)
             {
                 ManageDropsLoads();
             }
@@ -8140,13 +8141,13 @@ namespace SkyCoop
             }
             else if (ServerConfig.m_PlayersSpawnType == 1) // Can select
             {
-                if(Data.m_ExperienceMode == (int)ExperienceModeType.Interloper)
-                {
-                    Data.m_Location = (int)GameRegion.RandomRegion;
-                    SelectGenderForConnection();
-                }else{
+                //if(Data.m_ExperienceMode == (int)ExperienceModeType.Interloper)
+                //{
+                //    Data.m_Location = (int)GameRegion.RandomRegion;
+                //    SelectGenderForConnection();
+                //}else{
                     InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
-                }
+                //}
             }
             else if (ServerConfig.m_PlayersSpawnType == 2) // Random
             {
@@ -8180,6 +8181,7 @@ namespace SkyCoop
             MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
 
             GameManager.m_StartRegion = Region;
+            InterloperHook = true;
 
             //InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = Region;
             GameManager.Instance().LaunchSandbox();
@@ -9224,12 +9226,24 @@ namespace SkyCoop
                     UnityEngine.Object.Destroy(obj.GetComponent<Bed>());
                 }
 
-                foreach (var comp in obj.GetComponents<Component>())
+                //foreach (var comp in obj.GetComponents<Component>())
+                //{
+                //    if (!(comp is Transform) && !(comp is DroppedGearDummy))
+                //    {
+                //        UnityEngine.Object.Destroy(comp);
+                //    }
+                //}
+                if (obj.GetComponent<CookingPotItem>() != null)
                 {
-                    if (!(comp is Transform) && !(comp is DroppedGearDummy))
-                    {
-                        UnityEngine.Object.Destroy(comp);
-                    }
+                    UnityEngine.Object.Destroy(obj.GetComponent<CookingPotItem>());
+                }
+                if (obj.GetComponent<EvolveItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(obj.GetComponent<EvolveItem>());
+                }
+                if (obj.GetComponent<FlareGunRoundItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(obj.GetComponent<FlareGunRoundItem>());
                 }
 
                 DroppedGearDummy DGD = obj.AddComponent<DroppedGearDummy>();
@@ -9735,7 +9749,7 @@ namespace SkyCoop
 
         public static void SaveAllLoadedDrops()
         {
-            if (iAmHost == false)
+            if (iAmHost == false && InOnline() == true)
             {
                 return;
             }
@@ -9762,7 +9776,7 @@ namespace SkyCoop
 
         public static void SaveAllLoadedOpenables()
         {
-            if(iAmHost == false)
+            if(iAmHost == false && InOnline() == true)
             {
                 return;
             }
