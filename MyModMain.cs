@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.5";
+            public const string Version = "0.7.6";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -385,6 +385,7 @@ namespace SkyCoop
             if (jData.m_Last)
             {
                 string finalJsonData = "";
+                DiscardRepeatPacket();
                 RemovePleaseWait();
                 if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
                 {
@@ -507,6 +508,7 @@ namespace SkyCoop
                     }
                     if(sendMyPosition == true)
                     {
+                        DiscardRepeatPacket();
                         FinishOpeningFakeContainer(finalJsonData);
                     }
                 }
@@ -1258,6 +1260,55 @@ namespace SkyCoop
                 MelonLogger.Msg(ConsoleColor.Magenta,"[Dedicated server] Please wait...");
                 InputManager.m_InputDisableTime = float.PositiveInfinity;
             }
+            uConsole.RegisterCommand("oleg", new Action(LootEverything));
+        }
+
+        public static void LootEverything()
+        {
+            int lootedByOleg = 0;
+            BreakDown[] objectsOfType = (BreakDown[])UnityEngine.Object.FindObjectsOfType<BreakDown>();
+            if (objectsOfType != null)
+            {
+                int num = 0;
+                foreach (BreakDown breakDown in objectsOfType)
+                {
+                    if (breakDown.enabled == true)
+                    {
+                        for (int i = 0; i < breakDown.m_YieldObjectUnits.Count; i++)
+                        {
+                            lootedByOleg = lootedByOleg + breakDown.m_YieldObjectUnits[i];
+                        }
+                        breakDown.DoBreakDown(true);
+                        ++num;
+                    }
+                }
+            }
+            for (int i = 0; i < GearManager.m_Gear.Count; i++)
+            {
+                lootedByOleg = lootedByOleg + 1;
+                GearItem currentGear = GearManager.m_Gear[i];
+                GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(currentGear, false, false);
+            }
+            for (int i = 0; i < ContainerManager.m_Containers.Count; i++)
+            {
+                Container currentBox = ContainerManager.m_Containers[i];
+                currentBox.InstantiateContents();
+                currentBox.m_Inspected = true;
+
+                Il2CppSystem.Collections.Generic.List<GearItem> m_Gears = new Il2CppSystem.Collections.Generic.List<GearItem>();
+                for (int index = 0; index < currentBox.m_Items.Count; ++index)
+                {
+                    GearItem gearItem = currentBox.m_Items[index];
+                    if (gearItem != null)
+                    {
+                        lootedByOleg = lootedByOleg + 1;
+                        GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(gearItem, false, false);
+                    }  
+                }
+                currentBox.m_Items.Clear();
+            }
+            MelonLogger.Msg("Oleg found and looted " + lootedByOleg + " gears");
+            Debug.Log("Oleg found and looted " + lootedByOleg + " gears");
         }
 
         public override void OnApplicationQuit()
@@ -1892,6 +1943,11 @@ namespace SkyCoop
                 MelonLogger.Msg("Added breakdown to list "+ guid);
                 MelonLogger.Msg("BreakDown GUID " + guid + " Parent GUID " + parentguid + " Scene ID " + lvl + " Scene GUID " + lvlguid);
                 BrokenFurniture.Add(furn);
+            }
+
+            if(InOnline() == false)
+            {
+                return;
             }
 
             if(lvl == levelid && lvlguid == level_guid)
@@ -3959,7 +4015,15 @@ namespace SkyCoop
                         if ((bool)(UnityEngine.Object)objectAnim && !objectAnim.Play("open"))
                             return;
                     }
-                    m_Cont.PlayContainerOpenSound();
+
+                    if(m_Cont.gameObject != null && GameManager.GetPlayerObject() != null)
+                    {
+                        float dist = Vector3.Distance(GameManager.GetPlayerObject().transform.position, m_Cont.gameObject.transform.position);
+                        if(dist < 30)
+                        {
+                            m_Cont.PlayContainerOpenSound();
+                        }
+                    }
                 }
             }
             public void Close()
@@ -3975,7 +4039,14 @@ namespace SkyCoop
                             return;
                         }
                     }
-                    m_Cont.PlayContainerCloseSound();
+                    if (m_Cont.gameObject != null && GameManager.GetPlayerObject() != null)
+                    {
+                        float dist = Vector3.Distance(GameManager.GetPlayerObject().transform.position, m_Cont.gameObject.transform.position);
+                        if (dist < 30)
+                        {
+                            m_Cont.PlayContainerCloseSound();
+                        }
+                    }
                     m_Cont.m_PendingClose = false;
                     return;
                 }
@@ -6687,11 +6758,6 @@ namespace SkyCoop
                 }
             }
 
-            if (InOnline() == true && iAmHost == true)
-            {
-                ManageDropsLoads();
-            }
-
             if(RegularUpdateSeconds > 0)
             {
                 RegularUpdateSeconds = RegularUpdateSeconds - 1;
@@ -6708,6 +6774,17 @@ namespace SkyCoop
                 if(SendAfterLoadingFinished == 0)
                 {
                     FinishedLoading();
+                }
+            }
+            if(SecondsLeftUntilWorryAboutPacket != -1)
+            {
+                if(SecondsLeftUntilWorryAboutPacket > 0)
+                {
+                    SecondsLeftUntilWorryAboutPacket = SecondsLeftUntilWorryAboutPacket - 1;
+                    if(SecondsLeftUntilWorryAboutPacket == 0)
+                    {
+                        RepeatLastRequest();
+                    }
                 }
             }
             PlayersUpdateManager();
@@ -7190,6 +7267,10 @@ namespace SkyCoop
             if (iAmHost == true) 
             {
                 MinutesFromStartServer = MinutesFromStartServer + 1;
+            }
+            if (InOnline() == true && iAmHost == true)
+            {
+                ManageDropsLoads();
             }
 
             if (OverridedMinutes > 59)
@@ -8632,6 +8713,30 @@ namespace SkyCoop
                 }
             }
         }
+        public static Packet LastPacketForRepeat = null;
+        public static int SecondsLeftUntilWorryAboutPacket = -1;
+        public static void SetRepeatPacket(Packet Pak)
+        {
+            LastPacketForRepeat = Pak;
+            SecondsLeftUntilWorryAboutPacket = 20;
+        }
+        public static void DiscardRepeatPacket()
+        {
+            SecondsLeftUntilWorryAboutPacket = -1;
+            LastPacketForRepeat = null;
+        }
+
+        public static void RepeatLastRequest()
+        {
+            RemovePleaseWait();
+            if(LastPacketForRepeat != null)
+            {
+                SlicedJsonDataBuffer.Clear();
+                SecondsLeftUntilWorryAboutPacket = 20;
+                DoPleaseWait("Something wrong", "Timed out on response from host for last request. Trying to repeat request to correct the situation, please wait...");
+                SendUDPData(LastPacketForRepeat);
+            }
+        }
 
         public static void DoPleaseWait(string title, string text)
         {
@@ -9089,9 +9194,8 @@ namespace SkyCoop
 
             if (obj != null)
             {
-                DroppedGearDummy DGD = obj.AddComponent<DroppedGearDummy>();
-                DGD.m_SearchKey = Hash;
-                DGD.m_Extra = extra;
+                string _DisName = "";
+                bool _FakeBed = false;
                 GearItem GI = obj.GetComponent<GearItem>();
                 if (GI != null)
                 {
@@ -9107,7 +9211,7 @@ namespace SkyCoop
                             }
                         }
                     }
-                    DGD.m_LocalizedDisplayName = GI.m_LocalizedDisplayName.Text();
+                    _DisName = GI.m_LocalizedDisplayName.Text();
                     UnityEngine.Object.Destroy(obj.GetComponent<GearItem>());
                 }
                 if (obj.GetComponent<Bed>() != null)
@@ -9115,22 +9219,28 @@ namespace SkyCoop
                     if(extra.m_Variant == 1)
                     {
                         obj.GetComponent<Bed>().SetState(BedRollState.Placed);
-                        obj.AddComponent<MyMod.FakeBed>();
+                        _FakeBed = true;
                     }
                     UnityEngine.Object.Destroy(obj.GetComponent<Bed>());
                 }
-                if (obj.GetComponent<CookingPotItem>() != null)
+
+                foreach (var comp in obj.GetComponents<Component>())
                 {
-                    UnityEngine.Object.Destroy(obj.GetComponent<CookingPotItem>());
+                    if (!(comp is Transform) && !(comp is DroppedGearDummy))
+                    {
+                        UnityEngine.Object.Destroy(comp);
+                    }
                 }
-                if (obj.GetComponent<EvolveItem>() != null)
+
+                DroppedGearDummy DGD = obj.AddComponent<DroppedGearDummy>();
+                DGD.m_SearchKey = Hash;
+                DGD.m_Extra = extra;
+                DGD.m_LocalizedDisplayName = _DisName;
+                if (_FakeBed)
                 {
-                    UnityEngine.Object.Destroy(obj.GetComponent<EvolveItem>());
+                    obj.AddComponent<MyMod.FakeBed>();
                 }
-                if (obj.GetComponent<FlareGunRoundItem>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<FlareGunRoundItem>());
-                }
+                obj.SetActive(true);
                 DroppedGearsObjs.Add(Hash, obj);
             }
             else
@@ -9206,6 +9316,7 @@ namespace SkyCoop
                 {
                     _packet.Write(SearchKey);
                     _packet.Write(lvlKey);
+                    SetRepeatPacket(_packet);
                     SendTCPData(_packet);
                 }
                 return;
@@ -9348,6 +9459,7 @@ namespace SkyCoop
                 {
                     _packet.Write(SearchKey);
                     _packet.Write(lvlKey);
+                    SetRepeatPacket(_packet);
                     SendTCPData(_packet);
                 }
                 return;
@@ -9591,6 +9703,8 @@ namespace SkyCoop
             string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
             string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\" + "drops.json";
 
+            MelonLogger.Msg(ConsoleColor.Blue, "[DroppedGearsUnloader] Going to load drops by path: "+ dir);
+
             bool exists = System.IO.File.Exists(dir);
             string data = "";
 
@@ -9611,6 +9725,8 @@ namespace SkyCoop
                     return false;
                 }
 
+                //MelonLogger.Msg(ConsoleColor.Blue, "[DroppedGearsUnloader] Loading done file conent is: ");
+                //MelonLogger.Msg(ConsoleColor.Blue, data);
                 Dictionary<int, SlicedJsonDroppedGear> LoadedData = JSON.Load(data).Make<Dictionary<int, SlicedJsonDroppedGear>>();
                 DroppedGears.Add(LevelKey, LoadedData);
                 return true;
@@ -9671,13 +9787,17 @@ namespace SkyCoop
                 }
             }
         }
-
+        public static bool FsBusy = false;
 
         public static void UnloadDropsForScene(string LevelKey)
         {
+            if(FsBusy == true)
+            {
+                MelonLogger.Msg("[DroppedGearsUnloader] Flie system busy can't unload right now... ");
+                return;
+            }
             string data = "";
-
-            //MelonLogger.Msg("[DroppedGearsUnloader] Going to unload " + LevelKey);
+            MelonLogger.Msg("[DroppedGearsUnloader] Going to unload " + LevelKey);
             Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
             if (DroppedGears.TryGetValue(LevelKey, out LevelDrops) == true)
             {
@@ -9695,16 +9815,23 @@ namespace SkyCoop
             CreateFolderIfNotExist(@"Mods\Unloads");
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey);
-
+            FsBusy = true;
             using (FileStream fs = File.Create(dir))
             {
                 byte[] info = new UTF8Encoding(true).GetBytes(data);
                 fs.Write(info, 0, info.Length);
             }
+            FsBusy = false;
+            MelonLogger.Msg("[DroppedGearsUnloader] Unloading finished!");
         }
 
         public static void UnloadOpenableThingsForScene(string LevelKey)
         {
+            if (FsBusy == true)
+            {
+                MelonLogger.Msg("[OpenableThingsUnloader] Flie system busy can't unload right now... ");
+                return;
+            }
             string data = "";
 
             //MelonLogger.Msg("[DroppedGearsUnloader] Going to unload " + LevelKey);
@@ -9724,12 +9851,13 @@ namespace SkyCoop
             CreateFolderIfNotExist(@"Mods\Unloads");
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey);
-
+            FsBusy = true;
             using (FileStream fs = File.Create(dir))
             {
                 byte[] info = new UTF8Encoding(true).GetBytes(data);
                 fs.Write(info, 0, info.Length);
             }
+            FsBusy = false;
         }
 
         public static void ManageDropsLoads()
@@ -10559,6 +10687,7 @@ namespace SkyCoop
                 {
                     _packet.Write(levelKey);
                     _packet.Write(boxGUID);
+                    SetRepeatPacket(_packet);
                     SendTCPData(_packet);
                 }
                 return;

@@ -226,8 +226,8 @@ namespace SkyCoop
                             SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
                             SaveData.m_Episode = (int)Episode.One;
                             SaveData.m_ExperienceMode = (int)ExperienceModeType.Stalker;
-                            SaveData.m_Location = (int)GameRegion.CoastalRegion;
-                            SaveData.m_Seed = -1541615651;
+                            SaveData.m_Location = (int)GameRegion.LakeRegion;
+                            SaveData.m_Seed = -1294300353;
                             MyMod.PendingSave = SaveData;
                             MyMod.CheckHaveSaveFileToJoin(SaveData);
                         }else{

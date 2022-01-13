@@ -998,6 +998,7 @@ namespace SkyCoop
         public static void OPENEMPTYCONTAINER(Packet _packet)
         {
             MelonLogger.Msg("Host sent that this container is empty!");
+            MyMod.DiscardRepeatPacket();
             MyMod.FinishOpeningFakeContainer("");
         }
         public static void MARKSEARCHEDCONTAINERS(Packet _packet)
@@ -1028,11 +1029,13 @@ namespace SkyCoop
         public static void LOADINGSCENEDROPSDONE(Packet _packet)
         {
             MelonLogger.Msg("Host sent scene loading done!");
+            MyMod.DiscardRepeatPacket();
             MyMod.RemovePleaseWait();
         }
         public static void GEARNOTEXIST(Packet _packet)
         {
             MelonLogger.Msg("Gear I requested is not exist!");
+            MyMod.DiscardRepeatPacket();
             MyMod.RemovePleaseWait();
         }
         public static void USEOPENABLE(Packet _packet)

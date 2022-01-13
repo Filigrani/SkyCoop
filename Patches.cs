@@ -4813,6 +4813,7 @@ namespace SkyCoop
             {
                 _packet.Write(MyMod.levelid);
                 _packet.Write(MyMod.level_guid);
+                MyMod.SetRepeatPacket(_packet);
                 SendTCPData(_packet);
             }
         }
