@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.6b";
+            public const string Version = "0.7.6c";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -2120,7 +2120,6 @@ namespace SkyCoop
             public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
             void Update()
             {
-
             }
         }
         public class IgnoreDropOverride : MonoBehaviour
@@ -9196,12 +9195,16 @@ namespace SkyCoop
 
             if (obj != null)
             {
+                DisableObjectForXPMode.RemoveDisabler(obj);
                 string _DisName = "";
                 bool _FakeBed = false;
                 GearItem GI = obj.GetComponent<GearItem>();
                 if (GI != null)
                 {
-                    if(GI.m_FoodItem != null)
+                    GI.m_RolledSpawnChance = true;
+                    GI.m_StartHasBeenCalled = true;
+                    GI.m_MarkedForNextUpdateDestroy = false;
+                    if (GI.m_FoodItem != null)
                     {
                         if (extra.m_Variant == 1)
                         {
@@ -9245,7 +9248,6 @@ namespace SkyCoop
                 {
                     UnityEngine.Object.Destroy(obj.GetComponent<FlareGunRoundItem>());
                 }
-
                 DroppedGearDummy DGD = obj.AddComponent<DroppedGearDummy>();
                 DGD.m_SearchKey = Hash;
                 DGD.m_Extra = extra;

@@ -5423,6 +5423,31 @@ namespace SkyCoop
             }
         }
 
+        //[HarmonyPatch(typeof(GearItem), "RollSpawnChance")]
+        //private static class GearItem_RollSpawnChance
+        //{
+        //    private static bool Prefix(GearItem __instance)
+        //    {
+        //        MelonLogger.Msg(ConsoleColor.Blue, "[GearItem][RollSpawnChance] " + __instance.gameObject.name + " Gear trying to roll chance!");
+        //        if (__instance.m_BeenInPlayerInventory || __instance.m_BeenInContainer || __instance.m_RolledSpawnChance)
+        //        {
+        //            MelonLogger.Msg(ConsoleColor.Blue, "[GearItem][RollSpawnChance] " + __instance.gameObject.name + " Refuse to do so ");
+        //            return false;
+        //        }
+        //        __instance.m_RolledSpawnChance = true;
+        //        if (Utils.Approximately(__instance.m_SpawnChance, 100f, 0.0001f))
+        //        {
+        //            MelonLogger.Msg(ConsoleColor.Blue, "[GearItem][RollSpawnChance] " + __instance.gameObject.name + " Refuse to do so ");
+        //            return false;
+        //        }
+
+        //        float spawnChance = __instance.m_SpawnChance * GameManager.GetExperienceModeManagerComponent().GetGearSpawnChanceScale();
+        //        bool ok = GameManager.RollSpawnChance(__instance.gameObject, spawnChance);
+        //        MelonLogger.Msg(ConsoleColor.Blue, "[GearItem][RollSpawnChance] "+ __instance.gameObject.name + " Rolling result: ShouldSpawn = "+ ok);
+        //        return false;
+        //    }
+        //}
+
         //[HarmonyLib.HarmonyPatch(typeof(TLD_TimelineDirector), "HandleGamePause")]
         //internal static class TLD_TimelineDirector_HandleGamePause
         //{
