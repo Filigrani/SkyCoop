@@ -2,41 +2,41 @@
 Multiplayer for The Long Dark game
 
 We don't own The Long Dark! The Long Dark belong to Hinterland Studio Inc. 
-This is free modification that loads with using MelonLoader.
+This is a free modification that loads using MelonLoader.
 
-# How to install mod?
+# How to install mod
 
-First of all this is mod that loads with using MelonLoader, so you need to install [MelonLoader](https://melonwiki.xyz/#/)
-Next download last release version of the mod, and unzip files from archive in "Mods" folder in your The Long Dark directory.
+First of all this mod loads using MelonLoader, so you need to install [MelonLoader](https://melonwiki.xyz/#/)
+Next download the latest release of the mod, and unzip the files from the archive into the "Mods" folder in the install directory for The Long Dark.
 
 
-# How to play online?
+# How to play online
 
-How to play the mod?
+How to play the mod
 
-If you wanna play with using Epic Games Store version or GoG. You need to use lan network emulator.
-If all players use Steam version, host just can invite players by steam, if so, start with step 5.
+If you wanna play on the Epic Games Store version or GoG, you need to use a LAN emulator.
+If all players are using the Steam version, then the host can just invite players through Steam. If so, start with step 5.
 
-1. Install any LAN network emulators, I recommend [LogMeIn Hamachi](https://www.vpn.net/)
-2. Register account in the hamachi.
-3. Create room, and tell other player name of the room to they join in.
+1. Install any LAN network emulator, I recommend [LogMeIn Hamachi](https://www.vpn.net/)
+2. Register an account in the hamachi.
+3. Create a room, and tell other players the name of the room for them to join.
 4. When you join the room in the hamachi, copy your friend's IPv4 adress in the hamachi and run the game.
 
-5. Now host player need to select game mode you want to play, Survival sandbox or Challenges. Just select game mode like a you do when play single player, create new save file (Do not use your old single player saves, this will case to desync of items and houses).
-6. Just host player loaded press Escape button, there will be new button "Host", press it (If you on steam version  you will have choice, use steam if all your friends use steam version, if not use local), and server will be up (if you not sure that server is started, check out melon loader console window there will be message about it).
-7. Other player just need to press "Connect" button in main menu, input IP from hamachi, and press connect, If the connection was successful, you will see panel with selecting survivor(or it will be load save file itself instantly if you has played before).
-(On steam version, if you want to join by invite, your game shouln't be run when you click on join button at steam chat).
+5. Now the host player need to select the game mode you want to play: Survival, Sandbox or Challenges. Just select game mode like you do when playing single player, and create a new save file (Do not use your old single player saves, this will cause desync of items and houses).
+6. Host player: once the game has loaded,  press the Escape button. There will be new button "Host", press it (If you're on the Steam version you will have a choice. Use Steam if all your friends are using the Steam version, if not use local), and then the server will be up! If you not sure that the server has started, check out the MelonLoader console window, and there will be a message about it.
+7. Other players just need to press the "Connect" button in the main menu, input the IP from hamachi, and press connect. If the connection was successful, you will see a menu to select a survivor (or it will load a save file itself automatically if you have played before).
+On the Steam version, if you want to join by invite, your game shouldn't be running when you click on join button in Steam chat.
 
 # Mechanics:
-- Save Compatibility Please do not use your old saves/single player saves, please create new save slot for multiplayer, if you will use your old saves, this will case to a lot of desynces.
-- Giving item to other player You can give item to other player if they are near! Open your inventory, select item you want to give, and press G on your keyboard.
-- Cycle time and sleeping Time itself is going in runtime, 1 in game minute is 5 seconds of real time. You can still sleep, pass time or harvest animals, it still wastes your calories, but there are no time speedups, so anyway if both players are sleeping, time will be skipped based on the highest number of hours that players have selected. (Like if player1 selected 3 hours but player2 has selected 5 hours, 5 hours will be skipped).
-- Spawned items All spawned items are same for every player, if any player pickup item, item will be removed for all other players.
-- Animals Animals can attack or react only on nearest player.
-- Locations All players can be in different locations in same time.
-- Friendly Fire Watch your fire! You can hurt other player with firearms, be careful when hunting animals!
-- Reviving Across whole world you can find medkits, or craft them yourself. If one of players are dead, other players can revive them with medkit, you need have medkit in your inventory and hover on body of player until you see text "Revive".
--  Saving To save your progress, you need to sleep one hour. Saves works for host and client.
+- **Save Compatibility** Please do not use your old saves/single player saves! Create a new save slot for multiplayer. If you use your old saves, this will cause a lot of desyncs.
+- **Giving item to other player** You can give an item to another player if they are nearby! Open your inventory, select the item you want to give, and press G on your keyboard.
+- **Cycle time and sleeping** Time itself is going in runtime, 1 in game minute is 5 seconds of real time. You can still sleep, pass time or harvest animals. It still wastes your calories, but there are no time speedups. If both players are sleeping, time will be skipped based on the highest number of hours that all players have selected. (For example, if player1 selected 3 hours, but player2 has selected 5 hours, 5 hours will be skipped).
+- **Spawned items** All spawned items are the same for every player. If any player picks up an item, that item will be removed for all other players.
+- **Animals** Animals can only attack or react to the nearest player.
+- **Locations** All players can be in different locations at the same time.
+- **Friendly Fire** Watch your fire! You can hurt other player with firearms, be careful when hunting animals!
+- **Reviving** Across the whole world you can find medkits, or craft them yourself. If a player is dead, another player can revive them with a medkit. You need to have a medkit in your inventory and hover over the body of the dead player until you see the text "Revive".
+-  **Saving** To save your progress, you need to sleep one hour. Saves works for host and client.
 
 
 # Used stuff:
@@ -67,7 +67,7 @@ Tutorial how to write multiplayer https://www.youtube.com/playlist?list=PLXkn83W
 
 ----------------------------------------------------------------------
 
-Used for debuging:
+Used for debugging:
 
 UnityExplorer https://github.com/sinai-dev/UnityExplorer
 DeveloperConsole https://github.com/FINDarkside/TLD-Developer-Console
