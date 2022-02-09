@@ -17,17 +17,62 @@ namespace SkyCoop
             GameObject.Find("Panel_MainMenu/MainPanel/Main/TLD_wordmark").transform.localPosition += new Vector3(0, (numOfMainMenuItems - 6) * 30, 0);
         }
 
+        //public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
+        //{
+        //    Panel_MainMenu.MainMenuItem mainMenuItem = new Panel_MainMenu.MainMenuItem();
+        //    mainMenuItem.m_LabelLocalizationId = name;
+        //    mainMenuItem.m_Type = Panel_MainMenu.MainMenuItem.MainMenuItemType.Story + plus;
+        //    __instance.m_MenuItems.Insert(order, mainMenuItem);
+
+        //    string id = __instance.m_MenuItems[order].m_Type.ToString();
+        //    int type = (int)__instance.m_MenuItems[order].m_Type;
+
+        //    __instance.m_BasicMenu.AddItem(id, type, order, name, "", "", new Action(__instance.OnSandbox), Color.gray, Color.white);
+        //}
         public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
         {
             Panel_MainMenu.MainMenuItem mainMenuItem = new Panel_MainMenu.MainMenuItem();
             mainMenuItem.m_LabelLocalizationId = name;
-            mainMenuItem.m_Type = Panel_MainMenu.MainMenuItem.MainMenuItemType.Story + plus;
+            mainMenuItem.m_Type = (Panel_MainMenu.MainMenuItem.MainMenuItemType) 30+plus;
             __instance.m_MenuItems.Insert(order, mainMenuItem);
 
             string id = __instance.m_MenuItems[order].m_Type.ToString();
             int type = (int)__instance.m_MenuItems[order].m_Type;
 
             __instance.m_BasicMenu.AddItem(id, type, order, name, "", "", new Action(__instance.OnSandbox), Color.gray, Color.white);
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(BasicMenu), "UpdateDescription", null)]
+        internal class BasicMenu_UpdateDescription_Post
+        {
+            private static void Postfix(BasicMenu __instance, int buttonIndex)
+            {
+
+                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description30")
+                {
+                    __instance.m_DescriptionLabel.text = "People who supported the project.";
+                }
+                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description31")
+                {
+                    __instance.m_DescriptionLabel.text = "Connect by IP adress. If you plan to join by steam invite, quit the game first, game should not be runned, and then press join from steam chat.";
+                }
+                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description32")
+                {
+                    __instance.m_DescriptionLabel.text = "Configure and host the server.";
+                }
+                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description33")
+                {
+                    __instance.m_DescriptionLabel.text = "Reconnect to server. NOT CONNECT! Never use this option for first connect! Because you will miss tone of inital information about sync.";
+                }
+                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description34")
+                {
+                    __instance.m_DescriptionLabel.text = "Disconnect from current server. Make sure you still alive, cause if you does not. Your savefile will be deleted same as in singleplayer game when you die.";
+                }
+                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description35")
+                {
+                    __instance.m_DescriptionLabel.text = "Invite your steam friend to your P2P server. Only invites from this menu will work, invites from steam overlay won't work at all.";
+                }
+            }
         }
 
         public static void FixUpButtonStrings(Panel_PauseMenu __instance)
@@ -142,16 +187,16 @@ namespace SkyCoop
             MelonLogger.Msg("New hook, clicked "+_ID);
         }
 
-        public static void AddButtonPause(Panel_PauseMenu __instance, string name, int order)
+        public static void AddButtonPause(Panel_PauseMenu __instance, string name, int order, int plus)
         {
-            Panel_PauseMenu.PauseMenuItemType mainMenuItem = Panel_PauseMenu.PauseMenuItemType.BackToGame;
-            __instance.m_MenuItems.Insert(order, mainMenuItem-order);
+            Panel_PauseMenu.PauseMenuItemType mainMenuItem = (Panel_PauseMenu.PauseMenuItemType) 30+ plus;
+            __instance.m_MenuItems.Insert(order, mainMenuItem);
+
             Action act = new Action(() => CustomButtonClick(order));
-            //__instance.m_BasicMenu.AddItem("", 0, order, name, "", "", new Action(act), Color.gray, Color.white);
             string id = __instance.m_MenuItems[order].ToString();
             int menuItem = (int)__instance.m_MenuItems[order];
 
-            __instance.m_BasicMenu.AddItem(id, menuItem, order, name, name, (string)null, act, Color.green, Color.white);
+            __instance.m_BasicMenu.AddItem(id, menuItem, order, name, "", "", act, Color.green, Color.white);
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Initialize", null)]
@@ -162,8 +207,8 @@ namespace SkyCoop
                 MelonLogger.Msg("[UI] Trying modify main menu...");
                 //if (!InterfaceManager.IsMainMenuEnabled()) return;
                 //MelonLogger.Msg("[UI] Main main enabled starting modify...");
-                AddButton(__instance, "Donaters", 1, 10);
-                AddButton(__instance, "Connect", 5, 9);
+                AddButton(__instance, "Donaters", 1, 0);
+                AddButton(__instance, "Connect", 5, 1);
 
                 MoveUpMainMenuWordmark(Convert.ToInt16(__instance.m_BasicMenu.m_MenuItems.Count.ToString()));
             }
@@ -173,10 +218,10 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_PauseMenu __instance)
             {
-                AddButtonPause(__instance, "HOST A SERVER", 0);
-                AddButtonPause(__instance, "RECONNECT", 1);
-                AddButtonPause(__instance, "DISCONNECT", 2);
-                AddButtonPause(__instance, "INVITE", 3);
+                AddButtonPause(__instance, "HOST A SERVER", 0, 2);
+                AddButtonPause(__instance, "RECONNECT", 1, 3);
+                AddButtonPause(__instance, "DISCONNECT", 2, 4);
+                AddButtonPause(__instance, "INVITE", 3, 5);
 
                 if(__instance.gameObject != null && __instance.gameObject.transform.GetChild(4))
                 {

@@ -261,6 +261,8 @@ namespace SkyCoop
                     //}
                     //GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = LoadSceneSTR;
                     //GameManager.LoadScene(LoadSceneSTR, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+                    MyMod.DebugDiagnosis = true;
+                    MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {

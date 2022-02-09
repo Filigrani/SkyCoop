@@ -112,6 +112,9 @@ namespace GameServer
         LOADINGSCENEDROPSDONE,
         GEARNOTEXIST,
         USEOPENABLE,
+        TRYDIAGNISISPLAYER,
+        SENDMYAFFLCTIONS,
+        CUREAFFLICTION,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -219,6 +222,9 @@ namespace GameServer
         LOADINGSCENEDROPSDONE,
         GEARNOTEXIST,
         USEOPENABLE,
+        TRYDIAGNISISPLAYER,
+        SENDMYAFFLCTIONS,
+        CUREAFFLICTION,
     }
 
     public class Packet : IDisposable
@@ -696,6 +702,14 @@ namespace GameServer
             Write(obj.m_Variant);
             Write(obj.m_GearName);
         }
+        public void Write(MyMod.AffictionSync obj)
+        {
+            Write(obj.m_Type);
+            Write(obj.m_Location);
+            Write(obj.m_Case);
+            Write(obj.m_ShouldBeTreated);
+        }
+        
         #endregion
 
         #region Read Data
@@ -1276,9 +1290,15 @@ namespace GameServer
             obj.m_GearName = ReadString();
             return obj;
         }
-
-
-
+        public MyMod.AffictionSync ReadAffiction()
+        {
+            MyMod.AffictionSync obj = new MyMod.AffictionSync();
+            obj.m_Type = ReadInt();
+            obj.m_Location = ReadInt();
+            obj.m_Case = ReadString();
+            obj.m_ShouldBeTreated = ReadBool();
+            return obj;
+        }
         #endregion
 
         private bool disposed = false;

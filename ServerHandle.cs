@@ -1015,5 +1015,49 @@ namespace GameServer
             bool state = _packet.ReadBool();
             MyMod.ChangeOpenableThingState(LevelKey, _GUID, state);
         }
+        public static void TRYDIAGNISISPLAYER(int _fromClient, Packet _packet)
+        {
+            int ForWho = _packet.ReadInt();
+            if (ForWho == 0)
+            {
+                MyMod.SendMyAffictions(_fromClient, GameManager.GetConditionComponent().m_CurrentHP);
+            }else{
+                ServerSend.TRYDIAGNISISPLAYER(ForWho, _fromClient);
+            }
+        }
+        public static void CUREAFFLICTION(int _fromClient, Packet _packet)
+        {
+            MyMod.AffictionSync toCure = _packet.ReadAffiction();
+            int ForWho = _packet.ReadInt();
+
+            if(ForWho == 0)
+            {
+                MyMod.OtherPlayerCuredMyAffiction(toCure);
+            }else{
+                ServerSend.CUREAFFLICTION(ForWho, toCure);
+            }
+        }
+        public static void SENDMYAFFLCTIONS(int _fromClient, Packet _packet)
+        {
+            int Count = _packet.ReadInt();
+            List<MyMod.AffictionSync> Affs = new List<MyMod.AffictionSync>();
+
+            for (int index = 0; index < Count; ++index)
+            {
+                MyMod.AffictionSync newElement = _packet.ReadAffiction();
+                Affs.Add(newElement);
+            }
+            float hp = _packet.ReadFloat();
+            int forWho = _packet.ReadInt();
+
+            MelonLogger.Msg(ConsoleColor.Green, "Client " + _fromClient + " sent " + Count + " craps, to "+ forWho);
+
+            if (forWho == 0)
+            {
+                MyMod.CheckOtherPlayer(Affs, _fromClient, hp);
+            }else{
+                ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, _fromClient);
+            }
+        }
     }
 }

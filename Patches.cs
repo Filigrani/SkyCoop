@@ -1366,15 +1366,18 @@ namespace SkyCoop
             {
                 GameObject shokal = bh.gameObject;
 
-                for (int i = 0; i < MyMod.playersData.Count; i++)
+                if(shokal.GetComponent<ObjectGuid>() != null)
                 {
-                    if (MyMod.playersData[i] != null)
+                    for (int i = 0; i < MyMod.playersData.Count; i++)
                     {
-                        string otherAnimlGuid = MyMod.playersData[i].m_HarvestingAnimal;
-                        if (otherAnimlGuid == shokal.GetComponent<ObjectGuid>().Get())
+                        if (MyMod.playersData[i] != null)
                         {
-                            HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " IS BUSY WITH THIS ALREADY");
-                            return false;
+                            string otherAnimlGuid = MyMod.playersData[i].m_HarvestingAnimal;
+                            if (otherAnimlGuid == shokal.GetComponent<ObjectGuid>().Get())
+                            {
+                                HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " IS BUSY WITH THIS ALREADY");
+                                return false;
+                            }
                         }
                     }
                 }
@@ -1963,6 +1966,13 @@ namespace SkyCoop
                         return true;
                     }
                 }
+                if (arguments[i] == "skip" || arguments[i] == "-skip")
+                {
+                    if (i + 1 <= arguments.Length - 1)
+                    {
+                        return true;
+                    }
+                }
             }
             return false;
         }
@@ -2025,6 +2035,7 @@ namespace SkyCoop
                     {
                         MelonLogger.Msg("Unknown build of game, not using SteamWorks.NET");
                     }
+                    bool HasJoin = false;
                     if (v_type == "Steam")
                     {
                         MelonLogger.Msg("[SteamWorks.NET] Loading...");
@@ -2047,24 +2058,39 @@ namespace SkyCoop
                                     MyMod.SteamServerWorks = arguments[i + 1];
                                     MyMod.ConnectedSteamWorks = true;
                                     MyMod.NeedConnectAfterLoad = 3;
+                                    HasJoin = true;
                                     break;
                                 }
                             }
                         }
-
-
-                        //if (arguments.Count() > 2)
-                        //{
-                        //    int PreLast = arguments.Count() - 2;
-                        //    int Last = arguments.Count() - 1;
-                        //    if(arguments[PreLast] == "join")
-                        //    {
-                        //        MelonLogger.Msg("[STEAMWORKS.NET] Connect from startup to: "+ arguments[Last]);
-                        //        MyMod.ConnectedSteamWorks = true;
-                        //        MyMod.SteamServerWorks = arguments[Last];
-                        //        MyMod.NeedConnectAfterLoad = 3;
-                        //    }
-                        //}
+                    }
+                    if (HasJoin == false)
+                    {
+                        string[] arguments = Environment.GetCommandLineArgs();
+                        for (int i = 0; i < arguments.Length; i++)
+                        {
+                            if (arguments[i] == "slot" || arguments[i] == "-slot")
+                            {
+                                if (i + 1 <= arguments.Length - 1)
+                                {
+                                    MyMod.AutoStartSlot = arguments[i + 1];
+                                    MyMod.NeedLoadSaveAfterLoad = 3;
+                                    MyMod.NeedApplyAutoCMDs = true;
+                                }
+                            }
+                            if (arguments[i] == "cmd" || arguments[i] == "-cmd")
+                            {
+                                if (i + 1 <= arguments.Length - 1)
+                                {
+                                    string cmd = arguments[i + 1].Replace("@", " ");
+                                    MyMod.AutoCMDs.Add(cmd);
+                                }
+                            }
+                            if (arguments[i] == "host" || arguments[i] == "-host")
+                            {
+                                MyMod.AutoHostWhenLoaded = true;
+                            }
+                        }
                     }
 
                     if (Application.isBatchMode)
@@ -3447,21 +3473,31 @@ namespace SkyCoop
                             return;
                         }
                         string actString = GetPriorityActionForPlayer(mP.m_ID, mP).m_DisplayText;
-                        if(actString == "Look")
+                        string PlayerName = "";
+                        if (MyMod.playersData[mP.m_ID] != null && MyMod.playersData[mP.m_ID].m_Name != "")
                         {
-                            if (MyMod.playersData[mP.m_ID] != null && MyMod.playersData[mP.m_ID].m_Name != "")
-                            {
-                                actString = MyMod.playersData[mP.m_ID].m_Name;
-                            }else{
-                                actString = "Player";
-                            }
+                            PlayerName = MyMod.playersData[mP.m_ID].m_Name;
+                        }else{
+                            PlayerName = "Player";
                         }
-                        __result = actString;
+                        __result = PlayerName+"\n"+actString;
                     }
                     else if(interactiveObject.GetComponent<MyMod.DroppedGearDummy>() != null)
                     {
                         MyMod.DroppedGearDummy DGD = interactiveObject.GetComponent<MyMod.DroppedGearDummy>();
-                        string DroppedString = " Dropped by "+DGD.m_Extra.m_Dropper;
+
+                        string ActionString = "Dropped";
+                        bool IsSnare = false;
+                        if (interactiveObject.name.Contains("GEAR_Snare"))
+                        {
+                            IsSnare = true;
+                            if (DGD.m_Extra.m_Variant != 0)
+                            {
+                                ActionString = "Setup";
+                            }
+                        }
+
+                        string DroppedString = " "+ActionString + " by "+DGD.m_Extra.m_Dropper;
                         if (DGD.m_Extra.m_GoalTime == 0)
                         {
                             if(DroppedString != "")
@@ -3473,13 +3509,36 @@ namespace SkyCoop
                         }
                         else if (DGD.m_Extra.m_GoalTime == -1)
                         {
-                            __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
+                            if(IsSnare == false)
+                            {
+                                __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
+                            }else{
+                                
+                                if(DGD.m_Extra.m_Variant == 1)
+                                {
+                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
+                                }else{
+                                    __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
+                                }
+                            }
                         }else{
                             int minutesOnDry = MyMod.MinutesFromStartServer-DGD.m_Extra.m_DroppedTime;
                             int minutesLeft = MyMod.TimeToDry(interactiveObject.name)-minutesOnDry+1;
                             int hours = minutesLeft / 60;
 
-                            string str = DGD.m_LocalizedDisplayName + "\n" + "Cures in: ";
+                            string str = DGD.m_LocalizedDisplayName + "\n";
+                            if(IsSnare == false)
+                            {
+                                str = str + "Cures in: ";
+                            }else{
+                                
+                                if(DGD.m_Extra.m_Variant == 1)
+                                {
+                                    str = str + "May catch: ";
+                                }else{
+                                    str = str + "Will catch: ";
+                                }
+                            }
 
                             if(hours >= 24)
                             {
@@ -3510,7 +3569,12 @@ namespace SkyCoop
                                             str = str + minutesLeft + " minute";
                                         }
                                     }else{
-                                        str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
+                                        if(IsSnare == false)
+                                        {
+                                            str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
+                                        }else{
+                                            str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
+                                        }
                                     }
                                 }
                             }
@@ -3842,17 +3906,17 @@ namespace SkyCoop
             {
                 act = MyMod.GetActionForOtherPlayer("Lit");
             }
-            else if (mP.m_BloodLosts > 0)
-            {
-                act = MyMod.GetActionForOtherPlayer("Bandage");
-            }
-            else if (mP.m_NeedAntiseptic == true)
-            {
-                act = MyMod.GetActionForOtherPlayer("Sterilize");
-            }
+            //else if (mP.m_BloodLosts > 0)
+            //{
+            //    act = MyMod.GetActionForOtherPlayer("Bandage");
+            //}
+            //else if (mP.m_NeedAntiseptic == true)
+            //{
+            //    act = MyMod.GetActionForOtherPlayer("Sterilize");
+            //}
             else
             {
-                act = MyMod.GetActionForOtherPlayer("Look");
+                act = MyMod.GetActionForOtherPlayer("Examine");
             }
             return act;
         }
@@ -3935,8 +3999,14 @@ namespace SkyCoop
                                 __result = false;
                             }
                         }
+                        else if (PAction == "Examine")
+                        {
+                            MyMod.DoLongAction(mP, ProcessText, PAction);
+                            __result = true;
+                        }
                     }else if (obj.GetComponent<MyMod.DroppedGearDummy>() != null)
                     {
+                        MelonLogger.Msg("Trying interact with fake gear");
                         if(obj.GetComponent<MyMod.FakeBed>() == null)
                         {
                             MelonLogger.Msg("Trying pickup fake drop");
@@ -4889,6 +4959,87 @@ namespace SkyCoop
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "OnBack")]
+        public static class Panel_Diagnosis_OnBack
+        {
+            public static void Postfix(Panel_Diagnosis __instance)
+            {
+                MelonLogger.Msg("Stop diagnosis");
+                if(MyMod.DiagnosisDummy != null)
+                {
+                    UnityEngine.Object.Destroy(MyMod.DiagnosisDummy);
+                }
+            }
+        }
+
+        public static bool ShouldKeepAfterTreatment(AfflictionType type)
+        {
+            if (type == AfflictionType.FoodPoisioning
+                || type == AfflictionType.Dysentery
+                || type == AfflictionType.BrokenRib
+                || type == AfflictionType.Infection
+                || type == AfflictionType.IntestinalParasites)
+            {
+                return true;
+            }
+            return false;
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "PostTreatment")]
+        public static class Panel_Diagnosis_PostTreatment
+        {
+            public static void Prefix(Panel_Diagnosis __instance)
+            {
+                if (MyMod.DiagnosisDummy != null)
+                {
+                    MelonLogger.Msg("Cured other player");
+                    MyMod.AffictionSync aff = new MyMod.AffictionSync();
+
+                    aff.m_Location = (int)__instance.GetSelectedAffliction().m_Location;
+                    aff.m_Type = (int)__instance.GetSelectedAfflictionType();
+                    if(ShouldKeepAfterTreatment(__instance.GetSelectedAfflictionType()) == true)
+                    {
+                        __instance.GetSelectedAffliction().m_Remedy1Complete = false;
+                        __instance.GetSelectedAffliction().m_RestHours = 1;
+                    }
+
+                    MyMod.SendCureAffliction(aff);
+                }
+            }
+        }
+        //[HarmonyLib.HarmonyPatch(typeof(NPCAffliction), "IsTreated")]
+        //public static class NPCAffliction_IsTreated
+        //{
+        //    public static void Postfix(NPCAffliction __instance, bool __result)
+        //    {
+        //        if(__instance.m_RestHours == -1)
+        //        {
+        //            __result = false;
+        //        }
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "RefreshRightPage")]
+        public static class Panel_Diagnosis_RefreshRightPage
+        {
+            public static void Postfix(Panel_Diagnosis __instance)
+            {
+                __instance.m_LabelCause.color = Color.gray;
+                if(__instance.m_SelectedAffButton != null)
+                {
+                    AfflictionType AffType = __instance.GetSelectedAffliction().m_Definition.m_AfflictionType;
+                    if (__instance.GetSelectedAffliction().m_RestHours == 1 && AffType != AfflictionType.Frostbite && AffType != AfflictionType.CabinFever)
+                    {
+                        NGUITools.SetActive(__instance.m_RightPageObject, false);
+                        if (AffType == AfflictionType.InfectionRisk || Affliction.IsBadAffliction(AffType))
+                        {
+                            __instance.m_LabelCause.text = "AFFLICTION TREATED\nPATIENT NEED TIME TO HEAL";
+                            __instance.m_LabelCause.color = new Color(0.25f, 1, 0);
+                        }
+                    }
+                }
+            }
+        }
         //[HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")]
         //public static class BaseAiManager_Serialize
         //{
@@ -5186,19 +5337,19 @@ namespace SkyCoop
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "OnQuarter")]
-        internal static class Panel_BodyHarvest_NoQuatrate
-        {
-            private static bool Prefix(Panel_BodyHarvest __instance)
-            {
-                if(MyMod.InOnline() == true)
-                {
-                    __instance.DisplayErrorMessage("You can't quarter in multiplayer!");
-                    return false;
-                }
-                return true;
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "OnQuarter")]
+        //internal static class Panel_BodyHarvest_NoQuatrate
+        //{
+        //    private static bool Prefix(Panel_BodyHarvest __instance)
+        //    {
+        //        if(MyMod.InOnline() == true)
+        //        {
+        //            __instance.DisplayErrorMessage("You can't quarter in multiplayer!");
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(GearItem), "DecayOverTODHours")]
         internal static class GearItem_DecayOverTODHours
         {

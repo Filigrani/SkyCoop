@@ -1892,6 +1892,40 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void TRYDIAGNISISPLAYER(int _toClient, int _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.TRYDIAGNISISPLAYER))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void CUREAFFLICTION(int _toClient, MyMod.AffictionSync _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CUREAFFLICTION))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void SENDMYAFFLCTIONS(int _toClient, List<MyMod.AffictionSync> _msg, float hp, int fromWho)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.SENDMYAFFLCTIONS))
+            {
+                _packet.Write(_msg.Count);
+                for (int index = 0; index < _msg.Count; ++index)
+                {
+                    _packet.Write(_msg[index]);
+                }
+                _packet.Write(hp);
+                _packet.Write(fromWho);
+                SendTCPData(_toClient, _packet);
+            }
+        }
         public static void CHANGEAIM(int _From, bool _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CHANGEAIM))

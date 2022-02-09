@@ -283,6 +283,9 @@ namespace GameServer
                 { (int)ClientPackets.REQUESTOPENCONTAINER, ServerHandle.REQUESTOPENCONTAINER},
                 { (int)ClientPackets.CHANGEAIM, ServerHandle.CHANGEAIM},
                 { (int)ClientPackets.USEOPENABLE, ServerHandle.USEOPENABLE},
+                { (int)ClientPackets.TRYDIAGNISISPLAYER, ServerHandle.TRYDIAGNISISPLAYER},
+                { (int)ClientPackets.SENDMYAFFLCTIONS, ServerHandle.SENDMYAFFLCTIONS},
+                { (int)ClientPackets.CUREAFFLICTION, ServerHandle.CUREAFFLICTION},
             };
             Console.WriteLine("Initialized packets.");
         }

@@ -1044,5 +1044,31 @@ namespace SkyCoop
             bool state = _packet.ReadBool();
             MyMod.ChangeOpenableThingState(MyMod.levelid+MyMod.level_guid, _GUID, state);
         }
+        public static void TRYDIAGNISISPLAYER(Packet _packet)
+        {
+            int from = _packet.ReadInt();
+            MyMod.SendMyAffictions(from, GameManager.GetConditionComponent().m_CurrentHP);
+            MelonLogger.Msg(ConsoleColor.Green,"TRYDIAGNISISPLAYER");
+            MelonLogger.Msg(ConsoleColor.Green, "SendMyAffictions("+ from+","+" "+GameManager.GetConditionComponent().m_CurrentHP+");");
+        }
+        public static void SENDMYAFFLCTIONS(Packet _packet)
+        {
+            int Count = _packet.ReadInt();
+            List<MyMod.AffictionSync> Affs = new List<MyMod.AffictionSync>();
+
+            for (int index = 0; index < Count; ++index)
+            {
+                MyMod.AffictionSync newElement = _packet.ReadAffiction();
+                Affs.Add(newElement);
+            }
+            float hp = _packet.ReadFloat();
+            int Who = _packet.ReadInt();
+            MyMod.CheckOtherPlayer(Affs, Who, hp);
+        }
+        public static void CUREAFFLICTION(Packet _packet)
+        {
+            MyMod.AffictionSync toCure = _packet.ReadAffiction();
+            MyMod.OtherPlayerCuredMyAffiction(toCure);
+        }
     }
 }
