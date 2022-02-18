@@ -59,8 +59,10 @@ namespace GameServer
             MyMod.RealTimeCycleSpeed = true;
             MyMod.HadEverPingedMaster = false;
             MyMod.LoadAllDropsForScene();
-            MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
             MyMod.LoadAllOpenableThingsForScene();
+            MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
+            MyMod.DisableOriginalAnimalSpawns(true);
+            MyMod.SetFixedSpawn();
         }
 
         private static void TCPConnectCallback(IAsyncResult _result)

@@ -1916,13 +1916,13 @@ namespace GameServer
         {
             using (Packet _packet = new Packet((int)ServerPackets.SENDMYAFFLCTIONS))
             {
+                _packet.Write(fromWho);
                 _packet.Write(_msg.Count);
+                _packet.Write(hp);
                 for (int index = 0; index < _msg.Count; ++index)
                 {
                     _packet.Write(_msg[index]);
                 }
-                _packet.Write(hp);
-                _packet.Write(fromWho);
                 SendTCPData(_toClient, _packet);
             }
         }

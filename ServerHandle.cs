@@ -1039,7 +1039,9 @@ namespace GameServer
         }
         public static void SENDMYAFFLCTIONS(int _fromClient, Packet _packet)
         {
+            int forWho = _packet.ReadInt();
             int Count = _packet.ReadInt();
+            float hp = _packet.ReadFloat();
             List<MyMod.AffictionSync> Affs = new List<MyMod.AffictionSync>();
 
             for (int index = 0; index < Count; ++index)
@@ -1047,10 +1049,8 @@ namespace GameServer
                 MyMod.AffictionSync newElement = _packet.ReadAffiction();
                 Affs.Add(newElement);
             }
-            float hp = _packet.ReadFloat();
-            int forWho = _packet.ReadInt();
 
-            MelonLogger.Msg(ConsoleColor.Green, "Client " + _fromClient + " sent " + Count + " craps, to "+ forWho);
+            MelonLogger.Msg(ConsoleColor.Green, "Client " + _fromClient + " sent " + Count + " afflictions, for "+ forWho);
 
             if (forWho == 0)
             {

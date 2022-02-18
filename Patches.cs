@@ -2386,6 +2386,20 @@ namespace SkyCoop
 
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_rtt", data);
         }
+        public static void SaveFixedSpawn(SaveSlotType gameMode, string name)
+        {
+            string[] saveProxy = { MyMod.SavedSceneForSpawn };
+            string data = JSON.Dump(saveProxy);
+
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_fixedS", data);
+        }
+        public static void SaveFixedSpawnPosition(SaveSlotType gameMode, string name)
+        {
+            Vector3[] saveProxy = { MyMod.SavedPositionForSpawn };
+            string data = JSON.Dump(saveProxy);
+
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_fixedP", data);
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")]
         public static class SaveGameSystemPatch_SaveSceneData
@@ -2402,9 +2416,11 @@ namespace SkyCoop
                 SaveMPDeath(gameMode, name);
                 SaveGenVersion(gameMode, name);
                 SaveSeedInt(gameMode, name);
+                SaveRealtimeTime(gameMode, name);
                 MyMod.SaveAllLoadedDrops();
                 MyMod.SaveAllLoadedOpenables();
-                SaveRealtimeTime(gameMode, name);
+                SaveFixedSpawn(gameMode, name);
+                SaveFixedSpawnPosition(gameMode, name);
             }
         }
 
@@ -2628,6 +2644,27 @@ namespace SkyCoop
             }
         }
 
+        public static void LoadFixedSpawn(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_fixedS");
+            if (data != null)
+            {
+                string[] saveProxy = JSON.Load(data).Make<string[]>();
+                MyMod.SavedSceneForSpawn = saveProxy[0];
+                MyMod.FixedPlaceLoaded = true;
+            }
+        }
+        public static void LoadFixedSpawnPosition(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_fixedP");
+            if (data != null)
+            {
+                Vector3[] saveProxy = JSON.Load(data).Make<Vector3[]>();
+                MyMod.SavedPositionForSpawn = saveProxy[0];
+                MyMod.FixedPlaceLoaded = true;
+            }
+        }
+
         public static void clearFolder(string FolderName)
         {
             System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(FolderName);
@@ -2681,6 +2718,8 @@ namespace SkyCoop
                 LoadMPDeath(name);
                 LoadGenVersion(name);
                 LoadRealtimeTime(name);
+                LoadFixedSpawn(name);
+                LoadFixedSpawnPosition(name);
             }
         }
 
@@ -5040,6 +5079,42 @@ namespace SkyCoop
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegionManager), "Deserialize")]
+        public static class SpawnRegionManager_Deserialize
+        {
+            public static bool Prefix(SpawnRegionManager __instance)
+            {
+                MelonLogger.Msg("[SpawnRegionManager] Deserialize");
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Deserialize")]
+        public static class BaseAiManager_Deserialize
+        {
+            public static bool Prefix(BaseAiManager __instance)
+            {
+                MelonLogger.Msg("[BaseAiManager] Deserialize");
+                if (MyMod.AnimalsController == true)
+                {
+                    MyMod.TestLoadAnimals(MyMod.level_name);
+                }
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")]
+        public static class BaseAiManager_Serialize
+        {
+            public static bool Prefix(BaseAiManager __instance)
+            {
+                MelonLogger.Msg("[BaseAiManager] Serialize");
+                if(MyMod.AnimalsController == true)
+                {
+                    MyMod.TestSaveAnimals(MyMod.level_name);
+                }
+                return false;
+            }
+        }
+
         //[HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")]
         //public static class BaseAiManager_Serialize
         //{
@@ -5184,102 +5259,102 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "RemoveActiveSpawns")]
-        public static class SpawnRegion_RemoveActiveSpawns
-        {
-            public static bool Prefix(SpawnRegion __instance, int numToDeActivate, WildlifeMode wildlifeMode, bool isAdjustingOtherWildlifeMode)
-            {
-                for (int index = 0; index < __instance.m_Spawns.Count && numToDeActivate != 0; ++index)
-                {
-                    if (__instance.m_Spawns[index] && __instance.m_Spawns[index].gameObject.activeSelf)
-                    {
-                        Vector3 pos = __instance.m_Spawns[index].m_CachedTransform.position;
+        //[HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "RemoveActiveSpawns")]
+        //public static class SpawnRegion_RemoveActiveSpawns
+        //{
+        //    public static bool Prefix(SpawnRegion __instance, int numToDeActivate, WildlifeMode wildlifeMode, bool isAdjustingOtherWildlifeMode)
+        //    {
+        //        for (int index = 0; index < __instance.m_Spawns.Count && numToDeActivate != 0; ++index)
+        //        {
+        //            if (__instance.m_Spawns[index] && __instance.m_Spawns[index].gameObject.activeSelf)
+        //            {
+        //                Vector3 pos = __instance.m_Spawns[index].m_CachedTransform.position;
 
-                        bool AllPlayersAllowsIt = false;
-                        bool SomeoneSeeThisSpawn = false;
-                        bool IallowDespawn = false;
-                        string viewerName = "";
-                        float minimalDistance = GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance;
+        //                bool AllPlayersAllowsIt = false;
+        //                bool SomeoneSeeThisSpawn = false;
+        //                bool IallowDespawn = false;
+        //                string viewerName = "";
+        //                float minimalDistance = GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance;
 
-                        if (Utils.DistanceToMainCamera(pos) > minimalDistance)
-                        {
-                            IallowDespawn = true;
-                        }
+        //                if (Utils.DistanceToMainCamera(pos) > minimalDistance)
+        //                {
+        //                    IallowDespawn = true;
+        //                }
 
-                        for (int i = 0; i < MyMod.playersData.Count; i++)
-                        {
-                            if (MyMod.playersData[i] != null)
-                            {
-                                if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
-                                {
-                                    float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
-                                    if (plDis < minimalDistance)
-                                    {
-                                        SomeoneSeeThisSpawn = true;
-                                        viewerName = MyMod.playersData[i].m_Name;
-                                        break;
-                                    }
-                                }
-                            }
-                        }
+        //                for (int i = 0; i < MyMod.playersData.Count; i++)
+        //                {
+        //                    if (MyMod.playersData[i] != null)
+        //                    {
+        //                        if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+        //                        {
+        //                            float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+        //                            if (plDis < minimalDistance)
+        //                            {
+        //                                SomeoneSeeThisSpawn = true;
+        //                                viewerName = MyMod.playersData[i].m_Name;
+        //                                break;
+        //                            }
+        //                        }
+        //                    }
+        //                }
 
-                        string animalName = __instance.m_Spawns[index].gameObject.name;
-                        string animalGUID = "";
-                        if (__instance.m_Spawns[index].gameObject.GetComponent<ObjectGuid>() != null)
-                        {
-                            animalGUID = __instance.m_Spawns[index].gameObject.GetComponent<ObjectGuid>().Get();
-                        }else{
-                            animalGUID = "HAS_NO_GUID";
-                        }
+        //                string animalName = __instance.m_Spawns[index].gameObject.name;
+        //                string animalGUID = "";
+        //                if (__instance.m_Spawns[index].gameObject.GetComponent<ObjectGuid>() != null)
+        //                {
+        //                    animalGUID = __instance.m_Spawns[index].gameObject.GetComponent<ObjectGuid>().Get();
+        //                }else{
+        //                    animalGUID = "HAS_NO_GUID";
+        //                }
 
-                        if (MyMod.InOnline() == false)
-                        {
-                            AllPlayersAllowsIt = IallowDespawn;
-                        }else{
-                            if (IallowDespawn == true && SomeoneSeeThisSpawn == false)
-                            {
-                                AllPlayersAllowsIt = true;
-                                MelonLogger.Msg("Unloading animel because no one see this " + animalGUID + " " + animalName);
-                            }
-                            else
-                            {
+        //                if (MyMod.InOnline() == false)
+        //                {
+        //                    AllPlayersAllowsIt = IallowDespawn;
+        //                }else{
+        //                    if (IallowDespawn == true && SomeoneSeeThisSpawn == false)
+        //                    {
+        //                        AllPlayersAllowsIt = true;
+        //                        MelonLogger.Msg("Unloading animel because no one see this " + animalGUID + " " + animalName);
+        //                    }
+        //                    else
+        //                    {
 
-                                if (IallowDespawn == false)
-                                {
-                                    MelonLogger.Msg("Can't unload animal because I am see this animal " + animalGUID + " " + animalName);
-                                }
-                                else if (SomeoneSeeThisSpawn == true)
-                                {
-                                    MelonLogger.Msg("Can't unload animal because other player " + viewerName + " see this animal " + animalGUID + " " + animalName);
-                                }
+        //                        if (IallowDespawn == false)
+        //                        {
+        //                            MelonLogger.Msg("Can't unload animal because I am see this animal " + animalGUID + " " + animalName);
+        //                        }
+        //                        else if (SomeoneSeeThisSpawn == true)
+        //                        {
+        //                            MelonLogger.Msg("Can't unload animal because other player " + viewerName + " see this animal " + animalGUID + " " + animalName);
+        //                        }
 
-                                AllPlayersAllowsIt = false;
-                            }
-                        }
+        //                        AllPlayersAllowsIt = false;
+        //                    }
+        //                }
 
-                        if (AllPlayersAllowsIt == true)
-                        {
-                            GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns[index].m_PackAnimal, false);
-                            if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode)) && (__instance.m_Spawns[index].GetAiMode() != AiMode.Flee && __instance.m_Spawns[index].GetAiMode() != AiMode.Dead))
-                            {
-                                __instance.m_Spawns[index].SetAiMode(AiMode.Flee);
-                            }
-                            if (isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode))
-                            {
-                                __instance.m_Spawns[index].Despawn();
-                                --numToDeActivate;
-                            }
-                            else if ((!__instance.m_Spawns[index].m_CurrentTarget || !__instance.m_Spawns[index].m_CurrentTarget.IsPlayer()) && __instance.m_Spawns[index].GetAiMode() != AiMode.Feeding && __instance.m_Spawns[index].GetAiMode() != AiMode.Sleep && !__instance.m_Spawns[index].IsBleedingOut() && (!__instance.m_Spawns[index].m_AiWolf || __instance.m_Spawns[index].GetAiMode() != AiMode.WanderPaused))
-                            {
-                                __instance.m_Spawns[index].Despawn();
-                                numToDeActivate--;
-                            }
-                        }
-                    }
-                }
-                return false;
-            }
-        }
+        //                if (AllPlayersAllowsIt == true)
+        //                {
+        //                    GameManager.GetPackManager().UnregisterPackAnimal(__instance.m_Spawns[index].m_PackAnimal, false);
+        //                    if ((isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode)) && (__instance.m_Spawns[index].GetAiMode() != AiMode.Flee && __instance.m_Spawns[index].GetAiMode() != AiMode.Dead))
+        //                    {
+        //                        __instance.m_Spawns[index].SetAiMode(AiMode.Flee);
+        //                    }
+        //                    if (isAdjustingOtherWildlifeMode && __instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode) || !__instance.HasSameWildlifeMode(__instance.m_Spawns[index], wildlifeMode))
+        //                    {
+        //                        __instance.m_Spawns[index].Despawn();
+        //                        --numToDeActivate;
+        //                    }
+        //                    else if ((!__instance.m_Spawns[index].m_CurrentTarget || !__instance.m_Spawns[index].m_CurrentTarget.IsPlayer()) && __instance.m_Spawns[index].GetAiMode() != AiMode.Feeding && __instance.m_Spawns[index].GetAiMode() != AiMode.Sleep && !__instance.m_Spawns[index].IsBleedingOut() && (!__instance.m_Spawns[index].m_AiWolf || __instance.m_Spawns[index].GetAiMode() != AiMode.WanderPaused))
+        //                    {
+        //                        __instance.m_Spawns[index].Despawn();
+        //                        numToDeActivate--;
+        //                    }
+        //                }
+        //            }
+        //        }
+        //        return false;
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "MaybeSetAiModeWhenInactiveOrDisabled")]
         internal static class BaseAiManager_MaybeSetAiModeWhenInactiveOrDisabled
         {
@@ -5561,15 +5636,37 @@ namespace SkyCoop
         {
             private static void Prefix(ref string sceneName)
             {
-                if (MyMod.InterloperHook == false)
+                if (MyMod.InterloperHook == false && MyMod.OverridedSceneForSpawn == "")
                 {
                     return;
                 }
-                MyMod.InterloperHook = false;
-                GameRegion startRegion = GameManager.m_StartRegion;
-                if (startRegion != GameRegion.RandomRegion && startRegion != GameRegion.FutureRegion)
+
+                if (MyMod.InterloperHook == true)
                 {
-                    sceneName = GameManager.m_StartRegion.ToString();
+                    MyMod.InterloperHook = false;
+                    GameRegion startRegion = GameManager.m_StartRegion;
+                    if (startRegion != GameRegion.RandomRegion && startRegion != GameRegion.FutureRegion)
+                    {
+                        sceneName = GameManager.m_StartRegion.ToString();
+                    }
+                }
+                if (MyMod.OverridedSceneForSpawn != "")
+                {
+                    sceneName = MyMod.OverridedSceneForSpawn;
+                    MyMod.OverridedSceneForSpawn = "";
+                }
+            }
+        }
+
+        [HarmonyPatch(typeof(PlayerManager), "TeleportPlayerAfterSceneLoad")]
+        private static class PlayerManager_TeleportPlayerAfterSceneLoad
+        {
+            private static void Postfix(PlayerManager __instance)
+            {
+                if (MyMod.OverridedPositionForSpawn != Vector3.zero)
+                {
+                    __instance.TeleportPlayer(MyMod.OverridedPositionForSpawn, GameManager.GetPlayerTransform().rotation);
+                    MyMod.OverridedPositionForSpawn = Vector3.zero;
                 }
             }
         }

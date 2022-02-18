@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.7.7";
+            public const string Version = "0.8.0 pre";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -221,6 +221,7 @@ namespace SkyCoop
         public static Dictionary<string, Dictionary<int, SlicedJsonDroppedGear>> DroppedGears = new Dictionary<string, Dictionary<int, SlicedJsonDroppedGear>>();
         public static Dictionary<string, Dictionary<string, bool>> OpenableThings = new Dictionary<string, Dictionary<string, bool>>();
         public static Dictionary<int, GameObject> DroppedGearsObjs = new Dictionary<int, GameObject>();
+        public static Dictionary<string, Dictionary<string, AnimalCompactData>> AnimalStorage = new Dictionary<string, Dictionary<string, AnimalCompactData>>();
         //Voice chat
         public static int VoiceChatFrequencyHz = 19000;
         public static int MyMicrophoneID = 0;
@@ -238,6 +239,12 @@ namespace SkyCoop
         public static Dictionary<string, int> GearIDList = new Dictionary<string, int>();
         //public static bool AntiCheat = false;
         public static bool InterloperHook = false;
+        public static string OverridedSceneForSpawn = "";
+        public static Vector3 OverridedPositionForSpawn = Vector3.zero;
+        public static string SavedSceneForSpawn = "";
+        public static Vector3 SavedPositionForSpawn = new Vector3(0, 0, 0);
+        public static bool FixedPlaceLoaded = false;
+
         public static string AutoStartSlot = "";
         public static List<string> AutoCMDs = new List<string>();
 
@@ -681,7 +688,18 @@ namespace SkyCoop
             public int m_Variant = 0;
             public string m_GearName = "";
         }
-
+        public class AnimalCompactData
+        {
+            public string m_PrefabName = "";
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
+            public string m_GUID = "";
+            public int m_LastSeen = 0;
+            public float m_Health = 100;
+            public bool m_Bleeding = false;
+            public int m_TimeOfBleeding = 0;
+            public string m_RegionGUID = "";
+        }
         public class PlayerEquipmentData //: MelonMod
         {
             public string m_HoldingItem = "";
@@ -850,6 +868,8 @@ namespace SkyCoop
             public int m_Seed;
             public int m_ExperienceMode;
             public int m_Location;
+            public string m_FixedSpawnScene;
+            public Vector3 m_FixedSpawnPosition;
         }
         public class MultiplayerChatMessage //: MelonMod
         {
@@ -1295,7 +1315,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<DropFakeOnLeave>();
             ClassInjector.RegisterTypeInIl2Cpp<FakeBed>();
             ClassInjector.RegisterTypeInIl2Cpp<FakeBedDummy>();
-            ClassInjector.RegisterTypeInIl2Cpp<NPCStatusBarOverrider>();
+            ClassInjector.RegisterTypeInIl2Cpp<AnimalBornMarker>();
+            ClassInjector.RegisterTypeInIl2Cpp<SpawnRegionAnimalsList>();
 
             if (instance == null)
             {
@@ -1397,6 +1418,7 @@ namespace SkyCoop
                 uConsole.RunCommandSilent("God");
             }
             CheckHaveBookMod();
+            DisableOriginalAnimalSpawns(false);
         }
 
         public static GameObject MakeModObject(string _name, Transform newparent = null)
@@ -2170,17 +2192,6 @@ namespace SkyCoop
                 }
             }
         }
-        public class NPCStatusBarOverrider : MonoBehaviour
-        {
-            public NPCStatusBarOverrider(IntPtr ptr) : base(ptr) { }
-            public float m_Value = 0;
-            void Update()
-            {
-            }
-        }
-
-        
-
         public class DroppedGearDummy : MonoBehaviour
         {
             public DroppedGearDummy(IntPtr ptr) : base(ptr) { }
@@ -4280,25 +4291,199 @@ namespace SkyCoop
             }
         }
 
-        public static void AllowSpawnAnimals(bool spawn)
+        public static void DisableOriginalAnimalSpawns(bool OnHost)
         {
-            //Il2CppSystem.Collections.Generic.List<SpawnRegion> Regions = GameManager.GetSpawnRegionManager().m_SpawnRegions;
+            if(GameManager.m_SpawnRegionManager == null)
+            {
+                return;
+            }
+            
+            Il2CppSystem.Collections.Generic.List<SpawnRegion> Regions = GameManager.GetSpawnRegionManager().m_SpawnRegions;
 
-            //for (int i = 0; i < Regions.Count; i++)
-            //{
-            //    if (Regions.get_Item(i) != null)
-            //    {
-            //        SpawnRegion region = Regions.get_Item(i);
-            //        region.SetActive(spawn);
-            //    }
-            //}
+            for (int i = 0; i < Regions.Count; i++)
+            {
+                if (Regions[i] != null)
+                {
+                    SpawnRegion region = Regions[i];
+                    region.SetActive(false);
+                    region.gameObject.AddComponent<SpawnRegionAnimalsList>();
+                }
+            }
+            MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been deactivated");
+            if (OnHost == true)
+            {
+                for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
+                {
+                    GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
+                    if (animal != null)
+                    {
+                        ObjectGuidManager.UnRegisterGuid(animal.GetComponent<ObjectGuid>().Get());
+                        UnityEngine.Object.Destroy(animal);
+                    }
+                }
+            }
+        }
 
-            //if (spawn == true)
-            //{
-            //    MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been activated");
-            //}else{
-            //    MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been deactivated");
-            //}
+        public static void TestSaveAnimals(string LevelKey)
+        {
+            for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
+            {
+                if (BaseAiManager.m_BaseAis[index] != null)
+                {
+                    AnimalCompactData Dat = GetCompactDataForAnimal(BaseAiManager.m_BaseAis[index]);
+                    if(Dat != null)
+                    {
+                        RegisterAnimal(LevelKey, Dat);
+                    }
+                }
+            }
+        }
+
+        public static void TestLoadAnimals(string LevelKey)
+        {
+            MelonLogger.Msg(ConsoleColor.Green, "[AnimalStorage] Trying to load data for " + LevelKey);
+            Dictionary<string, AnimalCompactData> SceneStorage;
+            if (AnimalStorage.TryGetValue(LevelKey, out SceneStorage) == true)
+            {
+                MelonLogger.Msg(ConsoleColor.Green, "[AnimalStorage] Save found, loading each animal...");
+                int index = 0;
+                foreach (var cur in SceneStorage)
+                {
+                    index++;
+                    SpawnFromCompactData(cur.Value);
+                }
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "[AnimalStorage] Save Not found, so refuse to load!");
+            }
+        }
+
+        public static void SpawnFromCompactData(AnimalCompactData dat)
+        {
+            MelonLogger.Msg(ConsoleColor.Green, "[AnimalStorage] Trying to load " + dat.m_GUID + " from save!");
+            GameObject animal = UnityEngine.Object.Instantiate<GameObject>(Resources.Load(dat.m_PrefabName).Cast<GameObject>());
+            animal.name = dat.m_PrefabName;
+            animal.transform.position = dat.m_Position;
+            animal.transform.rotation = dat.m_Rotation;
+            BaseAi AI = animal.GetComponent<BaseAi>();
+            AI.m_CurrentHP = dat.m_Health;
+            if(AI.CreateMoveAgent(null) == true && !AI.GetMoveAgent().Warp(dat.m_Position, 1f, true, -1))
+            {
+                MelonLogger.Msg(ConsoleColor.Red, "[AnimalStorage] Can't load animal " + dat.m_GUID + " because it has invalid MoveAgent!");
+            }
+            if (animal.GetComponent<ObjectGuid>() == null)
+            {
+                animal.AddComponent<ObjectGuid>();
+            }
+            animal.GetComponent<ObjectGuid>().Set(dat.m_GUID);
+            ObjectGuidManager.RegisterGuid(dat.m_GUID, animal);
+            AnimalBornMarker ABM = animal.AddComponent<AnimalBornMarker>();
+            ABM.m_Animal = animal;
+            ABM.m_RegionGUID = dat.m_RegionGUID;
+            GameObject spRobj = ObjectGuidManager.Lookup(dat.m_RegionGUID);
+            if(spRobj != null)
+            {
+                SpawnRegion spR = spRobj.GetComponent<SpawnRegion>();
+                if(spRobj.GetComponent<SpawnRegionAnimalsList>() != null)
+                {
+                    spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals.Add(dat.m_GUID);
+                }
+            }
+        }
+        public static void SimulateSpawnFromRegionSpawn(string GUID)
+        {
+            GameObject spRobj = ObjectGuidManager.Lookup(GUID);
+            if(spRobj != null && spRobj.GetComponent<SpawnRegion>() != null)
+            {
+                SpawnRegion spR = spRobj.GetComponent<SpawnRegion>();
+                Vector3 zero = Vector3.zero;
+                Quaternion identity = Quaternion.identity;
+                BaseAi newAnimal = null;
+                if (spR.TryGetSpawnPositionAndRotation(ref zero, ref identity) == true)
+                {
+                    if(spR.PositionValidForSpawn(zero) == true)
+                    {
+                        newAnimal = spR.InstantiateSpawnInternal(WildlifeMode.Normal, zero, identity);
+                    }
+                }
+                if(newAnimal != null)
+                {
+                    GameObject animal = newAnimal.gameObject;
+                    if (animal.GetComponent<ObjectGuid>() == null)
+                    {
+                        animal.AddComponent<ObjectGuid>();
+                    }
+                    string animalGUID = ObjectGuidManager.GenerateNewGuidString();
+                    animal.GetComponent<ObjectGuid>().Set(animalGUID);
+                    AnimalBornMarker ABM = animal.AddComponent<AnimalBornMarker>();
+                    ABM.m_Animal = animal;
+                    ABM.m_RegionGUID = spRobj.GetComponent<ObjectGuid>().Get();
+                    if(spRobj.GetComponent<SpawnRegionAnimalsList>() != null)
+                    {
+                        spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals.Add(animalGUID);
+                    }
+                    ObjectGuidManager.RegisterGuid(animalGUID, spRobj);
+                }
+            }
+        }
+
+        public static AnimalCompactData GetCompactDataForAnimal(BaseAi AI)
+        {
+            if(AI != null && AI.gameObject != null && AI.gameObject.GetComponent<ObjectGuid>() != null)
+            {
+                GameObject animal = AI.gameObject;
+                AnimalCompactData Dat = new AnimalCompactData();
+
+                Dat.m_PrefabName = GetAnimalPrefabName(animal.name);
+                Dat.m_GUID = AI.gameObject.GetComponent<ObjectGuid>().Get();
+                Dat.m_Position = animal.transform.position;
+                Dat.m_Rotation = animal.transform.rotation;
+                Dat.m_LastSeen = MinutesFromStartServer;
+                Dat.m_Health = AI.m_CurrentHP;
+                Dat.m_Bleeding = AI.m_BleedingOut;
+                Dat.m_TimeOfBleeding = MinutesFromStartServer + (int)AI.m_ElapsedBleedingOutMinutes;
+                return Dat;
+            }
+            return null;
+        }
+
+        public static void RegisterAnimal(string LevelKey, AnimalCompactData Dat)
+        {
+            Dictionary<string, AnimalCompactData> SceneStorage;
+            if(AnimalStorage.TryGetValue(LevelKey, out SceneStorage) == false)
+            {
+                AnimalStorage.Add(LevelKey, new Dictionary<string, AnimalCompactData>());
+                if (AnimalStorage.TryGetValue(LevelKey, out SceneStorage) == false)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Idk why, but can't create dictionary for " + LevelKey);
+                }
+            }
+            if(SceneStorage != null)
+            {
+                AnimalCompactData AnimalDat;
+                if (SceneStorage.TryGetValue(Dat.m_GUID, out AnimalDat) == true)
+                {
+                    SceneStorage.Remove(Dat.m_GUID);
+                }
+                SceneStorage.Add(Dat.m_GUID, Dat);
+                MelonLogger.Msg(ConsoleColor.Green, "[AnimalStorage] Animal "+ Dat.m_GUID+" has been saved for "+ LevelKey);
+            }
+        }
+
+        public static void UnRegisterAnimal(string LevelKey, string GUID)
+        {
+            Dictionary<string, AnimalCompactData> SceneStorage;
+            if (AnimalStorage.TryGetValue(LevelKey, out SceneStorage) == false)
+            {
+                return;
+            }
+            if (SceneStorage != null)
+            {
+                AnimalCompactData AnimalDat;
+                if (SceneStorage.TryGetValue(GUID, out AnimalDat) == true)
+                {
+                    SceneStorage.Remove(GUID);
+                }
+            }
         }
 
         public static int IntToTrigger(int i, BaseAi _AI)
@@ -4633,9 +4818,9 @@ namespace SkyCoop
                             {
                                 m_InActive = true;
                                 string regionGUID = "";
-                                if(m_Animal.GetComponent<BaseAi>().m_SpawnRegionParent != null && m_Animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>() != null)
+                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
                                 {
-                                    regionGUID = m_Animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>().Get();
+                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
                                 }
                                 
                                 MakeAnimalActive(m_Animal, false, regionGUID);
@@ -4645,7 +4830,13 @@ namespace SkyCoop
                             {
                                 //MelonLogger.Msg("Re-creating animal under my control.");
                                 m_InActive = false;
-                                ReCreateAnimal(m_Animal, m_PendingProxy);
+                                string regionGUID = "";
+                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
+                                {
+                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
+                                }
+                                MakeAnimalActive(m_Animal, true, regionGUID);
+                                //ReCreateAnimal(m_Animal, m_PendingProxy);
                                 m_PendingProxy = "";
                             }
                         }
@@ -4658,9 +4849,9 @@ namespace SkyCoop
                                 //MelonLogger.Msg("Making controlled by client animal inactive");
                                 m_InActive = true;
                                 string regionGUID = "";
-                                if (m_Animal.GetComponent<BaseAi>().m_SpawnRegionParent != null && m_Animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>() != null)
+                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
                                 {
-                                    regionGUID = m_Animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>().Get();
+                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
                                 }
                                 MakeAnimalActive(m_Animal, false, regionGUID);
                             }
@@ -4668,7 +4859,13 @@ namespace SkyCoop
                             if (m_InActive == true)
                             {
                                 m_InActive = false;
-                                ReCreateAnimal(m_Animal, m_PendingProxy);
+                                string regionGUID = "";
+                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
+                                {
+                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
+                                }
+                                MakeAnimalActive(m_Animal, true, regionGUID);
+                                //ReCreateAnimal(m_Animal, m_PendingProxy);
                                 m_PendingProxy = "";
                             }
                         }
@@ -4836,6 +5033,18 @@ namespace SkyCoop
                     }
                 }
             }
+        }
+
+        public class AnimalBornMarker : MonoBehaviour
+        {
+            public AnimalBornMarker(IntPtr ptr) : base(ptr) { }
+            public GameObject m_Animal = null;
+            public string m_RegionGUID = "";
+        }
+        public class SpawnRegionAnimalsList : MonoBehaviour
+        {
+            public SpawnRegionAnimalsList(IntPtr ptr) : base(ptr) { }
+            public List<string> m_Animals = new List<string>();
         }
 
         public static void ExitHarvesting()
@@ -5897,9 +6106,7 @@ namespace SkyCoop
             if(obj.m_Controller == instance.myId)
             {
                 ShouldRecreate = true;
-            }
-            else
-            {
+            }else{
                 ShouldRecreate = false;
             }
 
@@ -6826,6 +7033,61 @@ namespace SkyCoop
         public static bool AutoHostWhenLoaded = false;
         public static int ApplyAutoThingsAfterLoaed = 0;
 
+        public static float MinimalDistanceForSpawn = 200;
+        public static float MaximalDistanceForAnimalRender = 260;
+
+        public static bool AnyOneClose(float minimalDistance, Vector3 point) // Returns true if someone locates near with this point.
+        {
+            // First checking if I am myself close to this point, if so end up this very quick, without even checking other.
+            float MyDis = Vector3.Distance(GameManager.GetPlayerTransform().position, point);
+            if(MyDis <= minimalDistance)
+            {
+                return true;
+            }
+            
+            for (int i = 0; i < playersData.Count; i++)
+            {
+                if (playersData[i] != null)
+                {
+                    if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid)
+                    {
+                        float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, point);
+                        if (plDis <= minimalDistance)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+        public static float GetClosestDistanceFromEveryone(Vector3 point) // Returns minimal distance to this point from most close player.
+        {
+            float result = float.PositiveInfinity; // Will be always bigger than anything we gonna compare with until we set it for first time.
+            // Do not forget about myself, maybe exactly me is closet one.
+            float MyDis = Vector3.Distance(GameManager.GetPlayerTransform().position, point);
+            if (MyDis <= result)
+            {
+                result = MyDis;
+            }
+
+            for (int i = 0; i < playersData.Count; i++)
+            {
+                if (playersData[i] != null)
+                {
+                    if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid)
+                    {
+                        float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, point);
+                        if(plDis < result)
+                        {
+                            result = plDis;
+                        }
+                    }
+                }
+            }
+            return result;
+        }
+
         private static void EverySecond()
         {
             if(DsServerIsUp == true)
@@ -6839,7 +7101,75 @@ namespace SkyCoop
                 }
             }
 
-            if(RegularUpdateSeconds > 0)
+            if (GameManager.m_SpawnRegionManager != null && AnimalsController == true)
+            {
+                Il2CppSystem.Collections.Generic.List<SpawnRegion> Regions = GameManager.GetSpawnRegionManager().m_SpawnRegions;
+                for (int i = 0; i < Regions.Count; i++) // Checking each spawn region
+                {
+                    SpawnRegion spR = Regions[i];
+                    GameObject spRobj = Regions[i].gameObject;
+                    Vector3 PlayerV3 = GameManager.GetPlayerTransform().position;
+                    //if (Vector3.Distance(spR.m_Center, PlayerV3) <= spR.m_Radius + MinimalDistanceForSpawn) // If this region near.
+
+                    if (AnyOneClose(spR.m_Radius + MinimalDistanceForSpawn, spR.m_Center)) // If anyone close to this region.
+                    {
+                        if (spRobj != null && spRobj.GetComponent<SpawnRegionAnimalsList>() != null)
+                        {
+                            if (spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals.Count < spR.CalculateTargetPopulation()) // If animals less than should be
+                            {
+                                SimulateSpawnFromRegionSpawn(spR.GetComponent<ObjectGuid>().Get()); // Spawn new animals for this region
+                            }
+                            List<string> AnimalsGuids = spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals; // Checking already spawned animals.
+                            for (int i2 = 0; i2 < AnimalsGuids.Count; i2++)
+                            {
+                                GameObject animal = ObjectGuidManager.Lookup(AnimalsGuids[i2]);
+
+                                if (animal != null)
+                                {
+                                    BaseAi AI = animal.GetComponent<BaseAi>();
+                                    if(GetClosestDistanceFromEveryone(animal.transform.position) > MaximalDistanceForAnimalRender) // If animal far away from everyone disable it.
+                                    {
+                                        if(animal.activeSelf == true)
+                                        {
+                                            animal.SetActive(false);
+                                        }
+                                    }else{ // If animal close, but has been disabled, re-enable it.
+                                        if (animal.activeSelf == false)
+                                        {
+                                            animal.SetActive(true);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }else{ // If spawn region is far away from everyone.
+                        if (spRobj != null && spRobj.GetComponent<SpawnRegionAnimalsList>() != null)
+                        {
+                            List<string> AnimalsGuids = spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals;
+                            if (AnimalsGuids.Count > 0)
+                            {
+                                for (int i2 = 0; i2 < AnimalsGuids.Count; i2++) // Checking spawned animals.
+                                {
+                                    GameObject animal = ObjectGuidManager.Lookup(AnimalsGuids[i2]);
+                                    if(animal != null)
+                                    {
+                                        BaseAi AI = animal.GetComponent<BaseAi>();
+                                        // If animal is valid to unload, unloading it.
+                                        if (AI.GetAiMode() != AiMode.Dead && AI.GetAiMode() != AiMode.Struggle && (AI.m_CurrentTarget == null || AI.m_CurrentTarget.IsPlayer() == false))
+                                        {
+                                            UnRegisterAnimal(level_name, AnimalsGuids[i2]);
+                                            UnityEngine.Object.DestroyImmediate(animal);
+                                        }
+                                    }
+                                }
+                                spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals = new List<string>();
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (RegularUpdateSeconds > 0)
             {
                 RegularUpdateSeconds = RegularUpdateSeconds - 1;
 
@@ -6983,8 +7313,8 @@ namespace SkyCoop
                         }
                     }
                 }
-
-                if(LowHealthStaggerBlockTime > 0)
+                
+                if (LowHealthStaggerBlockTime > 0)
                 {
                     LowHealthStaggerBlockTime = LowHealthStaggerBlockTime - 1;
                 }
@@ -7486,47 +7816,47 @@ namespace SkyCoop
         public static void WriteDownMesh(GameObject animal)
         {
 
-            SkinnedMeshRenderer mesh1 = null;
-            SkinnedMeshRenderer mesh2 = null;
-            SkinnedMeshRenderer mesh3 = null;
+            //SkinnedMeshRenderer mesh1 = null;
+            //SkinnedMeshRenderer mesh2 = null;
+            //SkinnedMeshRenderer mesh3 = null;
 
-            if (animal.name.StartsWith("WILDLIFE_Wolf"))
-            {
-                //7 Rig, Meshs 12,13
-                mesh1 = animal.transform.GetChild(7).GetChild(12).gameObject.GetComponent<SkinnedMeshRenderer>();
-                mesh2 = animal.transform.GetChild(7).GetChild(13).gameObject.GetComponent<SkinnedMeshRenderer>();
-            }
-            else if (animal.name.StartsWith("WILDLIFE_Stag"))
-            {
-                //23 Mesh
-                mesh1 = animal.transform.GetChild(23).gameObject.GetComponent<SkinnedMeshRenderer>();
-            }
+            //if (animal.name.StartsWith("WILDLIFE_Wolf"))
+            //{
+            //    //7 Rig, Meshs 12,13
+            //    mesh1 = animal.transform.GetChild(7).GetChild(12).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //    mesh2 = animal.transform.GetChild(7).GetChild(13).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //}
+            //else if (animal.name.StartsWith("WILDLIFE_Stag"))
+            //{
+            //    //23 Mesh
+            //    mesh1 = animal.transform.GetChild(23).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //}
 
-            else if (animal.name.StartsWith("WILDLIFE_Rabbit"))
-            {
-                // 6,7 Meshs
-                mesh1 = animal.transform.GetChild(6).gameObject.GetComponent<SkinnedMeshRenderer>();
-                mesh2 = animal.transform.GetChild(7).gameObject.GetComponent<SkinnedMeshRenderer>();
-            }
-            else if (animal.name.StartsWith("WILDLIFE_Moose"))
-            {
-                // 24,25 Meshs
-                mesh1 = animal.transform.GetChild(24).gameObject.GetComponent<SkinnedMeshRenderer>();
-                mesh2 = animal.transform.GetChild(25).gameObject.GetComponent<SkinnedMeshRenderer>();
-            }
-            else if (animal.name.StartsWith("WILDLIFE_Bear"))
-            {
-                // 10,11,12 Meshs
-                mesh1 = animal.transform.GetChild(10).gameObject.GetComponent<SkinnedMeshRenderer>();
-                mesh2 = animal.transform.GetChild(11).gameObject.GetComponent<SkinnedMeshRenderer>();
-                mesh3 = animal.transform.GetChild(12).gameObject.GetComponent<SkinnedMeshRenderer>();
-            }
+            //else if (animal.name.StartsWith("WILDLIFE_Rabbit"))
+            //{
+            //    // 6,7 Meshs
+            //    mesh1 = animal.transform.GetChild(6).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //    mesh2 = animal.transform.GetChild(7).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //}
+            //else if (animal.name.StartsWith("WILDLIFE_Moose"))
+            //{
+            //    // 24,25 Meshs
+            //    mesh1 = animal.transform.GetChild(24).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //    mesh2 = animal.transform.GetChild(25).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //}
+            //else if (animal.name.StartsWith("WILDLIFE_Bear"))
+            //{
+            //    // 10,11,12 Meshs
+            //    mesh1 = animal.transform.GetChild(10).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //    mesh2 = animal.transform.GetChild(11).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //    mesh3 = animal.transform.GetChild(12).gameObject.GetComponent<SkinnedMeshRenderer>();
+            //}
 
-            AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
+            //AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
 
-            if (mesh1 != null){if(au != null){au.m_Mesh1 = mesh1;}}
-            if (mesh2 != null){if(au != null){au.m_Mesh2 = mesh2;}}
-            if (mesh3 != null){if(au != null){au.m_Mesh3 = mesh3;}}
+            //if (mesh1 != null){if(au != null){au.m_Mesh1 = mesh1;}}
+            //if (mesh2 != null){if(au != null){au.m_Mesh2 = mesh2;}}
+            //if (mesh3 != null){if(au != null){au.m_Mesh3 = mesh3;}}
         }
 
         public static string GetAnimalPrefabName(string _name)
@@ -7622,20 +7952,6 @@ namespace SkyCoop
             SpawnAnimal(prefab, pos, _GUID, regionGUID, true, JsonProx, hp, LastAiState);
             return;
         }
-        public static void ReCreateAnimal_test_v2(GameObject animal, string proxy = "")
-        {
-            if (animal == null)
-            {
-                return;
-            }
-            string regionGUID = "";
-            if (animal.GetComponent<BaseAi>().m_SpawnRegionParent != null && animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>() != null)
-            {
-                regionGUID = animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>().Get();
-            }
-            MakeAnimalActive(animal, true, regionGUID);
-            return;
-        }
 
         public static void MakeAnimalActive(GameObject animal, bool active, string sRegionGUID)
         {
@@ -7651,15 +7967,12 @@ namespace SkyCoop
                 //UnityEngine.Component.Destroy(animal.transform.parent.GetComponent<MoveAgent>());
                 if(active == true)
                 {
-                    //BaseAiManager.CreateMoveAgent(animal.transform, animal.GetComponent<BaseAi>(), animal.transform.position);
-                    animal.GetComponent<BaseAi>().CreateMoveAgent(animal.transform);
+                    if (animal.GetComponent<BaseAi>().CreateMoveAgent(null) == true && !animal.GetComponent<BaseAi>().GetMoveAgent().Warp(animal.transform.position, 1f, true, -1))
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "[Reactivator] Problems with spawn animal because it has invalid MoveAgent!");
+                    }
                 }
                 animal.transform.parent.GetComponent<MoveAgent>().enabled = active;
-                if (active == true)
-                {
-                    //BaseAiManager.CreateMoveAgent(animal.transform, animal.GetComponent<BaseAi>(), animal.transform.position);
-                    animal.GetComponent<BaseAi>().CreateMoveAgent(animal.transform);
-                }
                 //MelonLogger.Msg("[MoveAgent]-> off");
             }
             if (animal.transform.parent != null && animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>() != null)
@@ -7732,7 +8045,6 @@ namespace SkyCoop
             //MelonLogger.Msg("TLDBehaviourTreeOwner ZDRAVSVUI DEREVO");
             if (animal.GetComponent<BaseAi>() != null)
             {
-                //UnityEngine.Component.Destroy(animal.GetComponent<BaseAi>());
                 animal.GetComponent<BaseAi>().enabled = active;
 
                 if (active == true)
@@ -7744,8 +8056,14 @@ namespace SkyCoop
                     if(RegionSpawnObj != null)
                     {
                         SpawnRegion sp = RegionSpawnObj.GetComponent<SpawnRegion>();
-                        _AI.SetSpawnRegionParent(sp);
-                        sp.m_Spawns.Add(animal.GetComponent<BaseAi>());
+                        if(sp.GetComponent<SpawnRegionAnimalsList>() != null)
+                        {
+                            SpawnRegionAnimalsList SRAL = sp.GetComponent<SpawnRegionAnimalsList>();
+                            if (SRAL.m_Animals.Contains(animal.GetComponent<ObjectGuid>().Get()) == false)
+                            {
+                                SRAL.m_Animals.Add(animal.GetComponent<ObjectGuid>().Get());
+                            }
+                        }
                     }
                 }
             }
@@ -7787,9 +8105,7 @@ namespace SkyCoop
             {
                 animal.GetComponent<ObjectGuid>().m_Guid = _guid;
                 ObjectGuidManager.RegisterGuid(_guid, animal);
-            }
-            else
-            {
+            }else{
                 animal.AddComponent<ObjectGuid>();
                 animal.GetComponent<ObjectGuid>().m_Guid = _guid;
                 ObjectGuidManager.RegisterGuid(_guid, animal);
@@ -7797,12 +8113,15 @@ namespace SkyCoop
 
             GameObject RegionSpawnObj = ObjectGuidManager.Lookup(sRegionGUID);
 
-            if (RegionSpawnObj != null)
+            if (RegionSpawnObj != null && RegionSpawnObj.GetComponent<SpawnRegionAnimalsList>() != null)
             {
-                SpawnRegion sp = RegionSpawnObj.GetComponent<SpawnRegion>();
-                _AI.SetSpawnRegionParent(sp);
-                sp.m_Spawns.Add(animal.GetComponent<BaseAi>());
-                if(health != -1)
+                SpawnRegionAnimalsList SML = RegionSpawnObj.GetComponent<SpawnRegionAnimalsList>();
+                if(SML.m_Animals.Contains(_guid) == false)
+                {
+                    SML.m_Animals.Add(_guid);
+                }
+                
+                if (health != -1)
                 {
                     _AI.m_CurrentHP = health;
                 }
@@ -7853,7 +8172,10 @@ namespace SkyCoop
             au.m_RightName = prefabName;
 
             //BaseAiManager.CreateMoveAgent(animal.transform, _AI, v3spawn);
-            _AI.CreateMoveAgent(animal.transform);
+            if (_AI.CreateMoveAgent(null) == true && !_AI.GetMoveAgent().Warp(v3spawn, 1f, true, -1))
+            {
+                MelonLogger.Msg(ConsoleColor.Red, "[Network AnimalSpawn] Problems with spawn animal " + _guid + " because it has invalid MoveAgent!");
+            }
 
             //MelonLogger.Msg(animal.GetComponent<ObjectGuid>().Get() + " Created " + prefabName);
         }
@@ -8003,10 +8325,6 @@ namespace SkyCoop
                             shouldBeController = ShouldbeAnimalController(MyTicksOnScene, levelid, 0);
                         }else{
                             shouldBeController = false;
-                        }
-                        if (shouldBeController != AnimalsController)
-                        {
-                            AllowSpawnAnimals(shouldBeController);
                         }
                         AnimalsController = shouldBeController;
                     }else{
@@ -8188,6 +8506,8 @@ namespace SkyCoop
             SaveData.m_Seed = GameManager.m_SceneTransitionData.m_GameRandomSeed;
             SaveData.m_ExperienceMode = (int) ExperienceModeManager.s_CurrentModeType;
             SaveData.m_Location = (int) RegionManager.GetCurrentRegion();
+            SaveData.m_FixedSpawnScene = SavedSceneForSpawn;
+            SaveData.m_FixedSpawnPosition = SavedPositionForSpawn;
 
             using (Packet __packet = new Packet((int)ServerPackets.SAVEDATA))
             {
@@ -8279,6 +8599,10 @@ namespace SkyCoop
                 Data.m_Location = (int)GameRegion.RandomRegion;
                 SelectGenderForConnection();
             }
+            else if (ServerConfig.m_PlayersSpawnType == 3) // Fixed place
+            {
+                SelectGenderForConnection();
+            }
         }
 
 
@@ -8307,6 +8631,8 @@ namespace SkyCoop
 
             GameManager.m_StartRegion = Region;
             InterloperHook = true;
+            OverridedSceneForSpawn = Data.m_FixedSpawnScene;
+            OverridedPositionForSpawn = Data.m_FixedSpawnPosition;
 
             //InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = Region;
             GameManager.Instance().LaunchSandbox();
@@ -10031,14 +10357,13 @@ namespace SkyCoop
             {
                 using (Packet _packet = new Packet((int)ClientPackets.SENDMYAFFLCTIONS))
                 {
+                    _packet.Write(PlayerSendTo);
                     _packet.Write(Affs.Count);
+                    _packet.Write(hp);
                     for (int index = 0; index < Affs.Count; ++index)
                     {
                         _packet.Write(Affs[index]);
                     }
-                    _packet.Write(hp);
-                    _packet.Write(PlayerSendTo);
-                    MelonLogger.Msg(ConsoleColor.Green, "Shit done, sending packet with "+ Affs.Count+" crap, to shokal number "+ PlayerSendTo);
                     SendTCPData(_packet);
                 }
             }
@@ -11463,6 +11788,11 @@ namespace SkyCoop
                 Application.runInBackground = true;
             }
             InitAudio();
+
+            if(sendMyPosition == true && GameManager.m_SpawnRegionManager != null)
+            {
+
+            }
 
             if (level_name == "MainMenu" && GearIDList.Count == 0)
             {
@@ -13178,6 +13508,15 @@ namespace SkyCoop
             }
         }
 
+        public static void SetFixedSpawn()
+        {
+            if(FixedPlaceLoaded == false)
+            {
+                SavedSceneForSpawn = level_name;
+                SavedPositionForSpawn = GameManager.GetPlayerTransform().position;
+            }
+        }
+
         public static void HostAServer(int port = 26950)
         {
             if (iAmHost != true)
@@ -13198,6 +13537,8 @@ namespace SkyCoop
                 LoadAllDropsForScene();
                 LoadAllOpenableThingsForScene();
                 MarkSearchedContainers(levelid+level_guid);
+                DisableOriginalAnimalSpawns(true);
+                SetFixedSpawn();
             }else{
                 HUDMessage.AddMessage("YOU ALREADY HOSING!!!!!!");
             }

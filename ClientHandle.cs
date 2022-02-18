@@ -253,7 +253,6 @@ namespace SkyCoop
         {
             MyMod.AnimalsController = _packet.ReadBool();
             //MelonLogger.Msg("Got new animal controller role: " + MyMod.AnimalsController);
-            MyMod.AllowSpawnAnimals(MyMod.AnimalsController);
         }
         public static void ALIGNANIMAL(Packet _packet)
         {
@@ -1053,7 +1052,9 @@ namespace SkyCoop
         }
         public static void SENDMYAFFLCTIONS(Packet _packet)
         {
+            int Who = _packet.ReadInt();
             int Count = _packet.ReadInt();
+            float hp = _packet.ReadFloat();
             List<MyMod.AffictionSync> Affs = new List<MyMod.AffictionSync>();
 
             for (int index = 0; index < Count; ++index)
@@ -1061,8 +1062,6 @@ namespace SkyCoop
                 MyMod.AffictionSync newElement = _packet.ReadAffiction();
                 Affs.Add(newElement);
             }
-            float hp = _packet.ReadFloat();
-            int Who = _packet.ReadInt();
             MyMod.CheckOtherPlayer(Affs, Who, hp);
         }
         public static void CUREAFFLICTION(Packet _packet)

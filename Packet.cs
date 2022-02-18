@@ -574,6 +574,8 @@ namespace GameServer
             Write(obj.m_Seed);
             Write(obj.m_ExperienceMode);
             Write(obj.m_Location);
+            Write(obj.m_FixedSpawnScene);
+            Write(obj.m_FixedSpawnPosition);
         }
 
         public void Write(MyMod.ContainerOpenSync obj)
@@ -1076,6 +1078,8 @@ namespace GameServer
             obj.m_Seed = ReadInt();
             obj.m_ExperienceMode = ReadInt();
             obj.m_Location = ReadInt();
+            obj.m_FixedSpawnScene = ReadString();
+            obj.m_FixedSpawnPosition = ReadVector3();
             return obj;
         }
 
