@@ -122,7 +122,7 @@ namespace SkyCoop
             }
 
 
-            GUI.Box(new Rect(10, 10, 100, 130), "Debug menu");
+            GUI.Box(new Rect(10, 10, 100, 160), "Debug menu");
 
             if (GUI.Button(new Rect(20, 40, 80, 20), "Cube"))
             {
@@ -159,6 +159,40 @@ namespace SkyCoop
                 else
                 {
                     MyMod.UIDebugType = "Open";
+                }
+            }
+            if (GUI.Button(new Rect(20, 130, 80, 20), "Advanced"))
+            {
+                if (MyMod.UIDebugType != "")
+                {
+                    MyMod.UIDebugType = "";
+                }else{
+                    MyMod.UIDebugType = "Advanced";
+                }
+            }
+
+            if (MyMod.UIDebugType == "Advanced")
+            {
+                GUI.Box(new Rect(150, 10, 140, 200), "Crazy Debug Tools");
+                if (GUI.Button(new Rect(160, 40, 120, 20), "UpdateBan="+MyMod.KillOnUpdate))
+                {
+                    MyMod.KillOnUpdate = !MyMod.KillOnUpdate;
+                }
+                if (GUI.Button(new Rect(160, 70, 120, 20), "Trace="+MyMod.CrazyPatchesLogger))
+                {
+                    MyMod.CrazyPatchesLogger = !MyMod.CrazyPatchesLogger;
+                }
+                if (GUI.Button(new Rect(160, 100, 120, 20), "Binds="+MyMod.DebugBind))
+                {
+                    MyMod.DebugBind = !MyMod.DebugBind;
+                }
+                if (GUI.Button(new Rect(160, 130, 120, 20), "Nuke patches"))
+                {
+                    HarmonyLib.Harmony.UnpatchAll();
+                }
+                if (GUI.Button(new Rect(160, 160, 120, 20), "Close"))
+                {
+                    MyMod.UIDebugType = "";
                 }
             }
 

@@ -15,6 +15,7 @@ using UnhollowerRuntimeLib;
 using UnhollowerBaseLib;
 using SkyCoop;
 using MelonLoader.TinyJSON;
+using System.Diagnostics;
 
 using GameServer;
 
@@ -26,57 +27,46 @@ namespace SkyCoop
         {
             MyMod.SendUDPData(_packet);
         }
-        //[HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")]
-        //public class GearItemDrop
-        //{
-        //    public static void Prefix(GearItem __instance)
-        //    {
-        //        MelonLogger.Msg("Item dropped " + __instance.m_GearName);
 
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            MyMod.SendDropItem(__instance);
-        //            //return false;
-        //        }
-        //        //return true;
-        //    }
-        //    public static void Postfix(GearItem __instance, GearItem __result)
-        //    {
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            if(__result != null && __result.gameObject != null)
-        //            {
-        //                UnityEngine.Object.DestroyImmediate(__result.gameObject);
-        //            }
-        //        }
-        //        //return true;
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")]
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")] // Once
         public class GearItemDrop
         {
             private static int ShouldDrop = 0;
             private static int Had = 0;
             public static void Prefix(GearItem __instance, int numUnits)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("Item dropped " + __instance.m_GearName);
                 if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() == null)
                 {
                     ShouldDrop = numUnits;
 
-                    if(__instance.m_StackableItem != null)
+                    if (__instance.m_StackableItem != null)
                     {
                         Had = __instance.m_StackableItem.m_Units;
-                    }else{
+                    }
+                    else
+                    {
                         Had = 1;
                     }
                 }
             }
             public static void Postfix(GearItem __instance, int numUnits, GearItem __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() == null)
                 {
-                    if(__instance.gameObject.GetComponent<Bed>() != null && __instance.gameObject.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
+                    if (__instance.gameObject.GetComponent<Bed>() != null && __instance.gameObject.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
                     {
                         return;
                     }
@@ -87,19 +77,23 @@ namespace SkyCoop
                         variant = 1;
                     }
 
-                    int left = Had-ShouldDrop;
-                    if(left > 0)
+                    int left = Had - ShouldDrop;
+                    if (left > 0)
                     {
                         MyMod.SendDropItem(__instance, ShouldDrop, Had, false, variant);
-                    }else{
+                    }
+                    else
+                    {
                         MyMod.SendDropItem(__instance, 0, 0, false, variant);
                     }
-                    
+
                     if (__result != null && __result.gameObject != null && __result != __instance)
                     {
                         UnityEngine.Object.DestroyImmediate(__result.gameObject);
                     }
-                }else{
+                }
+                else
+                {
                     if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() != null)
                     {
                         MelonLogger.Msg("[Postfix]Gear has IgnoreDropOverride doing drop without sync");
@@ -108,11 +102,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_GearSelect), "DoFirePickerAction")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_GearSelect), "DoFirePickerAction")] // Once
         private static class Panel_GearSelect_DoFirePickerAction
         {
             internal static void Prefix(Panel_GearSelect __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 GearItem selectedItem = __instance.GetSelectedItem();
                 if (selectedItem != null)
                 {
@@ -121,24 +121,36 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "StartCooking")]
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "StartCooking")] // Once
         private static class CookingPotItem_StartCooking
         {
             internal static void Prefix(CookingPotItem __instance, GearItem gearItemToCook)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (gearItemToCook != null)
                 {
-                    MelonLogger.Msg("Going to cook "+ gearItemToCook.m_GearName+ " IgnoreDropOverride");
+                    MelonLogger.Msg("Going to cook " + gearItemToCook.m_GearName + " IgnoreDropOverride");
                     gearItemToCook.gameObject.AddComponent<MyMod.IgnoreDropOverride>();
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "RestoreTransform")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "RestoreTransform")] // Once
         private static class PlayerManager_RestoreTransform
         {
             private static GameObject saveObj;
             internal static void Prefix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true)
                 {
                     MelonLogger.Msg("Going to cancle placement");
@@ -153,6 +165,12 @@ namespace SkyCoop
             }
             internal static void Postfix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true)
                 {
                     if (MyMod.InOnline() == true)
@@ -176,13 +194,19 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "PlaceMeshInWorld")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "PlaceMeshInWorld")] // Once
         private static class PlayerManager_PlaceMeshInWorld
         {
             private static GameObject saveObj;
             internal static void Prefix(PlayerManager __instance)
             {
-                if(MyMod.InOnline() == true)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.InOnline() == true)
                 {
                     if (__instance.m_ObjectToPlace != null)
                     {
@@ -193,6 +217,12 @@ namespace SkyCoop
             }
             internal static void Postfix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true)
                 {
                     if (saveObj != null)
@@ -209,12 +239,14 @@ namespace SkyCoop
                             variant = 1;
                         }
                         MyMod.DropFakeOnLeave DFL = saveObj.GetComponent<MyMod.DropFakeOnLeave>();
-                        if(DFL != null)
+                        if (DFL != null)
                         {
                             DFL.m_OldPossition = saveObj.transform.position;
                             DFL.m_OldRotation = saveObj.transform.rotation;
                             MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
-                        }else{
+                        }
+                        else
+                        {
                             GearItem gi = saveObj.gameObject.GetComponent<GearItem>();
                             if (gi.m_Cookable == null || gi.m_Cookable.IsNearFire() == false)
                             {
@@ -222,7 +254,9 @@ namespace SkyCoop
                                 DFL.m_OldPossition = saveObj.transform.position;
                                 DFL.m_OldRotation = saveObj.transform.rotation;
                                 MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
-                            }else{
+                            }
+                            else
+                            {
 
                             }
                         }
@@ -230,301 +264,288 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessAltFire")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessAltFire")] // Once
         private static class PlayerManager_InteractiveObjectsProcessAltFire
         {
             internal static void Prefix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("Going to place object");
                 MyMod.PlaceDroppedGear(__instance.m_InteractiveObjectUnderCrosshair);
             }
         }
-        
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "Awake")]
-        public class GameManager_Awake
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "Update")] // When open
+        private static class Panel_Rest_Update
         {
-
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory), "Update")]
-            private static class Panel_Inventory_Open
+            internal static void Postfix(Panel_Rest __instance)
             {
-                internal static void Postfix(Panel_Inventory __instance)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    if (__instance == null)
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MyMod.MyCycleSkip = __instance.m_SleepHours;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnCancel")] // Once
+        private static class Panel_Rest_Close
+        {
+            internal static void Postfix(Panel_Rest __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg("Sleeping menu close.");
+                if (MyMod.SleepingButtons != null)
+                {
+                    MyMod.SleepingButtons.SetActive(true);
+                }
+                if (MyMod.WaitForSleepLable != null)
+                {
+                    MyMod.WaitForSleepLable.SetActive(false);
+                }
+                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                {
+                    UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnPickUp")] // Once
+        private static class Panel_Rest_Close2
+        {
+            internal static bool Prefix(Panel_Rest __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                {
+                    if (__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject != null)
                     {
-                        return;
+                        MyMod.PickupDroppedGear(__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject);
                     }
-
-                    if(__instance.m_SelectedItemIndex != -1)
+                    UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
+                    __instance.m_Bed = null;
+                    __instance.Enable(false);
+                    return false;
+                }
+                return true;
+            }
+            internal static void Postfix(Panel_Rest __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg("Sleeping menu close.");
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnRest")] // Once
+        private static class Panel_Rest_Close3
+        {
+            public static Bed saveObj;
+            internal static void Prefix(Panel_Rest __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                saveObj = __instance.m_Bed;
+            }
+            internal static void Postfix(Panel_Rest __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg("Sleeping menu close.");
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PassTime), "End")] // Once
+        private static class Panel_Rest_Close4
+        {
+            public static Bed saveObj;
+            internal static void Prefix(PassTime __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                saveObj = __instance.m_Bed;
+            }
+            internal static void Postfix(PassTime __instance)
+            {
+                if (saveObj != null && saveObj.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                {
+                    if (MyMod.CrazyPatchesLogger == true)
                     {
-                        int seelecteditem = __instance.m_SelectedItemIndex;
-                        seelecteditem = seelecteditem + __instance.m_FirstItemDisplayedIndex;
-                        Il2CppSystem.Collections.Generic.List<GearItem> itemlist = __instance.m_FilteredInventoryList;
+                        StackTrace st = new StackTrace(new StackFrame(true));
+                        MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                        MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                    }
+                    UnityEngine.Object.DestroyImmediate(saveObj.gameObject);
+                    MelonLogger.Msg("Dummy bed removed");
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnConfirm")] // Once
+        private static class Panel_Confirmation_Ok
+        {
+            internal static void Postfix(Panel_Confirmation __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT SERVER ADDRESS")
+                {
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    MyMod.DoConnectToIp(text);
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "LOCAL OR STEAM?")
+                {
+                    MyMod.HostAServer();
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TELEPORT TO")
+                {
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    bool found = false;
+                    for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
+                    {
+                        GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
 
-                        if (__instance.m_FilteredInventoryList.Count > 0)
+                        if (animal != null && animal.GetComponent<ObjectGuid>() != null)
                         {
-                            GearItem gear = __instance.m_FilteredInventoryList[seelecteditem];
-
-                            if (gear != null)
+                            if (animal.GetComponent<ObjectGuid>().Get() == text)
                             {
-                                string itemname = gear.m_GearName;
-
-                                if (itemname.Contains("(Clone)"))
-                                {
-                                    int L = itemname.Length - 7;
-                                    MyMod.LastSelectedGearName = itemname.Remove(L, 7);
-                                }
-                                else
-                                {
-                                    MyMod.LastSelectedGearName = itemname;
-                                }
-
-                                if (MyMod.LastSelectedGearName != "gg")
-                                {
-                                    MyMod.LastSelectedGear = gear;
-                                }
-
-                                if (MyMod.NeedRefreshInv == true)
-                                {
-                                    MyMod.NeedRefreshInv = false;
-                                    __instance.m_IsDirty = true;
-                                    __instance.Update();
-                                }
-                            }else{
-                                MyMod.LastSelectedGearName = "";
-                            }
-                        }else{
-                            MyMod.LastSelectedGearName = "";
-                        }
-                    }
-                }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "Update")]
-            private static class Panel_Rest_Update
-            {
-                internal static void Postfix(Panel_Rest __instance)
-                {
-                    //__instance.m_SleepButton.SetActive(false);
-
-                    MyMod.MyCycleSkip = __instance.m_SleepHours;
-                }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnCancel")]
-            private static class Panel_Rest_Close
-            {
-                internal static void Postfix(Panel_Rest __instance)
-                {
-                    MelonLogger.Msg("Sleeping menu close.");
-                    if (MyMod.SleepingButtons != null)
-                    {
-                        MyMod.SleepingButtons.SetActive(true);
-                    }
-                    if (MyMod.WaitForSleepLable != null)
-                    {
-                        MyMod.WaitForSleepLable.SetActive(false);
-                    }
-                    if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
-                    {
-                        UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
-                    }
-                }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnPickUp")]
-            private static class Panel_Rest_Close2
-            {
-                internal static bool Prefix(Panel_Rest __instance)
-                {
-                    if(__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
-                    {
-                        if (__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject != null)
-                        {
-                            MyMod.PickupDroppedGear(__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject);
-                        }
-                        UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
-                        __instance.m_Bed = null;
-                        __instance.Enable(false);
-                        return false;
-                    }
-                    return true;
-                }
-                internal static void Postfix(Panel_Rest __instance)
-                {
-                    MelonLogger.Msg("Sleeping menu close.");
-                }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "OnRest")]
-            private static class Panel_Rest_Close3
-            {
-                public static Bed saveObj;
-                internal static void Prefix(Panel_Rest __instance)
-                {
-                    saveObj = __instance.m_Bed;
-                }
-                internal static void Postfix(Panel_Rest __instance)
-                {
-                    MelonLogger.Msg("Sleeping menu close.");
-                }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(PassTime), "End")]
-            private static class Panel_Rest_Close4
-            {
-                public static Bed saveObj;
-                internal static void Prefix(PassTime __instance)
-                {
-                    saveObj = __instance.m_Bed;
-                }
-                internal static void Postfix(PassTime __instance)
-                {
-                    if (saveObj != null && saveObj.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
-                    {
-                        UnityEngine.Object.DestroyImmediate(saveObj.gameObject);
-                        MelonLogger.Msg("Dummy bed removed");
-                    }
-                }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnConfirm")]
-            private static class Panel_Confirmation_Ok
-            {
-                internal static void Postfix(Panel_Confirmation __instance)
-                {
-                    if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT SERVER ADDRESS")
-                    {
-                        string text = __instance.m_CurrentGroup.m_InputField.GetText();
-                        MyMod.DoConnectToIp(text);
-                    }
-                    if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "LOCAL OR STEAM?")
-                    {
-                        MyMod.HostAServer();
-                    }
-                    if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TELEPORT TO")
-                    {
-                        string text = __instance.m_CurrentGroup.m_InputField.GetText();
-                        bool found = false;
-                        for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
-                        {
-                            GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
-
-                            if (animal != null && animal.GetComponent<ObjectGuid>() != null)
-                            {
-                                if (animal.GetComponent<ObjectGuid>().Get() == text)
-                                {
-                                    found = true;
-                                    GameManager.GetPlayerManagerComponent().TeleportPlayer(animal.transform.position, animal.transform.rotation);
-                                    break;
-                                }
-                            }
-                        }
-
-                        if (found == false)
-                        {
-                            HUDMessage.AddMessage("Animal with GUID " + text + " not exist!");
-                        }
-                    }
-                    if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT ID OF PLAYER TELEPORT TO")
-                    {
-                        string text = __instance.m_CurrentGroup.m_InputField.GetText();
-
-                        int ID = int.Parse(text);
-
-                        if(ID > MyMod.MaxPlayers-1 || ID < 0)
-                        {
-                            HUDMessage.AddMessage("Invalid ID of player!");
-                        }else{
-                            if(MyMod.playersData[ID].m_Levelid != MyMod.levelid)
-                            {
-                                HUDMessage.AddMessage("You and player on different scenes!");
-                            }else{
-                                GameManager.GetPlayerManagerComponent().TeleportPlayer(MyMod.playersData[ID].m_Position, MyMod.playersData[ID].m_Rotation);
-                                HUDMessage.AddMessage("You has been teleported to "+ MyMod.playersData[ID].m_Name);
+                                found = true;
+                                GameManager.GetPlayerManagerComponent().TeleportPlayer(animal.transform.position, animal.transform.rotation);
+                                break;
                             }
                         }
                     }
-                    if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TRACK")
+
+                    if (found == false)
                     {
-                        string text = __instance.m_CurrentGroup.m_InputField.GetText();
-                        bool found = false;
-                        for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
-                        {
-                            GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
+                        HUDMessage.AddMessage("Animal with GUID " + text + " not exist!");
+                    }
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT ID OF PLAYER TELEPORT TO")
+                {
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
 
-                            if (animal != null && animal.GetComponent<ObjectGuid>() != null)
-                            {
-                                if (animal.GetComponent<ObjectGuid>().Get() == text)
-                                {
-                                    found = true;
-                                    MyMod.DebugAnimalGUID = text;
-                                    MyMod.DebugAnimalGUIDLast = text;
-                                    MyMod.DebugLastAnimal = animal;
-                                    HUDMessage.AddMessage("Found animal starting tracking");
-                                    break;
-                                }
-                            }
+                    int ID = int.Parse(text);
+
+                    if (ID > MyMod.MaxPlayers - 1 || ID < 0)
+                    {
+                        HUDMessage.AddMessage("Invalid ID of player!");
+                    }
+                    else
+                    {
+                        if (MyMod.playersData[ID].m_Levelid != MyMod.levelid)
+                        {
+                            HUDMessage.AddMessage("You and player on different scenes!");
                         }
-
-                        if (found == false)
+                        else
                         {
-                            HUDMessage.AddMessage("Animal with GUID " + text + " not exist!");
+                            GameManager.GetPlayerManagerComponent().TeleportPlayer(MyMod.playersData[ID].m_Position, MyMod.playersData[ID].m_Rotation);
+                            HUDMessage.AddMessage("You has been teleported to " + MyMod.playersData[ID].m_Name);
                         }
                     }
                 }
-            }
-            [HarmonyLib.HarmonyPatch(typeof(Weather), "ChooseWeatherSetOfType")]
-            private static class Weather_ChooseWeatherSetOfType
-            {
-                internal static void Postfix(Weather __instance, WeatherStage reqType, WeatherSet __result)
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TRACK")
                 {
-                    string l = MyMod.level_name;
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    bool found = false;
+                    for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
+                    {
+                        GameObject animal = BaseAiManager.m_BaseAis[index].gameObject;
 
-                    if (__result == null  || l == "Empty" || l == "Boot" || l == "MainMenu")
-                    {
-                        return;
-                    }
-                    Weather wea = GameManager.GetWeatherComponent();
-                    for (int index = 0; index < wea.m_WeatherSetsForScene.Count; ++index)
-                    {
-                        WeatherSet ForweatherSet = wea.m_WeatherSetsForScene[index];
-                        if (ForweatherSet == __result)
+                        if (animal != null && animal.GetComponent<ObjectGuid>() != null)
                         {
-                            MelonLogger.Msg("New Weather Stage with set [ID " + index + "]" + __result.name);
-                            MyMod.LastSelectedWeatherSet = index;
-                            MyMod.LastSelectedWeatherSet2 = __result;
-                            break;
+                            if (animal.GetComponent<ObjectGuid>().Get() == text)
+                            {
+                                found = true;
+                                MyMod.DebugAnimalGUID = text;
+                                MyMod.DebugAnimalGUIDLast = text;
+                                MyMod.DebugLastAnimal = animal;
+                                HUDMessage.AddMessage("Found animal starting tracking");
+                                break;
+                            }
                         }
+                    }
+
+                    if (found == false)
+                    {
+                        HUDMessage.AddMessage("Animal with GUID " + text + " not exist!");
                     }
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(FirstPersonLightSource), "TurnOnEffects")]
+
+        [HarmonyLib.HarmonyPatch(typeof(FirstPersonLightSource), "TurnOnEffects")] // Once
         internal class FirstPersonLightSource_Start
         {
-
             public static void Prefix(FirstPersonLightSource __instance)
             {
-                //MyLightSourceName = __instance.gameObject.name;
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MyMod.MyLightSource = true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(FirstPersonLightSource), "TurnOffEffects")]
+        [HarmonyLib.HarmonyPatch(typeof(FirstPersonLightSource), "TurnOffEffects")] // Once
         internal class FirstPersonLightSource_End
         {
-
             public static void Prefix(FirstPersonLightSource __instance)
             {
-                //FPH_Match Range - 5 
-                //FPH_Torch
-                //FPH_KerosceneLamp
-                //FPH_Flare
-                //FPH_BlueFlare
-                //MyLightSourceName = __instance.gameObject.name;
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MyMod.MyLightSource = false;
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnCompletedDecalPlaceDown")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnCompletedDecalPlaceDown")] // Once
         internal class PlayerManager_Start
         {
 
             public static void Prefix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("Placed Decal " + __instance.m_DecalToPlace.m_DecalName);
                 MelonLogger.Msg("X " + __instance.m_DecalToPlace.m_Pos.x + " Y " + __instance.m_DecalToPlace.m_Pos.y + " Z " + __instance.m_DecalToPlace.m_Pos.z);
                 if (MyMod.InDarkWalkerMode == true && MyMod.IamShatalker == false && __instance.m_DecalToPlace.m_DecalName == "NowhereToHide_Lure")
@@ -550,12 +571,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(ObjectAnim), "Play")]
+        [HarmonyLib.HarmonyPatch(typeof(ObjectAnim), "Play")] // Once
         internal class ObjectAnim_Hack
         {
             public static void Postfix(ObjectAnim __instance, string name)
             {
-
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //MelonLogger.Msg("ObjectAnim last played anim " + name);
                 if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.ContainersSync>() != null)
                 {
@@ -567,11 +593,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(BowItem), "ReleaseFire")]
+        [HarmonyLib.HarmonyPatch(typeof(BowItem), "ReleaseFire")] // Once
         internal class BowItem_Shoot
         {
             public static void Prefix(BowItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (!(bool)(UnityEngine.Object)__instance.m_GearArrow)
                     return;
 
@@ -604,22 +636,34 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "HandleCollisionWithObject")]
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "HandleCollisionWithObject")] // Once, but be triggered a lot
         internal class ArrowItem_Shoot
         {
             public static void Postfix(ArrowItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() != null)
                 {
                     UnityEngine.Object.Destroy(__instance.gameObject);
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(vp_Bullet), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(vp_Bullet), "Start")] // Once
         internal class vp_Bullet_Start
         {
             public static bool Prefix(vp_Bullet __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null && __instance.gameObject != null)
                 {
                     GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(MyMod.GetGearItemObject("GEAR_Arrow"), new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0));
@@ -730,7 +774,9 @@ namespace SkyCoop
                                     if (MyBullet == true)
                                     {
                                         NeedPipSkills = true;
-                                    }else{
+                                    }
+                                    else
+                                    {
                                         NeedPipSkills = false;
                                     }
 
@@ -783,7 +829,7 @@ namespace SkyCoop
                                         //}
                                     }
                                 }
-                                if(MyBullet == true)
+                                if (MyBullet == true)
                                 {
                                     baseAiFromObject.SetupDamageForAnim(hit.collider.transform.position, GameManager.GetPlayerTransform().position, component);
                                     baseAiFromObject.ApplyDamage(num4, bleedOutMinutes, DamageSource.Player, hit.collider.name);
@@ -842,11 +888,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Start")] // Once
         internal class vp_FPSShooter_Start
         {
             public static void Postfix(vp_FPSShooter __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null && __instance.gameObject != null && __instance.ProjectilePrefab != null)
                 {
                     if (__instance.gameObject.name == "Rifle" && __instance.ProjectilePrefab.name == "PistolBullet")
@@ -861,12 +913,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Fire")]
+        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Fire")] // Once
         internal class vp_FPSShooter_End
         {
-
             public static void Prefix(vp_FPSShooter __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if ((UnityEngine.Object)__instance.m_Weapon == (UnityEngine.Object)null || (double)Time.time < (double)__instance.m_NextAllowedFireTime || (__instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire)) || GameManager.GetPlayerAnimationComponent().IsReloading())
                 {
                     //MelonLogger.Msg("[vp_FPSShooter] Can't shoot now!");
@@ -946,39 +1003,45 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GearItem), "ManualUpdate")]
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "ManualStart")] // Once
         private static class OverrideMedkit
         {
             internal static void Postfix(GearItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.name == "GEAR_MedicalSupplies_hangar")
                 {
                     __instance.m_WeightKG = 0.5f;
-                    FirstPersonItem fp = __instance.gameObject.AddComponent<FirstPersonItem>();
-                    fp.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(5);
-                    fp.m_FPSMeshID = 5;
-                    __instance.m_EmergencyStim = new EmergencyStimItem();
                 }
+                __instance.m_DailyHPDecay = 0;
             }
         }
 
         public static bool DuppableGearItem(string GearName)
         {
-            if (GearName.Contains("TechnicalBackpack") == true 
+            if (GearName.Contains("TechnicalBackpack") == true
                 || GearName.Contains("Crampons") == true
                 || GearName.Contains("CanneryCodeNote") == true
+                || GearName.Contains("BallisticVest") == true
                 || GearName.Contains("MountainTownFarmKey") == true)
             {
                 MelonLogger.Msg(ConsoleColor.Blue, "Item " + GearName + " is can be picked by other player");
                 return true;
-            }else{
+            }
+            else
+            {
                 return false;
             }
         }
         public static bool GarbadgeFilter(string GearName)
         {
-            if (GearName == "GEAR_CrowFeather" 
-                || GearName == "GEAR_Stone" 
+            if (GearName == "GEAR_CrowFeather"
+                || GearName == "GEAR_Stone"
                 || GearName == "GEAR_Stick")
             {
                 return true;
@@ -986,56 +1049,17 @@ namespace SkyCoop
             return false;
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessInspectablePickupItem")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessInspectablePickupItem")] // Once
         private static class Inventory_Pickup
         {
             internal static void Prefix(PlayerManager __instance, GearItem pickupItem)
             {
-                if (pickupItem.m_BeenInPlayerInventory == false)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
-                    pickupItem.m_BeenInPlayerInventory = true;
-                    if(DuppableGearItem(pickupItem.m_GearName) == true)
-                    {
-                        return;
-                    }
-                    if (GarbadgeFilter(pickupItem.m_GearName))
-                    {
-                        return;
-                    }
-                    MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent,MyMod.instance.myId, pickupItem.m_InstanceID, true);
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UpdateInspectGear")]
-        private static class Inventory_LeaveIt
-        {
-            internal static void Prefix(PlayerManager __instance)
-            {
-                if(__instance.m_Gear != null && __instance.m_InspectModeActive == true)
-                {
-                    if (InputManager.GetPutBackPressed(InputManager.m_CurrentContext) == true)
-                    {
-                        if(__instance.m_Gear.gameObject.GetComponent<MyMod.DropFakeOnLeave>() != null)
-                        {
-                            MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
-                            int variant = 0;
-                            if ((__instance.m_Gear.gameObject.GetComponent<FoodItem>() != null && __instance.m_Gear.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
-                                (__instance.m_Gear.gameObject.GetComponent<SmashableItem>() != null && __instance.m_Gear.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
-                            {
-                                variant = 1;
-                            }
-                            MyMod.SendDropItem(__instance.m_Gear, 0, 0, true, variant);
-                        }
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessPickupWithNoInspectScreen")]
-        private static class Inventory_Pickup2
-        {
-            internal static void Prefix(PlayerManager __instance, GearItem pickupItem)
-            {
                 if (pickupItem.m_BeenInPlayerInventory == false)
                 {
                     MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
@@ -1052,11 +1076,80 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InitializeObjectToPlace")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UpdateInspectGear")] // Always $!!! Maybe can be reworked
+        private static class Inventory_LeaveIt
+        {
+            internal static void Prefix(PlayerManager __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_Gear != null && __instance.m_InspectModeActive == true)
+                {
+                    if (InputManager.GetPutBackPressed(InputManager.m_CurrentContext) == true)
+                    {
+                        if (__instance.m_Gear.gameObject.GetComponent<MyMod.DropFakeOnLeave>() != null)
+                        {
+                            MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
+                            int variant = 0;
+                            if ((__instance.m_Gear.gameObject.GetComponent<FoodItem>() != null && __instance.m_Gear.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
+                                (__instance.m_Gear.gameObject.GetComponent<SmashableItem>() != null && __instance.m_Gear.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                            {
+                                variant = 1;
+                            }
+                            MyMod.SendDropItem(__instance.m_Gear, 0, 0, true, variant);
+                        }
+                    }
+                }
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessPickupWithNoInspectScreen")] // Once
+        private static class Inventory_Pickup2
+        {
+            internal static void Prefix(PlayerManager __instance, GearItem pickupItem)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (pickupItem.m_BeenInPlayerInventory == false)
+                {
+                    MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
+                    pickupItem.m_BeenInPlayerInventory = true;
+                    if (DuppableGearItem(pickupItem.m_GearName) == true)
+                    {
+                        return;
+                    }
+                    if (GarbadgeFilter(pickupItem.m_GearName))
+                    {
+                        return;
+                    }
+                    MyMod.AddPickedGear(pickupItem.gameObject.transform.position, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, pickupItem.m_InstanceID, true);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InitializeObjectToPlace")] // Once
         private static class Inventory_Pickup3
         {
             public static void Prefix(PlayerManager __instance, GameObject go)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (go != null && go.GetComponent<GearItem>() != null)
                 {
                     GearItem pickupItem = go.GetComponent<GearItem>();
@@ -1077,11 +1170,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(BlueprintDisplayItem), "Setup")]
+        [HarmonyLib.HarmonyPatch(typeof(BlueprintDisplayItem), "Setup")] // Once
         private static class FixRecipeIcons
         {
             internal static void Postfix(BlueprintDisplayItem __instance, BlueprintItem bpi)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar")
                 {
                     Texture2D medkitTexture = Utils.GetCachedTexture("ico_CraftItem__MedicalSupplies_hangar");
@@ -1094,11 +1193,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "ItemPassesFilter")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "ItemPassesFilter")] // Once
         private static class ShowRecipesInMedsTab
         {
             internal static void Postfix(Panel_Crafting __instance, ref bool __result, BlueprintItem bpi)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar" && __instance.m_CurrentCategory == Panel_Crafting.Category.FirstAid)
                 {
                     __result = true;
@@ -1110,11 +1215,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Container), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(Container), "Start")] // Once
         private static class Container_Hack
         {
             internal static void Postfix(Container __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null && __instance.gameObject != null)
                 {
                     __instance.gameObject.AddComponent<MyMod.ContainersSync>();
@@ -1122,11 +1233,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSelectFeatsBack")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSelectFeatsBack")] // Once
         internal class Panel_MainMenu_FeatBack
         {
             public static bool Prefix(Panel_MainMenu __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     MyMod.SelectGenderForConnection();
@@ -1136,11 +1253,17 @@ namespace SkyCoop
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSelectFeatsContinue")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSelectFeatsContinue")] // Once
         internal class Panel_MainMenu_FeatContinue
         {
             public static bool Prefix(Panel_MainMenu __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     GameAudioManager.PlayGuiConfirm();
@@ -1163,11 +1286,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion_Map), "OnSelectRegionContinue")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion_Map), "OnSelectRegionContinue")] // Once
         internal class Panel_SelectRegion_Map_Done
         {
             public static bool Prefix(Panel_SelectRegion_Map __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     return false;
@@ -1176,6 +1305,12 @@ namespace SkyCoop
             }
             public static void Postfix(Panel_SelectRegion_Map __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     //InterfaceManager.m_Panel_OptionsMenu.m_State.m_StartRegion = __instance.m_SelectedItem.m_Region;
@@ -1187,26 +1322,17 @@ namespace SkyCoop
             }
         }
 
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion), "OnSelectRegionContinue")]
-        //internal class Panel_SelectRegion_Done
-        //{
-        //    public static bool Prefix(Panel_SelectRegion __instance)
-        //    {
-        //        if (MyMod.PendingSave != null)
-        //        {
-        //            __instance.Enable(false);
-        //            MyMod.SelectGenderForConnection();
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion_Map), "OnClickBack")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion_Map), "OnClickBack")] // Once
         internal class Panel_SelectRegion_Map_OnClickBack
         {
             public static bool Prefix(Panel_SelectRegion_Map __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     return false;
@@ -1215,11 +1341,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion), "OnClickBack")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion), "OnClickBack")] // Once
         internal class Panel_SelectRegion_OnClickBack
         {
             public static bool Prefix(Panel_SelectRegion __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     return false;
@@ -1228,11 +1360,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "OnSelectSurvivorMale")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "OnSelectSurvivorMale")] // Once
         internal class Panel_SelectSurvivor_Select1
         {
             public static bool Prefix(Panel_SelectSurvivor __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Male;
@@ -1245,28 +1383,40 @@ namespace SkyCoop
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "OnSelectSurvivorFemale")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "OnSelectSurvivorFemale")] // Once
         internal class Panel_SelectSurvivor_Select2
         {
             public static bool Prefix(Panel_SelectSurvivor __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.PendingSave != null)
                 {
                     InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Female;
                     __instance.Enable(false);
                     MyMod.SelectBagesForConnection();
-                    
+
                     return false;
                 }
 
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "AnimSetTrigger")]
+        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "AnimSetTrigger")] // Calls Sometimes
         private static class GetID
         {
             internal static void Postfix(BaseAi __instance, int id)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null && __instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.activeSelf == true)
                 {
                     if (MyMod.iAmHost == true && MyMod.AnimalsController == true)
@@ -1300,16 +1450,21 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "Update")]
+        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "Awake")] // Once
         private static class AI_Hack
         {
             internal static void Postfix(BaseAi __instance)
             {
-                if (__instance != null && __instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.activeSelf == true)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+
+                if (__instance != null && __instance.gameObject != null)
                 {
                     GameObject animal = __instance.gameObject;
-                    string _guid = "";
-
                     if (MyMod.NoRabbits == true)
                     {
                         if (animal.name.Contains("Rabbit") && animal.activeSelf == true)
@@ -1317,56 +1472,30 @@ namespace SkyCoop
                             animal.SetActive(false);
                         }
                     }
-
-                    if (animal != null)
+                    MyMod.AnimalUpdates au = animal.GetComponent<MyMod.AnimalUpdates>();
+                    if (au == null)
                     {
-                        MyMod.AnimalUpdates au = animal.GetComponent<MyMod.AnimalUpdates>();
-                        if (animal.GetComponent<ObjectGuid>() != null)
-                        {
-                            _guid = animal.GetComponent<ObjectGuid>().Get();
-                        }
-                        if (au == null)
-                        {
-                            animal.AddComponent<MyMod.AnimalUpdates>();
-                            au = animal.GetComponent<MyMod.AnimalUpdates>();
-                            au.m_Animal = __instance.gameObject;
-                        }
+                        animal.AddComponent<MyMod.AnimalUpdates>();
+                        au = animal.GetComponent<MyMod.AnimalUpdates>();
+                        au.m_Animal = animal;
                     }
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "Update")]
-        private static class Panel_BodyHarvest_KickOutFromShokal
-        {
-            internal static void Postfix(Panel_BodyHarvest __instance)
-            {
-                if (__instance != null && __instance.m_BodyHarvest != null && __instance.m_BodyHarvest.gameObject != null && __instance.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
-                {
-                    GameObject shokal = __instance.m_BodyHarvest.gameObject;
-
-                    for (int i = 0; i < MyMod.playersData.Count; i++)
-                    {
-                        if (MyMod.playersData[i] != null)
-                        {
-                            string otherAnimlGuid = MyMod.playersData[i].m_HarvestingAnimal;
-                            if (otherAnimlGuid == shokal.GetComponent<ObjectGuid>().Get())
-                            {
-                                MyMod.ExitHarvesting();
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessBodyHarvestInteraction")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessBodyHarvestInteraction")] // Once
         private static class BodyHarvest_OutOfSomeoneAlready
         {
             internal static bool Prefix(BodyHarvest bh, bool playBookEndAnim)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 GameObject shokal = bh.gameObject;
 
-                if(shokal.GetComponent<ObjectGuid>() != null)
+                if (shokal.GetComponent<ObjectGuid>() != null)
                 {
                     for (int i = 0; i < MyMod.playersData.Count; i++)
                     {
@@ -1385,29 +1514,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(BodyHarvest), "UpdateBodyHarvest")]
-        private static class BodyHarvest_UpdateBodyHarvest
-        {
-            internal static bool Prefix(BodyHarvest __instance, float todHours)
-            {
-                if (__instance != null && __instance.gameObject != null)
-                {
-                    float _todHours = Time.deltaTime * (24f / GameManager.GetTimeOfDayComponent().GetDayLengthSecondsUnscaled());
-                    __instance.MaybeDecay(_todHours);
-                    __instance.MaybeFreeze(_todHours);
-                    if (!__instance.ConditionReachedZero() && !__instance.NoMoreResources())
-                        return false;
-                    __instance.DestroyIfFarAway();
-                }
-                return false;
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "HarvestSuccessful")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "HarvestSuccessful")] // Once
         private static class Panel_BodyHarvest_Hack
         {
             internal static void Prefix(Panel_BodyHarvest __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null && __instance.m_BodyHarvest != null && __instance.m_BodyHarvest.gameObject != null && __instance.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
                 {
                     MelonLogger.Msg("Harvested meant " + __instance.m_MenuItem_Meat.m_HarvestAmount);
@@ -1448,7 +1565,7 @@ namespace SkyCoop
             {
                 ServerSend.ANIMALDAMAGE(0, au.gameObject.GetComponent<ObjectGuid>().Get(), damage, au.m_ClientController);
             }
-            if(MyMod.sendMyPosition == true)
+            if (MyMod.sendMyPosition == true)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.ANIMALDAMAGE))
                 {
@@ -1460,15 +1577,21 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "ApplyDamage", new System.Type[] { typeof(float), typeof(float), typeof(DamageSource), typeof(string) })]
+        [HarmonyLib.HarmonyPatch(typeof(BaseAi), "ApplyDamage", new System.Type[] { typeof(float), typeof(float), typeof(DamageSource), typeof(string) })] // Once
         private static class AI_Hack_Damage
         {
             internal static bool Prefix(BaseAi __instance, float damage)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MyMod.AnimalUpdates au = __instance.gameObject.GetComponent<MyMod.AnimalUpdates>();
                 bool NeedSendDamage = false;
                 bool NeedApplyDamage = false;
-                if(MyMod.AnimalsController == true && au.m_ClientControlled == false)
+                if (MyMod.AnimalsController == true && au.m_ClientControlled == false)
                 {
                     NeedApplyDamage = true;
                     NeedSendDamage = false;
@@ -1499,15 +1622,27 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "InflictDamage", new System.Type[] { typeof(GameObject), typeof(float), typeof(bool), typeof(string), typeof(Vector3) })]
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "InflictDamage", new System.Type[] { typeof(GameObject), typeof(float), typeof(bool), typeof(string), typeof(Vector3) })] // Once
         private static class ArrowItem_DamageFix
-        {
+        {            
             internal static bool Prefix()
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 return false;
             }
             internal static void Postfix(ArrowItem __instance, GameObject victim, float damageScalar, bool stickIn, string collider, Vector3 collisionPoint, BaseAi __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 BaseAi baseAi = (BaseAi)null;
                 if (victim.layer == 16)
                     baseAi = victim.GetComponent<BaseAi>();
@@ -1527,14 +1662,16 @@ namespace SkyCoop
                 {
                     damage = float.PositiveInfinity;
                 }
-                    
+
                 if (baseAi.GetAiMode() != AiMode.Dead)
                 {
                     if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() == null)
                     {
                         MelonLogger.Msg("I am hit target with bow");
                         GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Archery, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                    }else{
+                    }
+                    else
+                    {
                         MelonLogger.Msg("Other player hit targer with bow");
                     }
                 }
@@ -1544,150 +1681,58 @@ namespace SkyCoop
                 return;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(CarryableBody), "Update")]
-        public class CarryableBody_Vzlom_Djopi
-        {
-            public static void Prefix(CarryableBody __instance)
-            {
-                if (__instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() && __instance.gameObject.GetComponent<ObjectGuid>().Get() != MyMod.PlayerBodyGUI)
-                {
-                    UnityEngine.Object.Destroy(__instance.gameObject);
-                }
-            }
-        }
 
-        [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Activate")]
-        public class LoadScene_Enter
-        {
-            public static void Prefix(LoadScene __instance)
-            {
-                if (__instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null)
-                {
-                    string DoorGUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
-
-                    MelonLogger.Msg("Entering door " + DoorGUID);
-
-                    if (MyMod.CarryingPlayer == true)
-                    {
-                        if (MyMod.sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.BODYWARP))
-                            {
-                                _packet.Write(DoorGUID);
-                                SendTCPData(_packet);
-                            }
-                        }
-
-                        if (MyMod.iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.BODYWARP))
-                            {
-                                ServerSend.BODYWARP(1, DoorGUID);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(LoadScene), "LoadLevelWhenFadeOutComplete")]
-        public class LoadScene_Load
-        {
-            public static bool Prefix(LoadScene __instance)
-            {
-                MyMod.NotNeedToPauseUntilLoaded = true;
-                //if (GameManager.GetPlayerManagerComponent().PlayerIsDead() && IsCarringMe == false )
-                //    return false;
-                string str = (string)null;
-                if (__instance.m_SceneCanBeInstanced)
-                    str = GameManager.StripOptFromSceneName(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
-                string sceneName = __instance.m_SceneToLoad;
-                if (GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene != null)
-                    sceneName = GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene;
-                GameManager.m_SceneTransitionData.m_SpawnPointName = __instance.m_ExitPointName;
-                GameManager.m_SceneTransitionData.m_SpawnPointAudio = __instance.m_SoundDuringFadeIn;
-                GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = (string)null;
-                GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = str;
-                GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = __instance.m_SceneLocationLocIDToShow;
-                GameManager.m_SceneTransitionData.m_Location = (string)null;
-                GameRegion UselessDummy = new GameRegion();
-                if (RegionManager.GetRegionFromString(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, out UselessDummy))
-                    GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = __instance.gameObject.transform.position;
-                if (__instance.m_SceneCanBeInstanced)
-                {
-                    GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = __instance.gameObject.transform.position;
-                    GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = sceneName + "_" + __instance.m_GUID;
-                }else{
-                    GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = sceneName;
-                }
-
-                MelonLogger.Msg(ConsoleColor.Yellow, "GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad " + GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad);
-
-
-                GameManager.LoadScene(sceneName, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
-                return false;
-            }
-        }
-        //[HarmonyLib.HarmonyPatch(typeof(Condition), "PlayerDeath")]
-        //public class Condition_Test
+        // LEFT OVERS OF CARRYING BODIES, HOOK TO NOT FOURCE DEATH AFTER LOADED
+        //[HarmonyLib.HarmonyPatch(typeof(LoadScene), "LoadLevelWhenFadeOutComplete")]
+        //public class LoadScene_Load
         //{
-        //    public static bool Prefix(Condition __instance)
+        //    public static bool Prefix(LoadScene __instance)
         //    {
-        //        MelonLogger.Msg("[Condition] PlayerDeath");
-        //        if (MyMod.InOnline() == true)
+        //        MyMod.NotNeedToPauseUntilLoaded = true;
+        //        //if (GameManager.GetPlayerManagerComponent().PlayerIsDead() && IsCarringMe == false )
+        //        //    return false;
+        //        string str = (string)null;
+        //        if (__instance.m_SceneCanBeInstanced)
+        //            str = GameManager.StripOptFromSceneName(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
+        //        string sceneName = __instance.m_SceneToLoad;
+        //        if (GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene != null)
+        //            sceneName = GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene;
+        //        GameManager.m_SceneTransitionData.m_SpawnPointName = __instance.m_ExitPointName;
+        //        GameManager.m_SceneTransitionData.m_SpawnPointAudio = __instance.m_SoundDuringFadeIn;
+        //        GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = (string)null;
+        //        GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = str;
+        //        GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = __instance.m_SceneLocationLocIDToShow;
+        //        GameManager.m_SceneTransitionData.m_Location = (string)null;
+        //        GameRegion UselessDummy = new GameRegion();
+        //        if (RegionManager.GetRegionFromString(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name, out UselessDummy))
+        //            GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = __instance.gameObject.transform.position;
+        //        if (__instance.m_SceneCanBeInstanced)
         //        {
-        //            //InterfaceManager.m_Panel_Log.Enable(false);
-        //            InterfaceManager.m_Panel_HUD.m_Sprite_SystemFadeOverlay.enabled = false;
-        //            __instance.PlayPlayerDeathAudio();
-        //            GameManager.GetPlayerManagerComponent().UnequipImmediate(false);
-        //            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Dead);
-        //            if (GameManager.m_PlayerStruggle != null && GameManager.m_PlayerStruggle.m_PartnerBaseAi != null)
-        //            {
-        //                //GameManager.m_PlayerStruggle.m_PlayerDied = false;
-        //                if (GameManager.m_PlayerStruggle.m_PartnerBaseAi.gameObject.name.Contains("WILDLIFE_Bear") != true && GameManager.m_PlayerStruggle.m_PartnerBaseAi.gameObject.name.Contains("WILDLIFE_Moose") != true)
-        //                {
-        //                    MelonLogger.Msg("[Condition] DoFakeGetup");
-        //                    GameManager.GetPlayerStruggleComponent().MakePartnerFlee();
-        //                    MyMod.DoFakeGetup = true;
-        //                }
-        //            }
-        //            return false;
+        //            GameManager.m_SceneTransitionData.m_PosBeforeInteriorLoad = __instance.gameObject.transform.position;
+        //            GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = sceneName + "_" + __instance.m_GUID;
+        //        }else{
+        //            GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = sceneName;
         //        }
-        //        else
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerStruggle), "GetUpAnimationComplete")]
-        //public class PlayerStruggle_Over
-        //{
-        //    public static void Prefix(PlayerStruggle __instance)
-        //    {
-        //        MelonLogger.Msg("[PlayerStruggle] Getup done");
-        //        MyMod.DoFakeGetup = false;
-        //        if (MyMod.LastStruggleAnimalName.Contains("WILDLIFE_Bear") == true)
-        //        {
-        //            MelonLogger.Msg("[PlayerStruggle] Struggle with bear complete, doing late damage");
-        //            GameManager.GetConditionComponent().m_NeverDie = false;
-        //            MyMod.NeedDoBearDamage = true;
-        //            __instance.ApplyBearDamageAfterStruggleEnds();
-        //        }
-        //        if (MyMod.LastStruggleAnimalName.Contains("WILDLIFE_Moose") == true)
-        //        {
-        //            MelonLogger.Msg("[PlayerStruggle] Struggle with moose complete, doing late damage");
-        //            GameManager.GetConditionComponent().m_NeverDie = false;
-        //            MyMod.NeedDoMooseDamage = true;
-        //            __instance.ApplyMooseDamageAfterStruggleEnds();
-        //        }
+
+        //        MelonLogger.Msg(ConsoleColor.Yellow, "GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad " + GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad);
+
+
+        //        GameManager.LoadScene(sceneName, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+        //        return false;
         //    }
         //}
 
-        [HarmonyLib.HarmonyPatch(typeof(WildlifeItem), "ProcessInteraction")]
+        [HarmonyLib.HarmonyPatch(typeof(WildlifeItem), "ProcessInteraction")] // Once
         public class WildlifeItem_Pickup
         {
             public static bool Prefix(WildlifeItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("[WildlifeItem] ProcessInteraction");
                 if (!GameManager.GetPlayerAnimationComponent().CanInteract())
                 {
@@ -1718,11 +1763,17 @@ namespace SkyCoop
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ReleaseThrownObject")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ReleaseThrownObject")] // Once
         public class PlayerManager_Throw
         {
             public static void Prefix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_ThrownItem != null)
                 {
                     MelonLogger.Msg("[PlayerManager][PreFix] ReleaseThrownObject " + __instance.m_ThrownItem.m_GearName);
@@ -1735,6 +1786,12 @@ namespace SkyCoop
             }
             public static void Postfix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.SaveThrowingItem != null)
                 {
                     MelonLogger.Msg("[PlayerManager][Postfix] ReleaseThrownObject SaveThrowingItem " + MyMod.SaveThrowingItem.name);
@@ -1785,11 +1842,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(NoiseMakerItem), "ProcessItemInHandDetonated")]
+        [HarmonyLib.HarmonyPatch(typeof(NoiseMakerItem), "ProcessItemInHandDetonated")] // Once
         public class NoiseMakerItem_ProcessItemInHandDetonated
         {
             public static void Postfix(NoiseMakerItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MyMod.ShootSync bomb = new MyMod.ShootSync();
                 bomb.m_position = GameManager.GetPlayerObject().transform.position;
                 bomb.m_rotation = GameManager.GetPlayerObject().transform.rotation;
@@ -1814,114 +1877,27 @@ namespace SkyCoop
             }
         }
 
-        
-        //[HarmonyLib.HarmonyPatch(typeof(Condition), "ForceStartEarRinging")]
-        //public class Condition_EarRining
-        //{
-        //    public static bool Prefix(Condition __instance)
-        //    {
-        //        MelonLogger.Msg("[Condition] ForceStartEarRinging");
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            MelonLogger.Msg("Killing annoying ear ring effect after fight with moose in multiplayer, cause it getting bugged when baseAI controller is off.");
-        //            return false;
-        //        }
-        //        else
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerStruggle), "ApplyBearDamageAfterStruggleEnds")]
-        //public class PlayerStruggle_BearDamage
-        //{
-        //    public static bool Prefix(PlayerStruggle __instance)
-        //    {
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            if (MyMod.NeedDoBearDamage == true)
-        //            {
-        //                MyMod.NeedDoBearDamage = false;
-        //                return true;
-        //            }
-        //            else
-        //            {
-        //                return false;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerStruggle), "ApplyMooseDamageAfterStruggleEnds")]
-        //public class PlayerStruggle_MooseDamage
-        //{
-        //    public static bool Prefix(PlayerStruggle __instance)
-        //    {
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            if (MyMod.NeedDoMooseDamage == true)
-        //            {
-        //                MyMod.NeedDoMooseDamage = false;
-        //                return true;
-        //            }
-        //            else
-        //            {
-        //                return false;
-        //            }
-        //        }
-        //        else
-        //        {
-        //            return true;
-        //        }
-        //    }
-        //}
-
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerStruggle), "Begin", new System.Type[] { typeof(GameObject) })]
-        //public class PlayerStruggle_Begin
-        //{
-        //    public static void Prefix(PlayerStruggle __instance, GameObject partner)
-        //    {
-        //        MyMod.LastStruggleAnimalName = partner.name;
-        //        MelonLogger.Msg("[PlayerStruggle] Begin struggle with " + MyMod.LastStruggleAnimalName);
-        //        ////WILDLIFE_Moose
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            if (MyMod.LastStruggleAnimalName.Contains("WILDLIFE_Bear") == true || MyMod.LastStruggleAnimalName.Contains("WILDLIFE_Moose") == true)
-        //            {
-        //                string tauntname = "";
-        //                string punchline = "";
-        //                if (MyMod.LastStruggleAnimalName.Contains("WILDLIFE_Bear") == true)
-        //                {
-        //                    tauntname = "bear";
-        //                    punchline = "wide parody of a wolf";
-        //                }
-        //                else
-        //                {
-        //                    tauntname = "moose";
-        //                    punchline = "step dancer";
-        //                }
-        //                MelonLogger.Msg("[PlayerStruggle] This is " + tauntname + "....fuck no, I so tired of fixing bugs with him, I just set NeverDie, cause I am so no care about this " + punchline);
-        //                GameManager.GetConditionComponent().m_NeverDie = true;
-        //            }
-        //        }
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(UIButton), "OnClick")]
+        [HarmonyLib.HarmonyPatch(typeof(UIButton), "OnClick")] // Once
         public class UIButton_OnClick
         {
             public static void Postfix(UIButton __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.gameObject != null && __instance.gameObject.transform.parent != null && __instance.gameObject.transform.parent != null && __instance.hoverSprite == "genericButton_over 1")
                 {
-                    if(__instance.gameObject.transform.parent.name == "WaitForEveryoneButton")
+                    if (__instance.gameObject.transform.parent.name == "WaitForEveryoneButton")
                     {
                         if (MyMod.CanSleep(false) == false)
                         {
                             MyMod.CanSleep(true);
-                        }else{
+                        }
+                        else
+                        {
                             if (MyMod.SleepingButtons != null)
                             {
                                 MyMod.SleepingButtons.SetActive(false);
@@ -1931,9 +1907,10 @@ namespace SkyCoop
                                 MyMod.WaitForSleepLable.SetActive(true);
                             }
                         }
-                    }else if (__instance.gameObject.transform.parent.name == "LieDownButton")
+                    }
+                    else if (__instance.gameObject.transform.parent.name == "LieDownButton")
                     {
-                        if(MyMod.AtBed == false)
+                        if (MyMod.AtBed == false)
                         {
                             MyMod.OutOfBedPosition = GameManager.GetPlayerTransform().position;
                             if (InterfaceManager.m_Panel_Rest.m_Bed)
@@ -1941,7 +1918,9 @@ namespace SkyCoop
                                 GameManager.GetPlayerManagerComponent().TeleportPlayer(InterfaceManager.m_Panel_Rest.m_Bed.m_BodyPlacementTransform.position, InterfaceManager.m_Panel_Rest.m_Bed.m_BodyPlacementTransform.rotation);
                                 MyMod.AtBed = true;
                             }
-                        }else{
+                        }
+                        else
+                        {
                             GameManager.GetPlayerManagerComponent().TeleportPlayer(MyMod.OutOfBedPosition, GameManager.GetPlayerTransform().rotation);
                             MyMod.AtBed = false;
                         }
@@ -1960,9 +1939,9 @@ namespace SkyCoop
 
                 if (arguments[i] == "join" || arguments[i] == "-join")
                 {
-                    if (i+1 <= arguments.Length-1)
+                    if (i + 1 <= arguments.Length - 1)
                     {
-                        MelonLogger.Msg("[STEAMWORKS.NET] Skip everything to connect to: " + arguments[i+1]);
+                        MelonLogger.Msg("[STEAMWORKS.NET] Skip everything to connect to: " + arguments[i + 1]);
                         return true;
                     }
                 }
@@ -1977,20 +1956,32 @@ namespace SkyCoop
             return false;
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string), typeof(string) })]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string), typeof(string) })] // Once
         public class GameManager_LoadSceneOverLoad1
         {
             public static void Prefix()
-            {                
-                MelonLogger.Msg(ConsoleColor.Yellow,"Loading other scene...");
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg(ConsoleColor.Yellow, "Loading other scene...");
                 MyMod.ApplyOtherCampfires = false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string)})]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string) })] // Once
         public class GameManager_LoadSceneOverLoad2
         {
             public static void Prefix()
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg(ConsoleColor.Yellow, "Loading other scene...");
                 MyMod.ApplyOtherCampfires = false;
             }
@@ -1998,11 +1989,17 @@ namespace SkyCoop
 
         public static bool OldPostLoadActionType = false;
 
-        [HarmonyLib.HarmonyPatch(typeof(SceneManager), "OnSceneLoaded")]
+        [HarmonyLib.HarmonyPatch(typeof(SceneManager), "OnSceneLoaded")] // Once
         public class SceneManager_Load
         {
             public static void Postfix()
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg(ConsoleColor.Yellow, "[SceneManager] OnSceneLoaded");
                 if (MyMod.level_name == "Boot")
                 {
@@ -2041,7 +2038,7 @@ namespace SkyCoop
                         MelonLogger.Msg("[SteamWorks.NET] Loading...");
                         bool ok = SteamConnect.StartSteam();
 
-                        if(ok == false)
+                        if (ok == false)
                         {
                             return;
                         }
@@ -2051,9 +2048,9 @@ namespace SkyCoop
                         {
                             //MelonLogger.Msg("Argument ["+i+"] Parameter ["+arguments[i]+"]");
 
-                            if(arguments[i] == "join" || arguments[i] == "-join")
+                            if (arguments[i] == "join" || arguments[i] == "-join")
                             {
-                                if(i+1 <= arguments.Length-1)
+                                if (i + 1 <= arguments.Length - 1)
                                 {
                                     MyMod.SteamServerWorks = arguments[i + 1];
                                     MyMod.ConnectedSteamWorks = true;
@@ -2097,7 +2094,7 @@ namespace SkyCoop
                     {
                         MyMod.StartDSAfterLoad = 3;
                     }
-                    
+
                     MyMod.FirstBoot = false;
                 }
                 if (MyMod.level_name != "Empty" && MyMod.level_name != "Boot" && MyMod.level_name != "MainMenu")
@@ -2132,39 +2129,38 @@ namespace SkyCoop
                 }
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(BloodLoss), "ApplyBandageToLocation")]
-        //private static class BloodLoss_Stop
-        //{
-        //    internal static void Postfix(BloodLoss __instance, AfflictionBodyArea area)
-        //    {
-        //        MyMod.UsedBandage(area);
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "DoBreakDown")]
+
+        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "DoBreakDown")] // Once
         private static class DoBreakDown_Sync
         {
             internal static void Postfix(BreakDown __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 string breakGuid = "";
                 string breakParentGuid = "";
-                if(__instance.gameObject != null)
+                if (__instance.gameObject != null)
                 {
                     ObjectGuid BreakGuidComp = __instance.gameObject.GetComponent<ObjectGuid>();
-                    if(BreakGuidComp != null)
+                    if (BreakGuidComp != null)
                     {
                         breakGuid = BreakGuidComp.Get();
                     }
-                    if(__instance.gameObject.transform.parent != null)
+                    if (__instance.gameObject.transform.parent != null)
                     {
                         ObjectGuid BreakGuidParentComp = __instance.gameObject.transform.parent.GetComponent<ObjectGuid>();
-                        if(BreakGuidParentComp != null)
+                        if (BreakGuidParentComp != null)
                         {
                             breakParentGuid = BreakGuidParentComp.Get();
                         }
                     }
                 }
 
-                if(breakGuid == "" && breakParentGuid == "")
+                if (breakGuid == "" && breakParentGuid == "")
                 {
                     MelonLogger.Msg("Deny listing that furn, cause have not any GUIDs, so it should be duppable");
                     return;
@@ -2173,11 +2169,17 @@ namespace SkyCoop
                 MyMod.OnFurnitureDestroyed(breakGuid, breakParentGuid, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Start")] // Once
         private static class LoadScene_SeededGUIDHook
         {
             internal static bool Prefix(LoadScene __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //MelonLogger.Msg("[LoadScene] SceneCanBeInstanced " + __instance.m_SceneCanBeInstanced + " ExitPoint " + __instance.m_ExitPointName + " SceneToLoad " + __instance.m_SceneToLoad);
                 if (!__instance.m_Active || __instance.m_StartHasBeenCalled)
                     return false;
@@ -2217,20 +2219,17 @@ namespace SkyCoop
             }
         }
 
-        //[HarmonyLib.HarmonyPatch(typeof(LoadScene), "Start")]
-        //private static class LoadScene_SeededGUIDHook
-        //{
-        //    internal static void Postfix(LoadScene __instance)
-        //    {
-        //        MelonLogger.Msg("[LoadScene] SceneCanBeInstanced " + __instance.m_SceneCanBeInstanced + " ExitPoint " + __instance.m_ExitPointName + " SceneToLoad " + __instance.m_SceneToLoad + " m_GUID "+__instance.m_GUID);
-        //    }
-        //}
-
-        [HarmonyLib.HarmonyPatch(typeof(LoadSceneParent), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(LoadSceneParent), "Start")] // Once
         private static class LoadSceneParent_SeededGUIDHook
         {
             internal static bool Prefix(LoadSceneParent __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //MelonLogger.Msg("[LoadSceneParent] Start");
                 if (__instance.m_StartHasBeenCalled)
                     return false;
@@ -2252,7 +2251,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Fail!");
             }
         }
@@ -2265,7 +2266,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][PickedGearSync] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][PickedGearSync] Fail!");
             }
         }
@@ -2279,7 +2282,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] Fail!");
             }
         }
@@ -2293,7 +2298,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][LootedContainers] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][LootedContainers] Fail!");
             }
         }
@@ -2311,7 +2318,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][ServerConfig] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][ServerConfig] Fail!");
             }
         }
@@ -2325,7 +2334,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][HarvestableSyncData] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][HarvestableSyncData] Fail!");
             }
         }
@@ -2339,7 +2350,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][SnowShelters] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][SnowShelters] Fail!");
             }
         }
@@ -2353,7 +2366,9 @@ namespace SkyCoop
             if (ok == true)
             {
                 //MelonLogger.Msg("[Saving][MultiplayerDeath] Successfully!");
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][MultiplayerDeath] Fail!");
             }
         }
@@ -2363,7 +2378,7 @@ namespace SkyCoop
             int[] saveProxy = { MyMod.BuildInfo.RandomGenVersion };
             string data = JSON.Dump(saveProxy);
 
-            if(MyMod.CantBeUsedForMP == false)
+            if (MyMod.CantBeUsedForMP == false)
             {
                 bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_genversion", data);
                 if (ok == true)
@@ -2401,11 +2416,17 @@ namespace SkyCoop
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_fixedP", data);
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")]
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")] // Once
         public static class SaveGameSystemPatch_SaveSceneData
         {
             public static void Postfix(SaveSlotType gameMode, string name)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 SaveServerConfig(gameMode, name);
                 SaveBrokenFurtiture(gameMode, name);
                 SavePickedGears(gameMode, name);
@@ -2443,7 +2464,9 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loaded Entries: " + loadedData.Count);
                 //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Total Entries: " + MyMod.BrokenFurniture.Count);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][BrokenFurnitureSync] No saves found!");
             }
         }
@@ -2467,7 +2490,9 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg("[Saving][PickedGearSync] Loaded Entries: " + loadedData.Count);
                 //MelonLogger.Msg("[Saving][PickedGearSync] Total Entries: " + MyMod.PickedGears.Count);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][PickedGearSync] No saves found!");
             }
         }
@@ -2491,7 +2516,9 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] Loaded Entries: " + loadedData.Count);
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] Total Entries: " + MyMod.DeployedRopes.Count);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] No saves found!");
             }
         }
@@ -2515,7 +2542,9 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg("[Saving][LootedContainers] Loaded Entries: " + loadedData.Count);
                 //MelonLogger.Msg("[Saving][LootedContainers] Total Entries: " + MyMod.LootedContainers.Count);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][LootedContainers] No saves found!");
             }
         }
@@ -2539,7 +2568,9 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg("[Saving][HarvestableSyncData] Loaded Entries: " + loadedData.Count);
                 //MelonLogger.Msg("[Saving][HarvestableSyncData] Total Entries: " + MyMod.HarvestedPlants.Count);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][HarvestableSyncData] No saves found!");
             }
         }
@@ -2563,7 +2594,9 @@ namespace SkyCoop
                 }
                 //MelonLogger.Msg("[Saving][SnowShelters] Loaded Entries: " + loadedData.Count);
                 //MelonLogger.Msg("[Saving][SnowShelters] Total Entries: " + MyMod.ShowSheltersBuilded.Count);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][SnowShelters] No saves found!");
             }
         }
@@ -2572,7 +2605,7 @@ namespace SkyCoop
         {
             //MelonLogger.Msg("[Saving][ServerConfig] Loading...");
 
-            if(MyMod.sendMyPosition == true)
+            if (MyMod.sendMyPosition == true)
             {
                 //MelonLogger.Msg("[Saving][ServerConfig] You on server being client, not need load this.");
                 return;
@@ -2585,7 +2618,9 @@ namespace SkyCoop
                 MyMod.ServerConfig = saveProxy;
                 //MelonLogger.Msg("[Saving][ServerConfig] m_FastConsumption: " + saveProxy.m_FastConsumption);
                 //MelonLogger.Msg("[Saving][ServerConfig] m_DuppedSpawns: " + saveProxy.m_DuppedSpawns);
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][ServerConfig] No saves found!");
             }
         }
@@ -2598,7 +2633,9 @@ namespace SkyCoop
                 bool[] saveProxy = JSON.Load(data).Make<bool[]>();
                 //MelonLogger.Msg("[Saving][MultiplayerDeath] IsDead: " + saveProxy[0]);
                 MyMod.IsDead = saveProxy[0];
-            }else{
+            }
+            else
+            {
                 //MelonLogger.Msg("[Saving][MultiplayerDeath] No saves found!");
             }
         }
@@ -2610,15 +2647,17 @@ namespace SkyCoop
             {
                 int[] saveProxy = JSON.Load(data).Make<int[]>();
                 MyMod.LastLoadedGenVersion = saveProxy[0];
-                if(MyMod.LastLoadedGenVersion != MyMod.BuildInfo.RandomGenVersion)
+                if (MyMod.LastLoadedGenVersion != MyMod.BuildInfo.RandomGenVersion)
                 {
                     MyMod.CantBeUsedForMP = true;
-                    MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because we created on old version of the mod, with Generation version "+ MyMod.LastLoadedGenVersion + ". Release of mod you using right now has Generation version "+ MyMod.BuildInfo.RandomGenVersion);
+                    MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because we created on old version of the mod, with Generation version " + MyMod.LastLoadedGenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
                 }
-            }else{
+            }
+            else
+            {
                 MyMod.LastLoadedGenVersion = 0;
                 MyMod.CantBeUsedForMP = true;
-                MelonLogger.Msg(ConsoleColor.DarkRed,"This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
+                MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
             }
         }
         public static int LoadSeedInt(string name)
@@ -2629,7 +2668,8 @@ namespace SkyCoop
                 int[] saveProxy = JSON.Load(data).Make<int[]>();
                 return saveProxy[0];
             }
-            else{
+            else
+            {
                 return 0;
             }
         }
@@ -2681,11 +2721,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "DeleteSaveFiles")]
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "DeleteSaveFiles")] // Once
         public static class SaveGameSystemPatch_DeleteSaveFiles
         {
             public static void Prefix(string name)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //MelonLogger.Msg("[DroppedGearsUnloader] Wiping unloads data before delete file " + name + "...");
                 int seed = LoadSeedInt(name);
                 string dir = @"Mods\Unloads\" + seed;
@@ -2696,18 +2742,26 @@ namespace SkyCoop
 
                     System.IO.Directory.Delete(dir);
                     //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " has been deleted");
-                }else{
+                }
+                else
+                {
                     //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " not exist, so doing nothing");
                 }
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "RestoreGlobalData")]
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "RestoreGlobalData")]  // Once
         public static class SaveGameSystemPatch_RestoreGlobalData
         {
             public static void Postfix(string name)
             {
-                MelonLogger.Msg(ConsoleColor.Yellow,"[Saving] Loading "+name+"...");
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg(ConsoleColor.Yellow, "[Saving] Loading " + name + "...");
                 LoadServerConfig(name);
                 LoadBrokenFurtiture(name);
                 LoadPickedGears(name);
@@ -2744,21 +2798,33 @@ namespace SkyCoop
 
 
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadMainMenu")]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadMainMenu")] // Once
         public static class GameManager_BackToMenu
         {
             public static void Prefix()
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 FlushAllSavable();
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BreakDown), "OnBreakDown")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_BreakDown), "OnBreakDown")] // Once
         public static class Panel_BreakDown_AudioStart
         {
             public static void Postfix(Panel_BreakDown __instance)
             {
-                if(__instance.m_BreakDown != null)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_BreakDown != null)
                 {
                     GameObject gameObject = __instance.m_BreakDown.gameObject;
                     string breakGuid = "";
@@ -2805,11 +2871,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BreakDown), "StopAudioAndRumbleEffects")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_BreakDown), "StopAudioAndRumbleEffects")] // Once
         public static class Panel_BreakDown_AudioStop
         {
             public static void Postfix(Panel_BreakDown __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.sendMyPosition == true)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.FURNBREAKINSTOP))
@@ -2827,79 +2899,17 @@ namespace SkyCoop
                 MelonLogger.Msg("Stop braking object");
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_BreakDown), "Update")]
-        public static class Panel_BreakDown_KickOutFromMenu
-        {
-            public static void Postfix(Panel_BreakDown __instance)
-            {            
-                if(__instance.m_BreakDown != null)
-                {
-                    GameObject gameObject = __instance.m_BreakDown.gameObject;
-                    string breakGuid = "";
-                    string breakParentGuid = "";
-                    if (gameObject != null)
-                    {
-                        ObjectGuid BreakGuidComp = gameObject.GetComponent<ObjectGuid>();
-                        if (BreakGuidComp != null)
-                        {
-                            breakGuid = BreakGuidComp.Get();
-                        }
-                        if (gameObject.transform.parent != null)
-                        {
-                            ObjectGuid BreakGuidParentComp = gameObject.transform.parent.GetComponent<ObjectGuid>();
-                            if (BreakGuidParentComp != null)
-                            {
-                                breakParentGuid = BreakGuidParentComp.Get();
-                            }
-                        }
-                    }
-
-                    MyMod.BrokenFurnitureSync furn = new MyMod.BrokenFurnitureSync();
-                    furn.m_Guid = breakGuid;
-                    furn.m_ParentGuid = breakParentGuid;
-                    furn.m_LevelID = MyMod.levelid;
-                    furn.m_LevelGUID = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
-
-                    if (__instance.m_BreakDown.gameObject.activeSelf == false)
-                    {
-                        //HUDMessage.AddMessage("THIS ALREADY BROKEN");
-                        //GameAudioManager.PlayGUIError();
-                        if (__instance.m_IsBreakingDown == true)
-                        {
-                            __instance.m_IsBreakingDown = false;
-                            __instance.StopAudioAndRumbleEffects();
-
-                        }
-                        __instance.OnCancel();
-                    }else{
-                        for (int i = 0; i < MyMod.playersData.Count; i++)
-                        {
-                            if (MyMod.playersData[i] != null)
-                            {
-                                MyMod.BrokenFurnitureSync otherFurn = MyMod.playersData[i].m_BrakingObject;
-                                if (otherFurn.m_Guid == furn.m_Guid && otherFurn.m_ParentGuid == furn.m_ParentGuid && otherFurn.m_LevelID == MyMod.levelid && otherFurn.m_LevelGUID == MyMod.level_guid)
-                                {
-                                    HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " IS BREAKING THIS");
-                                    GameAudioManager.PlayGUIError();
-                                    if (__instance.m_IsBreakingDown == true)
-                                    {
-                                        __instance.m_IsBreakingDown = false;
-                                        __instance.StopAudioAndRumbleEffects();
-
-                                    }
-                                    __instance.OnCancel();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "ProcessInteraction")]
+        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "ProcessInteraction")] // Once
         public static class BreakDown_ProcessInteraction
         {
             public static bool Prefix(BreakDown __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 GameObject gameObject = __instance.gameObject;
                 string breakGuid = "";
                 string breakParentGuid = "";
@@ -2942,11 +2952,17 @@ namespace SkyCoop
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessContainerInteraction")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessContainerInteraction")] // Once
         public static class PlayerManager_ProcessContainerInteraction
         {
             public static bool Prefix(PlayerManager __instance, Container c)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 string boxGUID = "";
 
                 if (c != null && c.gameObject != null && c.gameObject.GetComponent<ObjectGuid>() != null)
@@ -2979,50 +2995,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "Update")]
-        public static class PlayerManager_Update
-        {
-            public static void Postfix(PlayerManager __instance)
-            {
-                if(__instance.m_ContainerBeingSearched != null)
-                {
-                    Container c = __instance.m_ContainerBeingSearched;
-                    string boxGUID = "";
-
-                    if (c != null && c.gameObject != null && c.gameObject.GetComponent<ObjectGuid>() != null)
-                    {
-                        boxGUID = c.gameObject.GetComponent<ObjectGuid>().Get();
-                    }
-
-                    MyMod.ContainerOpenSync box = new MyMod.ContainerOpenSync();
-                    box.m_Guid = boxGUID;
-                    box.m_LevelID = MyMod.levelid;
-                    box.m_LevelGUID = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
-
-                    for (int i = 0; i < MyMod.playersData.Count; i++)
-                    {
-                        if (MyMod.playersData[i] != null)
-                        {
-                            if (MyMod.playersData[i].m_Container != null)
-                            {
-                                MyMod.ContainerOpenSync otherBox = MyMod.playersData[i].m_Container;
-                                if (otherBox.m_Guid == box.m_Guid && otherBox.m_LevelID == MyMod.levelid && otherBox.m_LevelGUID == MyMod.level_guid)
-                                {
-                                    __instance.m_ContainerBeingSearched.CancelSearch();
-                                    return;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "Start")] // Once
         public static class RopeAnchorPoint_Hook
         {
             public static void Postfix(RopeAnchorPoint __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.IsDead == true || GameManager.GetPlayerStruggleComponent().InStruggle() == true)
                 {
                     return;
@@ -3033,11 +3016,17 @@ namespace SkyCoop
                 MyMod.AddDeployedRopes(__instance.gameObject.transform.position, __instance.m_RopeDeployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "SnapRope")]
+        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "SnapRope")] // REALLY WEIRD ONE!!!
         public static class RopeAnchorPoint_Snapped
         {
             public static void Postfix(RopeAnchorPoint __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.IsDead == true || GameManager.GetPlayerStruggleComponent().InStruggle() == true)
                 {
                     return;
@@ -3046,30 +3035,38 @@ namespace SkyCoop
                 MyMod.AddDeployedRopes(__instance.gameObject.transform.position, __instance.m_RopeDeployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "ActionFinished")]
+        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "ActionFinished")] // REALLY WEIRD ONE!!!
         public static class RopeAnchorPoint_TakeOrDeploy
         {
             public static void Prefix(RopeAnchorPoint __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.IsDead == true || GameManager.GetPlayerStruggleComponent().InStruggle() == true)
                 {
                     return;
                 }
-                if(__instance.m_ActionState == RopeAnchorActionState.None)
+                if (__instance.m_ActionState == RopeAnchorActionState.None)
                 {
                     return;
                 }
                 if (GameManager.m_PlayerManager != null)
                 {
                     PlayerControlMode Plc = GameManager.GetPlayerManagerComponent().GetControlMode();
-                    if(Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
+                    if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
                     {
                         bool deployed = false;
                         if (Plc == PlayerControlMode.DeployRope)
                         {
                             MelonLogger.Msg("Rope Deployed");
                             deployed = true;
-                        }else{
+                        }
+                        else
+                        {
                             MelonLogger.Msg("Rope Taken");
                             deployed = false;
                         }
@@ -3082,15 +3079,27 @@ namespace SkyCoop
         //MAKING RANDOM GEARS SEEDED!
 
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "RollSpawnChance", new System.Type[] { typeof(GameObject), typeof(float) })]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "RollSpawnChance", new System.Type[] { typeof(GameObject), typeof(float) })] // Once, can be triggered a lot
         public static class GameManager_SeededRandom
         {
             public static bool Prefix(GameObject go, float spawnChance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 return false;
             }
             public static void Postfix(GameObject go, float spawnChance, ref bool __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 int _x = (int)go.transform.position.x;
                 int _y = (int)go.transform.position.y;
                 int _z = (int)go.transform.position.z;
@@ -3111,15 +3120,27 @@ namespace SkyCoop
         public static int EmuGenVersion = -1;
         public static bool EmulateOldRandom = false;
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "GetRandomSeed")]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "GetRandomSeed")] // Once, can be triggered a lot.
         public static class GameManager_GetRandomSeed
         {
             public static bool Prefix(int seed)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 return false;
             }
             public static void Postfix(int seed, ref int __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //MelonLogger.Msg("Getting random seed for "+ GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
                 //GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent
 
@@ -3129,10 +3150,12 @@ namespace SkyCoop
                     {
                         __result = seed ^ GameManager.m_SceneTransitionData.m_GameRandomSeed;
                     }
-                }else{
+                }
+                else
+                {
                     string UseString = "";
 
-                    if(GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != null && (GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != "" || GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != ""))
+                    if (GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != null && (GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != "" || GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != ""))
                     {
                         if (GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad != "")
                         {
@@ -3144,19 +3167,27 @@ namespace SkyCoop
                             {
                                 UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
                             }
-                        }else{
-                            UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
                         }
-                    }else{
-                        if(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != null)
+                        else
                         {
                             UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
-                        }else{
+                        }
+                    }
+                    else
+                    {
+                        if (GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent != null)
+                        {
+                            UseString = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                        }
+                        else
+                        {
 
                             if (UnityEngine.SceneManagement.SceneManager.GetActiveScene() != null)
                             {
                                 UseString = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-                            }else{
+                            }
+                            else
+                            {
                                 UseString = "SomethingWrong!!!";
                             }
                         }
@@ -3167,15 +3198,27 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(RandomSpawnObject), "ActivateRandomObject")]
+        [HarmonyLib.HarmonyPatch(typeof(RandomSpawnObject), "ActivateRandomObject")] // Once
         public static class RandomSpawnObject_SeededFix
         {
             public static bool Prefix(RandomSpawnObject __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 return false;
             }
             public static void Postfix(RandomSpawnObject __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //MelonLogger.Msg("[RandomSpawnObject] ActivateRandomObject started for "+__instance.gameObject.name+" Position X " + __instance.gameObject.transform.position.x + "Y " + __instance.gameObject.transform.position.y + " Z " + __instance.gameObject.transform.position.z);
                 List<GameObject> gameObjectList = new List<GameObject>((IEnumerable<GameObject>)__instance.m_ObjectList);
                 List<int> intList = new List<int>((IEnumerable<int>)__instance.m_Weights);
@@ -3244,47 +3287,27 @@ namespace SkyCoop
             }
         }
 
-        //public static bool GonnaDoRangeForPrefabSpawn = false;
-        //public static bool GonnaDoRollChanceForPrefabSpawn = false;
-        //public static int PrefabSpawnerRangeCallCounter = 0;
-        //public static int PrefabSpawnerGuidHash = 0;
-
-        //[HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObjects")]
-        //private static class SpawnObjectCrap
-        //{
-        //    private static void Prefix(PrefabSpawn __instance)
-        //    {
-        //        GonnaDoRangeForPrefabSpawn = true;
-        //        GonnaDoRollChanceForPrefabSpawn = true;
-        //        if (__instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.GetComponent<ObjectGuid>().Get() != "")
-        //        {
-        //            PrefabSpawnerGuidHash = __instance.gameObject.GetComponent<ObjectGuid>().Get().GetHashCode();
-        //        }
-        //        else
-        //        {
-        //            PrefabSpawnerGuidHash = __instance.gameObject.transform.position.GetHashCode();
-        //        }
-        //        MelonLogger.Msg(ConsoleColor.Blue, "PrefabSpawn Prefix() of " + PrefabSpawnerGuidHash);
-        //    }
-        //    private static void Postfix(PrefabSpawn __instance)
-        //    {
-        //        MelonLogger.Msg(ConsoleColor.Blue, "PrefabSpawn Postfix() of " + PrefabSpawnerGuidHash);
-        //        GonnaDoRangeForPrefabSpawn = false;
-        //        GonnaDoRollChanceForPrefabSpawn = false;
-        //        PrefabSpawnerRangeCallCounter = 0;
-        //        PrefabSpawnerGuidHash = 0;
-        //    }
-        //}
-
-        [HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObjects")]
+        [HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObjects")] // Once
         private static class SpawnObjectCrap
         {
             private static bool Prefix(PrefabSpawn __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 return false;
             }
             private static void Postfix(PrefabSpawn __instance, ref GameObject __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_PrefabList == null)
                 {
                     __result = (GameObject)null;
@@ -3297,7 +3320,9 @@ namespace SkyCoop
                 if (__instance.gameObject.GetComponent<ObjectGuid>() != null && __instance.gameObject.GetComponent<ObjectGuid>().Get() != "")
                 {
                     GuidHash = __instance.gameObject.GetComponent<ObjectGuid>().Get().GetHashCode();
-                }else{
+                }
+                else
+                {
                     GuidHash = __instance.gameObject.transform.position.GetHashCode();
                 }
 
@@ -3306,7 +3331,7 @@ namespace SkyCoop
                 {
                     num1 = Mathf.Max(num1, __instance.m_PrefabList[index].m_SetId);
                 }
-                    
+
                 List<List<PrefabSpawn.Element>> elementListList = new List<List<PrefabSpawn.Element>>();
                 for (int index = 0; index <= num1; ++index)
                     elementListList.Add(new List<PrefabSpawn.Element>());
@@ -3328,7 +3353,7 @@ namespace SkyCoop
                 }
 
                 CallCounter = CallCounter + 1;
-                
+
                 //int seedminMax = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash + CallCounter;
                 int seedminMax = GameManager.GetRandomSeed(GuidHash + CallCounter);
                 System.Random RNGminMax = new System.Random(seedminMax);
@@ -3363,7 +3388,7 @@ namespace SkyCoop
                     CallCounter = CallCounter + 1;
                     //int seedNum3 = GameManager.m_SceneTransitionData.m_GameRandomSeed + GuidHash + CallCounter;
                     int seedNum3 = GameManager.GetRandomSeed(GuidHash + CallCounter);
-                    System.Random RNGnum3 = new System.Random(seedNum3);                              
+                    System.Random RNGnum3 = new System.Random(seedNum3);
                     int num3 = RNGnum3.Next(0, num2);
                     int num7 = 0;
                     for (int index1 = 0; index1 < elementListList.Count; ++index1)
@@ -3409,54 +3434,14 @@ namespace SkyCoop
                 return;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObject")] //SpawnObject and SpawnObjects is different methods, S you see? Nice names (no).
-        private static class SpawnObjectCrapLogs
-        {
-            private static void Postfix(PrefabSpawn __instance, PrefabSpawn.Element spawnElement, ref GameObject __result)
-            {
-                if(__result != null)
-                {
-                    //MelonLogger.Msg("[PrefabSpawn Seeded] Spawned " + __result.gameObject.name+" X "+__result.gameObject.transform.position.x + " Y " + __result.gameObject.transform.position.y + " Z " + __result.gameObject.transform.position.z);
-                }
-            }
-        }
-        //[HarmonyLib.HarmonyPatch(typeof(Utils), "RollChance")]
-        //private static class SpawnObjectRollChance
+        //[HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObject")] //SpawnObject and SpawnObjects is different methods, S you see? Nice names (no).
+        //private static class SpawnObjectCrapLogs
         //{
-        //    private static void Postfix(float percent, ref bool __result)
+        //    private static void Postfix(PrefabSpawn __instance, PrefabSpawn.Element spawnElement, ref GameObject __result)
         //    {
-        //        if (GonnaDoRollChanceForPrefabSpawn)
+        //        if(__result != null)
         //        {
-        //            int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + PrefabSpawnerGuidHash;
-        //            System.Random RNG = new System.Random(seed);
-        //            GonnaDoRollChanceForPrefabSpawn = false;
-        //            __result = MyMod.RollChanceSeeded(percent, RNG);
-        //            MelonLogger.Msg(ConsoleColor.Blue, "PrefabSpawn " + PrefabSpawnerGuidHash + " Got RollChance result " + __result);
-        //        }
-        //    }
-        //}
-
-        //[HarmonyLib.HarmonyPatch(typeof(UnityEngine.Random), "RandomRangeInt", new Type[] { typeof(int), typeof(int) })]
-        //private static class StateChanger
-        //{
-        //    private static UnityEngine.Random.State preHookState = new UnityEngine.Random.State();
-        //    private static void Prefix()
-        //    {
-        //        MelonLogger.Msg(ConsoleColor.Yellow, "UnityEngine.Random.RandomRangeInt GonnaDoRangeForPrefabSpawn " + GonnaDoRangeForPrefabSpawn);
-        //        preHookState = UnityEngine.Random.state;
-        //        if (GonnaDoRangeForPrefabSpawn)
-        //        {
-        //            PrefabSpawnerRangeCallCounter = PrefabSpawnerRangeCallCounter + 1;
-        //            int _seed = PrefabSpawnerGuidHash + PrefabSpawnerRangeCallCounter;
-        //            UnityEngine.Random.InitState(GameManager.GetRandomSeed(_seed));
-        //            MelonLogger.Msg(ConsoleColor.Blue, "PrefabSpawn " + PrefabSpawnerGuidHash + " Used Random.Range with seed " + GameManager.GetRandomSeed(_seed)+ " call counts "+ PrefabSpawnerRangeCallCounter);
-        //        }
-        //    }
-        //    private static void Postfix()
-        //    {
-        //        if (GonnaDoRangeForPrefabSpawn)
-        //        {
-        //            UnityEngine.Random.state = preHookState;
+        //            //MelonLogger.Msg("[PrefabSpawn Seeded] Spawned " + __result.gameObject.name+" X "+__result.gameObject.transform.position.x + " Y " + __result.gameObject.transform.position.y + " Z " + __result.gameObject.transform.position.z);
         //        }
         //    }
         //}
@@ -3467,8 +3452,14 @@ namespace SkyCoop
             internal static float restoreTimeToDrink; //Thank you, Remodor, now I know I can have varible right in patch class!
             internal static void Prefix(PlayerManager __instance, WaterSupply ws, float volumeAvailable)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 restoreTimeToDrink = ws.m_TimeToDrinkSeconds;
-                if(MyMod.ServerConfig.m_FastConsumption == false)
+                if (MyMod.ServerConfig.m_FastConsumption == false)
                 {
                     ws.m_TimeToDrinkSeconds = 10;
                 }
@@ -3481,9 +3472,15 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UseFoodInventoryItem")]//Part of code from TLD_RelativeConsumptionTime
         internal class PlayerManager_UseFoodInventoryItem_Patch
         {
-            internal static float restoreTimeToEat; 
+            internal static float restoreTimeToEat;
             internal static void Prefix(PlayerManager __instance, GearItem gi)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 restoreTimeToEat = gi.m_FoodItem.m_TimeToEatSeconds;
                 if (MyMod.ServerConfig.m_FastConsumption == false)
                 {
@@ -3492,17 +3489,29 @@ namespace SkyCoop
             }
             internal static void Postfix(PlayerManager __instance, GearItem gi)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 gi.m_FoodItem.m_TimeToEatSeconds = restoreTimeToEat;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectDisplayText")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectDisplayText")] // Almost always
         internal class PlayerManager_GetInteractiveObjectDisplayText
         {
             internal static void Postfix(PlayerManager __instance, GameObject interactiveObject, ref string __result)
             {
-                if(interactiveObject != null)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    if(interactiveObject.GetComponent<MyMod.MultiplayerPlayer>() != null)
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (interactiveObject != null)
+                {
+                    if (interactiveObject.GetComponent<MyMod.MultiplayerPlayer>() != null)
                     {
                         MyMod.MultiplayerPlayer mP = interactiveObject.GetComponent<MyMod.MultiplayerPlayer>();
                         int m_LevelId = MyMod.playersData[mP.m_ID].m_Levelid;
@@ -3516,12 +3525,14 @@ namespace SkyCoop
                         if (MyMod.playersData[mP.m_ID] != null && MyMod.playersData[mP.m_ID].m_Name != "")
                         {
                             PlayerName = MyMod.playersData[mP.m_ID].m_Name;
-                        }else{
+                        }
+                        else
+                        {
                             PlayerName = "Player";
                         }
-                        __result = PlayerName+"\n"+actString;
+                        __result = PlayerName + "\n" + actString;
                     }
-                    else if(interactiveObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    else if (interactiveObject.GetComponent<MyMod.DroppedGearDummy>() != null)
                     {
                         MyMod.DroppedGearDummy DGD = interactiveObject.GetComponent<MyMod.DroppedGearDummy>();
 
@@ -3536,82 +3547,108 @@ namespace SkyCoop
                             }
                         }
 
-                        string DroppedString = " "+ActionString + " by "+DGD.m_Extra.m_Dropper;
+                        string DroppedString = " " + ActionString + " by " + DGD.m_Extra.m_Dropper;
                         if (DGD.m_Extra.m_GoalTime == 0)
                         {
-                            if(DroppedString != "")
+                            if (DroppedString != "")
                             {
                                 __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
-                            }else{
+                            }
+                            else
+                            {
                                 __result = DGD.m_LocalizedDisplayName;
                             }
                         }
                         else if (DGD.m_Extra.m_GoalTime == -1)
                         {
-                            if(IsSnare == false)
+                            if (IsSnare == false)
                             {
                                 __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
-                            }else{
-                                
-                                if(DGD.m_Extra.m_Variant == 1)
+                            }
+                            else
+                            {
+
+                                if (DGD.m_Extra.m_Variant == 1)
                                 {
                                     __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
-                                }else{
+                                }
+                                else
+                                {
                                     __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
                                 }
                             }
-                        }else{
-                            int minutesOnDry = MyMod.MinutesFromStartServer-DGD.m_Extra.m_DroppedTime;
-                            int minutesLeft = MyMod.TimeToDry(interactiveObject.name)-minutesOnDry+1;
+                        }
+                        else
+                        {
+                            int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+                            int minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
                             int hours = minutesLeft / 60;
 
                             string str = DGD.m_LocalizedDisplayName + "\n";
-                            if(IsSnare == false)
+                            if (IsSnare == false)
                             {
                                 str = str + "Cures in: ";
-                            }else{
-                                
-                                if(DGD.m_Extra.m_Variant == 1)
+                            }
+                            else
+                            {
+
+                                if (DGD.m_Extra.m_Variant == 1)
                                 {
                                     str = str + "May catch: ";
-                                }else{
+                                }
+                                else
+                                {
                                     str = str + "Will catch: ";
                                 }
                             }
 
-                            if(hours >= 24)
+                            if (hours >= 24)
                             {
                                 int days = hours / 24;
                                 if (days != 1)
                                 {
                                     str = str + days + " days";
-                                }else{
+                                }
+                                else
+                                {
                                     str = str + days + " day";
                                 }
-                                
-                            }else{
+
+                            }
+                            else
+                            {
                                 if (hours >= 1)
                                 {
-                                    if(hours != 1)
+                                    if (hours != 1)
                                     {
                                         str = str + hours + " hours";
-                                    }else{
+                                    }
+                                    else
+                                    {
                                         str = str + hours + " hour";
                                     }
-                                }else{
+                                }
+                                else
+                                {
                                     if (minutesLeft >= 1)
                                     {
                                         if (minutesLeft != 1)
                                         {
                                             str = str + minutesLeft + " minutes";
-                                        }else{
+                                        }
+                                        else
+                                        {
                                             str = str + minutesLeft + " minute";
                                         }
-                                    }else{
-                                        if(IsSnare == false)
+                                    }
+                                    else
+                                    {
+                                        if (IsSnare == false)
                                         {
                                             str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
-                                        }else{
+                                        }
+                                        else
+                                        {
                                             str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
                                         }
                                     }
@@ -3623,50 +3660,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
-        internal class PlayerManager_GetInteractiveObjectUnderCrosshairs
-        {
-            internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
-            {
-                int layerMask = vp_Layer.Default;
-                RaycastHit hit;
-
-                if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange))
-                {
-                    if(hit.collider.gameObject != null)
-                    {
-                        GameObject hitObj = hit.collider.transform.gameObject;
-                        //MelonLogger.Msg("Found something "+ hitObj.name);
-                        if(hitObj.GetComponent<MyMod.PlayerBulletDamage>() != null)
-                        {
-                            if(hitObj.GetComponent<MyMod.PlayerBulletDamage>().m_Player != null)
-                            {
-                                int m_ID = hitObj.GetComponent<MyMod.PlayerBulletDamage>().m_ClientId;
-
-                                if (MyMod.playersData[m_ID] != null)
-                                {
-                                    int m_LevelId = MyMod.playersData[m_ID].m_Levelid;
-                                    string m_LevelGUID = MyMod.playersData[m_ID].m_LevelGuid;
-                                    if (MyMod.levelid == m_LevelId && MyMod.level_guid == m_LevelGUID)
-                                    {
-                                        __result = hitObj.GetComponent<MyMod.PlayerBulletDamage>().m_Player;
-                                    }
-                                }
-                            }
-                        }
-                        else if(hitObj.GetComponent<MyMod.DroppedGearDummy>() != null)
-                        {
-                            __result = hitObj;
-                        }
-                    }
-                }
-            }
-        }
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
-        //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs2
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")] // Almost always
+        //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs
         //{
         //    internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
         //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
         //        int layerMask = vp_Layer.Default;
         //        RaycastHit hit;
 
@@ -3675,258 +3679,142 @@ namespace SkyCoop
         //            if (hit.collider.gameObject != null)
         //            {
         //                GameObject hitObj = hit.collider.transform.gameObject;
-        //                if (hitObj.GetComponent<MyMod.DroppedGearDummy>() != null)
+        //                //MelonLogger.Msg("Found something "+ hitObj.name);
+        //                if (hitObj.GetComponent<MyMod.PlayerBulletDamage>() != null)
         //                {
-        //                    __result = hitObj;
+        //                    if (hitObj.GetComponent<MyMod.PlayerBulletDamage>().m_Player != null)
+        //                    {
+
+        //                    }
         //                }
-        //                else
-        //                {
-        //                    MelonLogger.Msg("Hit object "+hitObj.name);
-        //                }
+        //                //else if (hitObj.GetComponent<MyMod.DroppedGearDummy>() != null)
+        //                //{
+        //                //    __result = hitObj;
+        //                //}
         //            }
         //        }
         //    }
         //}
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "FindInteractiveObject")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "FindInteractiveObject")] // Almsot always
         internal class PlayerManager_FindInteractiveObject
         {
             internal static void Postfix(RaycastHit hit, ref GearItem gi, ref GameObject interactiveObj)
             {
-                if (hit.transform.gameObject != null && hit.transform.gameObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    gi = new GearItem();
-                    interactiveObj = hit.transform.gameObject;
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-            }
-        }
-      //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
-      //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs2
-      //{
-      //    internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
-      //    {
-      //        if (__instance.ShouldSuppressCrosshairs())
-      //        {
-      //            __result = null;
-      //        }
-      //        int num = 138383360;
-      //        RaycastHit hit;
-      //        bool flag = Utils.RaycastNearest(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, num);
-      //        if (!flag)
-      //        {
-      //            flag = Physics.Raycast(GameManager.GetWeaponCamera().transform.position, GameManager.GetWeaponCamera().transform.forward, out hit, maxRange, num);
-      //            if (flag && Utils.GetTopParentWithLayer(hit.collider.gameObject, 23) == hit.collider.gameObject)
-      //            {
-      //                flag = false;
-      //            }
-      //        }
-      //        GameObject gameObject = null;
-      //        GearItem gearItem = null;
-      //        if (flag)
-      //        {
-      //            __instance.FindInteractiveObject(hit, ref gearItem, ref gameObject);
-      //        }
-      //        if (!gearItem && !gameObject)
-      //        {
-      //            num |= 16777216;
-      //            flag = Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, num);
-      //            if (!flag)
-      //            {
-      //                flag = Physics.Raycast(GameManager.GetWeaponCamera().transform.position, GameManager.GetWeaponCamera().transform.forward, out hit, maxRange, num);
-      //                if (flag && Utils.GetTopParentWithLayer(hit.collider.gameObject, 23) == hit.collider.gameObject)
-      //                {
-      //                    flag = false;
-      //                }
-      //            }
-      //            if (flag)
-      //            {
-      //                __instance.FindInteractiveObject(hit, ref gearItem, ref gameObject);
-      //            }
-      //        }
-      //        if (!flag || !gameObject)
-      //        {
-      //            __result = null;
-      //        }
-      //        if (gearItem)
-      //        {
-      //            if (gearItem.m_InPlayerInventory)
-      //            {
-      //                __result = null;
-      //            }
-      //            if (gearItem.m_NonInteractive)
-      //            {
-      //                __result = null;
-      //            }
-      //        }
-      //        float distance = hit.distance;
-      //        __instance.m_LocationOfLastInteractHit = hit.point;
-      //        Rigidbody rigidbody;
-      //        if (gameObject.TryGetComponent<Rigidbody>(out rigidbody))
-      //        {
-      //            if (rigidbody.velocity.sqrMagnitude > 25f)
-      //            {
-      //                __result = null;
-      //            }
-      //            ArrowItem arrowItem;
-      //            if (gameObject.TryGetComponent<ArrowItem>(out arrowItem) && arrowItem.InFlight(true))
-      //            {
-      //                __result = null;
-      //            }
-      //        }
-      //        int num2 = Utils.m_PhysicalCollisionLayerMask | 131072 | 1048576 | 134217728 | 16777216 | 32768;
-      //        num2 &= -67108865;
-      //        flag = Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, num2);
-      //        if (!flag)
-      //        {
-      //            flag = Physics.Raycast(GameManager.GetWeaponCamera().transform.position, GameManager.GetWeaponCamera().transform.forward, out hit, maxRange, num2);
-      //            if (flag && Utils.GetTopParentWithLayer(hit.collider.gameObject, 23) == hit.collider.gameObject)
-      //            {
-      //                flag = false;
-      //            }
-      //        }
-      //        if (!flag)
-      //        {
-      //            __result = null;
-      //        }
-      //        GearItem gearItem2;
-      //        if (hit.collider && hit.transform.gameObject && hit.transform.gameObject.TryGetComponent<GearItem>(out gearItem2) && gearItem2.m_InPlayerInventory && gameObject.layer == 21)
-      //        {
-      //            gameObject = hit.transform.gameObject;
-      //        }
-      //        if (hit.distance > distance)
-      //        {
-      //            __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //        }
-      //        GameObject gameObject2 = hit.transform.gameObject;
-      //        if (gameObject2 == gameObject)
-      //        {
-      //            if (gameObject.layer == 27)
-      //            {
-      //                BaseAi componentInParent = gameObject.GetComponentInParent<BaseAi>();
-      //                if (!componentInParent)
-      //                {
-      //                    __result = Utils.GetTopParentWithLayer(gameObject, gameObject.transform.parent.gameObject.layer);
-      //                }
-      //                __result = componentInParent.gameObject;
-      //            }
-      //            else
-      //            {
-      //                if (gameObject.layer == 18)
-      //                {
-      //                    for (int i = 0; i < gameObject.transform.childCount; i++)
-      //                    {
-      //                        Transform child = gameObject.transform.GetChild(i);
-      //                        if (child != null && child.gameObject.activeInHierarchy)
-      //                        {
-      //                            child.GetComponentsInChildren<MeshCollider>(false, __instance.m_MeshColliders);
-      //                            if (__instance.m_MeshColliders.Count > 0)
-      //                            {
-      //                                __result = null;
-      //                            }
-      //                        }
-      //                    }
-      //                    __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //                }
-      //                __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //            }
-      //        }else{
-      //            if (Utils.Approximately(hit.distance, distance, 0.0001f))
-      //            {
-      //                __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //            }
-      //            gameObject.GetComponentsInChildren<Transform>(__instance.m_Transforms);
+                if (hit.transform.gameObject != null)
+                {
+                    if(hit.transform.gameObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    {
+                        gi = new GearItem();
+                        interactiveObj = hit.transform.gameObject;
+                    }
+                    else if (hit.transform.gameObject.GetComponent<MyMod.PlayerBulletDamage>() != null)
+                    {
+                        MyMod.PlayerBulletDamage bulletZone = hit.transform.gameObject.GetComponent<MyMod.PlayerBulletDamage>();
+                        int m_ID = bulletZone.m_ClientId;
 
+                        if (MyMod.playersData[m_ID] != null && bulletZone.m_Player != null)
+                        {
+                            int m_LevelId = MyMod.playersData[m_ID].m_Levelid;
+                            string m_LevelGUID = MyMod.playersData[m_ID].m_LevelGuid;
+                            if (MyMod.levelid == m_LevelId && MyMod.level_guid == m_LevelGUID)
+                            {
+                                gi = new GearItem();
+                                interactiveObj = bulletZone.m_Player;
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
-      //            __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //            //using (Il2CppSystem.Collections.Generic.List<Transform>.Enumerator enumerator = __instance.m_Transforms.GetEnumerator())
-      //            //{
-      //            //    while (enumerator.MoveNext())
-      //            //    {
-      //            //        if (enumerator.Current == gameObject2.transform)
-      //            //        {
-      //            //            __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //            //        }
-      //            //    }
-      //            //}
-      //            //if (gameObject2.layer == 24)
-      //            //{
-      //            //    __result = Utils.GetTopParentWithLayer(gameObject, gameObject.layer);
-      //            //}
-      //            //__result = null;
-      //        }
-      //    }
-      //}
-
-      [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "IsClickHoldActive")]
-        internal class PlayerManager_IsClickHoldActive
-        {
-            internal static void Postfix(ref bool __result)
-            {
-                if (__result == false)
-                {
-                    if (MyMod.PlayerInteractionWith != null)
-                    {
-                        __result = true;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "IsCancelableActionInProgress")]
-        internal class PlayerManager_IsCancelableActionInProgress
-        {
-            internal static void Postfix(ref bool __result)
-            {
-                if(__result == false)
-                {
-                    if(MyMod.PlayerInteractionWith != null)
-                    {
-                        __result = true;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(InputManager), "MaybeCancelClickHold")]
-        internal class InputManager_MaybeCancelClickHold
-        {
-            internal static void Postfix(ref bool __result)
-            {
-                if (__result == false)
-                {
-                    if (MyMod.PlayerInteractionWith != null)
-                    {
-                        MyMod.LongActionCanceled(MyMod.PlayerInteractionWith);
-                        __result = true;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(InputManager), "IsClickHoldActive")]
-        internal class InputManager_IsClickHoldActive
-        {
-            internal static void Postfix(ref bool __result)
-            {
-                if (__result == false)
-                {
-                    if (MyMod.PlayerInteractionWith != null)
-                    {
-                        __result = true;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerStunned), "Update")]
-        internal class PlayerStunned_UpdateLowHealthStagger
-        {
-            internal static bool Prefix()
-            {
-                if(MyMod.LowHealthStaggerBlockTime > 0)
-                {
-                    return false;
-                }else{
-                    return true;
-                }
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "IsClickHoldActive")]
+        //internal class PlayerManager_IsClickHoldActive
+        //{
+        //    internal static void Postfix(ref bool __result)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (__result == false)
+        //        {
+        //            if (MyMod.PlayerInteractionWith != null)
+        //            {
+        //                __result = true;
+        //            }
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "IsCancelableActionInProgress")] // Don't remember
+        //internal class PlayerManager_IsCancelableActionInProgress
+        //{
+        //    internal static void Postfix(ref bool __result)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (__result == false)
+        //        {
+        //            if (MyMod.PlayerInteractionWith != null)
+        //            {
+        //                __result = true;
+        //            }
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(InputManager), "MaybeCancelClickHold")] // Don't remember
+        //internal class InputManager_MaybeCancelClickHold
+        //{
+        //    internal static void Postfix(ref bool __result)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (__result == false)
+        //        {
+        //            if (MyMod.PlayerInteractionWith != null)
+        //            {
+        //                MyMod.LongActionCanceled(MyMod.PlayerInteractionWith);
+        //                __result = true;
+        //            }
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(InputManager), "IsClickHoldActive")] // Always
+        //internal class InputManager_IsClickHoldActive
+        //{
+        //    internal static void Postfix(ref bool __result)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (__result == false)
+        //        {
+        //            if (MyMod.PlayerInteractionWith != null)
+        //            {
+        //                __result = true;
+        //            }
+        //        }
+        //    }
+        //}
 
         public static MyMod.PriorityActionForOtherPlayer GetPriorityActionForPlayer(int m_ID, MyMod.MultiplayerPlayer mP)
         {
@@ -3937,7 +3825,7 @@ namespace SkyCoop
             {
                 act = MyMod.GetActionForOtherPlayer("Revive");
             }
-            else if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands!= null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
+            else if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
             {
                 act = MyMod.GetActionForOtherPlayer("Stim");
             }
@@ -3960,15 +3848,21 @@ namespace SkyCoop
             return act;
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessInteraction")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessInteraction")] // Once
         internal class PlayerManager_InteractiveObjectsProcessInteraction
         {
             internal static void Postfix(PlayerManager __instance, ref bool __result)
             {
-                if(__instance.m_InteractiveObjectUnderCrosshair != null)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_InteractiveObjectUnderCrosshair != null)
                 {
                     GameObject obj = __instance.m_InteractiveObjectUnderCrosshair;
-                    if(obj.GetComponent<MyMod.MultiplayerPlayer>() != null)
+                    if (obj.GetComponent<MyMod.MultiplayerPlayer>() != null)
                     {
                         MyMod.MultiplayerPlayer mP = obj.GetComponent<MyMod.MultiplayerPlayer>();
 
@@ -3983,7 +3877,9 @@ namespace SkyCoop
                             {
                                 MyMod.DoLongAction(mP, ProcessText, PAction);
                                 __result = true;
-                            }else{
+                            }
+                            else
+                            {
                                 HUDMessage.AddMessage("YOU HAVE NOT ANY BANDAGES");
                                 GameAudioManager.PlayGUIError();
                                 __result = false;
@@ -3997,15 +3893,17 @@ namespace SkyCoop
                             {
                                 MyMod.DoLongAction(mP, ProcessText, PAction);
                                 __result = true;
-                            }else{
+                            }
+                            else
+                            {
                                 HUDMessage.AddMessage("YOU HAVE NOT HYDROGEN PEROXIDE");
                                 GameAudioManager.PlayGUIError();
                                 __result = false;
                             }
                         }
-                        else if(PAction == "Stim")
+                        else if (PAction == "Stim")
                         {
-                            if(GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
+                            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
                             {
                                 MyMod.EmergencyStimBeforeUse = GameManager.m_PlayerManager.m_ItemInHands;
                                 GameManager.GetPlayerManagerComponent().UseInventoryItem(GameManager.m_PlayerManager.m_ItemInHands);// Unequip GEAR_EmergencyStim
@@ -4043,28 +3941,37 @@ namespace SkyCoop
                             MyMod.DoLongAction(mP, ProcessText, PAction);
                             __result = true;
                         }
-                    }else if (obj.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    }
+                    else if (obj.GetComponent<MyMod.DroppedGearDummy>() != null)
                     {
                         MelonLogger.Msg("Trying interact with fake gear");
-                        if(obj.GetComponent<MyMod.FakeBed>() == null)
+                        if (obj.GetComponent<MyMod.FakeBed>() == null)
                         {
                             MelonLogger.Msg("Trying pickup fake drop");
                             MyMod.PickupDroppedGear(obj);
                             __result = true;
-                        }else{
+                        }
+                        else
+                        {
                             MyMod.UseFakeBed(obj);
                             __result = true;
                         }
                     }
-                } 
+                }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Container), "Close")]
+        [HarmonyLib.HarmonyPatch(typeof(Container), "Close")] // Once
         public static class Container_UsingSyncClose
         {
             public static void Postfix(Container __instance, ref bool __result)
             {
-                if(__result == true)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__result == true)
                 {
                     if (MyMod.MyContainer != null)
                     {
@@ -4092,11 +3999,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Container), "Open")]
+        [HarmonyLib.HarmonyPatch(typeof(Container), "Open")] // Once
         public static class Container_UsingSyncOpen
         {
             public static void Postfix(Container __instance, ref bool __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__result == true)
                 {
                     MyMod.ContainerOpenSync pendingContainer = new MyMod.ContainerOpenSync();
@@ -4117,7 +4030,7 @@ namespace SkyCoop
                             GearItem gearItem = __instance.m_Items[index];
                             if (gearItem != null)
                             {
-                                if(gearItem.m_GearName.Contains("MountainTownFarmKey") == true)
+                                if (gearItem.m_GearName.Contains("MountainTownFarmKey") == true)
                                 {
                                     return;
                                 }
@@ -4150,40 +4063,6 @@ namespace SkyCoop
             }
         }
 
-        //[HarmonyLib.HarmonyPatch(typeof(ContainerManager), "Deserialize", new System.Type[] { typeof(string), typeof(Il2CppSystem.Collections.Generic.List<GearItem>) })]
-        //public static class ContainerManager_Deserialize
-        //{
-        //    public static void Postfix(ContainerManager __instance)
-        //    {
-
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(GearManager), "Deserialize", new System.Type[] { typeof(string), typeof(Il2CppSystem.Collections.Generic.List<GearItem>) })]
-        //public static class GearManager_Deserialize
-        //{
-        //    public static void Postfix()
-        //    {
-
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(HarvestableManager), "DeserializeAll")]
-        //public static class HarvestableManager_Deserialize
-        //{
-        //    public static void Postfix()
-        //    {
-
-        //    }
-        //}
-
-        //[HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "DeserializeAll")]
-        //public static class SnowShelterManager_Deserialize
-        //{
-        //    public static void Postfix()
-        //    {
-                
-        //    }
-        //}
-
         public static void SendHarvestPlantState(string state, Harvestable plant)
         {
             MyMod.HarvestableSyncData harvData = new MyMod.HarvestableSyncData();
@@ -4211,50 +4090,72 @@ namespace SkyCoop
                     ServerSend.HARVESTPLANT(0, harvData, true);
                 }
 
-                if(state == "Done")
+                if (state == "Done")
                 {
                     MyMod.AddHarvastedPlant(harvData.m_Guid, 0);
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "DoHarvest")]
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "DoHarvest")] // Once
         public static class Harvestable_DoHarvest
         {
             public static void Postfix(Harvestable __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 SendHarvestPlantState("Start", __instance);
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "CancelHarvest")]
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "CancelHarvest")] // Once
         public static class Harvestable_CancelHarvest
         {
             public static void Postfix(Harvestable __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 SendHarvestPlantState("Cancel", __instance);
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "CompletedHarvest")]
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "CompletedHarvest")] // Once
         public static class Harvestable_CompletedHarvest
         {
             public static void Postfix(Harvestable __instance, bool success)
             {
-                if(success == true)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (success == true)
                 {
                     SendHarvestPlantState("Done", __instance);
                 }
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "ProcessInteraction")]
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "ProcessInteraction")] // Once
         public static class Harvestable_ProcessInteraction
         {
             public static bool Prefix(Harvestable __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 string ObjGUID = "";
-                
-                
                 if (__instance.gameObject != null)
                 {
                     GameObject contObj = __instance.gameObject;
@@ -4280,47 +4181,18 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "UpdateHarvesting")]
-        public static class Harvestable_UpdateHarvesting
-        {
-            public static bool Prefix(Harvestable __instance)
-            {
-                if(GameManager.GetPlayerManagerComponent().m_HarvestableInProgress == __instance)
-                {
-                    string ObjGUID = "";
-                    if (__instance.gameObject != null)
-                    {
-                        GameObject contObj = __instance.gameObject;
-                        if (contObj.GetComponent<ObjectGuid>() != null)
-                        {
-                            ObjGUID = contObj.GetComponent<ObjectGuid>().Get();
-                        }
-
-                        for (int i = 0; i < MyMod.playersData.Count; i++)
-                        {
-                            if (MyMod.playersData[i] != null)
-                            {
-                                string otherGuid = MyMod.playersData[i].m_Plant;
-                                if (otherGuid == ObjGUID)
-                                {
-                                    HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " IS ALREADY COLLECTING THIS");
-                                    return false;
-                                }
-                            }
-                        }
-                    }
-                }
-
-                return true;
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Start")] // Once
         public class BootUpdate_Start
         {
             public static void Postfix(BootUpdate __instance)
             {
-                if(NeedSkipCauseConnect() == false && Application.isBatchMode == false)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
                 {
                     return;
                 }
@@ -4332,11 +4204,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Update")]
+        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Update")] // Only on booting screen
         public class BootUpdate_Update
         {
             public static void Postfix(BootUpdate __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
                 {
                     return;
@@ -4345,11 +4223,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Enable")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Enable")] // Once
         public class SkipIntroReduxSkipIntro
         {
             public static void Prefix(Panel_MainMenu __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
                 {
                     return;
@@ -4358,11 +4242,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Enable")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Enable")] // Once
         internal class Panel_MainMenu_Enable
         {
             private static void Postfix(Panel_MainMenu __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
                 {
                     return;
@@ -4371,12 +4261,18 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(TextInputField), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(TextInputField), "Start")] // Once
         internal class TextInputField_MoreLetters
         {
             private static void Postfix(TextInputField __instance)
             {
-                if(__instance.m_Input.characterLimit < 100)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_Input.characterLimit < 100)
                 {
                     __instance.m_MaxLength = 100;
                     __instance.m_Input.characterLimit = (int)__instance.m_MaxLength;
@@ -4384,11 +4280,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SnowShelter), "Start")]
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelter), "Start")] // Once
         internal class SnowShelter_Serialize
         {
             private static bool Prefix(SnowShelter __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_StartHasBeenCalled)
                 {
                     return false;
@@ -4398,19 +4300,27 @@ namespace SkyCoop
                 {
                     SnowShelterManager.Add(__instance);
                     //MelonLogger.Msg("Registered an snowshelter, cause have not DoNotSerializeThis component.");
-                }else{
+                }
+                else
+                {
                     //MelonLogger.Msg("Skip snowshelter, cause have DoNotSerializeThis component.");
                 }
                 return false;
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterBuild), "BuildFinished")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterBuild), "BuildFinished")] // Once
         public static class Panel_SnowShelterBuild_BuildFinished
         {
             public static void Prefix(Panel_SnowShelterBuild __instance)
             {
-                if(__instance.m_SnowShelter != null)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_SnowShelter != null)
                 {
                     MelonLogger.Msg("Shelter builded!");
                     GameObject shelter = __instance.m_SnowShelter.gameObject;
@@ -4418,21 +4328,33 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(SnowShelter), "DismantleFinished")]
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelter), "DismantleFinished")] // Once
         public static class SnowShelter_DismantleFinished
         {
             public static void Postfix(SnowShelter __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("Shelter removed!");
                 GameObject shelter = __instance.gameObject;
                 MyMod.ShelterRemoved(shelter.transform.position, MyMod.levelid, MyMod.level_guid, true);
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnUse")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnUse")] // Once
         public static class Panel_SnowShelterInteract_OnUse
         {
             public static void Postfix(Panel_SnowShelterInteract __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_SnowShelter != null)
                 {
                     MelonLogger.Msg("Entering shelter");
@@ -4457,11 +4379,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "EnterShelter")]
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "EnterShelter")] // Once
         public static class SnowShelterManager_EnterShelter
         {
             public static void Postfix(SnowShelterManager __instance, SnowShelter ss)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (ss != null)
                 {
                     MelonLogger.Msg("Entering shelter");
@@ -4486,11 +4414,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "ExitShelter")]
+        [HarmonyLib.HarmonyPatch(typeof(SnowShelterManager), "ExitShelter")] // Once
         public static class SnowShelterManager_ExitShelter
         {
             public static void Postfix(SnowShelterManager __instance, SnowShelter ss)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (ss != null)
                 {
                     MelonLogger.Msg("Exiting shelter");
@@ -4510,11 +4444,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnDismantle")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnDismantle")] // Once
         public static class Panel_SnowShelterInteract_OnDismantle
         {
             public static bool Prefix(Panel_SnowShelterInteract __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MyMod.ShowShelterByOther FindData = new MyMod.ShowShelterByOther();
                 if (__instance.m_SnowShelter != null && __instance.m_SnowShelter.gameObject != null)
                 {
@@ -4539,16 +4479,22 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Fire), "AddFuel")]
+        [HarmonyLib.HarmonyPatch(typeof(Fire), "AddFuel")] // Once can be triggered often
         public static class Fire_AddFuel
         {
             public static void Postfix(Fire __instance, GearItem fuel)
             {
-                if(__instance.gameObject != null && fuel != null)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name+" fuel is "+fuel.m_GearName);
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                else if(__instance.gameObject != null && fuel == null)
+                if (__instance.gameObject != null && fuel != null)
+                {
+                    MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name + " fuel is " + fuel.m_GearName);
+                }
+                else if (__instance.gameObject != null && fuel == null)
                 {
                     MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name + " fuel is null");
                 }
@@ -4557,7 +4503,7 @@ namespace SkyCoop
                     MelonLogger.Msg("[Fire][AddFuel] firesource is null");
                 }
 
-                if(__instance.m_StartedByPlayer == false)
+                if (__instance.m_StartedByPlayer == false)
                 {
                     MelonLogger.Msg("Assign firesource of other player to myself");
                     __instance.m_StartedByPlayer = true;
@@ -4571,26 +4517,38 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlacePoints), "ShouldShow")]
-        public static class PlacePoints_ShouldShow
-        {
-            public static void Postfix(PlacePoints __instance, bool __result)
-            {
-                if(__instance.m_AttachedFire != null)
-                {
-                    if(__instance.m_AttachedFire.IsBurning() && __instance.m_AttachedFire.m_StartedByPlayer == false)
-                    {
-                        __result = false;
-                    }
-                }
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(PlacePoints), "ShouldShow")] // Unknown
+        //public static class PlacePoints_ShouldShow
+        //{
+        //    public static void Postfix(PlacePoints __instance, bool __result)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (__instance.m_AttachedFire != null)
+        //        {
+        //            if (__instance.m_AttachedFire.IsBurning() && __instance.m_AttachedFire.m_StartedByPlayer == false)
+        //            {
+        //                __result = false;
+        //            }
+        //        }
+        //    }
+        //}
 
-        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "CanBeInteractedWith")]
+        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "CanBeInteractedWith")] // Unknown
         public static class CookingSlot_CanBeInteractedWith
         {
             public static bool Prefix(CookingSlot __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_GearPlacePoint != null
                     && __instance.m_GearPlacePoint.m_FireToAttach != null
                     && __instance.m_GearPlacePoint.m_FireToAttach.IsBurning()
@@ -4602,11 +4560,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "CanOpenCookingInterface")]
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "CanOpenCookingInterface")] // Unknown
         public static class CookingPotItem_CanOpenCookingInterface
         {
             public static bool Prefix(CookingPotItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_FireBeingUsed != null
                     && __instance.m_FireBeingUsed.IsBurning()
                     && __instance.m_FireBeingUsed.m_StartedByPlayer == false)
@@ -4617,11 +4581,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "AttachedFireIsBurning")]
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "AttachedFireIsBurning")] // Unknown
         public static class CookingPotItem_AttachedFireIsBurning
         {
             public static bool Prefix(CookingPotItem __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_FireBeingUsed != null
                     && __instance.m_FireBeingUsed.IsBurning()
                     && __instance.m_FireBeingUsed.m_StartedByPlayer == false)
@@ -4632,11 +4602,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "GetHoverText")]
+        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "GetHoverText")] // Always when looking at object
         public static class WoodStove_GetHoverText
         {
             public static void Postfix(WoodStove __instance, ref string __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_Fire != null
                     && __instance.m_Fire.IsBurning()
                     && __instance.m_Fire.m_StartedByPlayer == false)
@@ -4647,11 +4623,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Campfire), "GetHoverText")]
+        [HarmonyLib.HarmonyPatch(typeof(Campfire), "GetHoverText")] // Always when looking at object
         public static class Campfire_GetHoverText
         {
             public static void Postfix(Campfire __instance, ref string __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance.m_Fire != null
                     && __instance.m_Fire.IsBurning()
                     && __instance.m_Fire.m_StartedByPlayer == false)
@@ -4661,11 +4643,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(InterfaceManager), "Awake")]
+        [HarmonyLib.HarmonyPatch(typeof(InterfaceManager), "Awake")] // Once
         public static class UI_InterfaceManager
         {
             public static void Prefix(InterfaceManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null)
                 {
                     MyMod.m_InterfaceManager = __instance;
@@ -4674,11 +4662,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "Initialize")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "Initialize")] // Once
         public static class UI_Panel_SelectSurvivor
         {
             public static void Prefix(Panel_SelectSurvivor __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null)
                 {
                     MyMod.m_Panel_SelectSurvivor = __instance;
@@ -4686,11 +4680,17 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Initialize")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Initialize")] // Once
         public static class UI_Panel_MainMenu
         {
             public static void Prefix(Panel_MainMenu __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (__instance != null)
                 {
                     MyMod.m_Panel_MainMenu = __instance;
@@ -4698,189 +4698,41 @@ namespace SkyCoop
                 }
             }
         }
-
-        //[HarmonyLib.HarmonyPatch(typeof(LootTable), "GetRandomGearPrefab")]
-        //public static class LootTable_SeededRandom
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        return false;
-        //    }
-
-        //    public static List<LootTableItem> m_FilteredLootTableItems = new List<LootTableItem>();
-
-        //    public static void Postfix(LootTable __instance, ref GameObject __result)
-        //    {
-        //        //MelonLogger.Msg("Proessing loottable " + __instance.gameObject.name);
-        //        //MelonLogger.Msg("Prefabs in loottable: " + __instance.m_Prefabs.Count);
-        //        int index1 = 0;
-        //        for (int index2 = 0; index2 < __instance.m_Prefabs.Count; ++index2)
-        //        {
-        //            if (index1 >= 256)
-        //            {
-        //                break;
-        //            }
-        //            if (!__instance.DisableForXPMode(__instance.m_Prefabs[index2]))
-        //            {
-        //                GameObject pref = __instance.m_Prefabs[index2];
-        //                int weig = __instance.m_Weights[index2];
-        //                //MelonLogger.Msg("__instance: " + pref + " Chance " + weig + "%");
-
-        //                if(m_FilteredLootTableItems.Count <= index1) 
-        //                {
-        //                    m_FilteredLootTableItems.Add(new LootTableItem());
-        //                }
-
-
-        //                m_FilteredLootTableItems[index1].m_Weight = weig;
-        //                m_FilteredLootTableItems[index1].m_Prefab = pref;
-        //                //MelonLogger.Msg("FilteredLootTableItems: " + m_FilteredLootTableItems[index1].m_Prefab.name + " Chance " + m_FilteredLootTableItems[index1].m_Weight + "%");
-        //                ++index1;
-        //            }
-        //        }
-        //        //MelonLogger.Msg("Found " + index1 + " for this experience mode");
-        //        GameObject go = __instance.gameObject;
-        //        int _x = (int)go.transform.position.x;
-        //        int _y = (int)go.transform.position.y;
-        //        int _z = (int)go.transform.position.z;
-        //        int seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + _x + _y + _z;
-        //        MelonLogger.Msg("Input values for Random: X " + _x + " Y " + _y + " Z " + _z + " GameSeed " + GameManager.m_SceneTransitionData.m_GameRandomSeed + " Final seed " + seed + " for table " + __instance.gameObject.name);
-        //        System.Random RNG = new System.Random(seed);
-
-        //        int num1 = 0;
-        //        for (int index2 = 0; index2 < index1; ++index2)
-        //        {
-        //            if (m_FilteredLootTableItems[index2] == null)
-        //            {
-        //                //MelonLogger.Msg("LootTable.m_FilteredLootTableItems[" + index2 + "] is NULL");
-        //            }
-        //            else
-        //            {
-        //                if (m_FilteredLootTableItems[index2].m_Prefab != null)
-        //                {
-        //                    num1 += m_FilteredLootTableItems[index2].m_Weight;
-        //                }
-        //            }
-        //        }
-
-        //        int num2 = RNG.Next(0, num1);
-
-        //        MelonLogger.Msg("Got random int " + num2 + " from 0/" + num1 + " for " + __instance.gameObject.name);
-        //        int num3 = 0;
-        //        int index3 = 0;
-        //        for (int index2 = 0; index2 < index1; ++index2)
-        //        {
-        //            int num4 = num3 + m_FilteredLootTableItems[index2].m_Weight;
-        //            if (num2 >= num3 && num2 < num4)
-        //            {
-        //                if (m_FilteredLootTableItems[index3].m_Prefab == null)
-        //                {
-        //                    //MelonLogger.Msg("Null prefab found at loot table index: " + index3 + " for loot table: " + __instance.gameObject.name);
-        //                    __result = (GameObject)null;
-        //                    return;
-        //                }
-
-        //                if (m_FilteredLootTableItems[index3].m_Prefab.GetComponent<GearItem>() == null)
-        //                {
-        //                    //MelonLogger.Msg("Gear Null found  at loot table index " + index3 + " for loot table: " + __instance.gameObject.name);
-        //                    __result = (GameObject)null;
-        //                    return;
-        //                }
-        //                else
-        //                {
-        //                    MelonLogger.Msg("Picked result " + m_FilteredLootTableItems[index3].m_Prefab.name + " for loot table: " + __instance.gameObject.name);
-        //                    __result = m_FilteredLootTableItems[index3].m_Prefab;
-        //                    return;
-        //                }
-
-        //                //__result = LootTable.m_FilteredLootTableItems[index3].m_Prefab.GetComponent<GearItem>() == null ? (GameObject)null : LootTable.m_FilteredLootTableItems[index3].m_Prefab;
-        //                //return;
-        //            }
-        //            num3 = num4;
-        //            ++index3;
-        //        }
-        //        MelonLogger.Msg("Found nothing for loot table: " + __instance.gameObject.name);
-        //        __result = (GameObject)null;
-        //        return;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")]
-        //private static class LoadSceneData_LevelGUID
-        //{
-        //    internal static void Prefix(SaveGameSystem _instance, string name, string sceneSaveName)
-        //    {
-        //        MelonLogger.Msg("Loading scene GUID "+ sceneSaveName);
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(LightFadeFire), "LateUpdate")]
-        //private static class LateUpdate_Hook
-        //{
-        //    internal static bool Prefix(LightFadeFire __instance)
-        //    {
-        //        if (GameManager.m_IsPaused)
-        //            return false;
-        //        if (__instance.m_Light)
-        //        {
-        //            __instance.m_Light = __instance.gameObject.GetComponent<Light>();
-        //            __instance.originalBrightness = __instance.m_Light.intensity;
-        //            if (__instance.startOff)
-        //            {
-        //                __instance.m_Light.intensity = 0.0f;
-        //                __instance.m_Light.enabled = false;
-        //            }
-        //        }else{
-        //            return false;
-        //        }
-        //        __instance.fireTime = 10000;
-        //        if (__instance.fireTime > __instance.maxTimeSec)
-        //        {
-        //            __instance.m_Light.intensity = __instance.originalBrightness * 1;
-        //            if (__instance.autoSwitchAfterIngnition)
-        //            {
-        //                __instance.autoSwitchAfterIngnition = false;
-        //                __instance.SetNewMaxTime(__instance.fullOnMinutes * 60f);
-        //            }
-        //        }
-        //        else if (__instance.fireTime > __instance.minTimeSec && __instance.fireTime <= __instance.maxTimeSec)
-        //        {
-        //            __instance.fadeTimeStep = __instance.fireTime * __instance.fadeTimeDifference;
-        //            __instance.m_Light.intensity = Mathf.Lerp(0.0f, __instance.originalBrightness, __instance.fadeTimeStep) * __instance.sourceFire.m_LightIntensityMultiplier;
-        //            if (__instance.useFireIgnitionFirst)
-        //            {
-        //                __instance.useFireIgnitionFirst = false;
-        //                __instance.SetNewMaxTime(100000);
-        //            }
-        //        }
-        //        else if (__instance.fireTime <= __instance.minTimeSec)
-        //            __instance.m_Light.intensity = 0.0f;
-        //        if (Utils.IsZero(__instance.m_Light.intensity, 0.0001f))
-        //            __instance.m_Light.enabled = false;
-        //        else
-        //            __instance.m_Light.enabled = true;
-        //        return false;
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(Condition), "KillPlayer")]
+        [HarmonyLib.HarmonyPatch(typeof(Condition), "KillPlayer")] // Once
         public class Condition_Test
         {
             public static bool Prefix(Condition __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("[Condition] PlayerDeath");
                 if (MyMod.InOnline() == true)
                 {
                     __instance.ForceKill();
                     return false;
-                }else{
+                }
+                else
+                {
                     return true;
                 }
             }
         }
         public static GameObject FakeBedRoll = null;
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "DoRest")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "DoRest")] // Once
         private static class Panel_Rest_DoRest
         {
             internal static void Prefix(Panel_Rest __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("[Panel_Rest] DoRest");
                 if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
                 {
@@ -4890,13 +4742,19 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Rest), "EndSleeping")]
+        [HarmonyLib.HarmonyPatch(typeof(Rest), "EndSleeping")] // Once
         public class Rest_StopSleep
         {
             public static void Postfix(Rest __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("[Rest] EndSleeping");
-                if(MyMod.IsDead == true)
+                if (MyMod.IsDead == true)
                 {
                     GameManager.GetPlayerManagerComponent().m_God = false;
                 }
@@ -4907,14 +4765,6 @@ namespace SkyCoop
                 }
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(GameManager), "SetAudioModeForLoadedScene")]
-        //internal static class GameManager_SetAudioModeForLoadedScene
-        //{
-        //    private static void Prefix()
-        //    {
-        //        MelonLogger.Msg("Prepare Scene");
-        //    }
-        //}
 
         public static void RequestDropsForScene()
         {
@@ -4941,13 +4791,13 @@ namespace SkyCoop
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading done!");
             MyMod.DroppedGearsObjs.Clear();
 
-            if(MyMod.iAmHost == true || MyMod.InOnline() == false)
+            if (MyMod.iAmHost == true || MyMod.InOnline() == false)
             {
                 MyMod.LoadAllDropsForScene();
-                MyMod.MarkSearchedContainers(MyMod.levelid+MyMod.level_guid);
+                MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
                 MyMod.LoadAllOpenableThingsForScene();
             }
-            if(MyMod.sendMyPosition == true)
+            if (MyMod.sendMyPosition == true)
             {
                 MyMod.DoPleaseWait("Please wait...", "Downloading scene drops...");
                 RequestDropsForScene();
@@ -4955,12 +4805,18 @@ namespace SkyCoop
         }
 
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Loading), "Enable")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Loading), "Enable")] // Once
         internal static class Panel_Loading_Toggle
         {
             private static void Postfix(Panel_Loading __instance, bool enable)
             {
-                if(enable == false)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (enable == false)
                 {
                     MelonLogger.Msg(ConsoleColor.Yellow, "[Scene Load] Everything finished loading!");
                     MyMod.SendAfterLoadingFinished = 2;
@@ -4968,43 +4824,67 @@ namespace SkyCoop
                 MyMod.LoadingScreenIsOn = enable;
             }
         }
-        
-        [HarmonyLib.HarmonyPatch(typeof(MissionServicesManager), "SceneLoadCompleted")]
+
+        [HarmonyLib.HarmonyPatch(typeof(MissionServicesManager), "SceneLoadCompleted")] // Once
         public static class MissionServicesManager_Loaded
         {
             public static void Postfix()
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg(ConsoleColor.Yellow, "[MissionServicesManager] SceneLoadCompleted!");
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")]
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "LoadSceneData")] // Once
         public static class SaveGameSystemPatch_LoadSceneData
         {
             public static void Postfix(string name)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg(ConsoleColor.Yellow, "[Scene Load] Saved data for scene is loaded!");
                 MyMod.UpdateEverything = 2;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(InputManager), "PauseGame")]
+        [HarmonyLib.HarmonyPatch(typeof(InputManager), "PauseGame")] // Once
         public static class InputManager_DuckYOuPause
         {
             public static void Postfix()
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true)
                 {
                     GameManager.m_IsPaused = false;
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "OnBack")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "OnBack")] // Once
         public static class Panel_Diagnosis_OnBack
         {
             public static void Postfix(Panel_Diagnosis __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("Stop diagnosis");
-                if(MyMod.DiagnosisDummy != null)
+                if (MyMod.DiagnosisDummy != null)
                 {
                     UnityEngine.Object.Destroy(MyMod.DiagnosisDummy);
                 }
@@ -5025,11 +4905,17 @@ namespace SkyCoop
         }
 
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "PostTreatment")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "PostTreatment")] // Once
         public static class Panel_Diagnosis_PostTreatment
         {
             public static void Prefix(Panel_Diagnosis __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.DiagnosisDummy != null)
                 {
                     MelonLogger.Msg("Cured other player");
@@ -5037,7 +4923,7 @@ namespace SkyCoop
 
                     aff.m_Location = (int)__instance.GetSelectedAffliction().m_Location;
                     aff.m_Type = (int)__instance.GetSelectedAfflictionType();
-                    if(ShouldKeepAfterTreatment(__instance.GetSelectedAfflictionType()) == true)
+                    if (ShouldKeepAfterTreatment(__instance.GetSelectedAfflictionType()) == true)
                     {
                         __instance.GetSelectedAffliction().m_Remedy1Complete = false;
                         __instance.GetSelectedAffliction().m_RestHours = 1;
@@ -5047,24 +4933,19 @@ namespace SkyCoop
                 }
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(NPCAffliction), "IsTreated")]
-        //public static class NPCAffliction_IsTreated
-        //{
-        //    public static void Postfix(NPCAffliction __instance, bool __result)
-        //    {
-        //        if(__instance.m_RestHours == -1)
-        //        {
-        //            __result = false;
-        //        }
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "RefreshRightPage")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "RefreshRightPage")] // Once
         public static class Panel_Diagnosis_RefreshRightPage
         {
             public static void Postfix(Panel_Diagnosis __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 __instance.m_LabelCause.color = Color.gray;
-                if(__instance.m_SelectedAffButton != null)
+                if (__instance.m_SelectedAffButton != null)
                 {
                     AfflictionType AffType = __instance.GetSelectedAffliction().m_Definition.m_AfflictionType;
                     if (__instance.GetSelectedAffliction().m_RestHours == 1 && AffType != AfflictionType.Frostbite && AffType != AfflictionType.CabinFever)
@@ -5079,153 +4960,111 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegionManager), "Deserialize")]
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegionManager), "Deserialize")] // Once
         public static class SpawnRegionManager_Deserialize
         {
             public static bool Prefix(SpawnRegionManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("[SpawnRegionManager] Deserialize");
                 return false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Deserialize")]
+        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Deserialize")] // Once
         public static class BaseAiManager_Deserialize
         {
             public static bool Prefix(BaseAiManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 MelonLogger.Msg("[BaseAiManager] Deserialize");
                 if (MyMod.AnimalsController == true)
                 {
-                    MyMod.TestLoadAnimals(MyMod.level_name);
+                    //MyMod.TestLoadAnimals(MyMod.level_name);
                 }
                 return false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")]
+        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")] // Once
         public static class BaseAiManager_Serialize
         {
             public static bool Prefix(BaseAiManager __instance)
             {
-                MelonLogger.Msg("[BaseAiManager] Serialize");
-                if(MyMod.AnimalsController == true)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    MyMod.TestSaveAnimals(MyMod.level_name);
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg("[BaseAiManager] Serialize");
+                if (MyMod.AnimalsController == true)
+                {
+                    //MyMod.TestSaveAnimals(MyMod.level_name);
                 }
                 return false;
             }
         }
-
-        //[HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "Serialize")]
-        //public static class BaseAiManager_Serialize
+        //[HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawnRegionCloseEnoughForSpawning")] // Once
+        //public static class SpawnRegion_SpawnRegionCloseEnoughForSpawning
         //{
-        //    public static void Prefix()
+        //    public static void Postfix(SpawnRegion __instance, bool __result)
         //    {
-        //        MelonLogger.Msg("[BaseAiManager][Serialize] Started");
-        //        BaseAiSaveList baseAiSaveList = new BaseAiSaveList();
-        //        baseAiSaveList.m_SerializedBaseAI.Clear();
-        //        for (int i = 0; i < BaseAiManager.m_BaseAis.Count; i++)
+        //        if (MyMod.CrazyPatchesLogger == true)
         //        {
-        //            MelonLogger.Msg("[BaseAiManager][Serialize] Index "+ i);
-        //            BaseAi baseAi = BaseAiManager.m_BaseAis.get_Item(i);
-        //            if (baseAi && baseAi.GetAiMode() != AiMode.Dead && !(baseAi.GetSpawnRegionParent() != null) && (!baseAi.m_AiBear || ExperienceModeManager.GetCurrentExperienceModeType() != ExperienceModeType.ChallengeHunted) && (!baseAi.GetComponent<DisableObjectForXPMode>() || !baseAi.GetComponent<DisableObjectForXPMode>().ShouldDisableForCurrentMode()) && (!baseAi.GetComponent<EnableObjectForXPMode>() || !baseAi.GetComponent<EnableObjectForXPMode>().ShouldDisableForCurrentMode()) && (baseAi.gameObject.activeSelf || !baseAi.GetComponent<MissionObjectIdentifier>() || !baseAi.GetComponent<MissionObjectIdentifier>().m_BaseAiOnlySerializeIfActive))
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (__result == false)
+        //        {
+        //            bool SomeoneSeeThisSpawn = false;
+        //            float maxDis = __instance.m_Radius + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance;
+        //            Vector3 pos = __instance.m_Center;
+        //            float dis = maxDis;
+
+        //            for (int i = 0; i < MyMod.playersData.Count; i++)
         //            {
-        //                BaseAiData baseAiData = baseAi.GetDeferredDeserializeData();
-        //                MelonLogger.Msg("[BaseAiManager][Serialize] Index " + i);
-        //                if (baseAiData == null)
+        //                if (MyMod.playersData[i] != null)
         //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Null! Making new one");
-        //                    baseAiData = new BaseAiData();
-        //                    baseAiData.m_Position = baseAi.transform.position;
-        //                    baseAiData.m_Rotation = baseAi.transform.rotation;
-        //                    baseAiData.m_PrefabName = baseAi.name;
-        //                    baseAiData.m_BaseAiSerialized = baseAi.Serialize();
-        //                    baseAiData.m_Guid = Utils.GetGuidFromGameObject(baseAi.gameObject);
-        //                }else{
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Not null");
-        //                }
-        //                baseAiSaveList.m_SerializedBaseAI.Add(baseAiData);
-        //            }else{
-        //                if(baseAi == null)
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 1");
-        //                }
-        //                else if (baseAi.GetAiMode() == AiMode.Dead)
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 2");
-        //                }
-        //                else if (baseAi.GetSpawnRegionParent() != null)
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 3");
-        //                }
-        //                else if((baseAi.m_AiBear || ExperienceModeManager.GetCurrentExperienceModeType() == ExperienceModeType.ChallengeHunted))
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 4");
-        //                }
-        //                else if((baseAi.GetComponent<DisableObjectForXPMode>() || baseAi.GetComponent<DisableObjectForXPMode>().ShouldDisableForCurrentMode()))
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 5");
-        //                }
-        //                else if((baseAi.GetComponent<EnableObjectForXPMode>() || baseAi.GetComponent<EnableObjectForXPMode>().ShouldDisableForCurrentMode()))
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 6");
-        //                }
-        //                else if ((baseAi.gameObject.activeSelf == false || !baseAi.GetComponent<MissionObjectIdentifier>() || baseAi.GetComponent<MissionObjectIdentifier>().m_BaseAiOnlySerializeIfActive))
-        //                {
-        //                    MelonLogger.Msg("[BaseAiManager][Serialize] Error 7");
+        //                    if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+        //                    {
+        //                        float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+        //                        if (plDis < maxDis)
+        //                        {
+        //                            SomeoneSeeThisSpawn = true;
+        //                            break;
+        //                        }
+        //                    }
         //                }
         //            }
+
+        //            if (SomeoneSeeThisSpawn == true)
+        //            {
+        //                __result = true;
+        //            }
         //        }
-        //        MelonLogger.Msg("[BaseAiManager][Serialize] Final result " + Utils.SerializeObject(baseAiSaveList));
         //    }
         //}
-        //[HarmonyLib.HarmonyPatch(typeof(BaseAi), "Serialize")]
-        //public static class BaseAiManager_Serialize
-        //{
-        //    public static void Postfix(string __result)
-        //    {
-        //        MelonLogger.Msg("[BaseAi] Serialize result " + __result);
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawnRegionCloseEnoughForSpawning")]
-        public static class SpawnRegion_SpawnRegionCloseEnoughForSpawning
-        {
-            public static void Postfix(SpawnRegion __instance, bool __result)
-            {
-                if (__result == false)
-                {
-                    bool SomeoneSeeThisSpawn = false;
-                    float maxDis = __instance.m_Radius + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance;
-                    Vector3 pos = __instance.m_Center;
-                    float dis = maxDis;
-
-                    for (int i = 0; i < MyMod.playersData.Count; i++)
-                    {
-                        if (MyMod.playersData[i] != null)
-                        {
-                            if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
-                            {
-                                float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
-                                if (plDis < maxDis)
-                                {
-                                    SomeoneSeeThisSpawn = true;
-                                    break;
-                                }
-                            }
-                        }
-                    }
-
-                    if (SomeoneSeeThisSpawn == true)
-                    {
-                        __result = true;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawnPositionOnScreenTooClose")]
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawnPositionOnScreenTooClose")] // Called a lot
         public static class SpawnRegion_SpawnPositionOnScreenTooClose
         {
             public static void Postfix(SpawnRegion __instance, Vector3 spawnPos, bool __result)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 //if(__result == false)
                 //{
                 //    bool SomeoneTooClose = false;
@@ -5355,63 +5194,75 @@ namespace SkyCoop
         //        return false;
         //    }
         //}
-        [HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "MaybeSetAiModeWhenInactiveOrDisabled")]
-        internal static class BaseAiManager_MaybeSetAiModeWhenInactiveOrDisabled
-        {
-            private static bool Prefix(BaseAiManager __instance, BaseAi bai)
-            {
-                Vector3 pos = bai.gameObject.transform.position;
-                bool SomeoneSeeThisSpawn = false;
-                string viewerName = "";
-                float minimalDistance = GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance;
+        //[HarmonyLib.HarmonyPatch(typeof(BaseAiManager), "MaybeSetAiModeWhenInactiveOrDisabled")] // Called often
+        //internal static class BaseAiManager_MaybeSetAiModeWhenInactiveOrDisabled
+        //{
+        //    private static bool Prefix(BaseAiManager __instance, BaseAi bai)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        Vector3 pos = bai.gameObject.transform.position;
+        //        bool SomeoneSeeThisSpawn = false;
+        //        string viewerName = "";
+        //        float minimalDistance = GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance;
 
-                for (int i = 0; i < MyMod.playersData.Count; i++)
-                {
-                    if (MyMod.playersData[i] != null)
-                    {
-                        if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
-                        {
-                            float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
-                            if (plDis < minimalDistance)
-                            {
-                                SomeoneSeeThisSpawn = true;
-                                viewerName = MyMod.playersData[i].m_Name;
-                                break;
-                            }
-                        }
-                    }
-                }
+        //        for (int i = 0; i < MyMod.playersData.Count; i++)
+        //        {
+        //            if (MyMod.playersData[i] != null)
+        //            {
+        //                if (MyMod.playersData[i].m_Levelid == MyMod.levelid && MyMod.playersData[i].m_LevelGuid == MyMod.level_guid)
+        //                {
+        //                    float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, pos);
+        //                    if (plDis < minimalDistance)
+        //                    {
+        //                        SomeoneSeeThisSpawn = true;
+        //                        viewerName = MyMod.playersData[i].m_Name;
+        //                        break;
+        //                    }
+        //                }
+        //            }
+        //        }
 
-                if (MyMod.InOnline() == false)
-                {
-                    return true;
-                }else{
-                    if (SomeoneSeeThisSpawn == true)
-                    {
-                        return false;
-                    }else{
-                        return true;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnExperienceClicked")]
-        public static class Panel_SelectExperience_OnExperienceClicked
-        {
-            public static bool Prefix(Panel_SelectExperience __instance)
-            {
-                Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
-                if (selectedMenuItem == null)
-                    return false;
-                ExperienceModeType _type = selectedMenuItem.m_Type;
-                if(_type == ExperienceModeType.Custom)
-                {
-                    MyMod.NoCustomExp();
-                    return false;
-                }
-                return true;
-            }
-        }
+        //        if (MyMod.InOnline() == false)
+        //        {
+        //            return true;
+        //        }
+        //        else
+        //        {
+        //            if (SomeoneSeeThisSpawn == true)
+        //            {
+        //                return false;
+        //            }
+        //            else
+        //            {
+        //                return true;
+        //            }
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnExperienceClicked")]
+        //public static class Panel_SelectExperience_OnExperienceClicked
+        //{
+        //    public static bool Prefix(Panel_SelectExperience __instance)
+        //    {
+        //        Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
+        //        if (selectedMenuItem == null)
+        //            return false;
+        //        ExperienceModeType _type = selectedMenuItem.m_Type;
+        //        if(_type == ExperienceModeType.Custom)
+        //        {
+        //            MyMod.NoCustomExp();
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+
+
         //[HarmonyLib.HarmonyPatch(typeof(Panel_BodyHarvest), "OnQuarter")]
         //internal static class Panel_BodyHarvest_NoQuatrate
         //{
@@ -5425,51 +5276,81 @@ namespace SkyCoop
         //        return true;
         //    }
         //}
-        [HarmonyLib.HarmonyPatch(typeof(GearItem), "DecayOverTODHours")]
-        internal static class GearItem_DecayOverTODHours
-        {
-            private static bool Prefix(GearItem __instance, float deltaTODHours, float scale)
-            {
-                if(MyMod.InOnline() == true)
-                {
-                    return false;
-                }else{
-                    return true;
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "Spawn")]
+        //[HarmonyLib.HarmonyPatch(typeof(GearItem), "DecayOverTODHours")] // Called often
+        //internal static class GearItem_DecayOverTODHours
+        //{
+        //    private static bool Prefix(GearItem __instance, float deltaTODHours, float scale)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        if (MyMod.InOnline() == true)
+        //        {
+        //            return false;
+        //        }
+        //        else
+        //        {
+        //            return true;
+        //        }
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "Spawn")] // Called often
         internal static class SpawnRegion_Spawn
         {
             private static bool Prefix(SpawnRegion __instance, WildlifeMode wildlifeMode)
             {
-                if(MyMod.InOnline() == false)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.InOnline() == false)
                 {
                     return true;
-                }else{
+                }
+                else
+                {
                     return MyMod.AnimalsController;
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(ConsoleManager), "spawn_common")]
+        [HarmonyLib.HarmonyPatch(typeof(ConsoleManager), "spawn_common")] // Once
         internal static class ConsoleManager_Spawn
         {
             private static bool Prefix(ConsoleManager __instance, string prefabName, float dist)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == false)
                 {
                     return true;
-                }else{
+                }
+                else
+                {
                     return MyMod.AnimalsController;
                 }
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Container), "OnOpenComplete")]
+        [HarmonyLib.HarmonyPatch(typeof(Container), "OnOpenComplete")] // Once
         internal static class Container_OnOpenComplete
         {
             private static bool Prefix(Container __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true)
                 {
                     MelonLogger.Msg("Opening container, request fake container");
@@ -5479,35 +5360,19 @@ namespace SkyCoop
                 return true;
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(Container), "GetInteractiveDisplayText")]
-        //internal static class Container_GetInteractiveDisplayText
-        //{
-        //    private static bool Prefix(Container __instance)
-        //    {
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //    private static void Postfix(Container __instance, string __result)
-        //    {
-        //        if (MyMod.InOnline() == true)
-        //        {
-        //            if(__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.ContainerLootedText>() != null)
-        //            {
-        //                __result = __instance.GetInteractiveActionText()+"\n"+Localization.Get("GAMEPLAY_SearchedPostfix");
-        //            }
-        //        }
-        //    }
-        //}
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Container), "OnDone")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Container), "OnDone")] // Once
         internal static class Panel_Container_Close
-        {            
+        {
             private static bool Prefix(Panel_Container __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 Container box = __instance.m_Container;
-                if(MyMod.InOnline() == true)
+                if (MyMod.InOnline() == true)
                 {
                     if (__instance.ShouldEnterSectionNav() && __instance.m_Container != null && !__instance.m_Container.m_FilterLocked)
                     {
@@ -5528,33 +5393,68 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(GameObject), typeof(int) })]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(GameObject), typeof(int) })] // Once
         internal static class PlayerManager_InstantiateItemAtPlayersFeet
         {
             private static void Postfix(GameObject prefab, int numUnits, GearItem __result)
             {
-                if(MyMod.InOnline() == true)
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.InOnline() == true)
                 {
                     MyMod.SendDropItem(__result, 0, 0, false);
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "OnBack")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(string), typeof(int) })] // Once
+        internal static class PlayerManager_InstantiateItemAtPlayersFeet2
+        {
+            private static void Postfix(string itemName, int numUnits, GearItem __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.InOnline() == true)
+                {
+                    MyMod.SendDropItem(__result, 0, 0, false);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "OnBack")] // Once
         internal static class Panel_Log_Dead
         {
             private static void Prefix(Panel_Log __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true && MyMod.IsDead == true)
                 {
                     Application.Quit();
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "DoQuitGame")]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "DoQuitGame")]  // Once
         internal static class Panel_PauseMenu_Quit
         {
             private static void Prefix(Panel_PauseMenu __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InOnline() == true)
                 {
                     Application.Quit();
@@ -5562,49 +5462,31 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")] // Once
         internal static class GameManager_OnApplicationFocus
         {
             private static bool Prefix(bool focusStatus)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 return false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Open", new System.Type[] { typeof(bool), typeof(bool) })]
+        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Open", new System.Type[] { typeof(bool), typeof(bool) })] // Once
         internal static class OpenClose_Open
         {
             private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
             {
-                if(isImmediate == true)
+                if (MyMod.CrazyPatchesLogger == true)
                 {
-                    return;
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                
-                string _GUID = "";
-
-                if(__instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null)
-                {
-                    _GUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
-                }
-
-                if(MyMod.InOnline() == true)
-                {
-                    if (MyMod.iAmHost == true)
-                    {
-                        MyMod.ChangeOpenableThingState(MyMod.levelid + MyMod.level_guid, _GUID, true);
-                    }
-                    else
-                    {
-                        MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, true);
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Close", new System.Type[] { typeof(bool), typeof(bool) })]
-        internal static class OpenClose_Close   
-        {
-            private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
-            {
                 if (isImmediate == true)
                 {
                     return;
@@ -5617,7 +5499,43 @@ namespace SkyCoop
                     _GUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
                 }
 
-                if(MyMod.InOnline() == true)
+                if (MyMod.InOnline() == true)
+                {
+                    if (MyMod.iAmHost == true)
+                    {
+                        MyMod.ChangeOpenableThingState(MyMod.levelid + MyMod.level_guid, _GUID, true);
+                    }
+                    else
+                    {
+                        MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Close", new System.Type[] { typeof(bool), typeof(bool) })] // Once
+        internal static class OpenClose_Close
+        {
+            private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (isImmediate == true)
+                {
+                    return;
+                }
+
+                string _GUID = "";
+
+                if (__instance.gameObject != null && __instance.gameObject.GetComponent<ObjectGuid>() != null)
+                {
+                    _GUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
+                }
+
+                if (MyMod.InOnline() == true)
                 {
                     if (MyMod.iAmHost == true)
                     {
@@ -5627,15 +5545,21 @@ namespace SkyCoop
                     {
                         MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, false);
                     }
-                }  
+                }
             }
         }
 
-        [HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen")]
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen")] // Once
         private static class GameManager_LoadSceneWithLoadingScreen
         {
             private static void Prefix(ref string sceneName)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.InterloperHook == false && MyMod.OverridedSceneForSpawn == "")
                 {
                     return;
@@ -5658,11 +5582,17 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyPatch(typeof(PlayerManager), "TeleportPlayerAfterSceneLoad")]
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "TeleportPlayerAfterSceneLoad")] // Once
         private static class PlayerManager_TeleportPlayerAfterSceneLoad
         {
             private static void Postfix(PlayerManager __instance)
             {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
                 if (MyMod.OverridedPositionForSpawn != Vector3.zero)
                 {
                     __instance.TeleportPlayer(MyMod.OverridedPositionForSpawn, GameManager.GetPlayerTransform().rotation);

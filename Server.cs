@@ -58,9 +58,9 @@ namespace GameServer
             MyMod.NeedSyncTime = true;
             MyMod.RealTimeCycleSpeed = true;
             MyMod.HadEverPingedMaster = false;
-            MyMod.LoadAllDropsForScene();
-            MyMod.LoadAllOpenableThingsForScene();
-            MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
+            //MyMod.LoadAllDropsForScene();
+            //MyMod.LoadAllOpenableThingsForScene();
+            //MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
             MyMod.DisableOriginalAnimalSpawns(true);
             MyMod.SetFixedSpawn();
         }

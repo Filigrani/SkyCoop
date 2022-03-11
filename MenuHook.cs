@@ -47,7 +47,10 @@ namespace SkyCoop
         {
             private static void Postfix(BasicMenu __instance, int buttonIndex)
             {
-
+                if(buttonIndex >= __instance.m_ItemModelList.Count && __instance.m_ItemModelList[buttonIndex] == null )
+                {
+                    return;
+                }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description30")
                 {
                     __instance.m_DescriptionLabel.text = "People who supported the project.";
@@ -270,9 +273,11 @@ namespace SkyCoop
                             MyMod.SaveSlotSync SaveData = new MyMod.SaveSlotSync();
                             SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
                             SaveData.m_Episode = (int)Episode.One;
-                            SaveData.m_ExperienceMode = (int)ExperienceModeType.Interloper;
+                            SaveData.m_ExperienceMode = (int)ExperienceModeType.Custom;
                             SaveData.m_Location = (int)GameRegion.LakeRegion;
                             SaveData.m_Seed = -1294300353;
+                            SaveData.m_CustomExperienceStr = "gsHMbj8PKxsjmaGO98IB";
+                            SaveData.m_FixedSpawnScene = "";
                             MyMod.PendingSave = SaveData;
                             MyMod.InterloperHook = true;
                             MyMod.CheckHaveSaveFileToJoin(SaveData);

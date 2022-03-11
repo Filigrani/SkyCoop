@@ -720,7 +720,6 @@ namespace SkyCoop
 
             if(MyMod.playersData[from] != null)
             {
-                MyMod.LowHealthStaggerBlockTime = 5;
                 HUDMessage.AddMessage("PLEASE DON'T MOVE, "+MyMod.playersData[from].m_Name+" IS TENDING YOU");
                 GameManager.GetVpFPSPlayer().Controller.Stop();
             }
@@ -1045,9 +1044,9 @@ namespace SkyCoop
         }
         public static void TRYDIAGNISISPLAYER(Packet _packet)
         {
+            MelonLogger.Msg(ConsoleColor.Green, "TRYDIAGNISISPLAYER");
             int from = _packet.ReadInt();
             MyMod.SendMyAffictions(from, GameManager.GetConditionComponent().m_CurrentHP);
-            MelonLogger.Msg(ConsoleColor.Green,"TRYDIAGNISISPLAYER");
             MelonLogger.Msg(ConsoleColor.Green, "SendMyAffictions("+ from+","+" "+GameManager.GetConditionComponent().m_CurrentHP+");");
         }
         public static void SENDMYAFFLCTIONS(Packet _packet)

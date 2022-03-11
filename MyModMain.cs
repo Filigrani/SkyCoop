@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.8.0 pre";
+            public const string Version = "0.8.3 pre";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -88,14 +88,10 @@ namespace SkyCoop
         public static bool NeedRefreshInv = false;
         public static string MyAnimState = "Idle";
         public static string MyPreviousAnimState = "Idle";
-        public static bool PrviousHasRifle = false;
         public static bool MyHasRifle = false;
         public static bool HasRevolver = false;
-        public static bool PrviousHasRevolver = false;
         public static bool MyHasRevolver = false;
         public static bool MyHasAxe = false;
-        public static bool PreviousHasAxe = false;
-        public static bool PreviousHasMedkit = false;
         public static bool MyHasMedkit = false;
         public static bool MyIsAiming = false;
         public static int CycleSkip = 0;
@@ -103,16 +99,10 @@ namespace SkyCoop
         public static bool IsSleeping = false;
         public static bool PreviousSleeping = false;
         public static bool IsCycleSkiping = false;
-        public static int LastSelectedWeatherSet;
-        public static WeatherSet LastSelectedWeatherSet2;
         public static List<string> KnownAnimals = new List<string>();
         public static int MyArrows = 0;
-        public static int PreviousArrows = 0;
         public static int MyFlares = 0;
-        public static int PreviousFlares = 0;
         public static int MyBlueFlares = 0;
-        public static int PreviousBlueFlares = 0;
-        public static int LastRecivedArrows = 0;
         public static int StepState = 0;
         public static GameObject LastObjectUnderCrosshair = null;
         public static Vector3 V3BeforeSleep = new Vector3(0, 0, 0);
@@ -129,7 +119,6 @@ namespace SkyCoop
         public static string DebugAnimalGUIDLast = "";
         public static GameObject DebugLastAnimal = null;
         public static bool InDarkWalkerMode = false;
-        public static float DarkWalkerSpeed = 0.12f;
         public static bool RealTimeCycleSpeed = true;
         public static string HarvestingAnimal = "";
         public static string PreviousHarvestingAnimal = "";
@@ -188,7 +177,6 @@ namespace SkyCoop
         public static int PreviousBloodLosts = 0;
         public static PlayerControlMode PreviousControlModeBeforeAction = PlayerControlMode.Normal;
         public static MultiplayerPlayer PlayerInteractionWith = null;
-        public static int LowHealthStaggerBlockTime = 0;
         public static GearItem EmergencyStimBeforeUse = null;
         public static bool HasInfecitonRisk = false;
         public static bool PreviousHasInfectionRisk = false;
@@ -247,10 +235,12 @@ namespace SkyCoop
 
         public static string AutoStartSlot = "";
         public static List<string> AutoCMDs = new List<string>();
+        public static bool CrazyPatchesLogger = false;
+        public static bool KillOnUpdate = false;
 
         public static void KillConsole()
         {
-            if(ServerConfig.m_CheatsMode == 2 || (iAmHost == true && ServerConfig.m_CheatsMode == 1))
+            if(ServerConfig.m_CheatsMode == 2 || (iAmHost == true && ServerConfig.m_CheatsMode == 1) || InOnline() == false)
             {
                 return;
             }
@@ -275,16 +265,6 @@ namespace SkyCoop
                 if(GearIDList.TryGetValue(ConsoleManager.m_AllGearItemNames[index], out exist) == false)
                 {
                     GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
-
-                    //if(ConsoleManager.m_AllGearItemNames[index].Contains(" ") == true)
-                    //{
-                    //    MelonLogger.Msg(ConsoleColor.Red,"[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ID " + index+" invalid");
-                    //}
-
-                    //MelonLogger.Msg("[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ID " + index);
-                }
-                else{
-                    //MelonLogger.Msg(ConsoleColor.Red, "[GearIDList] String " + ConsoleManager.m_AllGearItemNames[index] + " ALREADY EXIST");
                 }
             }
         }
@@ -870,6 +850,7 @@ namespace SkyCoop
             public int m_Location;
             public string m_FixedSpawnScene;
             public Vector3 m_FixedSpawnPosition;
+            public string m_CustomExperienceStr;
         }
         public class MultiplayerChatMessage //: MelonMod
         {
@@ -3229,7 +3210,6 @@ namespace SkyCoop
                 LongActionCanceled(mP);
             }
         }
-
         public static void DoLongAction(MultiplayerPlayer mP, string actionString, string actionType)
         {
             mP.m_ActionType = actionType;
@@ -3276,7 +3256,6 @@ namespace SkyCoop
             mP.m_InteractTimer = 0.0f;
             PlayerInteractionWith = null;
             InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
-
         }
         public static void LongActionFinished(MultiplayerPlayer mP, string ActionType)
         {
@@ -4175,17 +4154,42 @@ namespace SkyCoop
 
         public static void DamageByBullet(float damage, int from)
         {
+            if(damage <= 0)
+            {
+                return;
+            }
+            
             string DamageCase = "Other player";
             if(playersData[from] != null)
             {
                 DamageCase = playersData[from].m_Name + " shoot you";
             }
 
+            bool HasArmor = false;
+
+            if(damage == 50) // Chest damage locaZone
+            {
+                HasArmor = GameManager.GetDamageProtection().HasBallisticVest();
+                if (HasArmor)
+                {
+                    damage = damage / 10;
+                }
+            }
+
             GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
 
-            GameManager.GetBloodLossComponent().BloodLossStart(DamageCase, true, AfflictionOptions.PlayFX);
-            var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
-            GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothing(clothingRNG);
+            if (!HasArmor)
+            {
+                GameManager.GetBloodLossComponent().BloodLossStart(DamageCase, true, AfflictionOptions.PlayFX);
+                var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
+                GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothing(clothingRNG);
+            }else{
+                var RNG = new System.Random(); int ribBroke = RNG.Next(0, 100);
+                if(ribBroke <= 5)
+                {
+                    GameManager.GetBrokenRibComponent().BrokenRibStart(DamageCase, true, false, true, false);
+                }
+            }
 
             GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Voice.Priority.Critical, PlayerVoice.Options.None);
 
@@ -4269,7 +4273,7 @@ namespace SkyCoop
             {
                 m_Obj = t;
                 m_Obj.tag = "Flesh";
-                m_Obj.layer = vp_Layer.Default;
+                m_Obj.layer = vp_Layer.Container;
 
                 if (m_Obj.name == "Chest")
                 {
@@ -6445,7 +6449,7 @@ namespace SkyCoop
         Vector3 previoustickpos;
         Quaternion previoustickrot;
 
-        Vector3 SnappedPosition(Vector3 pointToSnap, Vector3 blockCenterPosition)
+        public static Vector3 SnappedPosition(Vector3 pointToSnap, Vector3 blockCenterPosition)
         {
             Vector3 relativePosition = pointToSnap - blockCenterPosition;
 
@@ -7313,11 +7317,6 @@ namespace SkyCoop
                         }
                     }
                 }
-                
-                if (LowHealthStaggerBlockTime > 0)
-                {
-                    LowHealthStaggerBlockTime = LowHealthStaggerBlockTime - 1;
-                }
 
                 if(UpdateLootedContainers > 0)
                 {
@@ -7509,53 +7508,6 @@ namespace SkyCoop
                     }
                 }
             }
-            //if (LastConnectedIp != "" || iAmHost == true)
-            //{
-            //    if(NeedTryReconnect == false)
-            //    {
-            //        if (iAmHost == true)
-            //        {
-            //            using (Packet _packet = new Packet((int)ServerPackets.KEEPITALIVE))
-            //            {
-            //                ServerSend.KEEPITALIVE(0, true);
-            //            }
-            //        }
-
-            //        if (sendMyPosition == true)
-            //        {
-            //            using (Packet _packet = new Packet((int)ClientPackets.KEEPITALIVE))
-            //            {
-            //                _packet.Write(true);
-            //                SendTCPData(_packet);
-            //            }
-            //        }
-
-            //        if (NoHostResponceSeconds > 10)
-            //        {
-            //            NeedTryReconnect = true;
-            //        }
-            //    }else{
-            //        if (iAmHost == false)
-            //        {
-            //            if (TryingReconnect == false)
-            //            {
-            //                TryingReconnect = true;
-            //                ProcessingReconnect();
-            //            }
-            //        }
-            //        if (iAmHost == true && SendRQEvent == false)
-            //        {
-            //            using (Packet _packet = new Packet((int)ServerPackets.RQRECONNECT))
-            //            {
-            //                ServerSend.RQRECONNECT(1, true);
-            //            }
-
-            //            SendRQEvent = true;
-            //        }
-            //    }
-
-            //    //NoHostResponceSeconds = NoHostResponceSeconds + 1;
-            //}
 
             if (LastConnectedIp != "" || iAmHost == true)
             {
@@ -7596,121 +7548,6 @@ namespace SkyCoop
             }else{
                 MaxAnimalsSyncNeed = MaxAnimalsSyncCount;
             }
-
-            //if (sendMyPosition == true)
-            //{
-            //    using (Packet _packet = new Packet((int)ClientPackets.CARRYBODY))
-            //    {
-            //        _packet.Write(CarryingPlayer);
-            //        SendTCPData(_packet);
-            //    }
-            //}
-            //if (iAmHost == true)
-            //{
-            //    using (Packet _packet = new Packet((int)ServerPackets.CARRYBODY))
-            //    {
-            //        ServerSend.CARRYBODY(1, CarryingPlayer);
-            //    }
-            //}
-
-            //if (IamShatalker == true && anotherbutt != null)
-            //{
-            //    Outline OL = anotherbutt.GetComponent<Outline>();
-            //    if (OL == null)
-            //    {
-            //        anotherbutt.AddComponent<Outline>();
-            //        OL = anotherbutt.GetComponent<Outline>();
-            //        OL.m_OutlineColor = Color.green;
-            //        OL.needsUpdate = true;
-            //    }
-
-            //    if (LureIsActive == true)
-            //    {
-            //        if (OL != null)
-            //        {
-            //            if(OL.m_OutlineColor != Color.clear)
-            //            {
-            //                OL.m_OutlineColor = Color.clear;
-            //                OL.needsUpdate = true;
-            //            }
-            //        }
-            //        anotherbutt.SetActive(false);
-            //    }else{
-            //        if (OL != null)
-            //        {
-            //            if (OL.m_OutlineColor != Color.green)
-            //            {
-            //                OL.m_OutlineColor = Color.green;
-            //                OL.needsUpdate = true;
-            //            }
-            //        }
-            //        anotherbutt.SetActive(true);
-            //    }
-            //}
-
-            if (IsShatalkerMode() == true)
-            {
-                if (IamShatalker == false && ShatalkerObject != null)
-                {
-                    if (ShatalkerObject.GetStartMovementDelayTime() > 1)
-                    {
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.DWCOUNTDOWN))
-                            {
-                                _packet.Write(ShatalkerObject.GetStartMovementDelayTime());
-                                SendTCPData(_packet);
-                            }
-                        }
-                        if (iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.DWCOUNTDOWN))
-                            {
-                                ServerSend.DWCOUNTDOWN(1, ShatalkerObject.GetStartMovementDelayTime());
-                            }
-                        }
-                    }
-
-                    if (WardWidget != null)
-                    {
-                        WardIsActive = WardWidget.activeSelf;
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.WARDISACTIVE))
-                            {
-                                _packet.Write(WardIsActive);
-                                SendTCPData(_packet);
-                            }
-                        }
-                        if (iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.WARDISACTIVE))
-                            {
-                                ServerSend.WARDISACTIVE(1, WardIsActive);
-                            }
-                        }
-                    }
-                    if (LureWidget != null)
-                    {
-                        LureIsActive = LureWidget.activeSelf;
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.LUREISACTIVE))
-                            {
-                                _packet.Write(LureIsActive);
-                                SendTCPData(_packet);
-                            }
-                        }
-                        if (iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.LUREISACTIVE))
-                            {
-                                ServerSend.LUREISACTIVE(1, LureIsActive);
-                            }
-                        }
-                    }
-                }
-            }
         }
 
         private static void EveryInGameMinute()
@@ -7739,8 +7576,6 @@ namespace SkyCoop
 
             OveridedTime = OverridedHourse + ":" + OverridedMinutes;
 
-            //MelonLogger.Msg("Seed "+ GameManager.m_SceneTransitionData.m_GameRandomSeed);
-
             ServerHandle.gametime = OveridedTime;
 
             using (Packet _packet = new Packet((int)ServerPackets.GAMETIME))
@@ -7759,9 +7594,6 @@ namespace SkyCoop
 
                     ServerSend.SYNCWEATHER(1, weather);
                 }
-            }
-            else{
-                //MelonLogger.Msg("Can't send wind sync.");
             }
         }
 
@@ -8509,6 +8341,13 @@ namespace SkyCoop
             SaveData.m_FixedSpawnScene = SavedSceneForSpawn;
             SaveData.m_FixedSpawnPosition = SavedPositionForSpawn;
 
+            if(ExperienceModeManager.s_CurrentModeType == ExperienceModeType.Custom)
+            {
+                SaveData.m_CustomExperienceStr = GameManager.GetExperienceModeManagerComponent().GetCurrentCustomModeString();
+            }else{
+                SaveData.m_CustomExperienceStr = "";
+            }
+
             using (Packet __packet = new Packet((int)ServerPackets.SAVEDATA))
             {
                 ServerSend.SAVEDATA(_forClient, SaveData);
@@ -8625,6 +8464,17 @@ namespace SkyCoop
             
             SaveGameSlots.SetSlotDisplayName(SaveGameSystem.m_CurrentSaveName, Seed + "");
             GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
+            if(ExpType == ExperienceModeType.Custom)
+            {
+                MelonLogger.Msg("Custom Experience Mode Key is " + Data.m_CustomExperienceStr);
+                bool ok = GameManager.GetExperienceModeManagerComponent().SetCurrentCustomModeString(Data.m_CustomExperienceStr);
+                if (ok)
+                {
+                    MelonLogger.Msg("Custom Experience Mode recreated from string!");
+                }else{
+                    MelonLogger.Msg(ConsoleColor.Red, "Failed to recreate custom experience from string!");
+                }
+            }
 
             MelonLogger.Msg("Save slot created!");
             MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
@@ -9579,24 +9429,6 @@ namespace SkyCoop
                         onServer = onServer + 1;
                     }
                 }
-
-                //if(m_InterfaceManager != null && InterfaceManager.m_Panel_Loading.IsLoading() == false)
-                //{
-                //    if (onServer == 0)
-                //    {
-                //        if (GameManager.m_IsPaused == false)
-                //        {
-                //            GameManager.m_IsPaused = true;
-                //            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server goes to sleep mode while there is no players on the server. Waiting for the players...");
-                //        }
-                //    }else{
-                //        if (GameManager.m_IsPaused == true)
-                //        {
-                //            GameManager.m_IsPaused = false;
-                //            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Waking up! There someone join!");
-                //        }
-                //    }
-                //}
             }
         }
 
@@ -10337,6 +10169,13 @@ namespace SkyCoop
                 AffictionSync AffSync = new AffictionSync();
                 AffSync.m_Type = (int)Affs[index].m_AfflictionType;
                 AffSync.m_Location = (int)Affs[index].m_Location;
+                if(Affs[index].m_Cause == null)
+                {
+                    AffSync.m_Case = "Unknown";
+                }else{
+                    AffSync.m_Case = Affs[index].m_Cause;
+                }
+
                 AffSync.m_Case = Affs[index].m_Cause;
                 AffSync.m_ShouldBeTreated = Panel_Affliction.CanBeTreated(Affs[index]);
                 ToReturn.Add(AffSync);
@@ -10371,14 +10210,17 @@ namespace SkyCoop
 
         public static void OtherPlayerCuredMyAffiction(AffictionSync Aff)
         {
+            GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(10, 0.3f, 0.3f);
             if (Aff.m_Type == (int)AfflictionType.FoodPoisioning)
             {
                 GameManager.GetFoodPoisoningComponent().TakeAntibiotics();
+                return;
             }
             else if (Aff.m_Type == (int)AfflictionType.Dysentery)
             {
                 GameManager.GetDysenteryComponent().TakeAntibiotics();
                 GameManager.GetDysenteryComponent().DrinkCleanWater(2f);
+                return;
             }
             else if (Aff.m_Type == (int)AfflictionType.SprainedAnkle)
             {
@@ -10417,11 +10259,13 @@ namespace SkyCoop
             {
                 GameManager.GetBurnsComponent().ApplyBandage();
                 GameManager.GetBurnsComponent().TakePainKillers();
+                return;
             }
             else if (Aff.m_Type == (int)AfflictionType.BurnsElectric)
             {
                 GameManager.GetBurnsElectricComponent().ApplyBandage();
                 GameManager.GetBurnsElectricComponent().TakePainKillers();
+                return;
             }
             else if (Aff.m_Type == (int)AfflictionType.BloodLoss)
             {
@@ -10449,6 +10293,7 @@ namespace SkyCoop
             else if (Aff.m_Type == (int)AfflictionType.InfectionRisk)
             {
                 GameManager.GetInfectionRiskComponent().ApplyAntisepticToLocation((AfflictionBodyArea)Aff.m_Location);
+                return;
             }
             else if (Aff.m_Type == (int)AfflictionType.Infection)
             {
@@ -10465,8 +10310,6 @@ namespace SkyCoop
             {
                 GameManager.GetIntestinalParasitesComponent().TakeAntibiotics();
             }
-
-            GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(10, 0.3f, 0.3f);
         }
         public static void SendCureAffliction(AffictionSync Aff)
         {
@@ -10493,9 +10336,10 @@ namespace SkyCoop
         public static void TryToCheckPlayer(int PlayerID) //Examine
         {
             DoPleaseWait("Diagnosis player", "Please wait...");
+            MelonLogger.Msg("Trying diagnosis client "+ PlayerID);
             if(iAmHost == true)
             {
-                ServerSend.TRYDIAGNISISPLAYER(PlayerID, MyMod.instance.myId);
+                ServerSend.TRYDIAGNISISPLAYER(PlayerID, instance.myId);
             }
             if (sendMyPosition == true)
             {
@@ -10584,6 +10428,7 @@ namespace SkyCoop
 
             if (!exists)
             {
+                MelonLogger.Msg(ConsoleColor.Yellow, "[DroppedGearsUnloader] Can't find drops by path: " + dir);
                 return false;
             }else{
                 try
@@ -10718,6 +10563,7 @@ namespace SkyCoop
                 }
 
                 DroppedGears.Add(LevelKey, LoadedData);
+                MelonLogger.Msg(ConsoleColor.Green, "[DroppedGearsUnloader] File is found and loaded!");
                 return true;
             }
         }
@@ -11775,202 +11621,210 @@ namespace SkyCoop
                     pListener = Cam.gameObject.AddComponent<AudioListener>();
                 }
             }
+            //if (GameManager.m_vpFPSCamera != null)
+            //{
+            //    if (GameManager.GetVpFPSCamera().gameObject.GetComponent<AudioListener>() == null)
+            //    {
+            //        GameManager.GetVpFPSCamera().gameObject.AddComponent<AudioListener>();
+            //    }
+            //}
         }
 
-        public override void OnUpdate()
+        public static void UpdateAPIStates()
         {
-            FakeDeath();
-            UpdateMain();
-            GameLogic.Update();
-
-            if(Application.runInBackground == false)
-            {
-                Application.runInBackground = true;
-            }
-            InitAudio();
-
-            if(sendMyPosition == true && GameManager.m_SpawnRegionManager != null)
-            {
-
-            }
-
-            if (level_name == "MainMenu" && GearIDList.Count == 0)
-            {
-                InitGearsIDS();
-                MelonLogger.Msg("[GearIDList] Loaded with "+ GearIDList.Count+" elements!");
-            }
-
-            if (Application.isBatchMode)
-            {
-                DedicatedServerUpdate();
-            }
-            if(InOnline() == true)
-            {
-                KillConsole();   
-            }
-
-            if(iAmHost == true)
+            if (iAmHost == true)
             {
                 API.m_ClientState = API.SkyCoopClientState.HOST;
-            }else if(sendMyPosition == true)
+            }
+            else if (sendMyPosition == true)
             {
                 API.m_ClientState = API.SkyCoopClientState.CLIENT;
-            }else{
+            }
+            else
+            {
                 API.m_ClientState = API.SkyCoopClientState.NONE;
             }
             API.m_MyClientID = instance.myId;
+        }
 
-            if (GameManager.m_vpFPSCamera != null)
+        public static void BuildSleepScreen()
+        {
+            if (SleepingButtons == null)
             {
-                if (GameManager.GetVpFPSCamera().gameObject.GetComponent<AudioListener>() == null)
+                SleepingButtons = InterfaceManager.m_Panel_Rest.gameObject.transform.GetChild(3).gameObject;
+                WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.m_Panel_Rest.gameObject.transform);
+                UnityEngine.Object.Destroy(WaitForSleepLable.GetComponent<UILocalize>());
+                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING OTHER PLAYERS TO SLEEP";
+                WaitForSleepLable.SetActive(false);
+            }
+
+            if (new_button == null)
+            {
+                new_button = UnityEngine.Object.Instantiate(InterfaceManager.m_Panel_Rest.m_SleepButton, InterfaceManager.m_Panel_Rest.m_SleepButton.transform.parent);
+
+                if (new_button2 == null)
                 {
-                    GameManager.GetVpFPSCamera().gameObject.AddComponent<AudioListener>();
-                }
-            }
-
-            if (GameManager.m_SceneTransitionData != null)
-            {
-                level_guid = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
-                if (level_guid != previous_level_guid)
-                {
-                    previous_level_guid = level_guid;
-                    MelonLogger.Msg("Scene GUID " + GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
-                }
-            }
-
-            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null && NeedConnectAfterLoad != -1)
-            {
-                DoWaitForConnect();
-            }
-
-            if(m_InterfaceManager != null && InterfaceManager.m_Panel_SnowShelterInteract != null)
-            {
-                CancleDismantling();
-            }
-
-            if(m_InterfaceManager != null && InterfaceManager.m_Panel_Rest != null && InterfaceManager.m_Panel_Rest.isActiveAndEnabled == true)
-            {
-                //InterfaceManager.m_Panel_Rest.OnRest();
-                //GameObject new_button = new GameObject();
-                //UnityEngine.Object.Instantiate(new_button, InterfaceManager.m_Panel_Rest.m_SleepButton.transform.parent);
-
-                if(SleepingButtons == null)
-                {
-                    SleepingButtons = InterfaceManager.m_Panel_Rest.gameObject.transform.GetChild(3).gameObject;
-                    WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.m_Panel_Rest.gameObject.transform);
-                    UnityEngine.Object.Destroy(WaitForSleepLable.GetComponent<UILocalize>());
-                    WaitForSleepLable.GetComponent<UILabel>().text = "WAITING OTHER PLAYERS TO SLEEP";
-                    WaitForSleepLable.SetActive(false);
+                    new_button.transform.position = new Vector3(0, -0.59f, 0);
+                }else{
+                    new_button.transform.position = new Vector3(-0.2777778f, -0.59f, 0);
                 }
 
-                if(new_button == null)
-                {
-                    new_button = UnityEngine.Object.Instantiate(InterfaceManager.m_Panel_Rest.m_SleepButton, InterfaceManager.m_Panel_Rest.m_SleepButton.transform.parent);
-                    
-                    if(new_button2 == null)
-                    {
-                        new_button.transform.position = new Vector3(0, -0.59f, 0);
-                    }else{
-                        new_button.transform.position = new Vector3(-0.2777778f, -0.59f, 0);
-                    }
-                    
-                    new_button.name = "WaitForEveryoneButton";
-                    GameObject Labl = new_button.transform.GetChild(0).GetChild(0).gameObject;
-                    UnityEngine.Object.Destroy(Labl.GetComponent<UILocalize>());
-                    Labl.GetComponent<UILabel>().text = "WAIT FOR EVERYONE";
-                    new_button.GetComponent<GenericButtonMouseSpawner>().onClick = null;
-                    new_button.transform.GetChild(0).gameObject.GetComponent<UIButton>().onClick = null;
-                }
-                //if (new_button2 == null)
-                //{
-                //    new_button2 = UnityEngine.Object.Instantiate(InterfaceManager.m_Panel_Rest.m_SleepButton, InterfaceManager.m_Panel_Rest.m_SleepButton.transform.parent);
-                //    new_button2.transform.position = new Vector3(0.2777778f, -0.59f, 0);
-
-                //    new_button2.name = "LieDownButton";
-                //    GameObject Labl = new_button2.transform.GetChild(0).GetChild(0).gameObject;
-                //    UnityEngine.Object.Destroy(Labl.GetComponent<UILocalize>());
-                //    Labl.GetComponent<UILabel>().text = "LIE DOWN";
-                //    new_button2.GetComponent<GenericButtonMouseSpawner>().onClick = null;
-                //    new_button2.transform.GetChild(0).gameObject.GetComponent<UIButton>().onClick = null;
-                //}else{
-                //    GameObject Labl = new_button2.transform.GetChild(0).GetChild(0).gameObject;
-                //    if(AtBed == false)
-                //    {
-                //        Labl.GetComponent<UILabel>().text = "LIE DOWN";
-                //    }else{
-                //        Labl.GetComponent<UILabel>().text = "GET UP";
-                //    }
-                //}
-                
+                new_button.name = "WaitForEveryoneButton";
+                GameObject Labl = new_button.transform.GetChild(0).GetChild(0).gameObject;
+                UnityEngine.Object.Destroy(Labl.GetComponent<UILocalize>());
+                Labl.GetComponent<UILabel>().text = "WAIT FOR EVERYONE";
+                new_button.GetComponent<GenericButtonMouseSpawner>().onClick = null;
+                new_button.transform.GetChild(0).gameObject.GetComponent<UIButton>().onClick = null;
             }
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Inventory != null && InterfaceManager.m_Panel_Inventory.isActiveAndEnabled == true)
-            {
-                if(GiveItemLableObj == null)
-                {
-                    //GameObject CloneTextDummy = InterfaceManager.m_Panel_Inventory.gameObject.transform.GetChild(3).GetChild(9).gameObject;
-                    //GiveItemLableObj = UnityEngine.Object.Instantiate(CloneTextDummy, InterfaceManager.m_Panel_Inventory.gameObject.transform.GetChild(3));
-                    //GiveItemLableObj.transform.position = new Vector3(-453, 300, 0);
-                    //GiveItemLable = GiveItemLableObj.GetComponent<UILabel>();
-                    //GiveItemLable.text = "SAS";
-                }
-            }
-
-            if (iAmHost == true && IsCycleSkiping == true && GameManager.m_PlayerManager != null)
-            {                
-                if(GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == false || IsDead == true)
-                {
-                    IsCycleSkiping = false;
-                }
-            }
-
-            if(WaitForSleepLable != null && WaitForSleepLable.activeSelf == true && CanSleep(false) == false)
+        }
+        public static void UpdateSleepScreen()
+        {
+            if (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true && CanSleep(false) == false)
             {
                 CanSleep(true);
                 WaitForSleepLable.SetActive(false);
-                if(SleepingButtons != null)
+                if (SleepingButtons != null)
                 {
                     SleepingButtons.SetActive(true);
                 }
             }
+        }
 
-
-            if (FirstBoot == false && SteamConnect.CanUseSteam == true)
+        public static void BuildCanvasUIs()
+        {
+            if (uConsole.m_Instance != null && uConsole.m_Instance.gameObject != null && uConsole.m_Instance.gameObject.transform.childCount > 0 && uConsole.m_Instance.gameObject.transform.GetChild(0) != null)
             {
-                SteamConnect.DoUpdate();
-            }
+                MelonLogger.Msg("[UI] Got Canvas");
+                UiCanvas = uConsole.m_Instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Canvas>();
 
-            InitAllPlayers();
-
-            if(iAmHost == true)
-            {
-                for (int i = 0; i < MaxPlayers; i++)
+                GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MP_Chat");
+                ChatObject = GameObject.Instantiate(LoadedAssets, UiCanvas.transform);
+                chatScroller = ChatObject.transform.GetChild(1).GetComponent<UnityEngine.UI.ScrollRect>();
+                chatInput = ChatObject.transform.GetChild(1).gameObject.GetComponent<UnityEngine.UI.InputField>();
+                chatPanel = ChatObject.transform.GetChild(0).GetChild(0).GetChild(0).gameObject;
+                ChatObject.SetActive(false);
+                chatInput.gameObject.SetActive(false);
+                MelonLogger.Msg("[UI] Chat object created!");
+                GameObject LoadedAssets2 = LoadedBundle.LoadAsset<GameObject>("MP_Status");
+                StatusObject = GameObject.Instantiate(LoadedAssets2, UiCanvas.transform);
+                StatusPanel = StatusObject.transform.GetChild(0).GetChild(0).GetChild(0).gameObject;
+                StatusObject.SetActive(false);
+                MelonLogger.Msg("[UI] Status object created!");
+                GameObject LoadedAssets3 = LoadedBundle.LoadAsset<GameObject>("MP_VoiceChat");
+                MicrophoneIdicator = GameObject.Instantiate(LoadedAssets3, UiCanvas.transform);
+                if (MicrophoneIdicator != null)
                 {
-                    if(i == 0)
+                    MelonLogger.Msg("[UI] Microphone Indicator created!");
+                    MicrophoneIdicator.SetActive(false);
+                }
+            }
+        }
+
+        public static void UpdateCanvasUis()
+        {
+            if (uConsole.m_Instance != null && uConsole.m_On == false && Cursor.visible == false)
+            {
+                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Return))
+                {
+                    if (chatInput.gameObject.activeSelf == false)
                     {
-                        MyTicksOnScene = MyTicksOnScene + 1;
-                    }else{
-                        if (playersData[i] != null)
+                        ChatObject.SetActive(true);
+                        chatInput.gameObject.SetActive(true);
+                        chatInput.ActivateInputField();
+                        HideChatTimer = 5;
+                        if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.Normal)
                         {
-                            if (Server.clients[i].IsBusy() == true && playersData[i].m_AnimState != "Knock")
-                            {
-                                if (playersData[i].m_Levelid != playersData[i].m_PreviousLevelId)
-                                {
-                                    playersData[i].m_PreviousLevelId = playersData[i].m_Levelid;
-                                    playersData[i].m_TicksOnScene = 0;
-                                }else{
-                                    playersData[i].m_TicksOnScene = playersData[i].m_TicksOnScene + 1;
-                                }
-                            }else{
-                                playersData[i].m_TicksOnScene = 0;
-                            }
+                            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+                        }
+                    }else{
+                        if (chatInput.text != "")
+                        {
+                            MultiplayerChatMessage message = new MultiplayerChatMessage();
+                            message.m_By = MyChatName;
+                            message.m_Type = 1;
+                            message.m_Message = chatInput.text;
+                            SendMessageToChat(message);
+                            chatInput.text = "";
+                        }
+                        chatInput.gameObject.SetActive(false);
+                        if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.Locked)
+                        {
+                            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
                         }
                     }
                 }
+                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Tab))
+                {
+                    if (StatusObject.activeSelf == false)
+                    {
+                        StatusObject.SetActive(true);
+                    }else{
+                        StatusObject.SetActive(false);
+                    }
+                }
+                //if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Alpha7))
+                //{
+                //    Il2CppSystem.Collections.Generic.List<GearItem> GearList = new Il2CppSystem.Collections.Generic.List<GearItem>();
+                //    GearList = Panel_WeaponPicker.GetPrioritizedWeaponList();
+
+                //    for (int i = 0; i < GearList.Count; i++)
+                //    {
+                //        if (GearList[i].m_GearName == "GEAR_Revolver")
+                //        {
+                //            GearList.Remove(GearList[i]);
+                //        }
+                //    }
+                //    if (GearList.Count > 0)
+                //    {
+                //        InterfaceManager.m_Panel_WeaponPicker.Enable(true, GearList, 1000);
+                //    }else{
+                //        HUDMessage.AddMessage("YOU HAVE NOT ANY MELEE WEAPONS!");
+                //    }
+                //}
             }
-            if (InOnline() == true)
+            if (UIHostMenu != null)
             {
-                FindPlayerToTrade();
-                //DoColisionForArrows();
+                GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
+                //GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
+                GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
+                if (IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn == true)
+                {
+                    //if(PublicSteamServer.activeSelf == false)
+                    //{
+                    //    PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                    //}
+                    //PublicSteamServer.SetActive(true);
+                    PortsObject.SetActive(false);
+                }else{
+                    //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
+                    //PublicSteamServer.SetActive(false);
+                    PortsObject.SetActive(true);
+                }
+            }
+        }
+
+        public static void DebugCrap()
+        {
+            int layerMask = 1 << 16;
+            RaycastHit hit;
+            Transform transform = GameManager.GetMainCamera().transform;
+            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, 50, layerMask))
+            {
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * hit.distance, Color.yellow);
+
+                if (hit.collider.gameObject.GetComponent<ObjectGuid>())
+                {
+                    DebugAnimalGUID = hit.collider.gameObject.GetComponent<ObjectGuid>().Get();
+                    DebugAnimalGUIDLast = DebugAnimalGUID;
+                    DebugLastAnimal = hit.collider.gameObject;
+                }else{
+                    DebugAnimalGUID = "Have not objectGuid";
+                    DebugAnimalGUIDLast = DebugAnimalGUID;
+                    DebugLastAnimal = hit.collider.gameObject;
+                }
+            }else{
+                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1000, Color.white);
+                DebugAnimalGUID = "";
             }
             if (ALWAYS_FUCKING_CURSOR_ON == true)
             {
@@ -11978,578 +11832,78 @@ namespace SkyCoop
                 Cursor.visible = true;
                 Cursor.lockState = CursorLockMode.None;
             }
-
-            if (UiCanvas == null)
+            if (DebugBind == true)
             {
-                if (uConsole.m_Instance != null && uConsole.m_Instance.gameObject != null && uConsole.m_Instance.gameObject.transform.childCount > 0 && uConsole.m_Instance.gameObject.transform.GetChild(0) != null)
+                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.B))
                 {
-                    MelonLogger.Msg("[UI] Got Canvas");
-                    UiCanvas = uConsole.m_Instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Canvas>();
-
-                    GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MP_Chat");
-                    ChatObject = GameObject.Instantiate(LoadedAssets, UiCanvas.transform);
-                    chatScroller = ChatObject.transform.GetChild(1).GetComponent<UnityEngine.UI.ScrollRect>();
-                    chatInput = ChatObject.transform.GetChild(1).gameObject.GetComponent<UnityEngine.UI.InputField>();
-                    chatPanel = ChatObject.transform.GetChild(0).GetChild(0).GetChild(0).gameObject;
-                    ChatObject.SetActive(false);
-                    chatInput.gameObject.SetActive(false);
-                    MelonLogger.Msg("[UI] Chat object created!");
-                    GameObject LoadedAssets2 = LoadedBundle.LoadAsset<GameObject>("MP_Status");
-                    StatusObject = GameObject.Instantiate(LoadedAssets2, UiCanvas.transform);
-                    StatusPanel = StatusObject.transform.GetChild(0).GetChild(0).GetChild(0).gameObject;
-                    StatusObject.SetActive(false);
-                    MelonLogger.Msg("[UI] Status object created!");
-                    GameObject LoadedAssets3 = LoadedBundle.LoadAsset<GameObject>("MP_VoiceChat");
-                    MicrophoneIdicator = GameObject.Instantiate(LoadedAssets3, UiCanvas.transform);
-                    if (MicrophoneIdicator != null)
+                    RaycastHit hitInfo;
+                    if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hitInfo, 50))
                     {
-                        MelonLogger.Msg("[UI] Microphone Indicator created!");
-                        MicrophoneIdicator.SetActive(false);
-                    }
+                        Vector3 instantiatePosition = SnappedPosition(hitInfo.point, hitInfo.collider.transform.position);
 
-                    //GameObject PanelHUD = InterfaceManager.m_Panel_HUD.m_EssentialHud;
-                    //GameObject Sprite = GameObject.Instantiate(new GameObject(), PanelHUD.transform);
-                    //UISprite sp = PingElement.AddComponent<UISprite>();
-                    //sp.mSpriteName = "ico_Radial_firstAid";
-                    //sp.mChanged = true;
-                    //PingElement = Sprite;
-                }
-            }
-            else{
-                if(m_InterfaceManager != null && uConsole.m_Instance != null && uConsole.m_On == false && Cursor.visible == false)
-                {
-                    if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Return))
-                    {
-                        if (chatInput.gameObject.activeSelf == false)
-                        {
-                            ChatObject.SetActive(true);
-                            chatInput.gameObject.SetActive(true);
-                            chatInput.ActivateInputField();
-                            HideChatTimer = 5;
-                            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.Normal)
-                            {
-                                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-                            }
-                        }else{
-                            if (chatInput.text != "")
-                            {
-                                MultiplayerChatMessage message = new MultiplayerChatMessage();
-                                message.m_By = MyChatName;
-                                message.m_Type = 1;
-                                message.m_Message = chatInput.text;
-                                SendMessageToChat(message);
-                                chatInput.text = "";
-                            }
-                            chatInput.gameObject.SetActive(false);
-                            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.Locked)
-                            {
-                                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
-                            }
-                        }
-                    }
-                    if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Tab))
-                    {
-                        if (StatusObject.activeSelf == false)
-                        {
-                            StatusObject.SetActive(true);
-                        }else{
-                            StatusObject.SetActive(false);
-                        }
-                    }
-                    if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Alpha7))
-                    {
-                        Il2CppSystem.Collections.Generic.List<GearItem> GearList = new Il2CppSystem.Collections.Generic.List<GearItem>();
-                        GearList = Panel_WeaponPicker.GetPrioritizedWeaponList();
-                        
-                        for (int i = 0; i < GearList.Count; i++)
-                        {
-                            if(GearList[i].m_GearName == "GEAR_Revolver")
-                            {
-                                GearList.Remove(GearList[i]);
-                            }
-                        }
-                        if (GearList.Count > 0)
-                        {
-                            InterfaceManager.m_Panel_WeaponPicker.Enable(true, GearList, 1000);
-                        }
-                        else
-                        {
-                            HUDMessage.AddMessage("YOU HAVE NOT ANY MELEE WEAPONS!");
-                        }
-                    }
-                }
-                if(UIHostMenu != null)
-                {
-                    GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
-                    //GameObject PublicSteamServer = UIHostMenu.transform.GetChild(5).gameObject;
-                    GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
-                    if(IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().isOn == true)
-                    {
-                        //if(PublicSteamServer.activeSelf == false)
-                        //{
-                        //    PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
-                        //}
-                        //PublicSteamServer.SetActive(true);
-                        PortsObject.SetActive(false);
-                    }else{
-                        //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
-                        //PublicSteamServer.SetActive(false);
-                        PortsObject.SetActive(true);
-                    }
-                }
-            }
+                        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                        cube.transform.position = instantiatePosition;
 
-            if (InOnline() == true)
-            {
-                //if (GameManager.m_InterfaceManager != null && InterfaceManager.m_Panel_PauseMenu != null && InterfaceManager.m_Panel_PauseMenu != null && InterfaceManager.m_Panel_PauseMenu.isActiveAndEnabled == true && SceneManager.IsLoading() == false && NotNeedToPauseUntilLoaded == false)
-                //{
-                //    GameManager.m_IsPaused = false;
-                //}
-
-                if (GameManager.m_Condition != null && GameManager.m_PlayerManager != null && GameManager.GetPlayerManagerComponent().PlayerIsDead())
-                {
-                    GameManager.m_Condition.DisableLowHealthEffects();
-                }
-                if(DoFakeGetup == true)
-                {
-                    BashGetupDelayCamera();
-                }
-            }
-
-            if (Time.time > nextActionTimeSecond)
-            {
-                nextActionTimeSecond += periodSecond;
-                MyMod.EverySecond();
-            }
-
-            if (InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
-            {
-                if(InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<BaseAi>() != null)
-                {
-                    HarvestingAnimal = InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
-                }else{
-                    HarvestingAnimal = "";
-                }
-            }else{
-                HarvestingAnimal = "";
-            }
-
-            //if (GameManager.m_BodyCarry != null && GameManager.GetBodyCarryComponent().m_Body != null)
-            //{
-            //    GameObject HeldBody = GameManager.GetBodyCarryComponent().m_Body.gameObject;
-            //    if (HeldBody.GetComponent<ObjectGuid>() != null && HeldBody.GetComponent<ObjectGuid>().Get() == PlayerBodyGUI)
-            //    //if (HeldBody.GetComponent<ObjectGuid>() != null)
-            //    {
-            //        CarryingPlayer = true;
-            //    }else{
-            //        CarryingPlayer = false;
-            //    }
-            //}else{
-            //    CarryingPlayer = false;
-            //}
-
-            //if(CarryingPlayer == true)
-            //{
-            //    if(playerbody != null && anotherbutt != null)
-            //    {
-            //        anotherplayer_levelid = levelid;
-            //        LastRecivedOtherPlayerVector = playerbody.transform.position;
-            //        anotherbutt.transform.position = playerbody.transform.position;
-            //    }
-            //}
-
-            if (PreviousHarvestingAnimal != HarvestingAnimal)
-            {
-                PreviousHarvestingAnimal = HarvestingAnimal;
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.HARVESTINGANIMAL))
-                    {
-                        _packet.Write(HarvestingAnimal);
-                        SendTCPData(_packet);
-                    }
-                }
-                if (iAmHost == true)
-                {
-                    using (Packet _packet = new Packet((int)ServerPackets.HARVESTINGANIMAL))
-                    {
-                        ServerSend.HARVESTINGANIMAL(1, HarvestingAnimal);
-                    }
-                }
-            }
-
-            //if (Time.time > nextActionTimeAniamls)
-            //{
-            //    nextActionTimeAniamls += periodAniamls;
-            //    if (levelid > 3 && AnimalsController == true)
-            //    {
-            //        for (int i = 0; i < AllAnimalsNew.Count; i++)
-            //        {
-            //            if (AllAnimalsNew.ElementAt<GameObject>(i) != null)
-            //            {
-            //                GameObject animal = AllAnimalsNew.ElementAt<GameObject>(i);
-            //                if (animal.GetComponent<AnimalUpdates>() != null && IsShatalkerMode() == false)
-            //                {
-            //                    animal.GetComponent<AnimalUpdates>().CallSync(false);
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
-            //if (IamShatalker == true && IsShatalkerMode() == true)
-            //{
-            //    GameManager.m_IceCrackingManager.enabled = false;
-            //    if (ShatalkerObject != null)
-            //    {
-            //        ShatalkerObject.SetStartMovementDelayTime(OverridenStartCountDown);
-            //    }
-
-            //    if (anotherbutt != null)
-            //    {
-            //        if (DarkWalkerIsReady == false)
-            //        {
-            //            if (InWaitingRoom == false)
-            //            {
-            //                InWaitingRoom = true;
-            //                SendToWaitngRoom();
-            //            }
-            //        } else {
-            //            if (InWaitingRoom == true)
-            //            {
-            //                InWaitingRoom = false;
-            //                ReturnFromWaitingRoom();
-            //            }
-
-            //            float dist = Vector3.Distance(GameManager.GetPlayerTransform().position, anotherbutt.transform.position);
-            //            if (dist < 200 && WardIsActive == true)
-            //            {
-            //                if (GameManager.GetPlayerManagerComponent().m_ControlMode != PlayerControlMode.Locked)
-            //                {
-            //                    HUDMessage.AddMessage("You got too close to the survivor!");
-            //                    GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-            //                }
-            //            } else {
-            //                if (GameManager.GetPlayerManagerComponent().m_ControlMode == PlayerControlMode.Locked)
-            //                {
-            //                    GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
-            //if (level_name == "MainMenu")
-            //{
-            //    Vector3 v3 = GameManager.GetMainCamera().transform.position;
-            //    GameManager.GetMainCamera().transform.position = new Vector3(80.27f, 2.9f, 47.47f);
-
-            //    ///MelonLogger.Msg("Camera X "+ v3.x  + " Y "+ v3.y + " Z "+ v3.z);
-
-            //    if (MenuStuffSpawned == null)
-            //    {
-            //        GameObject pl1 = MakeModObject("MenuPlayer1");
-            //        GameObject pl2 = MakeModObject("MenuPlayer2");
-            //        Animator pl1_anim = pl1.GetComponentInChildren<Animator>();
-            //        Animator pl2_anim = pl2.GetComponentInChildren<Animator>();
-            //        pl1_anim.Play("Menu1", 0);
-            //        pl2_anim.Play("Menu2", 0);
-            //        pl1.transform.position = new Vector3(77, 2.3f, 47);
-            //        pl2.transform.position = new Vector3(75, 2.3f, 49);
-            //        pl2.transform.rotation = new Quaternion(0, 0.773023f, 0, 0.634378f);
-            //        GameObject campfire = UnityEngine.Object.Instantiate<GameObject>(Resources.Load("INTERACTIVE_CampFire").Cast<GameObject>());
-            //        campfire.transform.position = new Vector3(77, 2.3f, 48);
-            //        Campfire cf = campfire.GetComponent<Campfire>();
-
-            //        FlexFire = cf;
-            //        MenuErjan1 = pl1_anim;
-            //        MenuErjan2 = pl2_anim;
-            //        if (cf != null)
-            //        {
-            //            cf.m_Fire.FireStateSet(FireState.FullBurn);
-            //            cf.m_Fire.ForceBurnTimeInMinutes(50);
-            //        }
-            //        EffectsControllerFire ecf = campfire.GetComponent<EffectsControllerFire>();
-
-            //        ecf.Initialize();
-            //        ecf.TriggerStage(FireState.FullBurn, true);
-
-            //        MenuStuffSpawned = pl1;
-            //    }
-            //}else{
-            //    if(FlexFire != null)
-            //    {
-            //        UnityEngine.Object.DestroyImmediate(FlexFire);
-            //    }
-            //    if(MenuErjan1 != null)
-            //    {
-            //        UnityEngine.Object.DestroyImmediate(MenuErjan1.gameObject);
-            //    }
-            //    if (MenuErjan2 != null)
-            //    {
-            //        UnityEngine.Object.DestroyImmediate(MenuErjan2.gameObject);
-            //    }
-            //}
-
-            if(SteamServerWorks != "" || Server.UsingSteamWorks == true)
-            {
-                TrackWhenRecordOver();
-            }
-
-            if (levelid > 3)
-            {
-                if (IamShatalker == true)
-                {
-                    GameManager.GetVpFPSPlayer().Controller.MotorVelocityMax = DarkWalkerSpeed;
-                    GameManager.GetVpFPSPlayer().Controller.MotorVelocityMin = DarkWalkerSpeed;
-                }
-
-                if (GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair != null)
-                {
-                    LastObjectUnderCrosshair = GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair;
-                }
-
-                int layerMask = 1 << 16;
-
-                RaycastHit hit;
-
-                Transform transform = GameManager.GetMainCamera().transform;
-
-
-                if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, 50, layerMask))
-                {
-                    Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * hit.distance, Color.yellow);
-
-                    if (hit.collider.gameObject.GetComponent<ObjectGuid>())
-                    {
-                        DebugAnimalGUID = hit.collider.gameObject.GetComponent<ObjectGuid>().Get();
-                        DebugAnimalGUIDLast = DebugAnimalGUID;
-                        DebugLastAnimal = hit.collider.gameObject;
-                    }
-                    else {
-                        DebugAnimalGUID = "Have not objectGuid";
-                        DebugAnimalGUIDLast = DebugAnimalGUID;
-                        DebugLastAnimal = hit.collider.gameObject;
-                    }
-                }
-                else {
-                    Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1000, Color.white);
-                    DebugAnimalGUID = "";
-                }
-
-                MyHasRifle = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Rifle");
-
-                if (PrviousHasRifle != MyHasRifle)
-                {
-                    PrviousHasRifle = MyHasRifle;
-                    SendMyEQ();
-                }
-
-                MyHasRevolver = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Revolver");
-
-                bool axe = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Hatchet"); // Axe
-                bool f_axe = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_FireAxe"); // Fire axe
-                bool h_axe = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_HatchetImprovised"); // Handmade axe
-
-                if (axe == true || f_axe == true || h_axe) // If have any axe
-                {
-                    MyHasAxe = true;
-                }else{
-                    MyHasAxe = false;
-                }
-
-                MyHasMedkit = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
-
-                if (PreviousHasMedkit != MyHasMedkit)
-                {
-                    PreviousHasMedkit = MyHasMedkit;
-                    SendMyEQ();
-                }
-
-
-                MyArrows = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_Arrow");
-                MyFlares = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_FlareA");
-                MyBlueFlares = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_FlareBlue");
-
-                if (PrviousHasRevolver != MyHasRevolver)
-                {
-                    PrviousHasRevolver = MyHasRevolver;
-                    SendMyEQ();
-                }
-                if (PreviousHasAxe != MyHasAxe)
-                {
-                    PreviousHasAxe = MyHasAxe;
-                    SendMyEQ();
-                }
-                if (PreviousArrows != MyArrows)
-                {
-                    PreviousArrows = MyArrows;
-                    SendMyEQ();
-                }
-                if(PreviousFlares != MyFlares)
-                {
-                    PreviousFlares = MyFlares;
-                    SendMyEQ();
-                }
-                if(PreviousBlueFlares != MyBlueFlares)
-                {
-                    PreviousBlueFlares = MyBlueFlares;
-                    SendMyEQ();
-                }
-                bool IsAiming = false;
-                if(GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_GunItem != null && GameManager.m_PlayerManager.m_ItemInHands.m_GunItem.IsAiming() == true)
-                {
-                    IsAiming = true;
-                }
-
-                if(MyIsAiming != IsAiming)
-                {
-                    MyIsAiming = IsAiming;
-                    if (playersData[0].m_Mimic == true && players[0] != null)
-                    {
-                        playersData[0].m_Aiming = MyIsAiming;
-                    }
-                    if (sendMyPosition == true)
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.CHANGEAIM))
-                        {
-                            _packet.Write(MyIsAiming);
-                            SendTCPData(_packet);
-                        }
-                    }
-                    if(iAmHost == true)
-                    {
-                        ServerSend.CHANGEAIM(0, MyIsAiming, true);
-                    }
-                }
-
-                if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
-                {
-                    if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
-                    {
-                        MyLightSourceName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
-                    }else{
-                        
-                        if(ModdedHandsBook == null)
-                        {
-                            MyLightSourceName = "";
-                        }else{
-                            if (!ModdedHandsBook.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("Offscreen"))
-                            {
-                                MyLightSourceName = "Book";
-                            }else{
-                                MyLightSourceName = "";
-                            }
-                        }
-                    }
-                }else{
-                    MyLightSourceName = "Map";
-                }
-
-                if(WaitForSleepLable != null && WaitForSleepLable.activeSelf == true)
-                {
-                    IsSleeping = true;
-                }else{
-                    IsSleeping = GameManager.GetPlayerManagerComponent().PlayerIsSleeping();
-                }
-                if (PreviousSleeping != IsSleeping)
-                {
-                    PreviousSleeping = IsSleeping;
-                    if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true || (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true))
-                    {
-                        MelonLogger.Msg("Going to sleep");
-                        MelonLogger.Msg("Skiping Cycle time " + MyCycleSkip);
-                        GameObject bed = LastObjectUnderCrosshair;
-                        if (bed != null && bed.GetComponent<Bed>() != null)
-                        {
-                            //V3BeforeSleep = GameManager.GetPlayerTransform().position;
-                            //NeedV3BeforeSleep = true;
-                            //GameManager.GetPlayerTransform().position = bed.gameObject.transform.position;
-                            //GameManager.GetPlayerTransform().rotation = bed.gameObject.transform.rotation;
-
-                            if(bed.GetComponent<Bed>().m_BodyPlacementTransform == true)
-                            {
-                                Vector3 SleepV3 = bed.GetComponent<Bed>().m_BodyPlacementTransform.position;
-                                Quaternion SleepQuat = bed.GetComponent<Bed>().m_BodyPlacementTransform.rotation;
-
-                                if(iAmHost == true)
-                                {
-                                    ServerSend.SLEEPPOSE(0, SleepV3, SleepQuat, true);
-                                }
-                                if (sendMyPosition == true)
-                                {
-                                    using (Packet _packet = new Packet((int)ClientPackets.SLEEPPOSE))
-                                    {
-                                        _packet.Write(SleepV3);
-                                        _packet.Write(SleepQuat);
-                                        SendTCPData(_packet);
-                                    }
-                                }
-                            }else{
-                                MelonLogger.Msg(ConsoleColor.DarkRed,"Bed has not sleep pose transform! AAAAAAAAAAAAAA");
-                            }
-                        }
-                    }else{
-                        MyCycleSkip = 0;
-                        if (iAmHost == true)
-                        {
-                            ServerSend.SLEEPPOSE(0, new Vector3(0,0,0), new Quaternion(0,0,0,0), true);
-                        }
                         if (sendMyPosition == true)
                         {
-                            using (Packet _packet = new Packet((int)ClientPackets.SLEEPHOURS))
+                            using (Packet _packet = new Packet((int)ClientPackets.BLOCK))
                             {
-                                _packet.Write(new Vector3(0, 0, 0));
-                                _packet.Write(new Quaternion(0, 0, 0, 0));
+                                _packet.Write(cube.transform.position);
                                 SendTCPData(_packet);
                             }
                         }
-                        MelonLogger.Msg("Has wakeup or cancle sleep");
-                    }
-
-                    if (sendMyPosition == true)
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.SLEEPHOURS))
+                        if (iAmHost == true)
                         {
-                            _packet.Write(MyCycleSkip);
-                            SendTCPData(_packet);
+                            using (Packet _packet = new Packet((int)ServerPackets.BLOCK))
+                            {
+                                ServerSend.BLOCK(0, cube.transform.position, true);
+                            }
                         }
                     }
                 }
+                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.K))
+                {
+                    SimRevive();
+                }
+
+                ALWAYS_FUCKING_CURSOR_ON = KeyboardUtilities.InputManager.GetKey(KeyCode.L);
+
+                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.LeftAlt))
+                {
+                    GameManager.GetVpFPSPlayer().Controller.Jump();
+                }
+            }
+        }
+
+        public static string PreviousEquipmentCheck = "";
+
+        public static void UpdateMyEquipment()
+        {
+            string EQCheck = "";
+            MyHasRifle = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Rifle");
+            MyArrows = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_Arrow");
+            MyFlares = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_FlareA");
+            MyBlueFlares = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_FlareBlue");
+            MyHasRevolver = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Revolver");
+            MyHasMedkit = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
+
+            bool axe = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Hatchet"); // Axe
+            bool f_axe = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_FireAxe"); // Fire axe
+            bool h_axe = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_HatchetImprovised"); // Handmade axe
+            if (axe == true || f_axe == true || h_axe)
+            {
+                MyHasAxe = true;
+            }else{
+                MyHasAxe = false;
             }
 
-            if (iAmHost == true && NeedSyncTime == true)
+            EQCheck = MyHasRifle.ToString() + MyArrows.ToString() + MyFlares.ToString() + MyBlueFlares.ToString() + MyHasRevolver.ToString() + MyHasMedkit.ToString() + MyHasAxe.ToString();
+            if(PreviousEquipmentCheck != EQCheck)
             {
-                if (Time.time > nextActionTime)
-                {
-                    nextActionTime += period;
-                    MyMod.EveryInGameMinute();
-                }
+                PreviousEquipmentCheck = EQCheck;
+                SendMyEQ();
             }
 
-            if (MyPreviousAnimState != MyAnimState)
-            {
-                MyPreviousAnimState = MyAnimState;
-                if(playersData[0].m_Mimic == true && players[0] != null)
-                {
-                    playersData[0].m_AnimState = MyAnimState;
-                }
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.ANIMSTATE))
-                    {
-                        _packet.Write(MyAnimState);
-                        SendTCPData(_packet);
-                    }
-                }
-                if (iAmHost == true)
-                {
-                    using (Packet _packet = new Packet((int)ServerPackets.ANIMSTATE))
-                    {
-                        ServerSend.ANIMSTATE(0, MyAnimState, true);
-                    }
-                }
-            }
             if (MyLightSourceName != MyLastLightSourceName)
             {
                 MyLastLightSourceName = MyLightSourceName;
@@ -12594,832 +11948,1026 @@ namespace SkyCoop
                     }
                 }
             }
-
-            if (RealTimeCycleSpeed == true && InOnline() == true)
+            if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
             {
-                //uConsole.RunCommandSilent("set_time " + OveridedTime);
-                string todString = OveridedTime;
-                float normalizedTOD = 0.0f;
-                if(Utils.TryParseTOD(todString, out normalizedTOD))
+                if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
                 {
-                    GameManager.GetTimeOfDayComponent().SetNormalizedTime(normalizedTOD);
-                }
-            }
-
-            //if (IamShatalker == true || ((ShatalkerModeClient == true || ServerHandle.DarkShatalkerMode == true) && levelid != anotherplayer_levelid))
-            //{
-            //    Vector3 shatalkerV3 = new Vector3(-1000, -1000, -1000);
-            //    if (ShatalkerObject != null)
-            //    {
-            //        ShatalkerObject.m_WorldPosition = shatalkerV3;
-            //    }
-            //}
-            //if (sendMyPosition == true && ShatalkerModeClient == true && levelid == anotherplayer_levelid)
-            //{
-            //    if (ShatalkerObject != null)
-            //    {
-            //        ShatalkerObject.m_WorldPosition = LastRecivedShatalkerVector;
-            //    }
-            //}
-
-            if (DebugBind == true)
-            {
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.B))
-                {
-                    RaycastHit hitInfo;
-                    if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hitInfo, 50))
-                    {
-                        Vector3 instantiatePosition = SnappedPosition(hitInfo.point, hitInfo.collider.transform.position);
-
-                        GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        cube.transform.position = instantiatePosition;
-
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.BLOCK))
-                            {
-                                _packet.Write(cube.transform.position);
-                                SendTCPData(_packet);
-                            }
-                        }
-                        if (iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.BLOCK))
-                            {
-                                ServerSend.BLOCK(0, cube.transform.position, true);
-                            }
-                        }
-                    }
-                }
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.K))
-                {
-                    SimRevive();
-                }
-
-                ALWAYS_FUCKING_CURSOR_ON = KeyboardUtilities.InputManager.GetKey(KeyCode.L);
-
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.LeftAlt))
-                {
-                    GameManager.GetVpFPSPlayer().Controller.Jump();
-                }
-                //if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.P))
-                //{
-                //    bool CampFireTest = true;
-                //    bool KeepSendLastData = true;
-
-                //    FireSourcesSync Data = new FireSourcesSync();
-
-                //    MelonLogger.Msg("[DEBUG] Adding fire sync IsCampfire " + CampFireTest);
-                //    Data.m_LevelId = levelid;
-                //    Data.m_LevelGUID = level_guid;
-                //    Data.m_Guid = "";
-                //    Data.m_Fuel = 5;
-                //    if (CampFireTest == false)
-                //    {
-                //        Fire dummyFire = FireManager.m_Fires[0];
-                //        Data.m_Position = dummyFire.gameObject.transform.position;
-                //        Data.m_Rotation = dummyFire.gameObject.transform.rotation;
-                //        if (dummyFire.gameObject.GetComponent<ObjectGuid>() != null)
-                //        {
-                //            Data.m_Guid = dummyFire.gameObject.GetComponent<ObjectGuid>().Get();
-                //        }
-                //    }else{
-                //        Data.m_Position = GameManager.GetPlayerObject().transform.position;
-                //        Data.m_Rotation = GameManager.GetPlayerObject().transform.rotation;
-                //        Data.m_IsCampfire = true;
-                //    }
-                //    if (KeepSendLastData == true)
-                //    {
-                //        if(DebugFireSource != null)
-                //        {
-                //            Data = DebugFireSource;
-                //        }else{
-                //            DebugFireSource = Data;
-                //        }
-                //    }
-                //    MayAddFireSources(Data);
-                //}
-            }
-            //if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.O))
-            //{
-            //    DebugFireSource = null;
-            //}
-
-            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.G))
-            {
-                if (LastSelectedGearName != "" && LastSelectedGear != null && InterfaceManager.m_Panel_Inventory.IsEnabled() == true && GiveItemTo != -1)
-                {
-                    Il2CppSystem.Collections.Generic.List<GearItemObject> items = GameManager.GetInventoryComponent().m_Items;
-                    GearItem _gear = null;
-                    string saveProxyData = "";
-
-                    for (int i = 0; i < items.Count; i++)
-                    {
-                        GearItem gear_ = items[i].m_GearItem;
-
-                        if (gear_ == LastSelectedGear)
-                        {                            
-                            _gear = items[i].m_GearItem;
-                            //saveProxyData = _gear.Serialize();
-                            //GameObject cloneObj = UnityEngine.Object.Instantiate(_gear.gameObject);
-                            //float randomY = -1000;
-                            //randomY = randomY + -UnityEngine.Random.Range(100, 300);
-                            //cloneObj.transform.position = new Vector3(0, randomY, 0);
-                            //GearItem cloneGear = cloneObj.GetComponent<GearItem>();
-
-                            //Prepare
-                            if (_gear.m_ClothingItem != null && _gear.m_ClothingItem.IsWearing())
-                            {
-                                _gear.m_ClothingItem.TakeOff();
-                            }
-                            if (_gear.m_TorchItem != null)
-                            {
-                                if(GiveItemTo != -1 && playersData[GiveItemTo] != null)
-                                {
-                                    if(playersData[GiveItemTo].m_PlayerEquipmentData.m_HoldingItem != "")
-                                    {
-                                        _gear.m_TorchItem.Extinguish(TorchState.Extinguished);
-                                    }
-                                }
-                            }
-                            if (GameManager.GetPlayerManagerComponent().m_ItemInHands == _gear)
-                            {
-                                GameManager.GetPlayerManagerComponent().UnequipItemInHandsSkipAnimation();
-                            }
-
-                            //Saving actual values.
-                            int units = 0;
-                            bool wasInPlayerInv = false;
-                            if (_gear.m_StackableItem != null)
-                            {
-                                units = _gear.m_StackableItem.m_Units;
-                            }
-                            wasInPlayerInv = _gear.m_InPlayerInventory;
-
-                            //Patching item
-                            _gear.m_InPlayerInventory = false;
-                            if (_gear.m_StackableItem != null)
-                            {
-                                _gear.m_StackableItem.m_Units = 1;
-                            }
-
-                            //Saving patched item.
-                            saveProxyData = _gear.Serialize();
-
-                            //Restore actual values.
-                            if (_gear.m_StackableItem != null)
-                            {
-                                _gear.m_StackableItem.m_Units = units;
-                            }
-                            _gear.m_InPlayerInventory = wasInPlayerInv;
-
-                            //GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(saveProxyData);
-                            //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_CurrentHP " + cloneGear.m_CurrentHP);
-                            //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_LastUpdatedTODHours " + cloneGear.m_LastUpdatedTODHours);
-                            //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_HoursPlayed " + Proxy.m_HoursPlayed);
-                            //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_DecayScalar " + cloneGear.m_DecayScalar);
-
-                            //UnityEngine.Object.DestroyImmediate(cloneObj);
-                            break;
-                        }
-                    }
-
-                    if (_gear != null)
-                    {
-                        GearItemDataPacket GearDataPak = new GearItemDataPacket();
-                        GearDataPak.m_GearName = _gear.m_GearName;
-                        GearDataPak.m_SendedTo = GiveItemTo;
-                        bool waterMode = false;
-                        float waterGave = 0;
-
-                        WaterSupply bottle = null;
-
-                        if(LastSelectedGearName == "GEAR_WaterSupplyPotable" || LastSelectedGearName == "GEAR_WaterSupplyNotPotable")
-                        {
-                            waterMode = true;
-                            if (LastSelectedGearName == "GEAR_WaterSupplyPotable")
-                            {
-                                bottle = GameManager.GetInventoryComponent().m_WaterSupplyPotable.m_WaterSupply;
-                            }
-                            if (LastSelectedGearName == "GEAR_WaterSupplyNotPotable")
-                            {
-                                bottle = GameManager.GetInventoryComponent().m_WaterSupplyNotPotable.m_WaterSupply;
-                            }
-                            float Liters = bottle.m_VolumeInLiters;
-
-                            if (Liters >= 0.5f)
-                            {
-                                waterGave = 0.5f;
-                            }else{
-                                waterGave = Liters;
-                            }
-                            GearDataPak.m_Water = waterGave;
-                        }else{
-                            GearDataPak.m_DataProxy = saveProxyData;
-
-                            //MelonLogger.Msg("SaveProxy: " + saveProxyData);
-                            //MelonLogger.Msg("UTF8 bytes: " + Encoding.UTF8.GetBytes(saveProxyData).Length);
-                        }
-
-                        if(waterMode == true)
-                        {
-                            if (iAmHost == true)
-                            {
-                                using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
-                                {
-                                    ServerSend.GOTITEM(GiveItemTo, GearDataPak);
-                                }
-                            }
-                            if (sendMyPosition == true)
-                            {
-                                using (Packet _packet = new Packet((int)ClientPackets.GOTITEM))
-                                {
-                                    _packet.Write(GearDataPak);
-                                    SendTCPData(_packet);
-                                }
-                            }
-                        }else{
-                            byte[] bytesToSlice = Encoding.UTF8.GetBytes(saveProxyData);
-                            //MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
-                            if(bytesToSlice.Length > 500)
-                            {
-                                List<byte> BytesBuffer = new List<byte>();
-                                BytesBuffer.AddRange(bytesToSlice);
-
-                                while( BytesBuffer.Count >= 500)
-                                {
-                                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
-                                    BytesBuffer.RemoveRange(0, 499);
-
-                                    string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
-                                    SlicedJsonData SlicedPacket = new SlicedJsonData();
-                                    SlicedPacket.m_GearName = _gear.m_GearName;
-                                    SlicedPacket.m_SendTo = GiveItemTo;
-                                    SlicedPacket.m_Hash = saveProxyData.GetHashCode();
-                                    SlicedPacket.m_Str = jsonStringSlice;
-                                    
-                                    if(BytesBuffer.Count != 0)
-                                    {
-                                        SlicedPacket.m_Last = false;
-                                    }else{
-                                        SlicedPacket.m_Last = true;
-                                    }
-                                    //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
-
-                                    if (iAmHost == true)
-                                    {
-                                        ServerSend.GOTITEMSLICE(GiveItemTo, SlicedPacket);
-                                    }
-                                    if (sendMyPosition == true)
-                                    {
-                                        using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
-                                        {
-                                            _packet.Write(SlicedPacket);
-                                            SendTCPData(_packet);
-                                        }
-                                    }
-                                }
-
-                                if(BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
-                                {
-                                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
-                                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
-
-                                    string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
-                                    SlicedJsonData SlicedPacket = new SlicedJsonData();
-                                    SlicedPacket.m_GearName = _gear.m_GearName;
-                                    SlicedPacket.m_SendTo = GiveItemTo;
-                                    SlicedPacket.m_Hash = saveProxyData.GetHashCode();
-                                    SlicedPacket.m_Str = jsonStringSlice;
-                                    SlicedPacket.m_Last = true;
-
-                                    //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
-
-                                    if (iAmHost == true)
-                                    {
-                                        ServerSend.GOTITEMSLICE(GiveItemTo, SlicedPacket);
-                                    }
-                                    if (sendMyPosition == true)
-                                    {
-                                        using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
-                                        {
-                                            _packet.Write(SlicedPacket);
-                                            SendTCPData(_packet);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (waterMode == true)
-                        {
-                            string say = "half liter of " + _gear.m_LocalizedDisplayName.Text();
-
-                            if(bottle.m_VolumeInLiters == waterGave)
-                            {
-                                bottle.m_VolumeInLiters = 0;
-                            }else{
-                                bottle.m_VolumeInLiters = bottle.m_VolumeInLiters - waterGave;
-                                say = waterGave+" liter of " + _gear.m_LocalizedDisplayName.Text();
-                            }
-                            HUDMessage.AddMessage("You gave " + say + " to " + playersData[GiveItemTo].m_Name);
-                        }else{
-                            HUDMessage.AddMessage("You gave " + _gear.m_LocalizedDisplayName.Text() + " to " + playersData[GiveItemTo].m_Name);
-                            GameManager.GetInventoryComponent().RemoveUnits(_gear, 1);
-                        }
-                        MelonLogger.Msg("You gave " + LastSelectedGearName + " to " + playersData[GiveItemTo].m_Name);
-                        NeedRefreshInv = true; // Reloading items list.
-                    }
-                }
-            }
-
-            Transform target = null;
-
-            if (levelid > 3) // Trying get player's position only if not at menu.
-            {
-                if(GameManager.GetFatigueComponent().GetHeavyBreathingState() == HeavyBreathingState.Heavy)
-                {
-                    NowHeavyBreath = true;
+                    MyLightSourceName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
                 }else{
-                    NowHeavyBreath = false;
-                }
 
-                //if(GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ContainerBeingSearched != null)
-                //{
-                //    ContainerOpenSync pendingContainer = new ContainerOpenSync();
-                //    pendingContainer.m_LevelID = levelid;
-                //    pendingContainer.m_LevelGUID = level_guid;
-
-                //    if(GameManager.m_PlayerManager.m_ContainerBeingSearched.gameObject != null)
-                //    {
-                //        GameObject contObj = GameManager.m_PlayerManager.m_ContainerBeingSearched.gameObject;
-                //        if(contObj.GetComponent<ObjectGuid>() != null)
-                //        {
-                //            pendingContainer.m_Guid = contObj.GetComponent<ObjectGuid>().Get();
-                //        }
-                //    }
-
-                //    if(MyContainer == null || MyContainer.Equals(pendingContainer) == false)
-                //    {
-                //        MyContainer = pendingContainer;
-                //        MelonLogger.Msg("Interacting wtih container");
-                //    }
-                //}else{
-                //    if(MyContainer != null)
-                //    {
-                //        MyContainer = null;
-                //        MelonLogger.Msg("Stop interacting wtih container");
-                //    }
-                //}
-
-                BloodLosts = GameManager.GetBloodLossComponent().GetAfflictionsCount();
-
-                if(PreviousBloodLosts != BloodLosts)
-                {
-                    PreviousBloodLosts = BloodLosts;
-                    if (sendMyPosition == true) // CLIENT
+                    if (ModdedHandsBook == null)
                     {
-                        using (Packet _packet = new Packet((int)ClientPackets.BLOODLOSTS))
+                        MyLightSourceName = "";
+                    }else{
+                        if (!ModdedHandsBook.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("Offscreen"))
                         {
-                            _packet.Write(BloodLosts);
-                            SendTCPData(_packet);
-                        }
-                    }
-                    if (iAmHost == true) // HOST
-                    {
-                        using (Packet _packet = new Packet((int)ServerPackets.BLOODLOSTS))
-                        {
-                            ServerSend.BLOODLOSTS(0, BloodLosts, true);
+                            MyLightSourceName = "Book";
+                        }else{
+                            MyLightSourceName = "";
                         }
                     }
                 }
+            }else{
+                MyLightSourceName = "Map";
+            }
+        }
 
-                HasInfecitonRisk = GameManager.GetInfectionRiskComponent().HasInfectionRisk();
-
-                if(PreviousHasInfectionRisk != HasInfecitonRisk)
+        public static void ProcessGivingItem()
+        {
+            if(m_InterfaceManager != null && InterfaceManager.m_Panel_Inventory != null && InterfaceManager.m_Panel_Inventory.IsEnabled())
+            {
+                Panel_Inventory Panel = InterfaceManager.m_Panel_Inventory;
+                if (Panel.m_SelectedItemIndex != -1)
                 {
-                    PreviousHasInfectionRisk = HasInfecitonRisk;
-                    if (sendMyPosition == true) // CLIENT
+                    int seelecteditem = Panel.m_SelectedItemIndex;
+                    seelecteditem = seelecteditem + Panel.m_FirstItemDisplayedIndex;
+                    Il2CppSystem.Collections.Generic.List<GearItem> itemlist = Panel.m_FilteredInventoryList;
+
+                    if (Panel.m_FilteredInventoryList.Count > 0)
                     {
-                        using (Packet _packet = new Packet((int)ClientPackets.INFECTIONSRISK))
+                        GearItem gear = Panel.m_FilteredInventoryList[seelecteditem];
+
+                        if (gear != null)
                         {
-                            _packet.Write(HasInfecitonRisk);
-                            SendTCPData(_packet);
-                        }
-                    }
-                    if (iAmHost == true) // HOST
-                    {
-                        using (Packet _packet = new Packet((int)ServerPackets.INFECTIONSRISK))
-                        {
-                            ServerSend.INFECTIONSRISK(0, HasInfecitonRisk, true);
-                        }
-                    }
-                }
+                            string itemname = gear.m_GearName;
 
-                if(PreviousNowHeavyBreath != NowHeavyBreath)
-                {
-                    PreviousNowHeavyBreath = NowHeavyBreath;
-
-                    if (sendMyPosition == true) // CLIENT
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.HEAVYBREATH))
-                        {
-                            _packet.Write(NowHeavyBreath);
-                            SendTCPData(_packet);
-                        }
-                    }
-                    if (iAmHost == true) // HOST
-                    {
-                        using (Packet _packet = new Packet((int)ServerPackets.HEAVYBREATH))
-                        {
-                            ServerSend.HEAVYBREATH(0, NowHeavyBreath, true);
-                        }
-                    }
-                }
-
-                target = GameManager.GetPlayerTransform();
-                //SYNC MOVEMENT
-                bool InFight = GameManager.GetPlayerStruggleComponent().InStruggle();
-
-                if (target != null && previoustickpos != target.position) // If position changed.
-                {
-
-                    previoustickpos = GameManager.GetPlayerTransform().position;
-
-                    if(IsDead == false && KillAfterLoad == false && InFight == false)
-                    {
-                        if(GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
-                        {
-                            if (GameManager.GetPlayerManagerComponent().PlayerCanSprint() == true && GameManager.GetPlayerManagerComponent().PlayerIsSprinting())
+                            if (itemname.Contains("(Clone)"))
                             {
-                                MyAnimState = "Run";
-                            }else{
-                                if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
-                                {
-                                    MyAnimState = "Ctrl";
-                                }else{
-                                    MyAnimState = "Walk";
-                                }
+                                int L = itemname.Length - 7;
+                                LastSelectedGearName = itemname.Remove(L, 7);
+                            }
+                            else
+                            {
+                                LastSelectedGearName = itemname;
+                            }
+
+                            if (LastSelectedGearName != "gg")
+                            {
+                                LastSelectedGear = gear;
                             }
                         }else{
-                            MyAnimState = "RopeMoving";
-                        }
-                    }
-
-                    if (sendMyPosition == true) // CLIENT
-                    {
-                        if (IamShatalker == false)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.XYZ))
-                            {
-                                _packet.Write(target.position);
-                                SendTCPData(_packet);
-                            }
-                        }
-                        if (IamShatalker == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.XYZDW))
-                            {
-                                _packet.Write(target.position);
-                                SendTCPData(_packet);
-                            }
-                        }
-                    }
-                    if (iAmHost == true) // HOST
-                    {
-                        if (IamShatalker == false)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.XYZ))
-                            {
-                                ServerSend.XYZ(0, target.position, true);
-                            }
-                        }
-                        if (IamShatalker == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.XYZDW))
-                            {
-                                ServerSend.XYZDW(1, target.position);
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (IsDead == true || KillAfterLoad == true || InFight == true)
-                    {
-                        if(IsDead == true || KillAfterLoad == true)
-                        {
-                            MyAnimState = "Knock";
-                        }else{
-                            MyAnimState = "Fight";
+                            LastSelectedGearName = "";
                         }
                     }else{
-                        
-                        if(GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
+                        LastSelectedGearName = "";
+                    }
+                }
+            }else{
+                return;
+            }
+
+            if (LastSelectedGearName != "" && LastSelectedGear != null && InterfaceManager.m_Panel_Inventory.IsEnabled() == true && GiveItemTo != -1)
+            {
+                Il2CppSystem.Collections.Generic.List<GearItemObject> items = GameManager.GetInventoryComponent().m_Items;
+                GearItem _gear = null;
+                string saveProxyData = "";
+
+                for (int i = 0; i < items.Count; i++)
+                {
+                    GearItem gear_ = items[i].m_GearItem;
+
+                    if (gear_ == LastSelectedGear)
+                    {
+                        _gear = items[i].m_GearItem;
+
+                        //Prepare
+                        if (_gear.m_ClothingItem != null && _gear.m_ClothingItem.IsWearing())
                         {
-                            if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true)
+                            _gear.m_ClothingItem.TakeOff();
+                        }
+                        if (_gear.m_TorchItem != null)
+                        {
+                            if (GiveItemTo != -1 && playersData[GiveItemTo] != null)
                             {
-                                MyAnimState = "Sleep";
-                            }else{
-                                if (GameManager.GetPlayerInVehicle().m_InVehicle == true)
+                                if (playersData[GiveItemTo].m_PlayerEquipmentData.m_HoldingItem != "")
                                 {
-                                    MyAnimState = "Sit";
+                                    _gear.m_TorchItem.Extinguish(TorchState.Extinguished);
+                                }
+                            }
+                        }
+                        if (GameManager.GetPlayerManagerComponent().m_ItemInHands == _gear)
+                        {
+                            GameManager.GetPlayerManagerComponent().UnequipItemInHandsSkipAnimation();
+                        }
+
+                        //Saving actual values.
+                        int units = 0;
+                        bool wasInPlayerInv = false;
+                        if (_gear.m_StackableItem != null)
+                        {
+                            units = _gear.m_StackableItem.m_Units;
+                        }
+                        wasInPlayerInv = _gear.m_InPlayerInventory;
+
+                        //Patching item
+                        _gear.m_InPlayerInventory = false;
+                        if (_gear.m_StackableItem != null)
+                        {
+                            _gear.m_StackableItem.m_Units = 1;
+                        }
+
+                        //Saving patched item.
+                        saveProxyData = _gear.Serialize();
+
+                        //Restore actual values.
+                        if (_gear.m_StackableItem != null)
+                        {
+                            _gear.m_StackableItem.m_Units = units;
+                        }
+                        _gear.m_InPlayerInventory = wasInPlayerInv;
+
+                        //GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(saveProxyData);
+                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_CurrentHP " + cloneGear.m_CurrentHP);
+                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_LastUpdatedTODHours " + cloneGear.m_LastUpdatedTODHours);
+                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_HoursPlayed " + Proxy.m_HoursPlayed);
+                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_DecayScalar " + cloneGear.m_DecayScalar);
+
+                        //UnityEngine.Object.DestroyImmediate(cloneObj);
+                        break;
+                    }
+                }
+
+                if (_gear != null)
+                {
+                    GearItemDataPacket GearDataPak = new GearItemDataPacket();
+                    GearDataPak.m_GearName = _gear.m_GearName;
+                    GearDataPak.m_SendedTo = GiveItemTo;
+                    bool waterMode = false;
+                    float waterGave = 0;
+
+                    WaterSupply bottle = null;
+
+                    if (LastSelectedGearName == "GEAR_WaterSupplyPotable" || LastSelectedGearName == "GEAR_WaterSupplyNotPotable")
+                    {
+                        waterMode = true;
+                        if (LastSelectedGearName == "GEAR_WaterSupplyPotable")
+                        {
+                            bottle = GameManager.GetInventoryComponent().m_WaterSupplyPotable.m_WaterSupply;
+                        }
+                        if (LastSelectedGearName == "GEAR_WaterSupplyNotPotable")
+                        {
+                            bottle = GameManager.GetInventoryComponent().m_WaterSupplyNotPotable.m_WaterSupply;
+                        }
+                        float Liters = bottle.m_VolumeInLiters;
+
+                        if (Liters >= 0.5f)
+                        {
+                            waterGave = 0.5f;
+                        }else{
+                            waterGave = Liters;
+                        }
+                        GearDataPak.m_Water = waterGave;
+                    }else{
+                        GearDataPak.m_DataProxy = saveProxyData;
+
+                        //MelonLogger.Msg("SaveProxy: " + saveProxyData);
+                        //MelonLogger.Msg("UTF8 bytes: " + Encoding.UTF8.GetBytes(saveProxyData).Length);
+                    }
+
+                    if (waterMode == true)
+                    {
+                        if (iAmHost == true)
+                        {
+                            using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
+                            {
+                                ServerSend.GOTITEM(GiveItemTo, GearDataPak);
+                            }
+                        }
+                        if (sendMyPosition == true)
+                        {
+                            using (Packet _packet = new Packet((int)ClientPackets.GOTITEM))
+                            {
+                                _packet.Write(GearDataPak);
+                                SendTCPData(_packet);
+                            }
+                        }
+                    }else{
+                        byte[] bytesToSlice = Encoding.UTF8.GetBytes(saveProxyData);
+                        //MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
+                        if (bytesToSlice.Length > 500)
+                        {
+                            List<byte> BytesBuffer = new List<byte>();
+                            BytesBuffer.AddRange(bytesToSlice);
+
+                            while (BytesBuffer.Count >= 500)
+                            {
+                                byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
+                                BytesBuffer.RemoveRange(0, 499);
+
+                                string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                                SlicedJsonData SlicedPacket = new SlicedJsonData();
+                                SlicedPacket.m_GearName = _gear.m_GearName;
+                                SlicedPacket.m_SendTo = GiveItemTo;
+                                SlicedPacket.m_Hash = saveProxyData.GetHashCode();
+                                SlicedPacket.m_Str = jsonStringSlice;
+
+                                if (BytesBuffer.Count != 0)
+                                {
+                                    SlicedPacket.m_Last = false;
                                 }else{
-                                    if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
+                                    SlicedPacket.m_Last = true;
+                                }
+                                //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+
+                                if (iAmHost == true)
+                                {
+                                    ServerSend.GOTITEMSLICE(GiveItemTo, SlicedPacket);
+                                }
+                                if (sendMyPosition == true)
+                                {
+                                    using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
                                     {
-                                        if (InterfaceManager.m_Panel_BreakDown.IsBreakingDown() == true)
-                                        {
-                                            BreakDown bk = InterfaceManager.m_Panel_BreakDown.m_BreakDown;
-                                            if (bk != null && bk.gameObject != null)
-                                            {
-                                                GameObject bkObj = InterfaceManager.m_Panel_BreakDown.m_BreakDown.gameObject;
-                                                float CamY = GameManager.GetMainCamera().transform.position.y;
-                                                if (bkObj.transform.position.y > CamY)
-                                                {
-                                                    MyAnimState = "HarvestingStanding";
-                                                } else {
-                                                    MyAnimState = "Harvesting";
-                                                }
-                                            } else {
-                                                MyAnimState = "Harvesting";
-                                            }
-                                        }else if(PlayerInteractionWith != null || (InterfaceManager.m_Panel_Diagnosis != null && InterfaceManager.m_Panel_Diagnosis.TreatmentInProgress() == true))  
-                                        { 
-                                            if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
-                                            {
-                                                MyAnimState = "Harvesting";
-                                            }else{
-                                                MyAnimState = "HarvestingStanding";
-                                            }
-                                        }else if (InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null)
-                                        {
-                                            MyAnimState = "Harvesting";
-                                        }else if ((InterfaceManager.m_Panel_SnowShelterBuild != null && InterfaceManager.m_Panel_SnowShelterBuild.m_IsBuilding == true) || (InterfaceManager.m_Panel_SnowShelterInteract != null && InterfaceManager.m_Panel_SnowShelterInteract.m_IsDismantling == true))
-                                        {
-                                            MyAnimState = "Harvesting";
-                                        }else if (GameManager.GetPlayerManagerComponent().m_HarvestableInProgress != null)
-                                        {
-                                            if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
-                                            {
-                                                MyAnimState = "Harvesting";
-                                            }else{
-                                                GameObject bkObj = GameManager.GetPlayerManagerComponent().m_HarvestableInProgress.gameObject;
-                                                if (bkObj.name.Contains("Cattail"))
-                                                {
-                                                    MyAnimState = "HarvestingStanding";
-                                                }else{
-                                                    float CamY = GameManager.GetMainCamera().transform.position.y;
-                                                    if (bkObj.transform.position.y > CamY)
-                                                    {
-                                                        MyAnimState = "HarvestingStanding";
-                                                    }else{
-                                                        MyAnimState = "Harvesting";
-                                                    }
-                                                }
-                                            }//InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null
-                                        }else{
-                                            PlayerControlMode Plc = GameManager.GetPlayerManagerComponent().GetControlMode();
-                                            if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
-                                            {
-                                                if (Plc == PlayerControlMode.AimRevolver)
-                                                {
-                                                    MyAnimState = "HoldGun_Sit";
-                                                }
-                                                else if (Plc == PlayerControlMode.StartingFire)
-                                                {
-                                                    MyAnimState = "Igniting";
-                                                }
-                                                else if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
-                                                {
-                                                    MyAnimState = "Harvesting";
-                                                }else{
-                                                    MyAnimState = "Ctrl";
-                                                }
-                                            }else{
-                                                if (Plc == PlayerControlMode.AimRevolver)
-                                                {
-                                                    MyAnimState = "HoldGun";
-                                                }
-                                                else if (Plc == PlayerControlMode.StartingFire)
-                                                {
-                                                    MyAnimState = "Igniting";
-                                                }
-                                                else if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
-                                                {
-                                                    MyAnimState = "HarvestingStanding";
-                                                }else{
-                                                    MyAnimState = "Idle";
-                                                }
-                                            }
-                                        }
-                                    }else{
-                                        MyAnimState = "Map";
+                                        _packet.Write(SlicedPacket);
+                                        SendTCPData(_packet);
                                     }
                                 }
                             }
-                        }else{
-                            MyAnimState = "RopeIdle";
+
+                            if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
+                            {
+                                byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                                BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                                string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
+                                SlicedJsonData SlicedPacket = new SlicedJsonData();
+                                SlicedPacket.m_GearName = _gear.m_GearName;
+                                SlicedPacket.m_SendTo = GiveItemTo;
+                                SlicedPacket.m_Hash = saveProxyData.GetHashCode();
+                                SlicedPacket.m_Str = jsonStringSlice;
+                                SlicedPacket.m_Last = true;
+
+                                //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+
+                                if (iAmHost == true)
+                                {
+                                    ServerSend.GOTITEMSLICE(GiveItemTo, SlicedPacket);
+                                }
+                                if (sendMyPosition == true)
+                                {
+                                    using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
+                                    {
+                                        _packet.Write(SlicedPacket);
+                                        SendTCPData(_packet);
+                                    }
+                                }
+                            }
                         }
                     }
+                    if (waterMode == true)
+                    {
+                        string say = "half liter of " + _gear.m_LocalizedDisplayName.Text();
+
+                        if (bottle.m_VolumeInLiters == waterGave)
+                        {
+                            bottle.m_VolumeInLiters = 0;
+                        }else{
+                            bottle.m_VolumeInLiters = bottle.m_VolumeInLiters - waterGave;
+                            say = waterGave + " liter of " + _gear.m_LocalizedDisplayName.Text();
+                        }
+                        HUDMessage.AddMessage("You gave " + say + " to " + playersData[GiveItemTo].m_Name);
+                    }else{
+                        HUDMessage.AddMessage("You gave " + _gear.m_LocalizedDisplayName.Text() + " to " + playersData[GiveItemTo].m_Name);
+                        GameManager.GetInventoryComponent().RemoveUnits(_gear, 1);
+                    }
+                    MelonLogger.Msg("You gave " + LastSelectedGearName + " to " + playersData[GiveItemTo].m_Name);
+                    InterfaceManager.m_Panel_Inventory.m_IsDirty = true;
+                    InterfaceManager.m_Panel_Inventory.Update();
                 }
             }
+        }
 
-            //SYNC ROTATION
-            if (target != null && previoustickrot != GameManager.GetPlayerTransform().rotation) // If rotation changed.
+        public static void UpdateVisualSyncs()
+        {
+            if (GameManager.GetFatigueComponent().GetHeavyBreathingState() == HeavyBreathingState.Heavy)
             {
-                previoustickrot = GameManager.GetPlayerTransform().rotation;
+                NowHeavyBreath = true;
+            }else{
+                NowHeavyBreath = false;
+            }
+
+            BloodLosts = GameManager.GetBloodLossComponent().GetAfflictionsCount();
+
+            if (PreviousBloodLosts != BloodLosts)
+            {
+                PreviousBloodLosts = BloodLosts;
                 if (sendMyPosition == true) // CLIENT
                 {
-                    using (Packet _packet = new Packet((int)ClientPackets.XYZW))
+                    using (Packet _packet = new Packet((int)ClientPackets.BLOODLOSTS))
                     {
-                        _packet.Write(target.rotation);
+                        _packet.Write(BloodLosts);
                         SendTCPData(_packet);
                     }
                 }
                 if (iAmHost == true) // HOST
                 {
-                    using (Packet _packet = new Packet((int)ServerPackets.XYZW))
+                    using (Packet _packet = new Packet((int)ServerPackets.BLOODLOSTS))
                     {
-                        ServerSend.XYZW(0, target.rotation, true);
+                        ServerSend.BLOODLOSTS(0, BloodLosts, true);
                     }
                 }
             }
 
-            //if (iAmHost == true) // SYNC OTHER PLAYER
-            //{
-            //    WardIsActive = false;
-            //    OverridenStartCountDown = 0;
-            //    if (OverridenStartCountDown < 2)
-            //    {
-            //        OverridenStartCountDown = 0;
-            //        ShatalkerObject.SetStartMovementDelayTime(OverridenStartCountDown);
-            //    }
-
-            //    if (ServerHandle.NeedReloadDWReadtState == true)
-            //    {
-            //        ServerHandle.NeedReloadDWReadtState = false;
-            //        if (iAmHost == true) // HOST
-            //        {
-            //            using (Packet _packet = new Packet((int)ServerPackets.DARKWALKERREADY))
-            //            {
-            //                ServerSend.DARKWALKERREADY(1, DarkWalkerIsReady);
-            //            }
-            //        }
-            //    }
-
-            //    if (IamShatalker == true)
-            //    {
-            //        DarkWalkerIsReady = false;
-            //        if (DarkWalkerIsReady == true)
-            //        {
-            //            ServerHandle.LastCountDown = 0;
-            //            OverridenStartCountDown = 0;
-            //        }
-            //    }
-            //}
-            //if (anotherbutt != null)
-            //{
-
-            //    if (PlayerBodyGUI != "")
-            //    {
-            //        GameObject findbody = ObjectGuidManager.Lookup(PlayerBodyGUI);
-            //        if (findbody != null)
-            //        {
-            //            findbody.GetComponent<NPC>().m_DisplayName.m_LocalizationID = "Body";
-            //            findbody.transform.position = LastRecivedOtherPlayerVector;
-            //            findbody.GetComponent<NPCCondition>().m_CurrentHP = 1;
-            //            findbody.GetComponent<NPCCondition>().enabled = false;
-            //            findbody.transform.GetChild(0).GetChild(1).gameObject.SetActive(false);
-            //            if(playerbody == null)
-            //            {
-            //                playerbody = findbody;
-            //            }
-            //        }
-            //    }
-            //    if (IsShatalkerMode() == true)
-            //    {
-            //        if (ShatalkerObject == null)
-            //        {
-            //            ShatalkerObject = Resources.FindObjectsOfTypeAll<InvisibleEntityManager>().First();
-            //            MelonLogger.Msg("Darkwalker object has been restored");
-            //        }
-            //        if (DarkWalkerHUD == null)
-            //        {
-            //            DarkWalkerHUD = Resources.FindObjectsOfTypeAll<HUDNowhereToHide>().First();
-            //            MelonLogger.Msg("Got DarkWalker HUD");
-            //        }
-            //        else
-            //        {
-            //            if (IamShatalker == false)
-            //            {
-            //                if (WardWidget == null)
-            //                {
-            //                    WardWidget = DarkWalkerHUD.transform.GetChild(3).gameObject;
-            //                    MelonLogger.Msg("Got WardWidget object");
-            //                }
-            //                if(LureWidget == null)
-            //                {
-            //                    LureWidget = DarkWalkerHUD.transform.GetChild(2).gameObject;
-            //                }
-
-            //                if (ShatalkerObject.GetStartMovementDelayTime() < 2)
-            //                {
-            //                    DarkWalkerIsReady = true;
-            //                }
-            //                else
-            //                {
-            //                    DarkWalkerIsReady = false;
-            //                }
-            //                if (DarkWalkerIsReady != PreviousDarkWalkerReady)
-            //                {
-            //                    PreviousDarkWalkerReady = DarkWalkerIsReady;
-            //                    MelonLogger.Msg("Sending to Darkwalker my ready state");
-            //                    if (sendMyPosition == true) // CLIENT
-            //                    {
-            //                        using (Packet _packet = new Packet((int)ClientPackets.DARKWALKERREADY))
-            //                        {
-            //                            _packet.Write(DarkWalkerIsReady);
-            //                            SendTCPData(_packet);
-            //                        }
-            //                    }
-            //                    if (iAmHost == true) // HOST
-            //                    {
-            //                        using (Packet _packet = new Packet((int)ServerPackets.DARKWALKERREADY))
-            //                        {
-            //                            ServerSend.DARKWALKERREADY(1, DarkWalkerIsReady);
-            //                        }
-            //                    }
-            //                }
-            //            }
-            //            if (IamShatalker == true)
-            //            {
-            //                if (DistanceWidget == null || DistanceLable == null)
-            //                {
-            //                    DistanceWidget = DarkWalkerHUD.transform.GetChild(1).gameObject;
-
-            //                    UnityEngine.Component.Destroy(DarkWalkerHUD.transform.GetChild(1).GetChild(0).gameObject.GetComponent<UILocalize>());
-            //                    DarkWalkerHUD.transform.GetChild(1).GetChild(0).gameObject.GetComponent<UILabel>().text = "SURVIVOR DISTANCE";
-            //                    DistanceLable = DarkWalkerHUD.transform.GetChild(1).GetChild(1).gameObject.GetComponent<UILabel>();
-            //                    MelonLogger.Msg("Got DistanceWidget object");
-            //                } else
-            //                {
-            //                    if (DarkWalkerIsReady == true)
-            //                    {
-            //                        DistanceWidget.SetActive(true);
-            //                        DarkWalkerHUD.transform.GetChild(0).gameObject.SetActive(false);
-            //                        DarkWalkerHUD.enabled = false;
-            //                        DarkWalkerHUD.transform.GetChild(0).gameObject.SetActive(false);
-            //                    }
-            //                    if (anotherbutt != null)
-            //                    {
-            //                        float dist = 0;
-            //                        bool HavePossition = false;
-
-            //                        if (levelid == anotherplayer_levelid)
-            //                        {
-            //                            dist = Vector3.Distance(GameManager.GetPlayerTransform().position, anotherbutt.transform.position);
-            //                            HavePossition = true;
-            //                        }else{
-            //                            for (int i = 0; i < SurvivorWalks.Count; i++)
-            //                            {
-            //                                if (SurvivorWalks[i].m_levelid == levelid)
-            //                                {
-            //                                    HavePossition = true;
-            //                                    dist = Vector3.Distance(GameManager.GetPlayerTransform().position, SurvivorWalks[i].m_V3);
-            //                                    break;
-            //                                }
-            //                            }
-            //                        }
-
-            //                        if(HavePossition == true)
-            //                        {
-            //                            if(LureIsActive && LastLure.m_levelid == levelid)
-            //                            {
-            //                                dist = Vector3.Distance(GameManager.GetPlayerTransform().position, LastLure.m_V3);
-            //                            }
-            //                            DistanceLable.text = Convert.ToInt32(dist) + " METERS";
-            //                        }else{
-            //                            DistanceLable.text = "SURVIVOR NEVER WAS HERE";
-            //                        }
-            //                    }
-            //                }
-            //            }
-            //        }
-            //    }
-            //}
-
-            if(MenuErjan1 != null && MenuErjan2 != null && FlexFire != null)
+            if (PreviousNowHeavyBreath != NowHeavyBreath)
             {
-                if(FlexFire.m_Fire.GetRemainingLifeTimeSeconds() <= 0)
-                {
-                    int currentTagHash = MenuErjan1.GetCurrentAnimatorStateInfo(0).tagHash;
-                    int neededTagHash = Animator.StringToHash("Samba Dancing");
+                PreviousNowHeavyBreath = NowHeavyBreath;
 
-                    if(currentTagHash != neededTagHash)
+                if (sendMyPosition == true) // CLIENT
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.HEAVYBREATH))
                     {
-                        MenuErjan1.Play("Samba Dancing",0);
-                        MenuErjan2.Play("Samba Dancing",0);
+                        _packet.Write(NowHeavyBreath);
+                        SendTCPData(_packet);
                     }
                 }
+                if (iAmHost == true) // HOST
+                {
+                    using (Packet _packet = new Packet((int)ServerPackets.HEAVYBREATH))
+                    {
+                        ServerSend.HEAVYBREATH(0, NowHeavyBreath, true);
+                    }
+                }
+            }
+        }
+
+        public static void SyncMovement(bool InFight, Transform target)
+        {
+            if (IsDead == false && KillAfterLoad == false && InFight == false)
+            {
+                if (GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
+                {
+                    if (GameManager.GetPlayerManagerComponent().PlayerCanSprint() == true && GameManager.GetPlayerManagerComponent().PlayerIsSprinting())
+                    {
+                        MyAnimState = "Run";
+                    }else{
+                        if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
+                        {
+                            MyAnimState = "Ctrl";
+                        }else{
+                            MyAnimState = "Walk";
+                        }
+                    }
+                }else{
+                    MyAnimState = "RopeMoving";
+                }
+            }
+
+            if (sendMyPosition == true) // CLIENT
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.XYZ))
+                {
+                    _packet.Write(target.position);
+                    SendTCPData(_packet);
+                }
+            }
+
+            if(iAmHost == true)
+            {
+                ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, true);
+            }
+        }
+
+        public static void SyncRotation(Transform target)
+        {
+            if (sendMyPosition == true) // CLIENT
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.XYZW))
+                {
+                    _packet.Write(target.rotation);
+                    SendTCPData(_packet);
+                }
+            }
+            if (iAmHost == true) // HOST
+            {
+                using (Packet _packet = new Packet((int)ServerPackets.XYZW))
+                {
+                    ServerSend.XYZW(0, target.rotation, true);
+                }
+            }
+        }
+
+        public static void SetCurrentAnimation(bool InFight)
+        {
+            if (IsDead == true || KillAfterLoad == true || InFight == true)
+            {
+                if (IsDead == true || KillAfterLoad == true)
+                {
+                    MyAnimState = "Knock";
+                }
+                else
+                {
+                    MyAnimState = "Fight";
+                }
+            }
+            else
+            {
+                if (GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
+                {
+                    if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true)
+                    {
+                        MyAnimState = "Sleep";
+                    }
+                    else
+                    {
+                        if (GameManager.GetPlayerInVehicle().m_InVehicle == true)
+                        {
+                            MyAnimState = "Sit";
+                        }
+                        else
+                        {
+                            if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
+                            {
+                                if (InterfaceManager.m_Panel_BreakDown.IsBreakingDown() == true)
+                                {
+                                    BreakDown bk = InterfaceManager.m_Panel_BreakDown.m_BreakDown;
+                                    if (bk != null && bk.gameObject != null)
+                                    {
+                                        GameObject bkObj = InterfaceManager.m_Panel_BreakDown.m_BreakDown.gameObject;
+                                        float CamY = GameManager.GetMainCamera().transform.position.y;
+                                        if (bkObj.transform.position.y > CamY)
+                                        {
+                                            MyAnimState = "HarvestingStanding";
+                                        }
+                                        else
+                                        {
+                                            MyAnimState = "Harvesting";
+                                        }
+                                    }
+                                    else
+                                    {
+                                        MyAnimState = "Harvesting";
+                                    }
+                                }
+                                else if (PlayerInteractionWith != null || (InterfaceManager.m_Panel_Diagnosis != null && InterfaceManager.m_Panel_Diagnosis.TreatmentInProgress() == true))
+                                {
+                                    if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
+                                    {
+                                        MyAnimState = "Harvesting";
+                                    }
+                                    else
+                                    {
+                                        MyAnimState = "HarvestingStanding";
+                                    }
+                                }
+                                else if (InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null)
+                                {
+                                    MyAnimState = "Harvesting";
+                                }
+                                else if ((InterfaceManager.m_Panel_SnowShelterBuild != null && InterfaceManager.m_Panel_SnowShelterBuild.m_IsBuilding == true) || (InterfaceManager.m_Panel_SnowShelterInteract != null && InterfaceManager.m_Panel_SnowShelterInteract.m_IsDismantling == true))
+                                {
+                                    MyAnimState = "Harvesting";
+                                }
+                                else if (GameManager.GetPlayerManagerComponent().m_HarvestableInProgress != null)
+                                {
+                                    if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
+                                    {
+                                        MyAnimState = "Harvesting";
+                                    }
+                                    else
+                                    {
+                                        GameObject bkObj = GameManager.GetPlayerManagerComponent().m_HarvestableInProgress.gameObject;
+                                        if (bkObj.name.Contains("Cattail"))
+                                        {
+                                            MyAnimState = "HarvestingStanding";
+                                        }else{
+                                            float CamY = GameManager.GetMainCamera().transform.position.y;
+                                            if (bkObj.transform.position.y > CamY)
+                                            {
+                                                MyAnimState = "HarvestingStanding";
+                                            }else{
+                                                MyAnimState = "Harvesting";
+                                            }
+                                        }
+                                    }//InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null
+                                }else{
+                                    PlayerControlMode Plc = GameManager.GetPlayerManagerComponent().GetControlMode();
+                                    if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
+                                    {
+                                        if (Plc == PlayerControlMode.AimRevolver)
+                                        {
+                                            MyAnimState = "HoldGun_Sit";
+                                        }
+                                        else if (Plc == PlayerControlMode.StartingFire)
+                                        {
+                                            MyAnimState = "Igniting";
+                                        }
+                                        else if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
+                                        {
+                                            MyAnimState = "Harvesting";
+                                        }else{
+                                            MyAnimState = "Ctrl";
+                                        }
+                                    }else{
+                                        if (Plc == PlayerControlMode.AimRevolver)
+                                        {
+                                            MyAnimState = "HoldGun";
+                                        }
+                                        else if (Plc == PlayerControlMode.StartingFire)
+                                        {
+                                            MyAnimState = "Igniting";
+                                        }
+                                        else if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
+                                        {
+                                            MyAnimState = "HarvestingStanding";
+                                        }else{
+                                            MyAnimState = "Idle";
+                                        }
+                                    }
+                                }
+                            }else{
+                                MyAnimState = "Map";
+                            }
+                        }
+                    }
+                }else{
+                    MyAnimState = "RopeIdle";
+                }
+            }
+        }
+
+        public static void UpdateSceneGUID()
+        {
+            if (GameManager.m_SceneTransitionData != null)
+            {
+                level_guid = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                if (level_guid != previous_level_guid)
+                {
+                    previous_level_guid = level_guid;
+                    MelonLogger.Msg("Scene GUID " + GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
+                }
+            }
+        }
+
+        public static void SendMyAnimation()
+        {
+            if (MyPreviousAnimState != MyAnimState)
+            {
+                MyPreviousAnimState = MyAnimState;
+                if (playersData[0].m_Mimic == true && players[0] != null)
+                {
+                    playersData[0].m_AnimState = MyAnimState;
+                }
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.ANIMSTATE))
+                    {
+                        _packet.Write(MyAnimState);
+                        SendTCPData(_packet);
+                    }
+                }
+                if (iAmHost == true)
+                {
+                    using (Packet _packet = new Packet((int)ServerPackets.ANIMSTATE))
+                    {
+                        ServerSend.ANIMSTATE(0, MyAnimState, true);
+                    }
+                }
+            }
+            bool IsAiming = false;
+            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_GunItem != null && GameManager.m_PlayerManager.m_ItemInHands.m_GunItem.IsAiming() == true)
+            {
+                IsAiming = true;
+            }
+
+            if (MyIsAiming != IsAiming)
+            {
+                MyIsAiming = IsAiming;
+                if (playersData[0].m_Mimic == true && players[0] != null)
+                {
+                    playersData[0].m_Aiming = MyIsAiming;
+                }
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.CHANGEAIM))
+                    {
+                        _packet.Write(MyIsAiming);
+                        SendTCPData(_packet);
+                    }
+                }
+                if (iAmHost == true)
+                {
+                    ServerSend.CHANGEAIM(0, MyIsAiming, true);
+                }
+            }
+        }
+
+        public static void UpdateTicksOnScenes()
+        {
+            for (int i = 0; i < MaxPlayers; i++)
+            {
+                if (i == 0)
+                {
+                    MyTicksOnScene = MyTicksOnScene + 1;
+                }else{
+                    if (playersData[i] != null)
+                    {
+                        if (Server.clients[i].IsBusy() == true && playersData[i].m_AnimState != "Knock")
+                        {
+                            if (playersData[i].m_Levelid != playersData[i].m_PreviousLevelId)
+                            {
+                                playersData[i].m_PreviousLevelId = playersData[i].m_Levelid;
+                                playersData[i].m_TicksOnScene = 0;
+                            }
+                            else
+                            {
+                                playersData[i].m_TicksOnScene = playersData[i].m_TicksOnScene + 1;
+                            }
+                        }
+                        else
+                        {
+                            playersData[i].m_TicksOnScene = 0;
+                        }
+                    }
+                }
+            }
+        }
+        
+        public static void SyncSleeping()
+        {
+            if (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true)
+            {
+                IsSleeping = true;
+            }else{
+                IsSleeping = GameManager.GetPlayerManagerComponent().PlayerIsSleeping();
+            }
+            if (PreviousSleeping != IsSleeping)
+            {
+                PreviousSleeping = IsSleeping;
+                if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true || (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true))
+                {
+                    MelonLogger.Msg("Going to sleep");
+                    MelonLogger.Msg("Skiping Cycle time " + MyCycleSkip);
+                    GameObject bed = LastObjectUnderCrosshair;
+                    if (bed != null && bed.GetComponent<Bed>() != null)
+                    {
+                        if (bed.GetComponent<Bed>().m_BodyPlacementTransform == true)
+                        {
+                            Vector3 SleepV3 = bed.GetComponent<Bed>().m_BodyPlacementTransform.position;
+                            Quaternion SleepQuat = bed.GetComponent<Bed>().m_BodyPlacementTransform.rotation;
+
+                            if (iAmHost == true)
+                            {
+                                ServerSend.SLEEPPOSE(0, SleepV3, SleepQuat, true);
+                            }
+                            if (sendMyPosition == true)
+                            {
+                                using (Packet _packet = new Packet((int)ClientPackets.SLEEPPOSE))
+                                {
+                                    _packet.Write(SleepV3);
+                                    _packet.Write(SleepQuat);
+                                    SendTCPData(_packet);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            MelonLogger.Msg(ConsoleColor.DarkRed, "Bed has not sleep pose transform! AAAAAAAAAAAAAA");
+                        }
+                    }
+                }else{
+                    MyCycleSkip = 0;
+                    if (iAmHost == true)
+                    {
+                        ServerSend.SLEEPPOSE(0, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0), true);
+                    }
+                    if (sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.SLEEPHOURS))
+                        {
+                            _packet.Write(new Vector3(0, 0, 0));
+                            _packet.Write(new Quaternion(0, 0, 0, 0));
+                            SendTCPData(_packet);
+                        }
+                    }
+                    MelonLogger.Msg("Has wakeup or cancle sleep");
+                }
+
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.SLEEPHOURS))
+                    {
+                        _packet.Write(MyCycleSkip);
+                        SendTCPData(_packet);
+                    }
+                }
+            }
+        }
+
+        public static void SendHarvestingAnimal()
+        {
+            if (PreviousHarvestingAnimal != HarvestingAnimal)
+            {
+                PreviousHarvestingAnimal = HarvestingAnimal;
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.HARVESTINGANIMAL))
+                    {
+                        _packet.Write(HarvestingAnimal);
+                        SendTCPData(_packet);
+                    }
+                }
+                if (iAmHost == true)
+                {
+                    using (Packet _packet = new Packet((int)ServerPackets.HARVESTINGANIMAL))
+                    {
+                        ServerSend.HARVESTINGANIMAL(1, HarvestingAnimal);
+                    }
+                }
+            }
+        }
+
+        public static void CancleIfSomeoneDoSame()
+        {
+            string boxGUID = null;
+            string harvestGUID = null;
+            string harvestAnimalGUID = null;
+            string breakGuid = "";
+            string breakParentGuid = "";
+            bool NeedCheckBreakDown = false;
+            //If I am looting box
+            Container c = GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched;
+            if(c != null && c.gameObject != null && c.gameObject.GetComponent<ObjectGuid>() != null)
+            {
+                boxGUID = c.gameObject.GetComponent<ObjectGuid>().Get();
+            }
+            //If I am harvesting plant
+            Harvestable h = GameManager.GetPlayerManagerComponent().m_HarvestableInProgress;
+            if (h != null && h.gameObject != null && h.gameObject.GetComponent<ObjectGuid>() != null)
+            {
+                harvestGUID = h.gameObject.GetComponent<ObjectGuid>().Get();
+            }
+            //If I am harvest animal
+            Panel_BodyHarvest PBH = InterfaceManager.m_Panel_BodyHarvest;
+            if (PBH !=  null && PBH.isActiveAndEnabled == true)
+            {
+                if(PBH.m_BodyHarvest != null && PBH.m_BodyHarvest.gameObject != null && PBH.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
+                {
+                    harvestAnimalGUID = PBH.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
+                }
+            }
+            // If I am breakdown something
+            Panel_BreakDown PBD = InterfaceManager.m_Panel_BreakDown;
+            if (PBD !=  null && PBD.isActiveAndEnabled == true && PBD.m_BreakDown != null && PBD.m_BreakDown.gameObject != null)
+            {
+                if(PBD.m_BreakDown.gameObject.activeSelf == true)
+                {
+                    GameObject gameObject = PBD.m_BreakDown.gameObject;
+                    ObjectGuid BreakGuidComp = gameObject.GetComponent<ObjectGuid>();
+                    if (BreakGuidComp != null)
+                    {
+                        breakGuid = BreakGuidComp.Get();
+                    }
+                    if (gameObject.transform.parent != null)
+                    {
+                        ObjectGuid BreakGuidParentComp = gameObject.transform.parent.GetComponent<ObjectGuid>();
+                        if (BreakGuidParentComp != null)
+                        {
+                            breakParentGuid = BreakGuidParentComp.Get();
+                        }
+                    }
+                    NeedCheckBreakDown = true;
+                }else{
+                    if (PBD.m_IsBreakingDown == true)
+                    {
+                        PBD.m_IsBreakingDown = false;
+                        PBD.StopAudioAndRumbleEffects();
+                    }
+                    PBD.OnCancel();
+                }
+            }
+
+            for (int i = 0; i < playersData.Count; i++)
+            {
+                if (playersData[i] != null)
+                {
+                    if(boxGUID != null || harvestGUID != null || harvestAnimalGUID != null || (breakGuid != null || breakParentGuid != null))
+                    {
+                        if (playersData[i].m_Container != null)
+                        {
+                            ContainerOpenSync otherBox = playersData[i].m_Container;
+                            if (otherBox.m_Guid == boxGUID && otherBox.m_LevelID == levelid && otherBox.m_LevelGUID == level_guid)
+                            {
+                                boxGUID = null;
+                                c.CancelSearch();
+                            }
+                        }
+                        string otherHarvestPlant = playersData[i].m_Plant;
+                        if (otherHarvestPlant == harvestGUID)
+                        {
+                            HUDMessage.AddMessage(playersData[i].m_Name + " IS ALREADY COLLECTING THIS");
+                            harvestGUID = null;
+                            h.CancelHarvest();
+                        }
+                        string otherAnimlGuid = MyMod.playersData[i].m_HarvestingAnimal;
+                        if (otherAnimlGuid == harvestAnimalGUID)
+                        {
+                            harvestAnimalGUID = null;
+                            ExitHarvesting();
+                        }
+                        if (NeedCheckBreakDown)
+                        {
+                            BrokenFurnitureSync otherFurn = playersData[i].m_BrakingObject;
+                            if (otherFurn.m_Guid == breakGuid && otherFurn.m_ParentGuid == breakParentGuid && otherFurn.m_LevelID == levelid && otherFurn.m_LevelGUID == level_guid)
+                            {
+                                NeedCheckBreakDown = false;
+                                HUDMessage.AddMessage(playersData[i].m_Name + " IS BREAKING THIS");
+                                GameAudioManager.PlayGUIError();
+                                if (PBD.m_IsBreakingDown == true)
+                                {
+                                    PBD.m_IsBreakingDown = false;
+                                    PBD.StopAudioAndRumbleEffects();
+                                }
+                                PBD.OnCancel();
+                            }
+                        }
+                    }else{
+                        return;
+                    }
+                }
+            }
+        }
+
+        
+
+        public override void OnUpdate()
+        {
+            if(KillOnUpdate == true)
+            {
+                DebugCrap();
+                return;
+            }
+            
+            if (Application.runInBackground == false) { Application.runInBackground = true; } // Always running in bg, to not lost any sync packets
+            FakeDeath(); // Limiting movement and ignore by animals
+            UpdateMain(); // Updating sync tread
+            GameLogic.Update(); // Updating sync tread for server
+            UpdateAPIStates(); // Updating ID and Client/Host state for API
+            InitAudio(); // Adding audio listener if needed
+            KillConsole(); // Unregistering cheats if server not allow cheating for you
+            UpdateSceneGUID(); // Scene GUID that used for detection of dublicated interiours 
+
+            if (GearIDList.Count == 0 && level_name == "MainMenu") // Doing it only once
+            {
+                InitGearsIDS(); // Compilating List of Gear names by ID, to reference on it to shorten names in sync packets
+            }
+            if (Application.isBatchMode) // If Dedicated mode, doing specific code for it
+            {
+                DedicatedServerUpdate(); // Updating dedicated settings
+            }
+            
+            
+            if (UiCanvas == null)
+            {
+                BuildCanvasUIs(); // Creating canvas based UI
+            }else{
+                UpdateCanvasUis(); // Upating text and other UI
+            }
+            if (Time.time > nextActionTimeSecond) 
+            {
+                nextActionTimeSecond += periodSecond;
+                EverySecond(); // Triggering this code very second
+            }
+
+            if (m_InterfaceManager != null)
+            {
+                if(InterfaceManager.m_Panel_Confirmation != null && NeedConnectAfterLoad != -1)
+                {
+                    DoWaitForConnect(); // Showing connection message after startup connection
+                }
+                if(InterfaceManager.m_Panel_SnowShelterInteract != null)
+                {
+                    CancleDismantling(); // Cancle Break-down of snowshelter where any other player is 
+                }
+                if(InterfaceManager.m_Panel_Rest != null && InterfaceManager.m_Panel_Rest.isActiveAndEnabled == true)
+                {
+                    if (SleepingButtons == null)
+                    {
+                        BuildSleepScreen(); // Patching up sleeping screen
+                    }else{
+                        UpdateSleepScreen(); // Upating sleepers numbers text
+                    }
+                }
+                if (InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
+                {
+                    if (InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<BaseAi>() != null)
+                    {
+                        HarvestingAnimal = InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
+                        SendHarvestingAnimal(); // Send harvesting animal if it changed 
+                    }else{
+                        HarvestingAnimal = "";
+                    }
+                }else{
+                    HarvestingAnimal = "";
+                }
+            }
+            if (SteamServerWorks != "" || Server.UsingSteamWorks == true)
+            {
+                TrackWhenRecordOver(); // Processing voice chat
+            }
+
+            if (FirstBoot == false && SteamConnect.CanUseSteam == true)
+            {
+                SteamConnect.DoUpdate(); // Start tracking of incomming data from other players
+            }
+
+            InitAllPlayers(); // Prepare players objects based on amount of max players
+
+            if(iAmHost == true)
+            {
+                if(IsCycleSkiping == true && GameManager.m_PlayerManager != null)
+                {
+                    if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == false || IsDead == true)
+                    {
+                        IsCycleSkiping = false;
+                    }
+                }
+                UpdateTicksOnScenes(); // Calculate how long player on this scene
+                if (NeedSyncTime == true)
+                {
+                    if (Time.time > nextActionTime)
+                    {
+                        nextActionTime += period;
+                        EveryInGameMinute(); // Trigger actions that happends every in game minute (5 seconds) and recalculate realtime cycle and resend weather.
+                    }
+                }
+            }
+            if (InOnline() == true)
+            {
+                //DoColisionForArrows();
+                if (GameManager.m_Condition != null && GameManager.m_PlayerManager != null && GameManager.GetPlayerManagerComponent().PlayerIsDead())
+                {
+                    GameManager.m_Condition.DisableLowHealthEffects();
+                }
+                if (DoFakeGetup == true)
+                {
+                    BashGetupDelayCamera(); // I not even remember, but this needed.
+                }
+                if (RealTimeCycleSpeed == true)
+                {
+                    string todString = OveridedTime;
+                    float normalizedTOD = 0.0f;
+                    if (Utils.TryParseTOD(todString, out normalizedTOD))
+                    {
+                        GameManager.GetTimeOfDayComponent().SetNormalizedTime(normalizedTOD);
+                    }
+                }
+                if(GameManager.m_ExperienceModeManager != null)
+                {
+                    GameManager.m_ExperienceModeManager.GetCurrentExperienceMode().m_DecayScale = 0;
+                }
+            }
+
+            if (level_name != "Empty" && level_name != "Boot" && level_name != "MainMenu" && GameManager.m_PlayerObject != null)
+            {
+                Transform transf = GameManager.GetPlayerTransform();
+                bool InFight = GameManager.GetPlayerStruggleComponent().InStruggle();
+                if (GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair != null)
+                {
+                    LastObjectUnderCrosshair = GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair;
+                }
+
+                if (GameManager.m_PlayerManager)
+                {
+                    if(m_InterfaceManager && InOnline() == true)
+                    {
+                        CancleIfSomeoneDoSame(); // Stop actions if another player doing same with that object.
+                    }
+                }
+
+                if(DebugGUI == true)
+                {
+                    DebugCrap();
+                }
+
+                UpdateMyEquipment(); // Resend my current equipment if needed.
+                UpdateVisualSyncs(); // Resend some effects if needed. (Bloodloss, heavy breath).
+
+                if (transf)
+                {
+                    if(previoustickpos != transf.position) // If moving
+                    {
+                        previoustickpos = GameManager.GetPlayerTransform().position;
+                        SyncMovement(InFight, transf); // Send movement position and sets runing/walking animation.
+                    }else{
+                        SetCurrentAnimation(InFight); // Sets animations when not moving, actions and almost everything.
+                    }
+                    if(previoustickrot != transf.rotation) // If rotating
+                    {
+                        previoustickrot = GameManager.GetPlayerTransform().rotation;
+                        SyncRotation(transf); // Send rotation of player model.
+                    }
+                }
+                SendMyAnimation(); //Send current animation if changed.
+                SyncSleeping(); //Send sleeping hours and sleep position, if changed.
+                if(PlayerInteractionWith != null && InputManager.GetInteractReleased(InputManager.m_CurrentContext))
+                {
+                    LongActionCanceled(PlayerInteractionWith);
+                }
+            }
+
+            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.G))
+            {
+                FindPlayerToTrade(); // Find closest player to give item to.
+                ProcessGivingItem(); // Attempt to give item to nearest player.
             }
         }
 
@@ -13463,14 +13011,18 @@ namespace SkyCoop
         public static void LoadAllDropsForScene()
         {
             string lvlKey = MyMod.levelid+MyMod.level_guid;
-
+            MelonLogger.Msg(ConsoleColor.Blue, "Trying to load drops for scene " + lvlKey);
             if (MyMod.DroppedGears.ContainsKey(lvlKey) == false)
             {
+                MelonLogger.Msg(ConsoleColor.Blue, "");
                 bool FoundSaves = LoadDropsForScene(lvlKey);
                 if(FoundSaves == false)
                 {
+                    MelonLogger.Msg(ConsoleColor.Yellow, "Drops drops for scene " + lvlKey + " not found");
                     return;
                 }
+            }else{
+                MelonLogger.Msg(ConsoleColor.Yellow, "Drops for scene " + lvlKey+" already loaded");
             }
 
             Dictionary<int, MyMod.SlicedJsonDroppedGear> LevelDrops;
@@ -13483,8 +13035,14 @@ namespace SkyCoop
                     index++;
                     int currentKey = cur.Key;
                     MyMod.SlicedJsonDroppedGear currentValue = cur.Value;
-                    GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(currentValue.m_Json);
-                    MyMod.FakeDropItem(GetGearIDByName(currentValue.m_GearName), DummyGear.m_Position, DummyGear.m_Rotation, cur.Key, currentValue.m_Extra);
+
+                    if(DroppedGearsObjs.ContainsKey(cur.Key) == false)
+                    {
+                        GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(currentValue.m_Json);
+                        MyMod.FakeDropItem(GetGearIDByName(currentValue.m_GearName), DummyGear.m_Position, DummyGear.m_Rotation, cur.Key, currentValue.m_Extra);
+                    }else{
+                        MelonLogger.Msg(ConsoleColor.Yellow, "Gear object "+ cur.Key + " already loaded not need to load this");
+                    }
                 }
             }
         }
@@ -13534,9 +13092,9 @@ namespace SkyCoop
                 OveridedTime = OverridedHourse + ":" + OverridedMinutes;
                 NeedSyncTime = true;
                 RealTimeCycleSpeed = true;
-                LoadAllDropsForScene();
-                LoadAllOpenableThingsForScene();
-                MarkSearchedContainers(levelid+level_guid);
+                //LoadAllDropsForScene();
+                //LoadAllOpenableThingsForScene();
+                //MarkSearchedContainers(levelid+level_guid);
                 DisableOriginalAnimalSpawns(true);
                 SetFixedSpawn();
             }else{
@@ -14428,11 +13986,11 @@ namespace SkyCoop
             }
 
 
-            if (GameManager.GetExperienceModeManagerComponent().GetCurrentExperienceMode().m_ModeType == ExperienceModeType.Custom)
-            {
-                NoCustomExp();
-                return;
-            }
+            //if (GameManager.GetExperienceModeManagerComponent().GetCurrentExperienceMode().m_ModeType == ExperienceModeType.Custom)
+            //{
+            //    NoCustomExp();
+            //    return;
+            //}
 
             if (UiCanvas != null && UIHostMenu == null)
             {

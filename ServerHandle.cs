@@ -62,10 +62,10 @@ namespace GameServer
 
             MyMod.playersData[_fromClient].m_Name = _username;
 
-            MelonLoader.MelonLogger.Msg("Client "+ _fromClient+" with user name "+ _username+" connected!");
-            MelonLoader.MelonLogger.Msg("Sending init data to new client...");
+            MelonLogger.Msg("Client "+ _fromClient+" with user name "+ _username+" connected!");
+            MelonLogger.Msg("Sending init data to new client...");
 
-            MelonLoader.MelonLogger.Msg("[Init data] Client 0 -> Client "+_fromClient+ " Data from host player object");
+            MelonLogger.Msg("[Init data] Client 0 -> Client "+_fromClient+ " Data from host player object");
             ServerSend.SERVERCFG(_fromClient);
             ServerSend.GEARPICKUPLIST(_fromClient);
             ServerSend.FURNBROKENLIST(_fromClient);
@@ -100,22 +100,13 @@ namespace GameServer
 
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
-                //MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " sid "+Server.clients[i].udp.sid);
-                //if(Server.clients[i].udp.endPoint == null)
-                //{
-                //    MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " endPoint null");
-                //}else{
-                //    MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " endPoint "+Server.clients[i].udp.endPoint.ToString());
-                //}
-                //MelonLoader.MelonLogger.Msg("[Init data] Slot " + i + " sid " + Server.clients[i].IsBusy());
-
                 if (Server.clients[i].IsBusy() == true)
                 {
                     
                     if (MyMod.playersData[i] != null && i != _fromClient)
                     {
                         int PlayerIndex = i;
-                        MelonLoader.MelonLogger.Msg("[Init data] Client " + i + " -> Client " + _fromClient + " Data from playersData[" + PlayerIndex + "]");
+                        MelonLogger.Msg("[Init data] Client " + i + " -> Client " + _fromClient + " Data from playersData[" + PlayerIndex + "]");
                         int _FromId = i;
                         int _ForId = _fromClient;
                         MyMod.MultiPlayerClientData pD = MyMod.playersData[i];
@@ -699,7 +690,6 @@ namespace GameServer
             {
                 if (MyMod.playersData[_fromClient] != null)
                 {
-                    MyMod.LowHealthStaggerBlockTime = 5;
                     HUDMessage.AddMessage("PLEASE DON'T MOVE, " + MyMod.playersData[_fromClient].m_Name + " IS TENDING YOU");
                     GameManager.GetVpFPSPlayer().Controller.Stop();
                 }
@@ -974,7 +964,7 @@ namespace GameServer
                 MelonLogger.Msg("Sending done, "+ index+" packets has been sent");
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }else{
-                MelonLogger.Msg("Requested scene has no drops "+ lvlKey);
+                MelonLogger.Msg("Requested scene does isn't loaded so, it has not drops? "+ lvlKey);
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }
         }

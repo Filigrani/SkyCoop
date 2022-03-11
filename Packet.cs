@@ -576,6 +576,7 @@ namespace GameServer
             Write(obj.m_Location);
             Write(obj.m_FixedSpawnScene);
             Write(obj.m_FixedSpawnPosition);
+            Write(obj.m_CustomExperienceStr);
         }
 
         public void Write(MyMod.ContainerOpenSync obj)
@@ -708,7 +709,7 @@ namespace GameServer
         {
             Write(obj.m_Type);
             Write(obj.m_Location);
-            Write(obj.m_Case);
+            WriteUnicodeString(obj.m_Case);
             Write(obj.m_ShouldBeTreated);
         }
         
@@ -1080,6 +1081,7 @@ namespace GameServer
             obj.m_Location = ReadInt();
             obj.m_FixedSpawnScene = ReadString();
             obj.m_FixedSpawnPosition = ReadVector3();
+            obj.m_CustomExperienceStr = ReadString();
             return obj;
         }
 
@@ -1299,7 +1301,7 @@ namespace GameServer
             MyMod.AffictionSync obj = new MyMod.AffictionSync();
             obj.m_Type = ReadInt();
             obj.m_Location = ReadInt();
-            obj.m_Case = ReadString();
+            obj.m_Case = ReadUnicodeString();
             obj.m_ShouldBeTreated = ReadBool();
             return obj;
         }
