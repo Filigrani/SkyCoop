@@ -5423,7 +5423,10 @@ namespace SkyCoop
                 }
                 if (MyMod.InOnline() == true)
                 {
-                    MyMod.SendDropItem(__result, 0, 0, false);
+                    if(itemName.Contains("GEAR_RevolverAmmoCasing") == true)
+                    {
+                        MyMod.SendDropItem(__result, 0, 0, false);
+                    }
                 }
             }
         }

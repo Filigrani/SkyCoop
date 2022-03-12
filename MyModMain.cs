@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.8.3 pre";
+            public const string Version = "0.8.4 pre";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -12851,13 +12851,13 @@ namespace SkyCoop
                     if (InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<BaseAi>() != null)
                     {
                         HarvestingAnimal = InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
-                        SendHarvestingAnimal(); // Send harvesting animal if it changed 
                     }else{
                         HarvestingAnimal = "";
                     }
                 }else{
                     HarvestingAnimal = "";
                 }
+                SendHarvestingAnimal(); // Send harvesting animal if it changed 
             }
             if (SteamServerWorks != "" || Server.UsingSteamWorks == true)
             {
