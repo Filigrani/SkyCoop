@@ -51,6 +51,7 @@ namespace GameServer
                 SteamConnect.Main.ProcessWhitelist(whitelist);
             }
             UsingSteamWorks = true;
+            MyMod.InitAllPlayers(); // Prepare players objects based on amount of max players
             MyMod.iAmHost = true;
             MyMod.OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
             MyMod.OverridedMinutes = GameManager.GetTimeOfDayComponent().GetMinutes();
@@ -61,8 +62,9 @@ namespace GameServer
             //MyMod.LoadAllDropsForScene();
             //MyMod.LoadAllOpenableThingsForScene();
             //MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
-            MyMod.DisableOriginalAnimalSpawns(true);
+            MyMod.DisableOriginalAnimalSpawns();
             MyMod.SetFixedSpawn();
+            MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
         }
 
         private static void TCPConnectCallback(IAsyncResult _result)
@@ -222,7 +224,6 @@ namespace GameServer
                 { (int)ClientPackets.SYNCWEATHER, ServerHandle.SYNCWEATHER},
                 { (int)ClientPackets.REVIVE, ServerHandle.REVIVE},
                 { (int)ClientPackets.REVIVEDONE, ServerHandle.REVIVEDONE},
-                { (int)ClientPackets.ANIMALSYNC, ServerHandle.ANIMALSYNC},
                 { (int)ClientPackets.ANIMALSYNCTRIGG, ServerHandle.ANIMALSYNCTRIGG},
                 { (int)ClientPackets.DARKWALKERREADY, ServerHandle.DARKWALKERREADY},
                 { (int)ClientPackets.WARDISACTIVE, ServerHandle.WARDISACTIVE},
@@ -288,6 +289,7 @@ namespace GameServer
                 { (int)ClientPackets.TRYDIAGNISISPLAYER, ServerHandle.TRYDIAGNISISPLAYER},
                 { (int)ClientPackets.SENDMYAFFLCTIONS, ServerHandle.SENDMYAFFLCTIONS},
                 { (int)ClientPackets.CUREAFFLICTION, ServerHandle.CUREAFFLICTION},
+                { (int)ClientPackets.ANIMALTEST, ServerHandle.ANIMALTEST},
             };
             Console.WriteLine("Initialized packets.");
         }

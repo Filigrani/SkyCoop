@@ -74,19 +74,16 @@ namespace SkyCoop
 
                         if (_AU != null)
                         {
-                            GUI.Label(new Rect(700, 10 + offset * 4, 500, 100), "m_ClientController " + _AU.m_ClientController);
-                            GUI.Label(new Rect(700, 10 + offset * 5, 500, 100), "m_ClientControlled " + _AU.m_ClientControlled);
-                            GUI.Label(new Rect(700, 10 + offset * 6, 500, 100), "m_Inactive " + _AU.m_InActive);
-                            GUI.Label(new Rect(700, 10 + offset * 7, 500, 100), "m_Banned " + _AU.m_Banned);
-                            GUI.Label(new Rect(700, 10 + offset * 8, 500, 100), "m_DampingIgnore " + _AU.m_DampingIgnore);
-                            GUI.Label(new Rect(700, 10 + offset * 9, 500, 100), "NoResponce " + _AU.NoResponce);
-                            GUI.Label(new Rect(700, 10 + offset * 10, 500, 100), "Object active " + MyMod.DebugLastAnimal.activeSelf);
-                            GUI.Label(new Rect(700, 10 + offset * 11, 500, 100), "RetakeCooldown " + _AU.ReTakeCoolDown);
-                            GUI.Label(new Rect(700, 10 + offset * 12, 500, 100), "LastFoundPlayer " + _AU.LastFoundPlayer);
-                            GUI.Label(new Rect(700, 10 + offset * 13, 500, 100), "Ai Mode " + _AI.GetAiMode());
-                            GUI.Label(new Rect(700, 10 + offset * 14, 500, 100), "HP " + _AI.m_CurrentHP);
-                            GUI.Label(new Rect(700, 10 + offset * 15, 500, 100), "m_HasEnteredStruggleOnLastAttack " + _AI.m_HasEnteredStruggleOnLastAttack);
-                            GUI.Label(new Rect(700, 10 + offset * 16, 500, 100), "SpawnRegion " + spawnRegionString);
+                            GUI.Label(new Rect(700, 10 + offset * 5, 500, 100), "m_Banned " + _AU.m_Banned);
+                            GUI.Label(new Rect(700, 10 + offset * 6, 500, 100), "m_DampingIgnore " + _AU.m_DampingIgnore);
+                            GUI.Label(new Rect(700, 10 + offset * 7, 500, 100), "NoResponce " + _AU.NoResponce);
+                            GUI.Label(new Rect(700, 10 + offset * 8, 500, 100), "Object active " + MyMod.DebugLastAnimal.activeSelf + " Rendering "+ _AI.m_RenderersEnabled);
+                            GUI.Label(new Rect(700, 10 + offset * 9, 500, 100), "RetakeCooldown " + _AU.ReTakeCoolDown);
+                            GUI.Label(new Rect(700, 10 + offset * 10, 500, 100), "LastFoundPlayer " + _AU.LastFoundPlayer);
+                            GUI.Label(new Rect(700, 10 + offset * 11, 500, 100), "Ai Mode " + _AI.GetAiMode());
+                            GUI.Label(new Rect(700, 10 + offset * 12, 500, 100), "HP " + _AI.m_CurrentHP);
+                            GUI.Label(new Rect(700, 10 + offset * 13, 500, 100), "m_HasEnteredStruggleOnLastAttack " + _AI.m_HasEnteredStruggleOnLastAttack);
+                            GUI.Label(new Rect(700, 10 + offset * 14, 500, 100), "SpawnRegion " + spawnRegionString);
 
                             if (GameManager.m_PlayerObject != null)
                             {
@@ -190,7 +187,11 @@ namespace SkyCoop
                 {
                     HarmonyLib.Harmony.UnpatchAll();
                 }
-                if (GUI.Button(new Rect(160, 160, 120, 20), "Close"))
+                if (GUI.Button(new Rect(160, 160, 120, 20), "EverySecond="+MyMod.KillEverySecond))
+                {
+                    MyMod.KillEverySecond = !MyMod.KillEverySecond;
+                }
+                if (GUI.Button(new Rect(160, 190, 120, 20), "Close"))
                 {
                     MyMod.UIDebugType = "";
                 }
@@ -213,72 +214,6 @@ namespace SkyCoop
                 }
                 if (GUI.Button(new Rect(160, 130, 80, 20), "Test"))
                 {
-                    //GameObject car = MyMod.MakeModObject("playercar");
-                    //car.layer = vp_Layer.Gear;
-                    //car.transform.position = GameManager.GetPlayerTransform().position;
-
-                    //GameObject Seat = car.transform.GetChild(0).gameObject;
-                    //GameObject FR = car.transform.GetChild(1).gameObject;
-                    //GameObject FL = car.transform.GetChild(2).gameObject;
-                    //GameObject BR = car.transform.GetChild(3).gameObject;
-                    //GameObject BL = car.transform.GetChild(4).gameObject;
-
-                    //Collider FR_c = car.transform.GetChild(5).gameObject.GetComponent<Collider>();
-                    //Collider FL_c = car.transform.GetChild(6).gameObject.GetComponent<Collider>();
-                    //Collider BR_c = car.transform.GetChild(7).gameObject.GetComponent<Collider>();
-                    //Collider BL_c = car.transform.GetChild(8).gameObject.GetComponent<Collider>();
-
-                    //MyMod.CarTest CarComp = car.AddComponent<MyMod.CarTest>();
-                    //CarComp.Wheel_L = FL_c.;
-                    //CarComp.Wheel_R = FR_c;
-                    //CarComp.Wheel_BR = BR_c;
-                    //CarComp.Wheel_BL = BL_c;
-                    ////Objs
-                    //CarComp.Wheel_R_obj = FR;
-                    //CarComp.Wheel_L_obj = FL;
-                    //CarComp.Wheel_BR_obj = BR;
-                    //CarComp.Wheel_BL_obj = BL;
-
-                    //CarComp.MotorForce = 4700;
-                    //CarComp.SteerForce = 45;
-                    //CarComp.BreakForce = 700;
-                    //CarComp.friction = 300;
-
-                    //CarComp.car = car;
-
-                    //GameObject campfire = UnityEngine.Object.Instantiate<GameObject>(Resources.Load("INTERACTIVE_CampFire").Cast<GameObject>());
-                    //campfire.transform.position = GameManager.GetPlayerTransform().position;
-                    //EffectsControllerFire ecf = campfire.GetComponent<EffectsControllerFire>();
-                    //Fire cf = campfire.GetComponent<Fire>();
-                    //cf.FireStateSet(FireState.FullBurn);
-                    //cf.ForceBurnTimeInMinutes(5);
-                    //cf.m_FullBurnTriggered = true;
-                    //campfire.GetComponent<Campfire>().m_State = CampfireState.Lit;
-                    //cf.m_IsPerpetual = true;
-                    //ecf.Initialize();
-                    //ecf.TriggerStage(FireState.FullBurn, true);
-
-                    //GameObject WIDEBOOOI = MyMod.MakeModObject("multi_test_wide");
-                    //WIDEBOOOI.transform.position = GameManager.GetPlayerTransform().position;
-
-                    //GameObject shelter = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetSnowShelterManager().m_SnowShelterPrefab.gameObject);
-                    //shelter.name = GameManager.GetSnowShelterManager().m_SnowShelterPrefab.name;
-                    //shelter.transform.position = GameManager.GetPlayerTransform().position;
-                    //shelter.AddComponent<MyMod.DoNotSerializeThis>();
-
-                    //GameObject BreathObj = UnityEngine.Object.Instantiate<GameObject>(Resources.Load("BreathWildlife").Cast<GameObject>());
-                    //BreathObj.transform.position = GameManager.GetPlayerTransform().position;
-                    //BreathObj.GetComponent<ParticleSystem>().Play();
-
-                    //foreach (var device in Microphone.devices)
-                    //{
-                    //    MelonLogger.Msg(ConsoleColor.Blue, "Microphone: " + device);
-                    //}
-
-                    //if (GameManager.GetPlayerManagerComponent().IsInPlacementMode())
-                    //{
-                    //    GameManager.GetPlayerManagerComponent().StowOrDropPlaceMesh();
-                    //}
                     //string LoadSceneSTR = "BlackrockPrisonZone";
                     //GameManager.GetPlayerManagerComponent().m_SceneTransitionStarted = true;
                     //string str = (string)null;
@@ -295,8 +230,10 @@ namespace SkyCoop
                     //}
                     //GameManager.m_SceneTransitionData.m_SceneSaveFilenameNextLoad = LoadSceneSTR;
                     //GameManager.LoadScene(LoadSceneSTR, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
-                    MyMod.DebugDiagnosis = true;
-                    MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
+
+                    //MyMod.DebugDiagnosis = true;
+                    //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
+                    //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {
@@ -498,9 +435,9 @@ namespace SkyCoop
             if (MyMod.UIDebugType == "AnimalsDebug")
             {
                 GUI.Box(new Rect(150, 10, 100, 270), "Debug Animals");
-                if (GUI.Button(new Rect(160, 40, 80, 20), "Room"))
+                if (GUI.Button(new Rect(160, 40, 80, 20), "UNUSED"))
                 {
-                    MyMod.SendToAnimalRoom();
+
                 }
                 if (GUI.Button(new Rect(160, 70, 80, 20), "GUID Stats"))
                 {

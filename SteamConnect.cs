@@ -17,6 +17,18 @@ namespace SkyCoop
         public static string SteamName = "";
         public static bool PiningMaster = false;
 
+        public static void Init()
+        {
+            if (SteamManager.Initialized == true)
+            {
+                MelonLogger.Msg("SteamManager Initialized");
+                SteamAPI.Init();
+                string str = "";
+                int num = 2555;
+                SteamApps.GetLaunchCommandLine(out str, num);
+            }
+        }
+
         public static bool StartSteam()
         {
             if(SteamManager.Initialized == false)
@@ -35,30 +47,34 @@ namespace SkyCoop
                 return;
             }
             Main.ListenData();
+            SteamAPI.RunCallbacks();
         }
 
         public class Main : MelonMod
         {
-            //private static Callback<P2PSessionRequest_t> _p2PSessionRequestCallback;
-            //public delegate void P2PRQ_Delegate(P2PSessionRequest_t request);
-            //public static P2PRQ_Delegate del = new P2PRQ_Delegate(OnP2PSessionRequest);
+            private static Callback<GameRichPresenceJoinRequested_t> _GameRichPresenceJoinRequested_t;
 
-            //public static void OnP2PSessionRequest(P2PSessionRequest_t request)
-            //{
-            //    CSteamID clientId = request.m_steamIDRemote;
-            //}
-
-            //public static void AllDels()
-            //{
-            //    IntPtr point = del.Method.MethodHandle.GetFunctionPointer();
-            //    Callback<P2PSessionRequest_t>.DispatchDelegate del_ = new Callback<P2PSessionRequest_t>.DispatchDelegate(point);
-            //    _p2PSessionRequestCallback = Callback<P2PSessionRequest_t>.Create(del_);
-            //}
+            public static void OnP2PSessionAccept(GameRichPresenceJoinRequested_t request)
+            {
+                if(MyMod.level_name == "MainMenu")
+                {
+                    MelonLogger.Msg("[SteamWorks.NET] Got accpeted invite message");
+                    if (request.m_steamIDFriend != null)
+                    {
+                        CSteamID clientId = request.m_steamIDFriend;
+                        string IDstr = clientId.ToString();
+                        MyMod.ConnectedSteamWorks = true;
+                        MyMod.SteamServerWorks = IDstr;
+                        MyMod.DoWaitForConnect();
+                        ConnectToHost(MyMod.SteamServerWorks);
+                    }
+                }
+            }
 
             public static void Run()
             {
+                _GameRichPresenceJoinRequested_t = Callback<GameRichPresenceJoinRequested_t>.Create(OnP2PSessionAccept);
                 string name = SteamFriends.GetPersonaName();
-
                 MelonLogger.Msg("[SteamWorks.NET] Logins as " + name + " SteamID " + SteamUser.GetSteamID().ToString());
                 MyMod.LoadChatName(name);
                 //AllDels();
@@ -99,8 +115,8 @@ namespace SkyCoop
             }
 
             public static void MakeFriendListUI()
-            {      
-                if(MyMod.UiCanvas != null && MyMod.UISteamFreindsMenuObj == null)
+            {
+                if (MyMod.UiCanvas != null && MyMod.UISteamFreindsMenuObj == null)
                 {
                     MyMod.UISteamFreindsMenuObj = MyMod.MakeModObject("MP_FriendList", MyMod.UiCanvas.transform);
                     int friends = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
@@ -151,7 +167,7 @@ namespace SkyCoop
                 MyMod.InitializeClientData();
 
                 SteamNetworking.AcceptP2PSessionWithUser(reciver);
-                MelonLogger.Msg("[SteamWorks.NET]Trying connecting to " + hostid);
+                MelonLogger.Msg("[SteamWorks.NET] Trying connecting to " + hostid);
                 MyMod.DoSteamWorksConnect(SteamUser.GetSteamID().ToString());
             }
             public static void SendUDPData(Packet _packet, CSteamID receiver)
@@ -245,10 +261,6 @@ namespace SkyCoop
                 web.DownloadStringCompleted += new DownloadStringCompletedEventHandler(Detail_DownloadStringCompleted);
                 web.DownloadStringAsync(uri);
             }
-            public static void OnP2PSessionRequest_Fail(P2PSessionConnectFail_t request)
-            {
-                MelonLogger.Msg("[SteamWorks.NET] Request failed ");
-            }
 
             public static void Disconnect(string hostid)
             {
@@ -302,7 +314,7 @@ namespace SkyCoop
                 uint size;
                 while (SteamNetworking.IsP2PPacketAvailable(out size))
                 {
-                    Il2CppStructArray<byte> _data = new byte[size];
+                    byte[] _data = new byte[size];
                     uint bytesRead;
 
                     CSteamID remoteId;

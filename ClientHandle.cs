@@ -251,13 +251,17 @@ namespace SkyCoop
         }
         public static void ANIMALROLE(Packet _packet)
         {
-            MyMod.AnimalsController = _packet.ReadBool();
-            //MelonLogger.Msg("Got new animal controller role: " + MyMod.AnimalsController);
+            bool New = _packet.ReadBool();
+            if (MyMod.AnimalsController != New)
+            {
+                MyMod.AnimalsController = New;
+                MyMod.DisableOriginalAnimalSpawns();
+                MelonLogger.Msg("Got new animal controller role: " + MyMod.AnimalsController);
+            }
         }
         public static void ALIGNANIMAL(Packet _packet)
         {
             MyMod.AnimalAligner Alig = _packet.ReadAnimalAligner();
-            MyMod.AlignAnimalWithProxy(Alig.m_Proxy, Alig.m_Guid);
         }
         public static void ASKFORANIMALPROXY(Packet _packet)
         {
@@ -311,8 +315,7 @@ namespace SkyCoop
         public static void PLAYERSSTATUS(Packet _packet)
         {
             int howmany = _packet.ReadInt();
-
-            if(howmany > MyMod.MaxPlayers)
+            if (howmany > MyMod.MaxPlayers)
             {
                 return;
             }
@@ -325,7 +328,8 @@ namespace SkyCoop
                 }
             }
             List<MyMod.MultiPlayerClientStatus> MPStatus = new List<MyMod.MultiPlayerClientStatus>();
-
+            int Sleepers = 0;
+            int Deads = 0;
             for (int i = 1; i <= howmany; i++)
             {
                 MyMod.MultiPlayerClientStatus client = _packet.ReadClientStatus();
@@ -334,6 +338,16 @@ namespace SkyCoop
                 {
                     MyMod.playersData[client.m_ID].m_Used = true;
                     MyMod.playersData[client.m_ID].m_Name = client.m_Name;
+
+                    if (client.m_Dead || client.m_Sleep)
+                    {
+                        Sleepers = Sleepers + 1;
+                    }
+                    if (client.m_Dead)
+                    {
+                        Deads = Deads + 1;
+                    }
+
                     if (client.m_Sleep == true)
                     {
                         MyMod.playersData[client.m_ID].m_SleepHours = 1;
@@ -343,14 +357,15 @@ namespace SkyCoop
                     MyMod.playersData[client.m_ID].m_Dead = client.m_Dead;
                 }
             }
-            MyMod.SleepTracker(MPStatus);
+            MyMod.ProcessSleep(Sleepers, howmany, Deads, 0);
             MyMod.UpdatePlayerStatusMenu(MPStatus);
         }
-        public static void ANIMALSYNC(Packet _packet)
+        public static void ANIMALTEST(Packet _packet)
         {
-            MyMod.AnimalSync got = _packet.ReadAnimal();
+            MyMod.AnimalCompactData dat = _packet.ReadAnimalCompactData();
+            MyMod.AnimalAnimsSync anim = _packet.ReadAnimalAnim();
             int from = _packet.ReadInt();
-            MyMod.DoAnimalSync(got);
+            MyMod.DoAnimalSync(dat, anim);
         }
 
         public static void ANIMALSYNCTRIGG(Packet _packet)
@@ -516,11 +531,6 @@ namespace SkyCoop
         }
         public static void BODYWARP(Packet _packet)
         {
-            string DoorId = _packet.ReadString();
-
-            MelonLogger.Msg("Got remote door enter request " + DoorId);
-
-            MyMod.WarpBody(DoorId);
         }
         public static void CHANGENAME(Packet _packet)
         {

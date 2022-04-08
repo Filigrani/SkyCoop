@@ -225,12 +225,6 @@ namespace SkyCoop
                 AddButtonPause(__instance, "RECONNECT", 1, 3);
                 AddButtonPause(__instance, "DISCONNECT", 2, 4);
                 AddButtonPause(__instance, "INVITE", 3, 5);
-
-                if(__instance.gameObject != null && __instance.gameObject.transform.GetChild(4))
-                {
-                    GameObject Icons = __instance.gameObject.transform.GetChild(4).gameObject;
-                    Icons.transform.position = new Vector3(Icons.transform.position.x, 0.27f, Icons.transform.position.z);
-                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "Update", null)]
@@ -239,6 +233,11 @@ namespace SkyCoop
             public static void Postfix(Panel_PauseMenu __instance)
             {
                 FixUpButtonStrings(__instance);
+                if (__instance.gameObject != null && __instance.gameObject.transform.GetChild(4))
+                {
+                    GameObject Icons = __instance.gameObject.transform.GetChild(4).gameObject;
+                    Icons.transform.position = new Vector3(Icons.transform.position.x, 0.27f, Icons.transform.position.z);
+                }
             }
         }
 

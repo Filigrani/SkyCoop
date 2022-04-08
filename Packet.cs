@@ -115,6 +115,7 @@ namespace GameServer
         TRYDIAGNISISPLAYER,
         SENDMYAFFLCTIONS,
         CUREAFFLICTION,
+        ANIMALTEST,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -225,6 +226,7 @@ namespace GameServer
         TRYDIAGNISISPLAYER,
         SENDMYAFFLCTIONS,
         CUREAFFLICTION,
+        ANIMALTEST,
     }
 
     public class Packet : IDisposable
@@ -542,6 +544,25 @@ namespace GameServer
             Write(obj.m_SpawnRegionGUID);
         }
 
+        public void Write(MyMod.AnimalAnimsSync obj)
+        {
+            Write(obj.AP_TurnAngle);
+            Write(obj.AP_TurnSpeed);
+            Write(obj.AP_Speed);
+            Write(obj.AP_Wounded);
+            Write(obj.AP_Roll);
+            Write(obj.AP_Pitch);
+            Write(obj.AP_TargetHeading);
+            Write(obj.AP_TargetHeadingSmooth);
+            Write(obj.AP_TapMeter);
+            Write(obj.AP_AiState);
+            Write(obj.AP_Corpse);
+            Write(obj.AP_Dead);
+            Write(obj.AP_DeadSide);
+            Write(obj.AP_DamageBodyPart);
+            Write(obj.AP_AttackId);
+        }
+
         public void Write(MyMod.AnimalTrigger obj)
         {
             Write(obj.m_Guid);
@@ -712,7 +733,21 @@ namespace GameServer
             WriteUnicodeString(obj.m_Case);
             Write(obj.m_ShouldBeTreated);
         }
-        
+
+        public void Write(MyMod.AnimalCompactData obj)
+        {
+            Write(obj.m_PrefabName);
+            Write(obj.m_Position);
+            Write(obj.m_Rotation);
+            Write(obj.m_GUID);
+            Write(obj.m_LastSeen);
+            Write(obj.m_Health);
+            Write(obj.m_Bleeding);
+            Write(obj.m_TimeOfBleeding);
+            Write(obj.m_RegionGUID);
+            Write(obj.m_LastController);
+        }
+
         #endregion
 
         #region Read Data
@@ -1040,6 +1075,29 @@ namespace GameServer
             return obj;
         }
 
+        public MyMod.AnimalAnimsSync ReadAnimalAnim(bool _moveReadPos = true)
+        {
+            MyMod.AnimalAnimsSync obj = new MyMod.AnimalAnimsSync();
+
+            obj.AP_TurnAngle = ReadFloat();
+            obj.AP_TurnSpeed = ReadFloat();
+            obj.AP_Speed = ReadFloat();
+            obj.AP_Wounded = ReadFloat();
+            obj.AP_Roll = ReadFloat();
+            obj.AP_Pitch = ReadFloat();
+            obj.AP_TargetHeading = ReadFloat();
+            obj.AP_TargetHeadingSmooth = ReadFloat();
+            obj.AP_TapMeter = ReadFloat();
+            obj.AP_AiState = ReadInt();
+            obj.AP_Corpse = ReadBool();
+            obj.AP_Dead = ReadBool();
+            obj.AP_DeadSide = ReadInt();
+            obj.AP_DamageBodyPart = ReadInt();
+            obj.AP_AttackId = ReadInt();
+
+            return obj;
+        }
+
         public MyMod.AnimalTrigger ReadAnimalTrigger(bool _moveReadPos = true)
         {
             MyMod.AnimalTrigger obj = new MyMod.AnimalTrigger();
@@ -1305,6 +1363,24 @@ namespace GameServer
             obj.m_ShouldBeTreated = ReadBool();
             return obj;
         }
+
+        public MyMod.AnimalCompactData ReadAnimalCompactData()
+        {
+            MyMod.AnimalCompactData obj = new MyMod.AnimalCompactData();
+            obj.m_PrefabName = ReadString();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_GUID = ReadString();
+            obj.m_LastSeen = ReadInt();
+            obj.m_Health = ReadFloat();
+            obj.m_Bleeding = ReadBool();
+            obj.m_TimeOfBleeding = ReadInt();
+            obj.m_RegionGUID = ReadString();
+            obj.m_LastController = ReadInt();
+
+            return obj;
+        }
+
         #endregion
 
         private bool disposed = false;

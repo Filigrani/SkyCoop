@@ -349,16 +349,17 @@ namespace GameServer
 
             ServerSend.DONEHARVASTING(0, got, true);
         }
-        public static void ANIMALSYNC(int _fromClient, Packet _packet)
+        public static void ANIMALTEST(int _fromClient, Packet _packet)
         {
-            MyMod.AnimalSync got = _packet.ReadAnimal();
+            MyMod.AnimalCompactData dat = _packet.ReadAnimalCompactData();
+            MyMod.AnimalAnimsSync anim = _packet.ReadAnimalAnim();
             int _for = _packet.ReadInt();
 
             if (_for == 0)
             {
-                MyMod.DoAnimalSync(got);
+                MyMod.DoAnimalSync(dat, anim);
             }else{
-                ServerSend.ANIMALSYNC(_fromClient, got, _for);
+                ServerSend.ANIMALTEST(_fromClient, dat, anim, _for);
             }
         }
         public static void ANIMALSYNCTRIGG(int _fromClient, Packet _packet)
@@ -403,7 +404,6 @@ namespace GameServer
         public static void ALIGNANIMAL(int _fromClient, Packet _packet)
         {
             MyMod.AnimalAligner Alig = _packet.ReadAnimalAligner();
-            MyMod.AlignAnimalWithProxy(Alig.m_Proxy, Alig.m_Guid);
         }
         public static void ASKFORANIMALPROXY(int _fromClient, Packet _packet)
         {
@@ -437,9 +437,7 @@ namespace GameServer
         }
         public static void BODYWARP(int _fromClient, Packet _packet)
         {
-            string _LevelName = _packet.ReadString();
 
-            MyMod.WarpBody(_LevelName);
         }
         public static void ANIMALDELETE(int _fromClient, Packet _packet)
         {
@@ -924,6 +922,11 @@ namespace GameServer
             string lvlKey = lvl+lvlGUID;
             Dictionary<int, MyMod.SlicedJsonDroppedGear> LevelDrops;
             MelonLogger.Msg("Client "+ _fromClient+" request all drops for scene "+ lvlKey);
+            if(MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_Levelid = lvl;
+                MyMod.playersData[_fromClient].m_LevelGuid = lvlGUID;
+            }
 
             MyMod.MarkSearchedContainers(lvlKey, _fromClient);
             SendAllOpenables(_fromClient, lvlKey);

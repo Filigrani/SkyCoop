@@ -426,15 +426,17 @@ namespace GameServer
         //        SendOnlyToClosePlayers(_packet, _From, LevelID, AnimalV3);
         //    }
         //}
-        public static void ANIMALSYNC(int _From, MyMod.AnimalSync _msg, int OnlyFor)
+        public static void ANIMALTEST(int _From, MyMod.AnimalCompactData _msg, MyMod.AnimalAnimsSync anim, int OnlyFor)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.ANIMALSYNC))
+            using (Packet _packet = new Packet((int)ServerPackets.ANIMALTEST))
             {
                 _packet.Write(_msg);
+                _packet.Write(anim);
                 _packet.Write(_From);
                 SendUDPData(OnlyFor, _packet);
             }
         }
+        
         public static void DARKWALKERREADY(int _toClient, bool _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.DARKWALKERREADY))
@@ -761,57 +763,6 @@ namespace GameServer
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
-            }
-        }
-        public static List<MyMod.MultiPlayerClientStatus> PLAYERSSTATUS()
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.PLAYERSSTATUS))
-            {
-                int ReadCount = 0;
-                List<MyMod.MultiPlayerClientStatus> L = new List<SkyCoop.MyMod.MultiPlayerClientStatus>();
-                if (Application.isBatchMode == false)
-                {
-                    ReadCount = ReadCount + 1;
-                    MyMod.MultiPlayerClientStatus me = new MyMod.MultiPlayerClientStatus();
-                    me.m_ID = 0;
-                    me.m_Name = MyMod.MyChatName;
-                    me.m_Sleep = MyMod.IsSleeping;
-                    me.m_Dead = MyMod.IsDead;
-                    L.Add(me);
-                }
-                for (int i = 1; i <= Server.MaxPlayers; i++)
-                {
-                    if (Server.clients[i].IsBusy() == true)
-                    {
-                        ReadCount = ReadCount + 1;
-                        MyMod.MultiPlayerClientStatus other = new MyMod.MultiPlayerClientStatus();
-                        other.m_ID = i;
-                        other.m_Name = MyMod.playersData[i].m_Name;
-                        if(MyMod.playersData[i].m_SleepHours > 0)
-                        {
-                            other.m_Sleep = true;
-                        }else{
-                            other.m_Sleep = false;
-                        }
-                        if (MyMod.playersData[i].m_AnimState == "Knock")
-                        {
-                            other.m_Dead = true;
-                        }else{
-                            other.m_Dead = false;
-                        }
-                        L.Add(other);
-                        //MelonLoader.MelonLogger.Msg("Player ID " + i + " NAME " + other.m_Name + " SLEEP " + other.m_Sleep + " DEAD " + other.m_Dead);
-                    }
-                }
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < L.Count; i++)
-                {
-                    MyMod.MultiPlayerClientStatus other = L[i];
-                    _packet.Write(other);
-                }
-                SendUDPDataToAll(_packet);
-                return L;
             }
         }
         public static void CHANGENAME(int _From, string _msg, bool toEveryOne, int OnlyFor = -1)

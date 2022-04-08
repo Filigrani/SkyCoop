@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.8.4 pre";
+            public const string Version = "0.8.7";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -126,7 +126,6 @@ namespace SkyCoop
         public static List<WalkTracker> SurvivorWalks = new List<WalkTracker>();
         public static WalkTracker LastLure = new WalkTracker();
         public static bool ALWAYS_FUCKING_CURSOR_ON = false;
-        public static bool NoRabbits = true;
         public static bool AnimalSyncOption = true;
         public static GameObject PistolBulletPrefab = null;
         public static GameObject RevolverBulletPrefab = null;
@@ -224,6 +223,7 @@ namespace SkyCoop
         public static bool AtBed = false;
         public static Vector3 OutOfBedPosition = new Vector3(0, 0, 0);
 
+        public static bool GearIDListReady = false;
         public static Dictionary<string, int> GearIDList = new Dictionary<string, int>();
         //public static bool AntiCheat = false;
         public static bool InterloperHook = false;
@@ -237,6 +237,8 @@ namespace SkyCoop
         public static List<string> AutoCMDs = new List<string>();
         public static bool CrazyPatchesLogger = false;
         public static bool KillOnUpdate = false;
+        public static bool KillEverySecond = false;
+        public static bool NoAnimalSync = true;
 
         public static void KillConsole()
         {
@@ -267,6 +269,7 @@ namespace SkyCoop
                     GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
                 }
             }
+            GearIDListReady = true;
         }
         public static string GetGearNameByID(int index)
         {
@@ -679,6 +682,7 @@ namespace SkyCoop
             public bool m_Bleeding = false;
             public int m_TimeOfBleeding = 0;
             public string m_RegionGUID = "";
+            public int m_LastController = 0;
         }
         public class PlayerEquipmentData //: MelonMod
         {
@@ -825,6 +829,35 @@ namespace SkyCoop
             public int m_LevelD = 0;
             public string m_SpawnRegionGUID = "";
         }
+        public class AnimalAnimsSync
+        {
+            public float AP_TurnAngle; //0
+            public float AP_TurnSpeed; //1
+            public float AP_Speed; //2
+            public float AP_Wounded; //3
+            public float AP_Roll; //4
+            public float AP_Pitch; //5
+            public float AP_TargetHeading; //6
+            public float AP_TargetHeadingSmooth; //7
+            public float AP_TapMeter; //8
+            //AE_Trigger_Branchpoint; //9
+            public int AP_AiState; //10
+            //StruggleStart //11
+            //StruggleEnd //12
+            //DamageImpact //13
+            public bool AP_Corpse; //14
+            public bool AP_Dead; //15
+            public int AP_DeadSide; //16
+            //AE_IsInStruggle //17
+            //public int AP_AE_NavigationState; //18
+            public int AP_DamageBodyPart; //19
+            //public int AP_AE_CorpseID; //20
+            //ScriptedSequence_Hostile //21
+            //ScriptedSequence_Feeding //22
+            public int AP_AttackId; //23
+            //Attack_Trigger //24
+        }
+
         public class WalkTracker //: MelonMod
         {
             public int m_levelid = 0;
@@ -1273,6 +1306,28 @@ namespace SkyCoop
 
         public override void OnApplicationStart()
         {
+            Assembly[] dlls = AppDomain.CurrentDomain.GetAssemblies();
+            Assembly GameAssembly = null;
+            for (int i = 0; i < dlls.Length; i++)
+            {
+                if(dlls[i].GetName().Name == "Assembly-CSharp")
+                {
+                    GameAssembly = dlls[i];
+                    break;
+                }
+            }
+            if(GameAssembly != null)
+            {
+                if (GameAssembly.GetType("SteamManager").GetMethod("Awake") == null)
+                {
+                    MelonLogger.Msg("This game version has not SteamManager");
+                }else{
+                    MelonLogger.Msg("This game version has SteamManager");
+                    var original = typeof(SteamManager).GetMethod("Awake");
+                    var postfix = typeof(SteamConnect).GetMethod("Init");
+                    HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
+                }
+            }
             Debug.Log($"[{InfoAttribute.Name}] Version {InfoAttribute.Version} loaded!");
             ClassInjector.RegisterTypeInIl2Cpp<AnimalUpdates>();
             ClassInjector.RegisterTypeInIl2Cpp<DestoryArrowOnHit>();
@@ -1286,7 +1341,6 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<GearSpawnPointSave>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerAnimator>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerClothingManager>();
-            ClassInjector.RegisterTypeInIl2Cpp<CarTest>();
             ClassInjector.RegisterTypeInIl2Cpp<FakeFire>();
             ClassInjector.RegisterTypeInIl2Cpp<FakeFireLight>();
             ClassInjector.RegisterTypeInIl2Cpp<DoNotSerializeThis>();
@@ -1298,16 +1352,13 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<FakeBedDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<AnimalBornMarker>();
             ClassInjector.RegisterTypeInIl2Cpp<SpawnRegionAnimalsList>();
+            ClassInjector.RegisterTypeInIl2Cpp<AnimalActor>();
 
             if (instance == null)
             {
                 instance = this;
                 tcp = new TCP();
                 udp = new UDP();
-            }
-            else if (instance != this)
-            {
-
             }
 
             LoadedBundle = AssetBundle.LoadFromFile("Mods\\multiplayerstuff.unity3d");
@@ -1388,18 +1439,18 @@ namespace SkyCoop
             MelonLogger.Msg("Level name: " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             level_name = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             MyTicksOnScene = 0;
-            if (ShatalkerModeClient == true || ServerHandle.DarkShatalkerMode == true || IamShatalker == true)
-            {
-                ShatalkerObject = Resources.FindObjectsOfTypeAll<InvisibleEntityManager>().First();
-                MelonLogger.Msg("Shatalker was null");
-            }
             if (IamShatalker == true)
             {
                 uConsole.RunCommandSilent("Ghost");
                 uConsole.RunCommandSilent("God");
             }
             CheckHaveBookMod();
-            DisableOriginalAnimalSpawns(false);
+            DisableOriginalAnimalSpawns();
+            if (level_name == "MainMenu" && GearIDListReady == false)
+            {
+                InitGearsIDS(); // Compilating List of Gear names by ID, to reference on it to shorten names in sync packets
+            }
+            InitAllPlayers();
         }
 
         public static GameObject MakeModObject(string _name, Transform newparent = null)
@@ -3351,30 +3402,6 @@ namespace SkyCoop
             if(plObj != null)
             {
                 plObj.SetActive(enable);
-                //if(plObj.GetComponent<MultiplayerPlayer>() != null)
-                //{
-                //    plObj.GetComponent<MultiplayerPlayer>().enabled = enable;
-                //}
-                //if (plObj.GetComponent<MultiplayerPlayerAnimator>() != null)
-                //{
-                //    plObj.GetComponent<MultiplayerPlayerAnimator>().enabled = enable;
-                //}
-                //if (plObj.GetComponent<MultiplayerPlayerClothingManager>() != null)
-                //{
-                //    plObj.GetComponent<MultiplayerPlayerClothingManager>().enabled = enable;
-                //}
-                //if (plObj.GetComponent<MultiplayerPlayerVoiceChatPlayer>() != null)
-                //{
-                //    plObj.GetComponent<MultiplayerPlayerVoiceChatPlayer>().enabled = enable;
-                //}
-                //if (plObj.GetComponent<AudioSource>() != null)
-                //{
-                //    plObj.GetComponent<AudioSource>().enabled = enable;
-                //}
-                //if (plObj.GetComponent<Animator>() != null)
-                //{
-                //    plObj.GetComponent<Animator>().enabled = enable;
-                //}
             }
         }
 
@@ -4295,26 +4322,32 @@ namespace SkyCoop
             }
         }
 
-        public static void DisableOriginalAnimalSpawns(bool OnHost)
+        public static void DisableOriginalAnimalSpawns()
         {
             if(GameManager.m_SpawnRegionManager == null)
             {
                 return;
             }
-            
-            Il2CppSystem.Collections.Generic.List<SpawnRegion> Regions = GameManager.GetSpawnRegionManager().m_SpawnRegions;
 
+            Il2CppSystem.Collections.Generic.List<SpawnRegion> Regions = GameManager.GetSpawnRegionManager().m_SpawnRegions;
             for (int i = 0; i < Regions.Count; i++)
             {
                 if (Regions[i] != null)
                 {
                     SpawnRegion region = Regions[i];
-                    region.SetActive(false);
-                    region.gameObject.AddComponent<SpawnRegionAnimalsList>();
+                    if (NoAnimalSync)
+                    {
+                        region.SetActive(false);
+                    }else{
+                        region.enabled = AnimalsController;
+                        if(region.gameObject.GetComponent<SpawnRegionAnimalsList>() == null)
+                        {
+                            region.gameObject.AddComponent<SpawnRegionAnimalsList>();
+                        }
+                    }
                 }
             }
-            MelonLogger.Msg("[SpawnAnimals] " + Regions.Count + " Regions has been deactivated");
-            if (OnHost == true)
+            if (NoAnimalSync)
             {
                 for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
                 {
@@ -4445,6 +4478,13 @@ namespace SkyCoop
                 Dat.m_Health = AI.m_CurrentHP;
                 Dat.m_Bleeding = AI.m_BleedingOut;
                 Dat.m_TimeOfBleeding = MinutesFromStartServer + (int)AI.m_ElapsedBleedingOutMinutes;
+
+                if (AI.GetSpawnRegionParent() != null && AI.GetSpawnRegionParent().GetComponent<ObjectGuid>() != null)
+                {
+                    Dat.m_RegionGUID = AI.GetSpawnRegionParent().GetComponent<ObjectGuid>().Get();
+                }else{
+                    Dat.m_RegionGUID = "";
+                }
                 return Dat;
             }
             return null;
@@ -4565,7 +4605,7 @@ namespace SkyCoop
                                 {
                                     LastFoundDistance = distanceToAnimal;
                                     LastFoundID = i;
-                                    MelonLogger.Msg("Pick nearest player " + LastFoundID + " " + otherPlayerV3.x + " " + otherPlayerV3.y + " " + otherPlayerV3.z);
+                                    //MelonLogger.Msg("Pick nearest player " + LastFoundID + " " + otherPlayerV3.x + " " + otherPlayerV3.y + " " + otherPlayerV3.z);
                                 }
                             }
                         }
@@ -4576,26 +4616,32 @@ namespace SkyCoop
             return LastFoundID;
         }
 
-        public static void SendAnimalForValidPlayers(AnimalSync data, Vector3 v3)
+        public static void SendAnimalForValidPlayers(AnimalCompactData data, AnimalAnimsSync anim)
         {
+            if (NoAnimalSync)
+            {
+                return;
+            }
+
             for (int i = 0; i < playersData.Count; i++)
             {
-                if(playersData[i] != null)
+                if (playersData[i] != null)
                 {
-                    if(i != instance.myId)
+                    if (i != instance.myId)
                     {
-                        float dis = Vector3.Distance(v3, playersData[i].m_Position);
-                        if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid && dis < GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance)
+                        if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid)
                         {
                             if (iAmHost == true)
                             {
-                                ServerSend.ANIMALSYNC(0, data, i);
+                                ServerSend.ANIMALTEST(0, data, anim, i);
                             }
                             if (sendMyPosition == true)
                             {
-                                using (Packet _packet = new Packet((int)ClientPackets.ANIMALSYNC))
+                                MelonLogger.Msg("Client sends ANIMALTEST " + data.m_GUID + " for " + i);
+                                using (Packet _packet = new Packet((int)ClientPackets.ANIMALTEST))
                                 {
                                     _packet.Write(data);
+                                    _packet.Write(anim);
                                     _packet.Write(i);
                                     SendTCPData(_packet);
                                 }
@@ -4604,6 +4650,63 @@ namespace SkyCoop
                     }
                 }
             }
+        }
+
+        public static AnimalAnimsSync GetAnimationDataFromAnimal(BaseAi _AI)
+        {
+            if (_AI)
+            {
+                Animator AN = _AI.m_Animator;
+                if (AN)
+                {
+                    AnimalAnimsSync sync = new AnimalAnimsSync();
+                    sync.AP_TurnAngle = AN.GetFloat(_AI.m_AnimParameter_TurnAngle);
+                    sync.AP_TurnSpeed = AN.GetFloat(_AI.m_AnimParameter_TurnSpeed);
+                    sync.AP_Speed = AN.GetFloat(_AI.m_AnimParameter_Speed);
+                    sync.AP_Wounded = AN.GetFloat(_AI.m_AnimParameter_Wounded);
+                    sync.AP_Roll = AN.GetFloat(_AI.m_AnimParameter_Roll);
+                    sync.AP_Pitch = AN.GetFloat(_AI.m_AnimParameter_Pitch);
+                    sync.AP_TargetHeading = AN.GetFloat(_AI.m_AnimParameter_TargetHeading);
+                    sync.AP_TargetHeadingSmooth = AN.GetFloat(_AI.m_AnimParameter_TargetHeadingSmooth);
+                    sync.AP_TapMeter = AN.GetFloat(_AI.m_AnimParameter_TapMeter);
+                    sync.AP_AiState = AN.GetInteger(_AI.m_AnimParameter_AiState);
+                    sync.AP_Corpse = AN.GetBool(_AI.m_AnimParameter_Corpse);
+                    sync.AP_Dead = AN.GetBool(_AI.m_AnimParameter_Dead);
+                    sync.AP_DeadSide = AN.GetInteger(_AI.m_AnimParameter_DamageSide);
+                    sync.AP_DamageBodyPart = AN.GetInteger(_AI.m_AnimParameter_DamageBodyPart);
+                    sync.AP_AttackId = AN.GetInteger(_AI.m_AnimParameter_AttackId);
+                    return sync;
+                }else{
+                    return null;
+                }
+            }
+            return null;
+        }
+
+        public static void RecreateAnimalToActor(GameObject animal)
+        {
+            string GUID = "";
+            string prefabName = GetAnimalPrefabName(animal.name);
+            string RegionGUID = "";
+
+            if (animal.GetComponent<BaseAi>().GetSpawnRegionParent() != null && animal.GetComponent<BaseAi>().GetSpawnRegionParent().GetComponent<ObjectGuid>())
+            {
+                RegionGUID = animal.GetComponent<BaseAi>().GetSpawnRegionParent().GetComponent<ObjectGuid>().Get();
+            }
+
+            Vector3 v3 = animal.transform.position;
+            Quaternion rot = animal.transform.rotation;
+            MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to actor " + GUID);
+
+            if (animal.GetComponent<ObjectGuid>() != null)
+            {
+                GUID = animal.GetComponent<ObjectGuid>().Get();
+                ObjectGuidManager.UnRegisterGuid(GUID);
+                animal.GetComponent<ObjectGuid>().Set("");
+                UnityEngine.Object.Destroy(animal);
+            }
+
+            SpawnAnimalActor(prefabName, v3, rot, GUID, RegionGUID);
         }
 
         public class AnimalUpdates : MonoBehaviour
@@ -4622,14 +4725,179 @@ namespace SkyCoop
             public float dampingOn_perioud = 1.5f;
             public Vector3 m_ToGo = new Vector3(0, 0, 0);
             public Quaternion m_ToRotate = new Quaternion(0, 0, 0, 0);
-            public int m_Anim = 0;
-            public int m_AnimNext = 0;
-            public GameObject m_TestModel = null;
-            public bool m_RemoteSpawned = false;
-            public string m_RightName = "";
-            public bool m_DebugAnimal = false;
             public bool m_CanSync = false;
-            public bool m_InActive = false;
+            public float m_Hp = 100;
+            public bool m_Banned = false;
+            public bool m_DampingIgnore = false;
+            public int LastFoundPlayer = -1;
+            public bool m_MyControlled = false;
+
+            void Start()
+            {
+                nextActionTimeNR = Time.time;
+                nextActionSync = Time.time;
+                nextActionBloodDrop = Time.time;
+                nextActionDampingOn = Time.time + dampingOn_perioud;
+            }
+
+            public void CallSync()
+            {
+                if (m_Animal != null && m_Banned == false && m_Animal.activeSelf == true)
+                {
+                    if (m_Animal.GetComponent<BaseAi>() != null)
+                    {
+                        BaseAi _AI = m_Animal.GetComponent<BaseAi>();
+
+                        AnimalCompactData Dat = GetCompactDataForAnimal(_AI);
+                        AnimalAnimsSync AnimDat = GetAnimationDataFromAnimal(_AI);
+
+                        int newController = GetClosestPlayerToAnimal(m_Animal, ReTakeCoolDown, instance.myId, GameManager.GetPlayerTransform().position, levelid);
+                        Dat.m_LastController = newController;
+                        if (newController != instance.myId)
+                        {
+                            SendAnimalForValidPlayers(Dat, AnimDat);
+                            m_Banned = true;
+                            RecreateAnimalToActor(m_Animal);
+                        }else{
+                            SendAnimalForValidPlayers(Dat, AnimDat);
+                        }
+                    }
+                }
+            }
+
+            void Update()
+            {
+                if (m_Animal != null)
+                {   
+                    if (Time.time > nextActionSync)
+                    {
+                        nextActionSync += actionSync_perioud;
+                        if (level_name != "Empty" && level_name != "MainMenu")
+                        {
+                            if(AnimalsController == true || m_MyControlled == true)
+                            {
+                                CallSync();
+                            }
+                        }
+                    }
+                    if (Time.time > nextActionTimeNR)
+                    {
+                        nextActionTimeNR += noresponce_perioud;
+                        ReTakeCoolDown--;
+                        if (ReTakeCoolDown <= 0)
+                        {
+                            ReTakeCoolDown = 0;
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void RecreateAnimalToSyncable(GameObject animal, string RegionGUID, float health)
+        {
+            
+            string GUID = "";
+            if (animal.GetComponent<ObjectGuid>() != null)
+            {
+                GUID = animal.GetComponent<ObjectGuid>().Get();
+            }
+            
+            string prefabName = GetAnimalPrefabName(animal.name);
+            Vector3 v3 = animal.transform.position;
+            Quaternion rot = animal.transform.rotation;
+            MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to syncable " + GUID+" with region GUID "+ RegionGUID);
+
+            if (!AiUtils.IsNavmeshPosValid(v3, 0.5f, 1f))
+            {
+                return;
+            }
+
+            SpawnRegion SR = null;
+
+            GameObject RegionSpawnObj = ObjectGuidManager.Lookup(RegionGUID);
+
+            if (RegionSpawnObj != null)
+            {
+                MelonLogger.Msg(ConsoleColor.Cyan, "Region found");
+                SR = RegionSpawnObj.GetComponent<SpawnRegion>();
+            }
+            UnityEngine.Object.Destroy(animal);
+
+            BaseAi bai;
+            GameObject newAnimal;
+            if (SR != null)
+            {
+                RegionSpawnObj.GetComponent<SpawnRegionAnimalsList>().m_Spawned--;
+                MelonLogger.Msg(ConsoleColor.Cyan, "This animal is region related");
+                bai = SR.InstantiateSpawnInternal(WildlifeMode.Normal, v3, rot);
+                newAnimal = bai.gameObject;
+                Utils.SetGuidForGameObject(newAnimal, GUID);
+                if (bai != null)
+                {
+                    if (!BaseAiManager.CreateMoveAgent(bai.transform, bai, v3))
+                    {
+                        bai.transform.SetParent(SR.gameObject.transform);
+                    }
+
+                    bai.SetSpawnRegionParent(SR);
+                    bai.m_AiDifficultySetting = GameManager.GetAiDifficultySettings().GetSetting(SR.m_AiDifficulty, bai.m_AiSubType);
+                    SR.m_Spawns.Add(bai);
+                }else{
+                    return;
+                }
+            }else{
+                GameObject reference = GetGearItemObject(prefabName);
+
+                if (reference == null)
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Can't re-create animal with prefab name " + prefabName);
+                    return;
+                }
+                MelonLogger.Msg(ConsoleColor.Cyan, "This animal is not region related");
+                newAnimal = UnityEngine.Object.Instantiate(reference, v3, rot);
+                bai = newAnimal.GetComponent<BaseAi>();
+                Utils.SetGuidForGameObject(newAnimal, GUID);
+                BaseAiManager.CreateMoveAgent(bai.transform, bai, v3);
+            }
+            AnimalUpdates au = newAnimal.GetComponent<AnimalUpdates>();
+
+            if (au == null)
+            {
+                newAnimal.AddComponent<AnimalUpdates>();
+
+                au = newAnimal.GetComponent<AnimalUpdates>();
+            }
+            au.m_ToGo = v3;
+            if (health != -1)
+            {
+                au.m_Hp = health;
+                bai.m_CurrentHP = health;
+            }
+            au.m_Animal = newAnimal;
+            au.m_MyControlled = true;
+            newAnimal.transform.position = v3;
+        }
+
+        public class AnimalActor : MonoBehaviour
+        {
+            public AnimalActor(IntPtr ptr) : base(ptr) { }
+            public GameObject m_Animal = null;
+            public int NoResponce = 5;
+            public int ReTakeCoolDown = 5;
+
+            // Timers
+            public float nextActionTimeNR = 0.0f;
+            public float noresponce_perioud = 1f;
+            public float nextActionSync = 0.0f;
+            public float actionSync_perioud = 0.3f;
+            public float nextActionBloodDrop = 0.0f;
+            public float blooddrop_period = 0.15f;
+            public float nextActionDampingOn = 0.0f;
+            public float dampingOn_perioud = 1.5f;
+
+            public Vector3 m_ToGo = new Vector3(0, 0, 0);
+            public Quaternion m_ToRotate = new Quaternion(0, 0, 0, 0);
+
             // Animation parameters
             public float AP_TurnAngle; //0
             public float AP_TurnSpeed; //1
@@ -4640,399 +4908,142 @@ namespace SkyCoop
             public float AP_TargetHeading; //6
             public float AP_TargetHeadingSmooth; //7
             public float AP_TapMeter; //8
-            //AE_Trigger_Branchpoint; //9
             public int AP_AiState; //10
-            //StruggleStart //11
-            //StruggleEnd //12
-            //DamageImpact //13
             public bool AP_Corpse; //14
             public bool AP_Dead; //15
             public int AP_DeadSide; //16
-            //AE_IsInStruggle //17
-            //public int AP_AE_NavigationState; //18
             public int AP_DamageBodyPart; //19
-            //public int AP_AE_CorpseID; //20
-            //ScriptedSequence_Hostile //21
-            //ScriptedSequence_Feeding //22
             public int AP_AttackId; //23
-            //Attack_Trigger //24
-            public bool m_WritenMeshes = false;
-            public SkinnedMeshRenderer m_Mesh1 = null;
-            public SkinnedMeshRenderer m_Mesh2 = null;
-            public SkinnedMeshRenderer m_Mesh3 = null;
+
             public float m_Hp = 100;
             public bool m_Bleeding = false;
-            public bool m_ClientControlled = false;
             public int m_ClientController = 0;
             public bool m_Banned = false;
-            public bool m_DampingIgnore = true;
-            public string m_PendingProxy = "";
-            public bool m_WaitForAligment = false;
-            public int LastFoundPlayer = -1;
+            public bool m_DampingIgnore = false;
+            public string m_RegionGUID = "";
+
+            int m_AnimParameter_TurnAngle;
+            int m_AnimParameter_TurnSpeed;
+            int m_AnimParameter_Speed;
+            int m_AnimParameter_Wounded;
+            int m_AnimParameter_Roll;
+            int m_AnimParameter_Pitch;
+            int m_AnimParameter_TargetHeading;
+            int m_AnimParameter_TargetHeadingSmooth;
+            int m_AnimParameter_TapMeter;
+            int m_AnimParameter_AiState;
+            int m_AnimParameter_Corpse;
+            int m_AnimParameter_Dead;
+            int m_AnimParameter_DamageSide;
+            int m_AnimParameter_DamageBodyPart;
+            int m_AnimParameter_AttackId;
+
+            public Dictionary<string, int> m_AnimalAnimatorHashes = new Dictionary<string, int>();
+            public bool m_AnimalAnimatorHashesReady = false;
+            public Animator m_Animator;
 
             void Start()
             {
                 nextActionTimeNR = Time.time;
                 nextActionSync = Time.time;
                 nextActionBloodDrop = Time.time;
-                nextActionDampingOn = Time.time+dampingOn_perioud;
+                nextActionDampingOn = Time.time + dampingOn_perioud;
             }
-            public void CallSync()
+
+            public void AnimInit()
             {
-                if (m_Animal != null && m_Banned == false)
+                m_AnimParameter_TurnAngle = Animator.StringToHash("TurnAngle");
+                m_AnimParameter_TurnSpeed = Animator.StringToHash("TurnSpeed");
+                m_AnimParameter_Speed = Animator.StringToHash("Speed");
+                m_AnimParameter_Wounded = Animator.StringToHash("Wounded");
+                m_AnimParameter_Roll = Animator.StringToHash("Roll");
+                m_AnimParameter_Pitch = Animator.StringToHash("Pitch");
+                m_AnimParameter_TargetHeading = Animator.StringToHash("TargetHeading");
+                m_AnimParameter_TargetHeadingSmooth = Animator.StringToHash("TargetHeadingSmooth");
+                m_AnimParameter_TapMeter = Animator.StringToHash("TapMeter");
+                m_AnimParameter_AiState = Animator.StringToHash("AiState");
+                m_AnimParameter_Corpse = Animator.StringToHash("Corpse");
+                m_AnimParameter_Dead = Animator.StringToHash("Dead");
+                m_AnimParameter_DamageSide = Animator.StringToHash("DamageSide");
+                m_AnimParameter_DamageBodyPart = Animator.StringToHash("DamageBodyPart");
+                m_AnimParameter_AttackId = Animator.StringToHash("AttackId");
+                m_AnimalAnimatorHashesReady = true;
+            }
+
+            void SetAnimations()
+            {
+                Animator AN = m_Animator;
+                if (AN != null)
                 {
-                    if ((AnimalsController == true || (m_ClientController == instance.myId)) && m_WaitForAligment == false)
+                    if (!m_AnimalAnimatorHashesReady)
                     {
-                        if(m_Animal.GetComponent<WildlifeItem>() != null && m_Animal.GetComponent<WildlifeItem>().m_PickedUp == true)
-                        {
-                            return;
-                        }
-
-                        AnimalSync sync = new AnimalSync();
-                        sync.m_position = m_Animal.transform.position;
-                        sync.m_rotation = m_Animal.transform.rotation;
-                        sync.m_guid = m_Animal.GetComponent<ObjectGuid>().Get();
-                        sync.m_LevelD = levelid;
-
-                        if (m_Animal.GetComponent<BaseAi>() != null && m_Animal.GetComponent<BaseAi>().m_Animator != null)
-                        {
-
-                            BaseAi _AI = m_Animal.GetComponent<BaseAi>();
-
-                            Animator AN = _AI.m_Animator;
-
-                            sync.AP_TurnAngle = AN.GetFloat(_AI.m_AnimParameter_TurnAngle);
-                            sync.AP_TurnSpeed = AN.GetFloat(_AI.m_AnimParameter_TurnSpeed);
-                            sync.AP_Speed = AN.GetFloat(_AI.m_AnimParameter_Speed);
-                            sync.AP_Wounded = AN.GetFloat(_AI.m_AnimParameter_Wounded);
-                            sync.AP_Roll = AN.GetFloat(_AI.m_AnimParameter_Roll);
-                            sync.AP_Pitch = AN.GetFloat(_AI.m_AnimParameter_Pitch);
-                            sync.AP_TargetHeading = AN.GetFloat(_AI.m_AnimParameter_TargetHeading);
-                            sync.AP_TargetHeadingSmooth = AN.GetFloat(_AI.m_AnimParameter_TargetHeadingSmooth);
-                            sync.AP_TapMeter = AN.GetFloat(_AI.m_AnimParameter_TapMeter);
-                            sync.AP_AiState = AN.GetInteger(_AI.m_AnimParameter_AiState);
-                            sync.AP_Corpse = AN.GetBool(_AI.m_AnimParameter_Corpse);
-                            sync.AP_Dead = AN.GetBool(_AI.m_AnimParameter_Dead);
-                            sync.AP_DeadSide = AN.GetInteger(_AI.m_AnimParameter_DamageSide);
-                            sync.AP_DamageBodyPart = AN.GetInteger(_AI.m_AnimParameter_DamageBodyPart);
-                            sync.AP_AttackId = AN.GetInteger(_AI.m_AnimParameter_AttackId);
-                            
-
-                            if(_AI.m_SpawnRegionParent != null && _AI.m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>() != null)
-                            {
-                                sync.m_SpawnRegionGUID = _AI.m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>().Get();
-                            }else{
-                                sync.m_SpawnRegionGUID = "";
-                            }
-
-                            bool ItWas = m_ClientControlled;
-                            int NewController = instance.myId;
-
-                            if(AnimalsController == true)
-                            {
-                                if(m_ClientControlled == false)
-                                {
-                                    NewController = GetClosestPlayerToAnimal(m_Animal, m_Animal.GetComponent<AnimalUpdates>().ReTakeCoolDown, instance.myId, GameManager.GetPlayerTransform().position, levelid);
-                                    LastFoundPlayer = NewController;
-                                }else{
-                                    NewController = GetClosestPlayerToAnimal(m_Animal, m_Animal.GetComponent<AnimalUpdates>().ReTakeCoolDown, m_ClientController, playersData[m_ClientController].m_Position, playersData[m_ClientController].m_Levelid);
-                                    LastFoundPlayer = NewController;
-                                }
-                                if (NewController != instance.myId)
-                                {
-                                    m_ClientController = NewController;
-                                    m_ClientControlled = true;
-                                    sync.m_Controller = NewController;
-                                }
-                                else
-                                {
-                                    m_ClientController = instance.myId;
-                                    m_ClientControlled = false;
-                                    sync.m_Controller = instance.myId;
-                                }
-                            }else{
-                                m_ClientController = instance.myId;
-                                m_ClientControlled = true;
-                                sync.m_Controller = instance.myId;
-                            }
-
-                            if(m_ClientControlled != ItWas)
-                            {
-                                if(m_ClientControlled == true)
-                                {
-                                    sync.m_ProxySave = _AI.Serialize();
-                                }else{
-                                    //if(m_WaitForAligment != true)
-                                    //{
-                                    //    if (iAmHost == true)
-                                    //    {
-                                    //        using (Packet _packet = new Packet((int)ServerPackets.ASKFORANIMALPROXY))
-                                    //        {
-                                    //            ServerSend.ASKFORANIMALPROXY(1, sync.m_guid);
-                                    //        }
-                                    //    }
-
-                                    //    if (sendMyPosition == true)
-                                    //    {
-                                    //        using (Packet _packet = new Packet((int)ClientPackets.ASKFORANIMALPROXY))
-                                    //        {
-                                    //            _packet.Write(sync.m_guid);
-                                    //            SendTCPData(_packet);
-                                    //        }
-                                    //    }
-                                    //    m_WaitForAligment = true;
-                                    //    return;
-                                    //}
-                                }
-                            }
-
-                            if (_AI.GetAiMode() == AiMode.Dead)
-                            {
-                                sync.m_Hp = 0;
-                                sync.m_Bleeding = false;
-                            } else {
-                                sync.m_Hp = _AI.m_CurrentHP;
-                                sync.m_Bleeding = _AI.m_BleedingOut;
-                            }
-
-                            if(m_Animal.GetComponent<BodyHarvest>() != null)
-                            {
-                                BodyHarvest BH = m_Animal.GetComponent<BodyHarvest>();
-                                sync.m_Meat = BH.m_MeatAvailableKG;
-                                sync.m_Guts = BH.m_GutAvailableUnits;
-                                sync.m_Hide = BH.m_HideAvailableUnits;
-                                sync.m_Frozen = BH.m_PercentFrozen;
-                            }
-                        }
-                        sync.m_name = GetAnimalPrefabName(m_Animal.name);
-                        SendAnimalForValidPlayers(sync, m_Animal.transform.position);
+                        AnimInit();
                     }
+                    
+                    AN.SetFloat(m_AnimParameter_TurnAngle, AP_TurnAngle);
+                    AN.SetFloat(m_AnimParameter_TurnSpeed, AP_TurnSpeed);
+                    AN.SetFloat(m_AnimParameter_Speed, AP_Speed);
+                    AN.SetFloat(m_AnimParameter_Wounded, AP_Wounded);
+                    AN.SetFloat(m_AnimParameter_Roll, AP_Roll);
+                    AN.SetFloat(m_AnimParameter_Pitch, AP_Pitch);
+                    AN.SetFloat(m_AnimParameter_TargetHeading, AP_TargetHeading);
+                    AN.SetFloat(m_AnimParameter_TargetHeadingSmooth, AP_TargetHeadingSmooth);
+                    AN.SetFloat(m_AnimParameter_TapMeter, AP_TapMeter);
+                    AN.SetInteger(m_AnimParameter_AiState, AP_AiState);
+                    AN.SetBool(m_AnimParameter_Corpse, AP_Corpse);
+                    AN.SetBool(m_AnimParameter_Dead, AP_Dead);
+                    AN.SetInteger(m_AnimParameter_DamageSide, AP_DeadSide);
+                    AN.SetInteger(m_AnimParameter_DamageBodyPart, AP_DamageBodyPart);
+                    AN.SetInteger(m_AnimParameter_AttackId, AP_AttackId);
+                }
+            }
+
+            void SetPosition()
+            {
+                if (m_DampingIgnore == true)
+                {
+                    m_Animal.transform.position = m_ToGo;
+                    m_Animal.transform.rotation = m_ToRotate;
+                }else{
+                    m_Animal.transform.position = Vector3.Lerp(m_Animal.transform.position, m_ToGo, Time.deltaTime * DeltaAnimalsMultiplayer);
+                    m_Animal.transform.rotation = Quaternion.Lerp(m_Animal.transform.rotation, m_ToRotate, Time.deltaTime * DeltaAnimalsMultiplayer);
                 }
             }
 
             void Update()
-            {                
-                if (m_Animal != null)
+            {
+                if (m_Animal != null && m_Banned == false)
                 {
-                    if (AnimalsController == false)
+                    if (AnimalsController == false || m_ClientController != instance.myId)
                     {
-                        if(m_ClientController != instance.myId)
-                        {
-                            if (m_InActive == false)
-                            {
-                                m_InActive = true;
-                                string regionGUID = "";
-                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
-                                {
-                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
-                                }
-                                
-                                MakeAnimalActive(m_Animal, false, regionGUID);
-                            }
-                        }else{
-                            if (m_InActive == true)
-                            {
-                                //MelonLogger.Msg("Re-creating animal under my control.");
-                                m_InActive = false;
-                                string regionGUID = "";
-                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
-                                {
-                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
-                                }
-                                MakeAnimalActive(m_Animal, true, regionGUID);
-                                //ReCreateAnimal(m_Animal, m_PendingProxy);
-                                m_PendingProxy = "";
-                            }
-                        }
-                    }else{
-                        if(m_ClientControlled == true)
-                        {
-                            if (m_InActive == false)
-                            {
-
-                                //MelonLogger.Msg("Making controlled by client animal inactive");
-                                m_InActive = true;
-                                string regionGUID = "";
-                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
-                                {
-                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
-                                }
-                                MakeAnimalActive(m_Animal, false, regionGUID);
-                            }
-                        }else{
-                            if (m_InActive == true)
-                            {
-                                m_InActive = false;
-                                string regionGUID = "";
-                                if (m_Animal.GetComponent<AnimalBornMarker>() != null)
-                                {
-                                    regionGUID = m_Animal.GetComponent<AnimalBornMarker>().m_RegionGUID;
-                                }
-                                MakeAnimalActive(m_Animal, true, regionGUID);
-                                //ReCreateAnimal(m_Animal, m_PendingProxy);
-                                m_PendingProxy = "";
-                            }
-                        }
+                        SetAnimations();
+                        SetPosition();
                     }
 
-                    if ((AnimalsController == false || m_ClientControlled == true))
+                    if (m_ClientController == instance.myId)
                     {
-                        if (m_WritenMeshes == false)
-                        {
-                            m_WritenMeshes = true;
-                            WriteDownMesh(m_Animal);
-                        }
-
-                        if (m_Mesh1 != null) { if (m_Mesh1.isVisible == false) { m_Mesh1.enabled = true; m_Mesh1.forceRenderingOff = false; } }
-                        if (m_Mesh2 != null) { if (m_Mesh2.isVisible == false) { m_Mesh2.enabled = true; m_Mesh2.forceRenderingOff = false; } }
-                        if (m_Mesh3 != null) { if (m_Mesh3.isVisible == false) { m_Mesh3.enabled = true; m_Mesh3.forceRenderingOff = false; } }
-
-                        BaseAi _AI = m_Animal.GetComponent<BaseAi>();
-
-                        if (m_ClientController != instance.myId)
-                        {
-                            if(m_DampingIgnore == true)
-                            {
-                                m_Animal.transform.position = m_ToGo;
-                                m_Animal.transform.rotation = m_ToRotate;
-                            }else{
-                                m_Animal.transform.position = Vector3.Lerp(m_Animal.transform.position, m_ToGo, Time.deltaTime * DeltaAnimalsMultiplayer);
-                                m_Animal.transform.rotation = Quaternion.Lerp(m_Animal.transform.rotation, m_ToRotate, Time.deltaTime * DeltaAnimalsMultiplayer);
-                            }
-
-                            if (_AI != null)
-                            {
-                                Animator AN = _AI.m_Animator;
-
-                                AN.SetFloat(_AI.m_AnimParameter_TurnAngle, AP_TurnAngle);
-                                AN.SetFloat(_AI.m_AnimParameter_TurnSpeed, AP_TurnSpeed);
-                                AN.SetFloat(_AI.m_AnimParameter_Speed, AP_Speed);
-                                AN.SetFloat(_AI.m_AnimParameter_Wounded, AP_Wounded);
-                                AN.SetFloat(_AI.m_AnimParameter_Roll, AP_Roll);
-                                AN.SetFloat(_AI.m_AnimParameter_Pitch, AP_Pitch);
-                                AN.SetFloat(_AI.m_AnimParameter_TargetHeading, AP_TargetHeading);
-                                AN.SetFloat(_AI.m_AnimParameter_TargetHeadingSmooth, AP_TargetHeadingSmooth);
-                                AN.SetFloat(_AI.m_AnimParameter_TapMeter, AP_TapMeter);
-                                AN.SetInteger(_AI.m_AnimParameter_AiState, AP_AiState);
-                                AN.SetBool(_AI.m_AnimParameter_Corpse, AP_Corpse);
-                                AN.SetBool(_AI.m_AnimParameter_Dead, AP_Dead);
-                                AN.SetInteger(_AI.m_AnimParameter_DamageSide, AP_DeadSide);
-                                AN.SetInteger(_AI.m_AnimParameter_DamageBodyPart, AP_DamageBodyPart);
-                                AN.SetInteger(_AI.m_AnimParameter_AttackId, AP_AttackId);
-                            }
-                        }
-
-                        _AI.m_CurrentHP = m_Hp;
-
-                        if (m_Hp <= 0)
-                        {
-                            _AI.SetAiMode(AiMode.Dead);
-                        }
+                        m_Banned = true;
+                        RecreateAnimalToSyncable(m_Animal, m_RegionGUID, m_Hp);
                     }
 
-                    if (m_Animal.GetComponent<BodyHarvest>() != null)
-                    {
-                        if (m_Animal.GetComponent<BaseAi>().GetAiMode() == AiMode.Dead || m_Animal.GetComponent<BaseAi>().m_CurrentHP == 0)
-                        {
-                            BodyHarvest BH = m_Animal.GetComponent<BodyHarvest>();
-
-                            if (BH.enabled == true)
-                            {
-                                if (m_Animal.GetComponent<ObjectGuid>().Get() == OtherHarvetingAnimal)
-                                {
-                                    BH.enabled = false;
-                                }
-                            }
-                            else
-                            {
-                                if (m_Animal.GetComponent<ObjectGuid>().Get() != OtherHarvetingAnimal)
-                                {
-                                    BH.enabled = true;
-                                }
-                            }
-                        }
-                    }
-
-                    if (AnimalsController == true || m_ClientController == instance.myId)
-                    {
-                        m_CanSync = true;
-                    }else{
-                        m_CanSync = false;
-                    }
                     if (Time.time > nextActionTimeNR)
                     {
                         nextActionTimeNR += noresponce_perioud;
-
-                        if(AnimalsController == true || m_ClientController == instance.myId)
+                        NoResponce--;
+                        if (NoResponce <= 0)
                         {
-                            if(ReTakeCoolDown > 0)
+                            MelonLogger.Msg(ConsoleColor.Yellow, "Found animal that we not need anymore " + m_Animal.GetComponent<ObjectGuid>().Get());
+                            GameAudioManager.StopAllSoundsFromGameObject(m_Animal);
+                            ObjectGuidManager.UnRegisterGuid(m_Animal.GetComponent<ObjectGuid>().Get());
+
+                            GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+
+                            if (RegionSpawnObj != null)
                             {
-                                ReTakeCoolDown = ReTakeCoolDown-1;
+                                RegionSpawnObj.GetComponent<SpawnRegionAnimalsList>().m_Spawned--;
                             }
-                        }
-                        if (AnimalsController == false && m_ClientController != instance.myId)
-                        {
-                            NoResponce = NoResponce - 1;
-                            if (NoResponce <= 0)
-                            {
-                                MelonLogger.Msg("Found animal that we not need anymore " + m_Animal.GetComponent<ObjectGuid>().Get());
-
-                                if (m_Animal.GetComponent<ObjectGuid>() != null && m_Animal.GetComponent<ObjectGuid>().Get() == HarvestingAnimal)
-                                {
-                                    ExitHarvesting();
-                                    if(m_Animal.GetComponent<BodyHarvest>() != null)
-                                    {
-                                        m_Animal.GetComponent<BodyHarvest>().enabled = false;
-                                    }
-                                }
-                                ObjectGuidManager.UnRegisterGuid(m_Animal.GetComponent<ObjectGuid>().Get());
-                                UnityEngine.Object.Destroy(m_Animal);
-                            }
-                        }
-                    }
-                    if(Time.time > nextActionDampingOn)
-                    {
-                        if(m_DampingIgnore == true)
-                        {
-                            m_DampingIgnore = false;
-                        }
-                    }
-                    if (Time.time > nextActionSync)
-                    {
-                        nextActionSync += actionSync_perioud;
-                        if (levelid > 3 && (AnimalsController == true || m_ClientController == instance.myId) && IsShatalkerMode() == false && m_CanSync == true)
-                        {
-                            CallSync();
-                        }
-                    }
-                    if (Time.time > nextActionBloodDrop)
-                    {
-                        nextActionBloodDrop += blooddrop_period;
-
-                        if (levelid > 3 && AnimalsController == false && m_Bleeding == true)
-                        {
-                            BaseAi _AI = m_Animal.GetComponent<BaseAi>();
-                            if (_AI.m_BloodTrail != null)
-                            {
-                                BloodTrail _Blood = _AI.m_BloodTrail;
-
-                                Vector3 pos = m_Animal.transform.position;
-                                ++pos.y;
-                                Vector2 insideUnitCircle = UnityEngine.Random.insideUnitCircle;
-                                insideUnitCircle.Normalize();
-                                Vector2 vector2 = insideUnitCircle * UnityEngine.Random.Range(0.0f, 0.75f);
-                                pos.x += vector2.x;
-                                pos.z += vector2.y;
-                                pos -= m_Animal.transform.forward * 0.5f;
-                                RaycastHit hitInfo;
-                                if (!Physics.Raycast(pos, Vector3.down, out hitInfo, float.PositiveInfinity, Utils.m_PhysicalCollisionLayerMask) || (UnityEngine.Object)hitInfo.collider == (UnityEngine.Object)null)
-                                    return;
-                                Vector3 scale = _Blood.m_DecalProjectorScale * UnityEngine.Random.Range(0.5f, 2f);
-                                int uvRectangleIndex = _Blood.m_UvRectangleIndexBloodSmall;
-                                if (Utils.RollChance(50f))
-                                    uvRectangleIndex = _Blood.m_UvRectangleIndexBloodLarge;
-                                GameManager.GetDynamicDecalsManager().CreateDecal(hitInfo.point, _Blood.transform.rotation.eulerAngles.y, hitInfo.normal, uvRectangleIndex, scale, _Blood.GetDecalProjectorType(), GameManager.GetWeatherComponent().IsIndoorEnvironment());
-                            }
+                            
+                            UnityEngine.Object.Destroy(m_Animal);
                         }
                     }
                 }
@@ -5049,6 +5060,7 @@ namespace SkyCoop
         {
             public SpawnRegionAnimalsList(IntPtr ptr) : base(ptr) { }
             public List<string> m_Animals = new List<string>();
+            public int m_Spawned = 0;
         }
 
         public static void ExitHarvesting()
@@ -5457,7 +5469,6 @@ namespace SkyCoop
             { (int)ServerPackets.REVIVE, ClientHandle.REVIVE},
             { (int)ServerPackets.REVIVEDONE, ClientHandle.REVIVEDONE},
             { (int)ServerPackets.ANIMALROLE, ClientHandle.ANIMALROLE},
-            { (int)ServerPackets.ANIMALSYNC, ClientHandle.ANIMALSYNC},
             { (int)ServerPackets.DARKWALKERREADY, ClientHandle.DARKWALKERREADY},
             { (int)ServerPackets.HOSTISDARKWALKER, ClientHandle.HOSTISDARKWALKER},
             { (int)ServerPackets.WARDISACTIVE, ClientHandle.WARDISACTIVE},
@@ -5539,6 +5550,7 @@ namespace SkyCoop
             { (int)ServerPackets.TRYDIAGNISISPLAYER, ClientHandle.TRYDIAGNISISPLAYER},
             { (int)ServerPackets.SENDMYAFFLCTIONS, ClientHandle.SENDMYAFFLCTIONS},
             { (int)ServerPackets.CUREAFFLICTION, ClientHandle.CUREAFFLICTION},
+            { (int)ServerPackets.ANIMALTEST, ClientHandle.ANIMALTEST},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -6046,23 +6058,6 @@ namespace SkyCoop
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
         }
 
-        public static void AlignAnimalWithProxy(string Proxy, string _guid)
-        {
-            GameObject animal = ObjectGuidManager.Lookup(_guid);
-
-            if(animal != null)
-            {
-                animal.GetComponent<BaseAi>().Deserialize(Proxy);
-
-                AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
-
-                if (au != null)
-                {
-                    au.m_WaitForAligment = false;
-                }
-            }
-        }
-
         public static void DeleteAnimal(string _guid)
         {
             //MelonLogger.Msg("Got signal to delete " + _guid + " animal");
@@ -6086,7 +6081,7 @@ namespace SkyCoop
 
                 if (animal.GetComponent<AnimalUpdates>() != null)
                 {
-                    if(AnimalsController == true || au.m_ClientController == instance.myId)
+                    if(AnimalsController == true)
                     {
                         animal.GetComponent<BaseAi>().ApplyDamage(damage, DamageSource.Player, "");
                         MelonLogger.Msg("After apply damage current HP Is " + animal.GetComponent<BaseAi>().m_CurrentHP);
@@ -6095,93 +6090,71 @@ namespace SkyCoop
             }
         }
 
-
-        public static void DoAnimalSync(AnimalSync obj)
+        public static void SetAnimationParams(GameObject animal, AnimalAnimsSync obj)
         {
-            if(obj.m_LevelD != levelid)
+            AnimalActor au = animal.GetComponent<AnimalActor>();
+            if (!au)
             {
                 return;
             }
-            string _guid = obj.m_guid;
-            string prefabName = obj.m_name;
-            bool AnimalExists = false;
-            bool ShouldRecreate = false;
 
-            if(obj.m_Controller == instance.myId)
-            {
-                ShouldRecreate = true;
-            }else{
-                ShouldRecreate = false;
-            }
+            au.AP_TurnAngle = obj.AP_TurnAngle;
+            au.AP_TurnSpeed = obj.AP_TurnSpeed;
+            au.AP_Speed = obj.AP_Speed;
+            au.AP_Wounded = obj.AP_Wounded;
+            au.AP_Roll = obj.AP_Roll;
+            au.AP_Pitch = obj.AP_Pitch;
+            au.AP_TargetHeading = obj.AP_TargetHeading;
+            au.AP_TargetHeadingSmooth = obj.AP_TargetHeadingSmooth;
+            au.AP_TapMeter = obj.AP_TapMeter;
+            au.AP_AiState = obj.AP_AiState;
+            au.AP_Corpse = obj.AP_Corpse;
+            au.AP_Dead = obj.AP_Dead;
+            au.AP_DeadSide = obj.AP_DeadSide;
+            au.AP_DamageBodyPart = obj.AP_DamageBodyPart;
+            au.AP_AttackId = obj.AP_AttackId;
+        }
 
-            if(NoRabbits == true && obj.m_name.Contains("Rabbit"))
+        public static void SetAnimalPosition(GameObject animal, Vector3 xyz, Quaternion xyzw)
+        {
+            AnimalActor au = animal.GetComponent<AnimalActor>();
+            if (!au)
             {
-               // MelonLogger.Msg("Got sync of rabbit, refuse to use this.");
                 return;
             }
+            au.m_ToGo = xyz;
+            au.m_ToRotate = xyzw;
+        }
 
-            //MelonLogger.Msg(_guid + " Got animal " + obj.m_name);
-
-            GameObject animal = ObjectGuidManager.Lookup(_guid);
-
-            if (animal != null)
+        public static void DoAnimalSync(AnimalCompactData dat, AnimalAnimsSync anim)
+        {
+            if (NoAnimalSync)
             {
-                AnimalExists = true;
-                BaseAi _AI = animal.GetComponent<BaseAi>();
-                AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
-
-                if (animal.GetComponent<AnimalUpdates>() != null)
+                return;
+            }
+            GameObject animal = ObjectGuidManager.Lookup(dat.m_GUID);
+            if (animal)
+            {
+                if (animal.GetComponent<AnimalActor>() != null)
                 {
-                    if (au.m_Banned == true)
-                    {
-                        return;
-                    }
-                    if (obj.m_ProxySave != "")
-                    {
-                        au.m_PendingProxy = obj.m_ProxySave;
-                    }
-                    au.m_ClientController = obj.m_Controller;
-
-                    if (obj.m_Controller != instance.myId)
-                    {
-                        au.m_ToGo = obj.m_position;
-                        au.m_ToRotate = obj.m_rotation;
-
-                        au.AP_TurnAngle = obj.AP_TurnAngle;
-                        au.AP_TurnSpeed = obj.AP_TurnSpeed;
-                        au.AP_Speed = obj.AP_Speed;
-                        au.AP_Wounded = obj.AP_Wounded;
-                        au.AP_Roll = obj.AP_Roll;
-                        au.AP_Pitch = obj.AP_Pitch;
-                        au.AP_TargetHeading = obj.AP_TargetHeading;
-                        au.AP_TargetHeadingSmooth = obj.AP_TargetHeadingSmooth;
-                        au.AP_TapMeter = obj.AP_TapMeter;
-                        au.AP_AiState = obj.AP_AiState;
-                        au.AP_Corpse = obj.AP_Corpse;
-                        au.AP_Dead = obj.AP_Dead;
-                        au.AP_DeadSide = obj.AP_DeadSide;
-                        au.AP_DamageBodyPart = obj.AP_DamageBodyPart;
-                        au.AP_AttackId = obj.AP_AttackId;
-
-                        _AI.m_CurrentHP = obj.m_Hp;
-                        au.m_Hp = obj.m_Hp;
-                        au.m_Bleeding = obj.m_Bleeding;
-                    }
-
-                    au.NoResponce = 5;
-                    BodyHarvest BH = animal.GetComponent<BodyHarvest>();
-                    BH.m_MeatAvailableKG = obj.m_Meat;
-                    BH.m_GutAvailableUnits = obj.m_Guts;
-                    BH.m_HideAvailableUnits = obj.m_Hide;
-                    BH.m_PercentFrozen = obj.m_Frozen;
+                    animal.GetComponent<AnimalActor>().NoResponce = 5;
+                    animal.GetComponent<AnimalActor>().m_Hp = dat.m_Health;
+                    animal.GetComponent<AnimalActor>().m_RegionGUID = dat.m_RegionGUID;
+                    animal.GetComponent<AnimalActor>().m_ClientController = dat.m_LastController;
+                    SetAnimationParams(animal, anim);
+                    SetAnimalPosition(animal, dat.m_Position, dat.m_Rotation);
                 }
             }else{
-                AnimalExists = false;
-            }
-
-            if (AnimalExists == false)
-            {
-                SpawnAnimal(prefabName, obj.m_position, _guid, obj.m_SpawnRegionGUID, ShouldRecreate, obj.m_ProxySave, obj.m_Hp);
+                animal = SpawnAnimalActor(dat.m_PrefabName, dat.m_Position, dat.m_Rotation, dat.m_GUID, dat.m_RegionGUID);
+                if (animal && animal.GetComponent<AnimalActor>())
+                {
+                    animal.GetComponent<AnimalActor>().NoResponce = 5;
+                    animal.GetComponent<AnimalActor>().m_Hp = dat.m_Health;
+                    animal.GetComponent<AnimalActor>().m_RegionGUID = dat.m_RegionGUID;
+                    animal.GetComponent<AnimalActor>().m_ClientController = dat.m_LastController;
+                    SetAnimationParams(animal, anim);
+                    SetAnimalPosition(animal, dat.m_Position, dat.m_Rotation);
+                }
             }
         }
 
@@ -6446,8 +6419,8 @@ namespace SkyCoop
         private static readonly List<Action> executeCopiedOnMainThread = new List<Action>();
         private static bool actionToExecuteOnMainThread = false;
 
-        Vector3 previoustickpos;
-        Quaternion previoustickrot;
+        private static Vector3 previoustickpos;
+        private static Quaternion previoustickrot;
 
         public static Vector3 SnappedPosition(Vector3 pointToSnap, Vector3 blockCenterPosition)
         {
@@ -6507,47 +6480,6 @@ namespace SkyCoop
             }
         }
 
-        public void DoWeatherOverride()
-        {
-            Weather weatherComponent = GameManager.GetWeatherComponent();
-            if (!InteriorTemperatureTrigger.m_PlayerInside)
-                weatherComponent.m_IndoorTemperatureCelsius = 0; //this.m_IndoorTemperatureCelsius;
-            weatherComponent.m_HighTempMinCelsius = 0; //this.m_HighTempMinCelsius;
-            weatherComponent.m_HighTempMaxCelsius = 0; //this.m_HighTempMaxCelsius;
-            weatherComponent.m_LowTempMinCelsius = 0; //this.m_LowTempMinCelsius;
-            weatherComponent.m_LowTempMaxCelsius = 0; //this.m_LowTempMaxCelsius;
-            weatherComponent.m_BlizzardDegreesDrop = 0; //this.m_BlizzardDegreesDrop;
-            weatherComponent.m_BlizzardDegreesChangePerSecond = 0; //this.m_BlizzardDegreesChangePerSecond;
-            weatherComponent.m_HourWarmingBegins = 0; //this.m_HourWarmingBegins;
-            weatherComponent.m_HourCoolingBegins = 0; //this.m_HourCoolingBegins;
-                                                      //if (this.m_AuroraEarlyWindowProbability != 0)
-            weatherComponent.m_AuroraEarlyWindowProbability = 0; //this.m_AuroraEarlyWindowProbability;
-            //if (this.m_AuroraLateWindowProbability != 0)
-            weatherComponent.m_AuroraLateWindowProbability = 0; //this.m_AuroraLateWindowProbability;
-            weatherComponent.m_DegreesPerSecondChangeLow = 0; //this.m_DegreesPerSecondChangeLow;
-            weatherComponent.m_DegreesPerSecondChangeMedium = 0; //this.m_DegreesPerSecondChangeMedium;
-            weatherComponent.m_DegreesPerSecondChangeHigh = 0; //this.m_DegreesPerSecondChangeHigh;
-            weatherComponent.m_TimeToDisplayTempWhenChanged = 0; //this.m_TimeToDisplayTempWhenChanged;
-            weatherComponent.m_MinWindSpeedForBlowingSnow = 0; //this.m_MinWindSpeedForBlowingSnow;
-            weatherComponent.m_BlowingSnowTransitionSeconds = 0; //this.m_BlowingSnowTransitionSeconds;
-            weatherComponent.m_SkyboxHorizonAdjust = new Vector4(); //this.m_SkyboxHorizonAdjust;
-            //weatherComponent.RegisterSceneWeatherSets(new WeatherSet); //this.m_WeatherSetOverrides);
-            GameManager.GetWindComponent().ApplySceneOverrides(null);
-            UniStormWeatherSystem.m_MinimumFogDensityScale = 0; //this.m_MinimumFogDensityScale;
-        }
-
-        public static void ProcessingReconnect()
-        {
-            if(LastConnectedIp != "")
-            {
-                if(sendMyPosition == true)
-                {
-                    Disconnect();
-                }
-                DoConnectToIp(LastConnectedIp);
-            }
-        }
-
         public static void SkipRTTime(int h)
         {
             int totaltime = OverridedHourse + h;
@@ -6581,93 +6513,6 @@ namespace SkyCoop
             RestCon.RollForRestInterruption();
             GameManager.GetRestComponent().m_WakeUpAtFullRest = false;
             //MelonLogger.Msg("Called fake sleep");
-        }
-
-        public static void SleepTracker(List<MyMod.MultiPlayerClientStatus> _status)
-        {
-            int SleepersNeed = _status.Count;
-            int Sleepers = 0;
-            int Deads = 0;
-            bool EveryOneIsSleeping = false;
-            List<int> SleepingHours = new List<int>();
-
-            for (int i = 0; i < _status.Count; i++)
-            {
-                if (_status[i] != null)
-                {
-                    MultiPlayerClientStatus mPs = _status[i];
-                    //MelonLoader.MelonLogger.Msg("Player ID " + mPs.m_ID + " NAME " + mPs.m_Name + " SLEEP " + mPs.m_Sleep + " DEAD " + mPs.m_Dead);
-                    if (mPs.m_Sleep == true || mPs.m_Dead == true)
-                    {
-                        Sleepers = Sleepers + 1;
-                    }
-                    if(mPs.m_Dead == true)
-                    {
-                        Deads = Deads + 1;
-                    }
-
-                    if(iAmHost == true)
-                    {
-                        SleepingHours.Add(playersData[mPs.m_ID].m_SleepHours);
-                    }
-                }
-            }
-            string SleepersText = "Players sleep " + Sleepers + "/" + SleepersNeed;
-            if (WaitForSleepLable != null)
-            {
-                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING OTHER PLAYERS TO SLEEP\n" + SleepersText;
-            }
-            if (Sleepers >= SleepersNeed && Deads < SleepersNeed)
-            {
-                EveryOneIsSleeping = true;
-            }
-
-            if (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true && EveryOneIsSleeping == true)
-            {
-                if (WaitForSleepLable != null)
-                {
-                    WaitForSleepLable.SetActive(false);
-                }
-                if (SleepingButtons != null)
-                {
-                    SleepingButtons.SetActive(true);
-                }
-                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Rest != null)
-                {
-                    InterfaceManager.m_Panel_Rest.OnRest();
-                }
-            }
-
-            if(iAmHost == true)
-            {
-                if (EveryOneIsSleeping == true)
-                {
-                    if ((GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true || IsDead == true) && IsCycleSkiping == false)
-                    {
-                        IsCycleSkiping = true;
-                        SleepingHours.Sort();
-                        int Skip = SleepingHours[SleepingHours.Count - 1];
-
-                        for (int i = 0; i < playersData.Count; i++)
-                        {
-                            if (playersData[i] != null)
-                            {
-                                playersData[i].m_SleepHours = 0;
-                            }
-                        }
-                        if (Skip > 0)
-                        {
-                            if(IsDead == true)
-                            {
-                                SimpleSleepWithNoSleep(Skip);
-                            }
-                            SkipRTTime(Skip);
-                        }
-                    }
-                }else{
-                    IsCycleSkiping = false;
-                }
-            }
         }
 
         public static void SendConsume(bool IsDrink)
@@ -7092,28 +6937,29 @@ namespace SkyCoop
             return result;
         }
 
-        private static void EverySecond()
+        public class AnimalsSpawnsShort
         {
-            if(DsServerIsUp == true)
-            {
-                SecondsWithoutSaving = SecondsWithoutSaving + 1;
-                if(SecondsWithoutSaving > 300)
-                {
-                    SecondsWithoutSaving = 0;
-                    ConsoleManager.CONSOLE_save();
-                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save 5 minutes later!");
-                }
-            }
+            public Vector3 m_Position = new Vector3(0,0,0);
+            public SpawnRegion m_SPR = null;
+            public string m_GUID = "";
 
-            if (GameManager.m_SpawnRegionManager != null && AnimalsController == true)
+            public AnimalsSpawnsShort(SpawnRegion spR)
+            {
+                m_Position = spR.m_Center;
+                m_SPR = spR;
+                m_GUID = spR.GetComponent<ObjectGuid>().Get();
+            }
+        }
+
+        public static void PopulateAnimals()
+        {
+            if (GameManager.m_SpawnRegionManager != null)
             {
                 Il2CppSystem.Collections.Generic.List<SpawnRegion> Regions = GameManager.GetSpawnRegionManager().m_SpawnRegions;
                 for (int i = 0; i < Regions.Count; i++) // Checking each spawn region
                 {
                     SpawnRegion spR = Regions[i];
                     GameObject spRobj = Regions[i].gameObject;
-                    Vector3 PlayerV3 = GameManager.GetPlayerTransform().position;
-                    //if (Vector3.Distance(spR.m_Center, PlayerV3) <= spR.m_Radius + MinimalDistanceForSpawn) // If this region near.
 
                     if (AnyOneClose(spR.m_Radius + MinimalDistanceForSpawn, spR.m_Center)) // If anyone close to this region.
                     {
@@ -7131,13 +6977,15 @@ namespace SkyCoop
                                 if (animal != null)
                                 {
                                     BaseAi AI = animal.GetComponent<BaseAi>();
-                                    if(GetClosestDistanceFromEveryone(animal.transform.position) > MaximalDistanceForAnimalRender) // If animal far away from everyone disable it.
+                                    if (GetClosestDistanceFromEveryone(animal.transform.position) > MaximalDistanceForAnimalRender) // If animal far away from everyone disable it.
                                     {
-                                        if(animal.activeSelf == true)
+                                        if (animal.activeSelf == true)
                                         {
                                             animal.SetActive(false);
                                         }
-                                    }else{ // If animal close, but has been disabled, re-enable it.
+                                    }
+                                    else
+                                    { // If animal close, but has been disabled, re-enable it.
                                         if (animal.activeSelf == false)
                                         {
                                             animal.SetActive(true);
@@ -7146,7 +6994,9 @@ namespace SkyCoop
                                 }
                             }
                         }
-                    }else{ // If spawn region is far away from everyone.
+                    }
+                    else
+                    { // If spawn region is far away from everyone.
                         if (spRobj != null && spRobj.GetComponent<SpawnRegionAnimalsList>() != null)
                         {
                             List<string> AnimalsGuids = spRobj.GetComponent<SpawnRegionAnimalsList>().m_Animals;
@@ -7155,7 +7005,7 @@ namespace SkyCoop
                                 for (int i2 = 0; i2 < AnimalsGuids.Count; i2++) // Checking spawned animals.
                                 {
                                     GameObject animal = ObjectGuidManager.Lookup(AnimalsGuids[i2]);
-                                    if(animal != null)
+                                    if (animal != null)
                                     {
                                         BaseAi AI = animal.GetComponent<BaseAi>();
                                         // If animal is valid to unload, unloading it.
@@ -7171,6 +7021,213 @@ namespace SkyCoop
                         }
                     }
                 }
+            }
+        }
+
+        public static void ProcessSleep(int Sleepers, int SleepersNeed, int Deads, int FinalHours)
+        {
+            bool EveryOneIsSleeping = false;
+            string SleepersText = "Players sleep " + Sleepers + "/" + SleepersNeed;
+            if (WaitForSleepLable != null)
+            {
+                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING OTHER PLAYERS TO SLEEP\n" + SleepersText;
+            }
+            if (Sleepers >= SleepersNeed && Deads < SleepersNeed)
+            {
+                EveryOneIsSleeping = true;
+            }
+
+            if (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true && EveryOneIsSleeping == true)
+            {
+                if (WaitForSleepLable != null)
+                {
+                    WaitForSleepLable.SetActive(false);
+                }
+                if (SleepingButtons != null)
+                {
+                    SleepingButtons.SetActive(true);
+                }
+                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Rest != null)
+                {
+                    InterfaceManager.m_Panel_Rest.OnRest();
+                }
+            }
+
+            if (iAmHost == true)
+            {
+                if (EveryOneIsSleeping == true)
+                {
+                    if ((GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true || IsDead == true) && IsCycleSkiping == false)
+                    {
+                        IsCycleSkiping = true;
+                        int Skip = FinalHours;
+
+                        for (int i = 0; i < playersData.Count; i++)
+                        {
+                            if (playersData[i] != null)
+                            {
+                                playersData[i].m_SleepHours = 0;
+                            }
+                        }
+                        if (Skip > 0)
+                        {
+                            if (IsDead == true)
+                            {
+                                SimpleSleepWithNoSleep(Skip);
+                            }
+                            SkipRTTime(Skip);
+                        }
+                    }
+                }else{
+                    IsCycleSkiping = false;
+                }
+            }
+        }
+
+        public static List<MultiPlayerClientStatus> SleepTrackerAndTimeOutAndAnimalControllers()
+        {
+            List<MultiPlayerClientStatus> L = new List<MultiPlayerClientStatus>();
+            using (Packet _packet = new Packet((int)ServerPackets.PLAYERSSTATUS))
+            {
+                int ReadCount = 0;
+                int Sleepers = 0;
+                int Deads = 0;
+                List<int> SleepingHours = new List<int>();
+                if (Application.isBatchMode == false)
+                {
+                    ReadCount = ReadCount + 1;
+                    MultiPlayerClientStatus me = new MyMod.MultiPlayerClientStatus();
+                    me.m_ID = 0;
+                    me.m_Name = MyChatName;
+                    me.m_Sleep = IsSleeping;
+                    if (me.m_Sleep || me.m_Dead)
+                    {
+                        Sleepers = Sleepers + 1;
+                    }
+                    if (me.m_Dead)
+                    {
+                        Deads = Deads + 1;
+                    }
+                    me.m_Dead = IsDead;
+                    L.Add(me);
+                }
+
+                bool shouldBeControllerME = false;
+                if (IsDead == false)
+                {
+                    shouldBeControllerME = ShouldbeAnimalController(MyTicksOnScene, levelid, 0);
+                }else{
+                    shouldBeControllerME = false;
+                }
+
+                if (shouldBeControllerME != AnimalsController)
+                {
+                    AnimalsController = shouldBeControllerME;
+                    DisableOriginalAnimalSpawns();
+                }
+                for (int i = 1; i <= Server.MaxPlayers; i++)
+                {
+                    if (Server.clients[i] != null && Server.clients[i].IsBusy() == true)
+                    {
+                        ReadCount = ReadCount + 1;
+                        MultiPlayerClientStatus other = new MultiPlayerClientStatus();
+                        other.m_ID = i;
+                        other.m_Name = playersData[i].m_Name;
+                        if (playersData[i].m_SleepHours > 0)
+                        {
+                            other.m_Sleep = true;
+                        }else{
+                            other.m_Sleep = false;
+                        }
+                        if (playersData[i].m_AnimState == "Knock")
+                        {
+                            other.m_Dead = true;
+                        }else{
+                            other.m_Dead = false;
+                        }
+
+                        if(other.m_Sleep || other.m_Dead)
+                        {
+                            Sleepers = Sleepers + 1;
+                        }
+                        if (other.m_Dead)
+                        {
+                            Deads = Deads + 1;
+                        }
+                        if(iAmHost == true)
+                        {
+                            SleepingHours.Add(playersData[other.m_ID].m_SleepHours);
+                        }
+                        L.Add(other);
+                        Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
+                        if (Server.clients[i].TimeOutTime > 10)
+                        {
+                            MelonLogger.Msg("Client " + i + " no responce time " + Server.clients[i].TimeOutTime);
+                        }
+                        if (Server.clients[i].TimeOutTime > 30)
+                        {
+                            Server.clients[i].TimeOutTime = 0;
+                            MyMod.MultiplayerChatMessage DisconnectMessage = new MyMod.MultiplayerChatMessage();
+                            DisconnectMessage.m_Type = 0;
+                            DisconnectMessage.m_By = playersData[i].m_Name;
+                            DisconnectMessage.m_Message = playersData[i].m_Name + " disconnected!";
+                            SendMessageToChat(DisconnectMessage, true);
+                            ResetDataForSlot(i);
+                            MelonLogger.Msg("Client " + i + " processing disconnect");
+                            Server.clients[i].udp.Disconnect();
+                        }
+                        if (playersData[i] != null)
+                        {
+                            if (Server.clients[i].IsBusy() == true)
+                            {
+                                bool shouldBeController = false;
+                                if (playersData[i].m_AnimState != "Knock")
+                                {
+                                    shouldBeController = ShouldbeAnimalController(playersData[i].m_TicksOnScene, playersData[i].m_Levelid, i);
+                                }else{
+                                    shouldBeController = false;
+                                }
+                                ServerSend.ANIMALROLE(i, shouldBeController);
+                            }
+                        }
+                    }
+                }
+
+                _packet.Write(ReadCount);
+                for (int i = 0; i < L.Count; i++)
+                {
+                    _packet.Write(L[i]);
+                }
+                
+                ServerSend.SendUDPDataToAll(_packet);
+                PlayersOnServer = ReadCount;
+                SleepingHours.Sort();
+                int Skip = 0;
+                if (SleepingHours.Count > 0)
+                {
+                    Skip = SleepingHours[SleepingHours.Count - 1];
+                }
+                ProcessSleep(Sleepers, ReadCount, Deads, Skip);
+            }
+            return L;
+        }
+
+        private static void EverySecond()
+        {
+            if(DsServerIsUp == true)
+            {
+                SecondsWithoutSaving = SecondsWithoutSaving + 1;
+                if(SecondsWithoutSaving > 300)
+                {
+                    SecondsWithoutSaving = 0;
+                    ConsoleManager.CONSOLE_save();
+                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save 5 minutes later!");
+                }
+            }
+
+            if(AnimalsController == true)
+            {
+                //PopulateAnimals();
             }
 
             if (RegularUpdateSeconds > 0)
@@ -7474,39 +7531,8 @@ namespace SkyCoop
 
             if (iAmHost == true)
             {
-                List<MyMod.MultiPlayerClientStatus> MPStatus = ServerSend.PLAYERSSTATUS();
-                PlayersOnServer = MPStatus.Count;
-                SleepTracker(MPStatus);
-                UpdatePlayerStatusMenu(MPStatus);
-                SetAnimalControllers();
-
-                for (int i = 1; i <= MaxPlayers; i++)
-                {
-                    //MelonLogger.Msg("Client " + i + " no responce time " + Server.clients[i].TimeOutTime+ " Busy "+ Server.clients[i].IsBusy());
-                    if (Server.clients[i].IsBusy() == true)
-                    {
-                        //if(Server.UsingSteamWorks == false)
-                        //{
-                        Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
-                        //}
-                        if (Server.clients[i].TimeOutTime > 10)
-                        {
-                            MelonLogger.Msg("Client " + i + " no responce time " + Server.clients[i].TimeOutTime);
-                        }
-                        if (Server.clients[i].TimeOutTime > 30)
-                        {
-                            Server.clients[i].TimeOutTime = 0;
-                            MyMod.MultiplayerChatMessage DisconnectMessage = new MyMod.MultiplayerChatMessage();
-                            DisconnectMessage.m_Type = 0;
-                            DisconnectMessage.m_By = playersData[i].m_Name;
-                            DisconnectMessage.m_Message = playersData[i].m_Name + " disconnected!";
-                            SendMessageToChat(DisconnectMessage, true);
-                            ResetDataForSlot(i);
-                            MelonLogger.Msg("Client " + i + " processing disconnect");
-                            Server.clients[i].udp.Disconnect();
-                        }
-                    }
-                }
+                List<MultiPlayerClientStatus> PlayersListDat = SleepTrackerAndTimeOutAndAnimalControllers();
+                UpdatePlayerStatusMenu(PlayersListDat);
             }
 
             if (LastConnectedIp != "" || iAmHost == true)
@@ -7598,13 +7624,11 @@ namespace SkyCoop
         }
 
         public static float nextActionTime = 0.0f;
-        public float period = 5f;
+        public static float period = 5f;
         public static float nextActionTimeAniamls = 0.0f;
-        public float periodAniamls = 0.3f;
-        public float nextActionTimeSecond = 0.0f;
-        public float periodSecond = 1f;
-
-        public bool DeathTrigger = false;
+        public static float periodAniamls = 0.3f;
+        public static float nextActionTimeSecond = 0.0f;
+        public static float periodSecond = 1f;
 
         public static bool IsShatalkerMode() // This is darlkwalker mode active.
         {
@@ -7647,48 +7671,6 @@ namespace SkyCoop
 
         public static void WriteDownMesh(GameObject animal)
         {
-
-            //SkinnedMeshRenderer mesh1 = null;
-            //SkinnedMeshRenderer mesh2 = null;
-            //SkinnedMeshRenderer mesh3 = null;
-
-            //if (animal.name.StartsWith("WILDLIFE_Wolf"))
-            //{
-            //    //7 Rig, Meshs 12,13
-            //    mesh1 = animal.transform.GetChild(7).GetChild(12).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //    mesh2 = animal.transform.GetChild(7).GetChild(13).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //}
-            //else if (animal.name.StartsWith("WILDLIFE_Stag"))
-            //{
-            //    //23 Mesh
-            //    mesh1 = animal.transform.GetChild(23).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //}
-
-            //else if (animal.name.StartsWith("WILDLIFE_Rabbit"))
-            //{
-            //    // 6,7 Meshs
-            //    mesh1 = animal.transform.GetChild(6).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //    mesh2 = animal.transform.GetChild(7).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //}
-            //else if (animal.name.StartsWith("WILDLIFE_Moose"))
-            //{
-            //    // 24,25 Meshs
-            //    mesh1 = animal.transform.GetChild(24).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //    mesh2 = animal.transform.GetChild(25).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //}
-            //else if (animal.name.StartsWith("WILDLIFE_Bear"))
-            //{
-            //    // 10,11,12 Meshs
-            //    mesh1 = animal.transform.GetChild(10).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //    mesh2 = animal.transform.GetChild(11).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //    mesh3 = animal.transform.GetChild(12).gameObject.GetComponent<SkinnedMeshRenderer>();
-            //}
-
-            //AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
-
-            //if (mesh1 != null){if(au != null){au.m_Mesh1 = mesh1;}}
-            //if (mesh2 != null){if(au != null){au.m_Mesh2 = mesh2;}}
-            //if (mesh3 != null){if(au != null){au.m_Mesh3 = mesh3;}}
         }
 
         public static string GetAnimalPrefabName(string _name)
@@ -7740,52 +7722,70 @@ namespace SkyCoop
             }
         }
 
-        public static void ReCreateAnimal(GameObject animal, string proxy = "")
+        public static Animator RemoveAnimalComponents(GameObject animal)
         {
             if (animal == null)
             {
-                return;
+                return null;
             }
-            animal.SetActive(false);
-            Vector3 pos = animal.transform.position;
-            Quaternion rotation = animal.transform.rotation;
-            string _GUID = animal.GetComponent<ObjectGuid>().Get();
-            string prefab = GetAnimalPrefabName(animal.name);
-            //MelonLogger.Msg("Trying re-create animal " + prefab + " " + _GUID);
-            AnimalUpdates AU = animal.GetComponent<AnimalUpdates>();
-            float hp = animal.GetComponent<BaseAi>().m_CurrentHP;
-            AiMode LastAiState = (AiMode)AU.AP_AiState;
-
-            if(animal.GetComponent<BaseAi>().m_CurrentHP == 0 || AU.m_Hp == 0 && AU.AP_AiState == 2 || animal.GetComponent<Harvestable>() != null && (animal.GetComponent<Harvestable>().enabled == true))
+            if (animal.transform.parent != null && animal.transform.parent.GetComponent<MoveAgent>() != null)
             {
-                MelonLogger.Msg("Recreation canceled");
-                return;
+                UnityEngine.Object.DestroyImmediate(animal.transform.parent.GetComponent<MoveAgent>());
+            }
+            if (animal.transform.parent != null && animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>());
+            }
+            if (animal.GetComponent<AiTarget>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiTarget>());
+            }
+            if (animal.GetComponent<AiWolf>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiWolf>());
+            }
+            if (animal.GetComponent<AiStag>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiStag>());
+            }
+            if (animal.GetComponent<AiRabbit>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiRabbit>());
+            }
+            //MelonLogger.Msg("AiRabbit yahooo");
+            if (animal.GetComponent<AiMoose>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiMoose>());
             }
 
-            if(AU != null)
+            if (animal.GetComponent<AiBear>() != null)
             {
-                AU.m_Banned = true;
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiBear>());
             }
-
-            string JsonProx = proxy;
-
-            if(JsonProx == "")
+            if (animal.GetComponent<CharacterController>() != null)
             {
-                JsonProx = animal.GetComponent<BaseAi>().Serialize();
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<CharacterController>());
             }
-            string regionGUID = "";
-            if (animal.GetComponent<BaseAi>().m_SpawnRegionParent != null && animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>() != null)
+            //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
+            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
             {
-                regionGUID = animal.GetComponent<BaseAi>().m_SpawnRegionParent.gameObject.GetComponent<ObjectGuid>().Get();
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
             }
-            UnityEngine.Object.Destroy(animal);
-            ObjectGuidManager.UnRegisterGuid(_GUID);
-            MelonLogger.Msg("Recreating animal with state "+ LastAiState);
-            SpawnAnimal(prefab, pos, _GUID, regionGUID, true, JsonProx, hp, LastAiState);
-            return;
+            //MelonLogger.Msg("Blackboard DA BECAUSE DA");
+            if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
+            {
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<TLDBehaviourTreeOwner>());
+            }
+            if (animal.GetComponent<BaseAi>() != null)
+            {
+                Animator anim = animal.GetComponent<BaseAi>().m_Animator;
+                UnityEngine.Object.DestroyImmediate(animal.GetComponent<BaseAi>());
+                return anim;
+            }
+            return null;
         }
 
-        public static void MakeAnimalActive(GameObject animal, bool active, string sRegionGUID)
+        public static void MakeAnimalActive(GameObject animal, bool active)
         {
             //MelonLogger.Msg("Nachinayem kuhat");
             if (animal == null)
@@ -7796,14 +7796,6 @@ namespace SkyCoop
             //MelonLogger.Msg("Animal narmalna");
             if (animal.transform.parent != null && animal.transform.parent.GetComponent<MoveAgent>() != null)
             {
-                //UnityEngine.Component.Destroy(animal.transform.parent.GetComponent<MoveAgent>());
-                if(active == true)
-                {
-                    if (animal.GetComponent<BaseAi>().CreateMoveAgent(null) == true && !animal.GetComponent<BaseAi>().GetMoveAgent().Warp(animal.transform.position, 1f, true, -1))
-                    {
-                        MelonLogger.Msg(ConsoleColor.Red, "[Reactivator] Problems with spawn animal because it has invalid MoveAgent!");
-                    }
-                }
                 animal.transform.parent.GetComponent<MoveAgent>().enabled = active;
                 //MelonLogger.Msg("[MoveAgent]-> off");
             }
@@ -7878,138 +7870,39 @@ namespace SkyCoop
             if (animal.GetComponent<BaseAi>() != null)
             {
                 animal.GetComponent<BaseAi>().enabled = active;
-
-                if (active == true)
-                {
-                    BaseAi _AI = animal.GetComponent<BaseAi>();
-
-                    GameObject RegionSpawnObj = ObjectGuidManager.Lookup(sRegionGUID);
-
-                    if(RegionSpawnObj != null)
-                    {
-                        SpawnRegion sp = RegionSpawnObj.GetComponent<SpawnRegion>();
-                        if(sp.GetComponent<SpawnRegionAnimalsList>() != null)
-                        {
-                            SpawnRegionAnimalsList SRAL = sp.GetComponent<SpawnRegionAnimalsList>();
-                            if (SRAL.m_Animals.Contains(animal.GetComponent<ObjectGuid>().Get()) == false)
-                            {
-                                SRAL.m_Animals.Add(animal.GetComponent<ObjectGuid>().Get());
-                            }
-                        }
-                    }
-                }
-            }
-            //MelonLogger.Msg("BaseAi NE SUS");
-            if(animal.GetComponent<AnimalUpdates>() != null)
-            {
-                AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
-                au.nextActionDampingOn = Time.time+au.dampingOn_perioud;
-                au.m_DampingIgnore = true;
             }
         }
-
-        public static void SpawnAnimal(string prefabName, Vector3 v3spawn, string _guid, string sRegionGUID, bool recreateion = false, string prox = "", float health = -1, AiMode state = AiMode.Idle)
+        public static GameObject SpawnAnimalActor(string prefabName, Vector3 v3, Quaternion rot, string GUID, string RegionGUID)
         {
-            GameObject checkanimal = ObjectGuidManager.Lookup(_guid);
-            if(checkanimal != null)
+            GameObject reference = GetGearItemObject(prefabName);
+
+            if (reference == null)
             {
-                MelonLogger.Msg("Animal " + _guid + " had two instances, destroy old one ");
-                UnityEngine.Object.Destroy(checkanimal);
-                ObjectGuidManager.UnRegisterGuid(_guid);
+                MelonLogger.Msg(ConsoleColor.Red, "Can't create animal actor with prefab name "+ prefabName);
+                return null;
             }
 
-            //UnityEngine.Object original = Resources.Load(prefabName);
-            //GameObject animal = UnityEngine.Object.Instantiate(original) as GameObject;
-
-            GameObject animal = UnityEngine.Object.Instantiate<GameObject>(Resources.Load(prefabName).Cast<GameObject>());
-            animal.name = prefabName;
-            animal.transform.position = v3spawn;
-
-            //MoveAgent AG = animal.transform.parent.GetComponent<MoveAgent>();
-            //AG.m_Target
-
-            BaseAi _AI = animal.GetComponent<BaseAi>();
-            _AI.m_SpawnPos = v3spawn;
-
-            //_AI.m_SpawnRegionParent.InstantiateSpawn
-
-            if (animal.GetComponent<ObjectGuid>() != null)
+            GameObject obj = UnityEngine.Object.Instantiate(reference, v3, rot);
+            AnimalActor act = obj.AddComponent<AnimalActor>();
+            act.m_Animal = obj;
+            act.m_Animator = RemoveAnimalComponents(obj);
+            act.m_ToGo = v3;
+            act.m_ToRotate = rot;
+            Light[] componentsInChildren = (Light[])obj.GetComponentsInChildren<Light>(true);
+            if (componentsInChildren != null)
             {
-                animal.GetComponent<ObjectGuid>().m_Guid = _guid;
-                ObjectGuidManager.RegisterGuid(_guid, animal);
-            }else{
-                animal.AddComponent<ObjectGuid>();
-                animal.GetComponent<ObjectGuid>().m_Guid = _guid;
-                ObjectGuidManager.RegisterGuid(_guid, animal);
+                for (int index = 0; index < componentsInChildren.Length; ++index)
+                    componentsInChildren[index].enabled = false;
             }
 
-            GameObject RegionSpawnObj = ObjectGuidManager.Lookup(sRegionGUID);
-
-            if (RegionSpawnObj != null && RegionSpawnObj.GetComponent<SpawnRegionAnimalsList>() != null)
+            GameObject SRobj = ObjectGuidManager.Lookup(RegionGUID);
+            if(SRobj != null)
             {
-                SpawnRegionAnimalsList SML = RegionSpawnObj.GetComponent<SpawnRegionAnimalsList>();
-                if(SML.m_Animals.Contains(_guid) == false)
-                {
-                    SML.m_Animals.Add(_guid);
-                }
-                
-                if (health != -1)
-                {
-                    _AI.m_CurrentHP = health;
-                }
+                SRobj.GetComponent<SpawnRegionAnimalsList>().m_Spawned++;
             }
 
-            AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
-
-            if (au == null)
-            {
-                animal.AddComponent<AnimalUpdates>();
-
-                au = animal.GetComponent<AnimalUpdates>();
-            }
-            au.m_ToGo = v3spawn;
-            if (health != -1)
-            {
-                au.m_Hp = health;
-                _AI.m_CurrentHP = health;
-            }
-
-            if (recreateion == true)
-            {
-                if(prox != "")
-                {
-                    //MelonLogger.Msg("Spawn Recreation deserialize " + prox);
-                    _AI.Deserialize(prox);
-                    if (health != -1)
-                    {
-                        _AI.m_CurrentHP = health;
-                    }
-                }
-
-                if (AnimalsController == false)
-                {
-                    au.m_ClientController = instance.myId;
-                    au.m_InActive = false;
-                }
-                else
-                {
-                    au.m_ClientControlled = false;
-                    au.m_InActive = false;
-                }
-            }
-            au.m_Animal = animal;
-            au.m_RemoteSpawned = true;
-            animal.transform.position = v3spawn;
-            au.m_RemoteSpawned = true;
-            au.m_RightName = prefabName;
-
-            //BaseAiManager.CreateMoveAgent(animal.transform, _AI, v3spawn);
-            if (_AI.CreateMoveAgent(null) == true && !_AI.GetMoveAgent().Warp(v3spawn, 1f, true, -1))
-            {
-                MelonLogger.Msg(ConsoleColor.Red, "[Network AnimalSpawn] Problems with spawn animal " + _guid + " because it has invalid MoveAgent!");
-            }
-
-            //MelonLogger.Msg(animal.GetComponent<ObjectGuid>().Get() + " Created " + prefabName);
+            Utils.SetGuidForGameObject(obj, GUID);
+            return obj;
         }
 
         public static bool ShouldbeAnimalController(int _Ticks, int _Level, int _From)
@@ -8115,218 +8008,6 @@ namespace SkyCoop
             return true;
         }
 
-        //public static void SetAnimalsSpawns()
-        //{
-        //    if(GameManager.m_SpawnRegionManager != null)
-        //    {
-        //        if(InOnline() == false)
-        //        {
-        //            GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance = 200;
-        //            GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance = 150;
-        //            GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance = 250;
-        //            GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance = 175;
-        //        }else{
-        //            GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance = float.PositiveInfinity;
-        //            GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance = float.PositiveInfinity;
-        //            GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance = float.PositiveInfinity;
-        //            GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance = float.NegativeInfinity;
-        //        }
-        //        //MelonLogger.Msg("m_SpawnRegionDisableDistance " + GameManager.GetSpawnRegionManager().m_SpawnRegionDisableDistance); //200
-        //        //MelonLogger.Msg("m_DisallowDespawnBelowDistance " + GameManager.GetSpawnRegionManager().m_DisallowDespawnBelowDistance); //150
-        //        //MelonLogger.Msg("m_AllowDespawnOnscreenDistance " + GameManager.GetSpawnRegionManager().m_AllowDespawnOnscreenDistance); //250
-        //        //MelonLogger.Msg("m_AllowSpawnOnscreenDistance " + GameManager.GetSpawnRegionManager().m_AllowSpawnOnscreenDistance); //175
-        //    }
-        //}
-
-        public static void SetAnimalControllers()
-        {
-            if(MaxPlayers > playersData.Count)
-            {
-                return;
-            }
-            
-            for (int i = 0; i < MaxPlayers; i++)
-            {
-                if (playersData[i] != null)
-                {
-                    if(i == 0)
-                    {
-                        bool shouldBeController = false;
-                        if (IsDead == false)
-                        {
-                            shouldBeController = ShouldbeAnimalController(MyTicksOnScene, levelid, 0);
-                        }else{
-                            shouldBeController = false;
-                        }
-                        AnimalsController = shouldBeController;
-                    }else{
-                        if (Server.clients[i].IsBusy() == true)
-                        {
-                            bool shouldBeController = false;
-                            if(playersData[i].m_AnimState != "Knock")
-                            {
-                                shouldBeController = ShouldbeAnimalController(playersData[i].m_TicksOnScene, playersData[i].m_Levelid, i);
-                            }else{
-                                shouldBeController = false;
-                            }
-                            ServerSend.ANIMALROLE(i, shouldBeController);
-                        }
-                    }
-                }
-            }
-        }
-
-        public static GameObject WaitingRoom = null;
-        public static Vector3 ReturnFromWaitngRoomV3 = new Vector3(0, 0, 0);
-        public static List<GameObject> WaitingRoomGears = new List<GameObject>();
-        public static bool InWaitingRoom = false;
-
-        public static void SendToWaitngRoom()
-        {
-            Vector3 pV3 = GameManager.GetPlayerTransform().position;
-            Vector3 spawn_V3 = new Vector3(pV3.x, pV3.y + 1000, pV3.z);
-            GameObject room = null;
-
-            if (WaitingRoom == null)
-            {
-                GameObject RoomPrefab = LoadedBundle.LoadAsset<GameObject>("WaitRoom");
-                room = GameObject.Instantiate(RoomPrefab);
-                room.transform.position = spawn_V3;
-                WaitingRoom = room;
-                ReturnFromWaitngRoomV3 = GameManager.GetPlayerTransform().position;
-                GameManager.GetPlayerManagerComponent().TeleportPlayer(room.transform.GetChild(3).position, GameManager.GetMainCamera().transform.rotation);
-            } else
-            {
-                room = WaitingRoom;
-                if (ReturnFromWaitngRoomV3 != new Vector3(0, 0, 0))
-                {
-                    ReturnFromWaitngRoomV3 = GameManager.GetPlayerTransform().position;
-                }
-                GameManager.GetPlayerManagerComponent().TeleportPlayer(room.transform.GetChild(3).position, GameManager.GetMainCamera().transform.rotation);
-            }
-
-            InWaitingRoom = true;
-
-
-            for (int i = 0; i < WaitingRoomGears.Count; i++)
-            {
-                if (WaitingRoomGears[i] != null)
-                {
-                    if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null && GameManager.GetPlayerManagerComponent().m_ItemInHands == WaitingRoomGears[i].GetComponent<GearItem>())
-                    {
-                        MelonLogger.Msg("Waiting room item was in hands, trying unequip");
-                        GameManager.GetPlayerManagerComponent().UseInventoryItem(WaitingRoomGears[i].gameObject.GetComponent<GearItem>());
-                    }
-                    UnityEngine.Object.Destroy(WaitingRoomGears[i]);
-                }
-            }
-
-            int cans = 51;
-
-            for (int i = 0; i < cans; i++)
-            {
-                Vector3 can_spawnV3 = room.transform.GetChild(2).GetChild(i).position;
-
-                GameObject gear = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject("GEAR_RecycledCan"));
-                gear.transform.position = can_spawnV3;
-                WaitingRoomGears.Add(gear);
-            }
-
-            int ammoboxes = 5;
-
-            for (int i = 0; i < ammoboxes; i++)
-            {
-                Vector3 can_spawnV3 = room.transform.GetChild(5).GetChild(i).position;
-
-                GameObject gear = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject("GEAR_RifleAmmoBox"));
-                gear.transform.position = can_spawnV3;
-                WaitingRoomGears.Add(gear);
-            }
-
-            GameObject rifle = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject("GEAR_Rifle"));
-            rifle.transform.position = room.transform.GetChild(4).position;
-            rifle.GetComponent<GearItem>().m_CurrentHP = rifle.GetComponent<GearItem>().m_MaxHP;
-            rifle.GetComponent<GearItem>().m_GunItem.m_FiringRateSeconds = 0.1f;
-            rifle.GetComponent<GearItem>().m_GunItem.m_ClipSize = 100;
-            rifle.GetComponent<GearItem>().m_GunItem.m_RoundsInClip = 100;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_AllowHipFire = true;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_MultiplierReload = 1;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_ReloadCoolDownSeconds = 0.1f;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_YawRecoilMax = 0.1f;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_YawRecoilMin = 0.1f;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_PitchRecoilMax = 0.1f;
-            //rifle.GetComponent<GearItem>().m_GunItem.m_PitchRecoilMin = 0.1f;
-            WaitingRoomGears.Add(rifle);
-        }
-
-        public static void SendToAnimalRoom()
-        {
-            Vector3 pV3 = GameManager.GetPlayerTransform().position;
-            Vector3 spawn_V3 = new Vector3(pV3.x, pV3.y + 1000, pV3.z);
-            
-
-            GameObject RoomPrefab = LoadedBundle.LoadAsset<GameObject>("WaitRoom");
-            GameObject room = GameObject.Instantiate(RoomPrefab); 
-            room.transform.position = spawn_V3;
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(room.transform.GetChild(3).position, GameManager.GetMainCamera().transform.rotation);
-
-            Vector3 v3AnimalSpawn = room.transform.GetChild(4).position;
-            GameObject animal = UnityEngine.Object.Instantiate<GameObject>(Resources.Load("WILDLIFE_WOLF").Cast<GameObject>());
-            MakeAnimalActive(animal, false, "");
-            animal.transform.position = v3AnimalSpawn;
-            animal.AddComponent<AnimalUpdates>();
-            AnimalUpdates au = animal.GetComponent<AnimalUpdates>();
-            au.m_Animal = animal;
-            animal.name = animal.name + "_DEBUG";
-            au.m_ToGo = v3AnimalSpawn;
-            animal.transform.position = v3AnimalSpawn;
-            au.m_RemoteSpawned = true;
-            au.m_DebugAnimal = true;
-            if (animal.GetComponent<ObjectGuid>() == null)
-            {
-                animal.AddComponent<ObjectGuid>();
-                animal.GetComponent<ObjectGuid>().m_Guid = ObjectGuidManager.GenerateNewGuidString();
-            }
-            MelonLogger.Msg("Created DEBUG ANIMAL");
-        }
-
-        public static void DestoryWaitingRoom()
-        {
-            for (int i = 0; i < WaitingRoomGears.Count; i++)
-            {
-                if (WaitingRoomGears[i] != null)
-                {
-                    if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null && GameManager.GetPlayerManagerComponent().m_ItemInHands == WaitingRoomGears[i].GetComponent<GearItem>())
-                    {
-                        MelonLogger.Msg("Waiting room item was in hands, trying unequip");
-                        GameManager.GetPlayerManagerComponent().UseInventoryItem(WaitingRoomGears[i].gameObject.GetComponent<GearItem>());
-                    }
-                    UnityEngine.Object.Destroy(WaitingRoomGears[i]);
-                }
-            }
-            if (WaitingRoom != null)
-            {
-                UnityEngine.Object.Destroy(WaitingRoom);
-            }
-        }
-
-        public static void ReturnFromWaitingRoom()
-        {
-            if (ReturnFromWaitngRoomV3 != new Vector3(0, 0, 0))
-            {
-                DestoryWaitingRoom();
-                GameManager.GetPlayerManagerComponent().TeleportPlayer(ReturnFromWaitngRoomV3, GameManager.GetMainCamera().transform.rotation);
-                InWaitingRoom = false;
-                ReturnFromWaitngRoomV3 = new Vector3(0, 0, 0);
-            }
-        }
-
-        public string mWeatherProxy = "";
-        public string mWeatherTransitionProxy = "";
-        public string mWindProxy = "";
-
-
-
         public static SaveSlotSync PendingSave = null;
 
         public static void SendSlotData(int _forClient)
@@ -8403,6 +8084,7 @@ namespace SkyCoop
 
             if(HaveSaveFile == true)
             {
+                KillConsole(); // Unregistering cheats if server not allow cheating for you
                 MelonLogger.Msg("Trying loading save slot...");
                 SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
                 MelonLogger.Msg("Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
@@ -8456,6 +8138,8 @@ namespace SkyCoop
             MelonLogger.Msg("Creating save slot " + Seed);
             GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
             //SaveGameSystem.SetCurrentSaveInfo(Ep, SST, SaveGameSlots.GetUnusedGameId(), null);
+
+            KillConsole(); // Unregistering cheats if server not allow cheating for you
 
             SaveGameSystem.m_CurrentEpisode = Ep;
             SaveGameSystem.m_CurrentGameId = SaveGameSlots.GetUnusedGameId();
@@ -8855,51 +8539,6 @@ namespace SkyCoop
         public static GameObject SleepingButtons = null;
         public static GameObject WaitForSleepLable = null;
 
-        public static void SetupMenuPlayer(GameObject m_Player, int Hat, int Top, int Pants, int Boots, string ArmsType)
-        {
-            GameObject clothing = m_Player.transform.GetChild(0).gameObject;
-            GameObject arms_middle = m_Player.transform.GetChild(1).GetChild(0).GetChild(0).gameObject;
-            GameObject arms_short = m_Player.transform.GetChild(1).GetChild(0).GetChild(1).gameObject;
-            GameObject arms_tiny = m_Player.transform.GetChild(1).GetChild(0).GetChild(2).gameObject;
-
-            int hatsCount = clothing.transform.GetChild(0).childCount;
-            int topsCount = clothing.transform.GetChild(1).childCount;
-            int pantsCount = clothing.transform.GetChild(2).childCount;
-            int bootsCount = clothing.transform.GetChild(3).childCount;
-            for (int i = 0; i < hatsCount; i++)
-            {
-                clothing.transform.GetChild(0).transform.GetChild(i).gameObject.SetActive(false);
-            }
-            for (int i = 0; i < topsCount; i++)
-            {
-                clothing.transform.GetChild(1).transform.GetChild(i).gameObject.SetActive(false);
-            }
-            for (int i = 0; i < pantsCount; i++)
-            {
-                clothing.transform.GetChild(2).transform.GetChild(i).gameObject.SetActive(false);
-            }
-            for (int i = 0; i < bootsCount; i++)
-            {
-                clothing.transform.GetChild(3).transform.GetChild(i).gameObject.SetActive(false);
-            }
-
-            clothing.transform.GetChild(0).transform.GetChild(Hat).gameObject.SetActive(true);
-            clothing.transform.GetChild(1).transform.GetChild(Top).gameObject.SetActive(true);
-            clothing.transform.GetChild(2).transform.GetChild(Pants).gameObject.SetActive(true);
-            clothing.transform.GetChild(3).transform.GetChild(Boots).gameObject.SetActive(true);
-            arms_tiny.SetActive(false);
-            arms_short.SetActive(false);
-            arms_middle.SetActive(false);
-            if (ArmsType == "Tiny")
-            {
-                arms_tiny.SetActive(true);
-            }else if (ArmsType == "Short"){
-                arms_short.SetActive(true);
-            }else{
-                arms_middle.SetActive(true);
-            }
-        }
-
         public static void SendMyEQ()
         {
             PlayerEquipmentData Edata = new PlayerEquipmentData();
@@ -8982,21 +8621,11 @@ namespace SkyCoop
         }
 
         public static bool HasWaitForConnect = false;
-
-
         //Legacy UI
         public static InterfaceManager m_InterfaceManager;
         public static Panel_SelectSurvivor m_Panel_SelectSurvivor;
         public static Panel_MainMenu m_Panel_MainMenu;
         public static Panel_SelectRegion m_Panel_SelectRegion;
-
-        public static void NoCustomExp()
-        {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
-            {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "You can't use custom experience mode in online! This case to major desync!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
-            }
-        }
 
         public static void DoWaitForConnect()
         {
@@ -10046,97 +9675,6 @@ namespace SkyCoop
             }
         }
 
-        //public static void SetBarFill(NPCStatusBar status, float fill)
-        //{
-        //    status.m_FillSprite.fillAmount = Mathf.Lerp(status.m_FillSpriteOffset, 1f - status.m_FillSpriteOffset, fill);
-        //    if (status.m_ReverseFillSprite)
-        //        status.m_ReverseFillSprite.fillAmount = Mathf.Lerp(status.m_FillSpriteOffset, 1f - status.m_FillSpriteOffset, status.GetReverseFillValue());
-        //    if (status.m_BuffFillSprite)
-        //        status.m_BuffFillSprite.fillAmount = status.GetBuffFillValue();
-        //    if (status.m_BuffObject)
-        //        Utils.SetActive(status.m_BuffObject, status.IsBuffActive());
-        //    if (status.m_DebuffObject)
-        //        Utils.SetActive(status.m_DebuffObject, status.IsDebuffActive());
-        //    if (status.m_BuffFillObject)
-        //        Utils.SetActive(status.m_BuffFillObject, status.ShouldShowBuffedFillSprite());
-        //    if (status.m_NoBuffFillObject)
-        //        Utils.SetActive(status.m_NoBuffFillObject, !status.ShouldShowBuffedFillSprite());
-        //    status.SetSpriteColors(fill);
-        //    status.UpdateBacksplash(fill);
-        //}
-
-        //public static void CheckOtherPlayer()
-        //{
-        //    float health = 10;
-        //    //float thirst = 30;
-        //    //float hunger = 30;
-        //    //float fatigue = 30;
-        //    //float freezy = 90;
-
-        //    //float fillValueH = 1 - hunger / 100f;
-        //    //float fillValueF = 1 - fatigue / 100f;
-
-        //    GameObject DummyNpc = new GameObject();
-        //    NPC m_NPC = DummyNpc.AddComponent<NPC>();
-        //    NPCAfflictions m_NPCaff = DummyNpc.AddComponent<NPCAfflictions>();
-        //    NPCCondition m_NPCcon = DummyNpc.AddComponent<NPCCondition>();
-        //    CarryableBody m_BodyCarry = DummyNpc.AddComponent<CarryableBody>();
-        //    NPCThirst m_Thirst = DummyNpc.AddComponent<NPCThirst>();
-        //    NPCVoice m_Voice = DummyNpc.AddComponent<NPCVoice>();
-        //    NPCFreezing m_Cold = DummyNpc.AddComponent<NPCFreezing>();
-        //    m_NPC.m_AfflictionsComponent = m_NPCaff;
-        //    m_NPC.m_Condition = m_NPCcon;
-        //    m_NPC.m_Body = m_BodyCarry;
-        //    m_NPC.m_Thirst = m_Thirst;
-        //    m_NPC.m_Voice = m_Voice;
-        //    m_NPC.m_Freezing = m_Cold;
-        //    m_NPCaff.m_NPC = m_NPC;
-        //    m_Thirst.m_NPC = m_NPC;
-        //    m_Thirst.m_AlwaysHydrated = false;
-        //    m_Cold.m_NPC = m_NPC;
-
-        //    m_NPCaff.AddAffliction(AfflictionType.CabinFever, "unknown", AfflictionBodyArea.Head);
-        //    m_NPCaff.AddAffliction(AfflictionType.BloodLoss, "unknown", AfflictionBodyArea.LegRight);
-        //    m_NPCaff.AddAffliction(AfflictionType.InfectionRisk, "unknown", AfflictionBodyArea.ArmLeft);
-        //    m_NPCaff.AddAffliction(AfflictionType.WellFed, "unknown", AfflictionBodyArea.Stomach);
-        //    m_NPCaff.AddAffliction(AfflictionType.FrostbiteRisk, "unknown", AfflictionBodyArea.ArmRight);
-
-        //    m_NPCcon.m_CurrentHP = health;
-        //    m_NPCcon.m_MaxHP = 100;
-        //    //m_Cold.m_CurrentFreezing = freezy;
-        //    //m_Thirst.m_CurrentThirstPercentage = thirst;
-        //    Panel_Diagnosis Panel = InterfaceManager.m_Panel_Diagnosis;
-
-        //    GameObject thirstBar = Panel.gameObject.transform.GetChild(2).gameObject;
-        //    GameObject hungerBar = UnityEngine.Object.Instantiate(thirstBar, thirstBar.transform.parent);
-        //    GameObject fatigueBar = UnityEngine.Object.Instantiate(thirstBar, thirstBar.transform.parent);
-
-        //    UnityEngine.Object.DestroyImmediate(hungerBar.transform.GetChild(0).GetComponent<GenericStatusBarSpawner>());
-        //    UnityEngine.Object.DestroyImmediate(fatigueBar.transform.GetChild(0).GetComponent<GenericStatusBarSpawner>());
-
-        //    //[x1] -1.1167f
-        //    //[x2] -0.988f
-        //    //[x3] -0.865f
-        //    float y = thirstBar.transform.position.y;
-        //    float z = thirstBar.transform.position.z;
-
-        //    fatigueBar.transform.position = new Vector3(-1.1167f, y, z);
-        //    thirstBar.transform.position = new Vector3(-0.988f, y, z);
-        //    hungerBar.transform.position = new Vector3(-0.865f, y, z);
-
-        //    //fatigueBar.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(6).gameObject.GetComponent<UISprite>().mSpriteName = "ico_status_fatigue1";
-        //    //NPCStatusBar fatigueStatus = fatigueBar.transform.GetChild(0).GetChild(0).GetComponent<NPCStatusBar>();
-        //    //NPCStatusBarOverrider fatigueOverrider = fatigueStatus.gameObject.AddComponent<NPCStatusBarOverrider>();
-        //    //fatigueOverrider.m_Value = fillValueF;
-
-        //    //hungerBar.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(6).gameObject.GetComponent<UISprite>().mSpriteName = "ico_status_hunger1";
-        //    //NPCStatusBar hungerStatus = hungerBar.transform.GetChild(0).GetChild(0).GetComponent<NPCStatusBar>();
-        //    //NPCStatusBarOverrider hungerOverrider = hungerStatus.gameObject.AddComponent<NPCStatusBarOverrider>();
-        //    //hungerOverrider.m_Value = fillValueH;
-
-        //    InterfaceManager.m_Panel_Diagnosis.Enable(true, m_NPC);
-        //}
-
         public static GameObject DiagnosisDummy = null;
         public static int CurePlayerID = 0;
 
@@ -10626,11 +10164,6 @@ namespace SkyCoop
 
         public static void UnloadDropsForScene(string LevelKey)
         {
-            if(FsBusy == true)
-            {
-                MelonLogger.Msg("[DroppedGearsUnloader] Flie system busy can't unload right now... ");
-                return;
-            }
             string data = "";
             MelonLogger.Msg("[DroppedGearsUnloader] Going to unload " + LevelKey);
             Dictionary<int, SlicedJsonDroppedGear> LevelDrops;
@@ -10650,13 +10183,11 @@ namespace SkyCoop
             CreateFolderIfNotExist(@"Mods\Unloads");
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed);
             CreateFolderIfNotExist(@"Mods\Unloads\" + seed + @"\" + LevelKey);
-            FsBusy = true;
             using (FileStream fs = File.Create(dir))
             {
                 byte[] info = new UTF8Encoding(true).GetBytes(data);
                 fs.Write(info, 0, info.Length);
             }
-            FsBusy = false;
             MelonLogger.Msg("[DroppedGearsUnloader] Unloading finished!");
         }
 
@@ -11073,10 +10604,10 @@ namespace SkyCoop
 
         public static void CreateFolderIfNotExist(string path)
         {
-            bool exists = System.IO.Directory.Exists(path);
+            bool exists = Directory.Exists(path);
             if (!exists)
             {
-                System.IO.Directory.CreateDirectory(path);
+                Directory.CreateDirectory(path);
             }
         }
 
@@ -11110,24 +10641,24 @@ namespace SkyCoop
             string seed = GameManager.m_SceneTransitionData.m_GameRandomSeed + "";
             string dir = @"Mods\Unloads\" + seed + @"\" + LevelKey + @"\Containers\" + GUID + ".json";
 
-            bool exists = System.IO.File.Exists(dir);
+            bool exists = File.Exists(dir);
 
             if (!exists)
             {
-                MelonLogger.Msg("[DroppedGearsUnloader] Saves not found");
+                MelonLogger.Msg("[ContainersLoader] Saves not found");
                 return "";
             }else{
                 try
                 {
                     using (var sr = new StreamReader(dir))
                     {
-                        MelonLogger.Msg("[DroppedGearsUnloader] Saves found");
+                        MelonLogger.Msg("[ContainersLoader] Saves found");
                         return sr.ReadToEnd();
                     }
                 }
                 catch (IOException e)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "[DroppedGearsUnloader] The file could not be read:" + e.Message);
+                    MelonLogger.Msg(ConsoleColor.Red, "[ContainersLoader] The file could not be read:" + e.Message);
                     return "";
                 }
             }
@@ -11605,9 +11136,6 @@ namespace SkyCoop
             SaveFakeContainer(boxGUID, levelKey, CompressedData, false);
         }
 
-        public static GameObject PingElement = null;
-
-
         public static void InitAudio()
         {
             Camera Cam = GameManager.GetMainCamera();
@@ -11621,13 +11149,6 @@ namespace SkyCoop
                     pListener = Cam.gameObject.AddComponent<AudioListener>();
                 }
             }
-            //if (GameManager.m_vpFPSCamera != null)
-            //{
-            //    if (GameManager.GetVpFPSCamera().gameObject.GetComponent<AudioListener>() == null)
-            //    {
-            //        GameManager.GetVpFPSCamera().gameObject.AddComponent<AudioListener>();
-            //    }
-            //}
         }
 
         public static void UpdateAPIStates()
@@ -11639,9 +11160,7 @@ namespace SkyCoop
             else if (sendMyPosition == true)
             {
                 API.m_ClientState = API.SkyCoopClientState.CLIENT;
-            }
-            else
-            {
+            }else{
                 API.m_ClientState = API.SkyCoopClientState.NONE;
             }
             API.m_MyClientID = instance.myId;
@@ -11805,25 +11324,17 @@ namespace SkyCoop
 
         public static void DebugCrap()
         {
-            int layerMask = 1 << 16;
             RaycastHit hit;
             Transform transform = GameManager.GetMainCamera().transform;
-            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, 50, layerMask))
+            if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, 50))
             {
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * hit.distance, Color.yellow);
-
-                if (hit.collider.gameObject.GetComponent<ObjectGuid>())
+                if (hit.collider.gameObject.GetComponent<BaseAi>() && hit.collider.gameObject.GetComponent<ObjectGuid>())
                 {
                     DebugAnimalGUID = hit.collider.gameObject.GetComponent<ObjectGuid>().Get();
                     DebugAnimalGUIDLast = DebugAnimalGUID;
                     DebugLastAnimal = hit.collider.gameObject;
-                }else{
-                    DebugAnimalGUID = "Have not objectGuid";
-                    DebugAnimalGUIDLast = DebugAnimalGUID;
-                    DebugLastAnimal = hit.collider.gameObject;
                 }
             }else{
-                Debug.DrawRay(transform.position, transform.TransformDirection(Vector3.forward) * 1000, Color.white);
                 DebugAnimalGUID = "";
             }
             if (ALWAYS_FUCKING_CURSOR_ON == true)
@@ -12437,7 +11948,7 @@ namespace SkyCoop
                                                 MyAnimState = "Harvesting";
                                             }
                                         }
-                                    }//InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null
+                                    }
                                 }else{
                                     PlayerControlMode Plc = GameManager.GetPlayerManagerComponent().GetControlMode();
                                     if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
@@ -12785,35 +12296,24 @@ namespace SkyCoop
                 }
             }
         }
-
-        
-
         public override void OnUpdate()
         {
             if(KillOnUpdate == true)
             {
-                DebugCrap();
+                DebugCrap(); // Debug for debuging and debuging debug.
                 return;
             }
-            
+
             if (Application.runInBackground == false) { Application.runInBackground = true; } // Always running in bg, to not lost any sync packets
             FakeDeath(); // Limiting movement and ignore by animals
             UpdateMain(); // Updating sync tread
             GameLogic.Update(); // Updating sync tread for server
             UpdateAPIStates(); // Updating ID and Client/Host state for API
             InitAudio(); // Adding audio listener if needed
-            KillConsole(); // Unregistering cheats if server not allow cheating for you
-            UpdateSceneGUID(); // Scene GUID that used for detection of dublicated interiours 
-
-            if (GearIDList.Count == 0 && level_name == "MainMenu") // Doing it only once
-            {
-                InitGearsIDS(); // Compilating List of Gear names by ID, to reference on it to shorten names in sync packets
-            }
             if (Application.isBatchMode) // If Dedicated mode, doing specific code for it
             {
                 DedicatedServerUpdate(); // Updating dedicated settings
             }
-            
             
             if (UiCanvas == null)
             {
@@ -12821,21 +12321,25 @@ namespace SkyCoop
             }else{
                 UpdateCanvasUis(); // Upating text and other UI
             }
-            if (Time.time > nextActionTimeSecond) 
+
+            if (Time.time > nextActionTimeSecond)
             {
                 nextActionTimeSecond += periodSecond;
-                EverySecond(); // Triggering this code very second
+                if (KillEverySecond == false)
+                {
+                    EverySecond(); // Triggering this code very second
+                }
             }
 
             if (m_InterfaceManager != null)
             {
-                if(InterfaceManager.m_Panel_Confirmation != null && NeedConnectAfterLoad != -1)
+                if(NeedConnectAfterLoad != -1 && InterfaceManager.m_Panel_Confirmation != null)
                 {
                     DoWaitForConnect(); // Showing connection message after startup connection
                 }
                 if(InterfaceManager.m_Panel_SnowShelterInteract != null)
                 {
-                    CancleDismantling(); // Cancle Break-down of snowshelter where any other player is 
+                    CancleDismantling(); // Cancle Break-down of snowshelter where any other player is inside
                 }
                 if(InterfaceManager.m_Panel_Rest != null && InterfaceManager.m_Panel_Rest.isActiveAndEnabled == true)
                 {
@@ -12869,9 +12373,7 @@ namespace SkyCoop
                 SteamConnect.DoUpdate(); // Start tracking of incomming data from other players
             }
 
-            InitAllPlayers(); // Prepare players objects based on amount of max players
-
-            if(iAmHost == true)
+            if (iAmHost == true)
             {
                 if(IsCycleSkiping == true && GameManager.m_PlayerManager != null)
                 {
@@ -12968,6 +12470,29 @@ namespace SkyCoop
             {
                 FindPlayerToTrade(); // Find closest player to give item to.
                 ProcessGivingItem(); // Attempt to give item to nearest player.
+            }
+            if (InputManager.GetPutBackPressed(InputManager.m_CurrentContext))
+            {
+                if (GameManager.m_PlayerManager)
+                {
+                    PlayerManager __PM = GameManager.m_PlayerManager;
+                    if (__PM.m_Gear != null && __PM.m_InspectModeActive == true)
+                    {
+                        GearItem GI = __PM.m_Gear;
+                        GameObject GIobj = GI.gameObject;
+                        if (GI.gameObject.GetComponent<MyMod.DropFakeOnLeave>() != null)
+                        {
+                            MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
+                            int variant = 0;
+                            if ((GIobj.GetComponent<FoodItem>() != null && GIobj.GetComponent<FoodItem>().m_Opened == true) ||
+                                (GIobj.GetComponent<SmashableItem>() != null && GIobj.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                            {
+                                variant = 1;
+                            }
+                            SendDropItem(GI, 0, 0, true, variant);
+                        }
+                    }
+                }
             }
         }
 
@@ -13086,17 +12611,16 @@ namespace SkyCoop
                 nextActionTime = Time.time;
                 nextActionTimeAniamls = Time.time;
                 iAmHost = true;
+                InitAllPlayers(); // Prepare players objects based on amount of max players
                 MelonLogger.Msg("Server has been runned with InGame time: " + GameManager.GetTimeOfDayComponent().GetHour() + ":" + GameManager.GetTimeOfDayComponent().GetMinutes() + " seed "+ GameManager.m_SceneTransitionData.m_GameRandomSeed);
                 OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
                 OverridedMinutes = GameManager.GetTimeOfDayComponent().GetMinutes();
                 OveridedTime = OverridedHourse + ":" + OverridedMinutes;
                 NeedSyncTime = true;
                 RealTimeCycleSpeed = true;
-                //LoadAllDropsForScene();
-                //LoadAllOpenableThingsForScene();
-                //MarkSearchedContainers(levelid+level_guid);
-                DisableOriginalAnimalSpawns(true);
+                DisableOriginalAnimalSpawns();
                 SetFixedSpawn();
+                KillConsole(); // Unregistering cheats if server not allow cheating for you
             }else{
                 HUDMessage.AddMessage("YOU ALREADY HOSING!!!!!!");
             }
@@ -13125,125 +12649,6 @@ namespace SkyCoop
             }
         } 
 
-        public void PreReleaseGUI()
-        {
-            //if (IamShatalker == true)
-            //{
-            //    if (anotherbutt != null)
-            //    {
-            //        if (WardIsActive == true)
-            //        {
-            //            //MelonLogger.Msg("Ward is active!");
-            //            GUI.Label(new Rect(700, 30, 500, 100), "Ward is active!");
-            //        }
-            //    }
-            //}
-
-            if (level_name != "Empty" && level_name != "Boot" && level_name != "MainMenu" && m_InterfaceManager != null && InterfaceManager.m_Panel_PauseMenu != null && InterfaceManager.m_Panel_PauseMenu.IsEnabled() == true)
-            {
-                GUI.Box(new Rect(10, 10, 100, 200), "Multiplayer");
-
-                if (InOnline() == false)
-                {
-                    if (AtHostMenu == false)
-                    {
-                        if (GUI.Button(new Rect(20, 40, 80, 20), "Host"))
-                        {
-                            if (iAmHost != true)
-                            {
-                                AtHostMenu = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU ALREADY HOSING!!!!!!");
-                            }
-                        }
-                        if (GUI.Button(new Rect(20, 70, 80, 20), "Connect"))
-                        {
-                            if (sendMyPosition != true)
-                            {
-                                InDarkWalkerMode = true;
-                                RealTimeCycleSpeed = false;
-                                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU ALREADY CONNECTED!!!!");
-                            }
-                        }
-                    }
-                    else
-                    {
-                        GUI.Box(new Rect(10, 10, 100, 200), "Host as");
-                        if (GUI.Button(new Rect(20, 40, 80, 20), "Darkwalker"))
-                        {
-                            IamShatalker = true;
-                            uConsole.RunCommandSilent("Ghost");
-                            uConsole.RunCommandSilent("God");
-                            ///Host
-                            isRuning = true;
-
-                            Thread mainThread = new Thread(new ThreadStart(MainThread));
-                            ServerHandle.IamShatalker = true;
-
-                            Server.Start(1, 26950);
-                            nextActionTime = Time.time;
-                            nextActionTimeAniamls = Time.time;
-                            iAmHost = true;
-                            MelonLogger.Msg("Server has been runned with InGame time: " + GameManager.GetTimeOfDayComponent().GetHour() + ":" + GameManager.GetTimeOfDayComponent().GetMinutes());
-                            OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
-                            OverridedMinutes = GameManager.GetTimeOfDayComponent().GetMinutes();
-                            OveridedTime = OverridedHourse + ":" + OverridedMinutes;
-                            RealTimeCycleSpeed = false;
-                            NeedSyncTime = false;
-                            InDarkWalkerMode = true;
-                            AtHostMenu = false;
-                        }
-                        if (GUI.Button(new Rect(20, 70, 80, 20), "Survivor"))
-                        {
-                            ///Host
-                            isRuning = true;
-
-                            Thread mainThread = new Thread(new ThreadStart(MainThread));
-                            ServerHandle.IamShatalker = false;
-
-                            Server.Start(1, 26950);
-                            nextActionTime = Time.time;
-                            nextActionTimeAniamls = Time.time;
-                            iAmHost = true;
-                            MelonLogger.Msg("Server has been runned with InGame time: " + GameManager.GetTimeOfDayComponent().GetHour() + ":" + GameManager.GetTimeOfDayComponent().GetMinutes());
-                            OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
-                            OverridedMinutes = GameManager.GetTimeOfDayComponent().GetMinutes();
-                            OveridedTime = OverridedHourse + ":" + OverridedMinutes;
-                            RealTimeCycleSpeed = false;
-                            NeedSyncTime = false;
-                            InDarkWalkerMode = true;
-                            AtHostMenu = false;
-                        }
-                        if (GUI.Button(new Rect(20, 120, 80, 20), "Back"))
-                        {
-                            AtHostMenu = false;
-                        }
-                    }
-                } else
-                {
-                    if (GUI.Button(new Rect(20, 40, 80, 20), "Disconnect"))
-                    {
-                        MelonLogger.Msg("Disconnect case pressed disconnect button");
-                        LastConnectedIp = "";
-                        Disconnect();
-                    }
-                    if (IamShatalker == false && ShatalkerObject != null && ShatalkerObject.GetStartMovementDelayTime() > 2)
-                    {
-                        if (GUI.Button(new Rect(20, 70, 80, 20), "Skip waiting"))
-                        {
-                            ShatalkerObject.SetStartMovementDelayTime(0);
-                        }
-                    }
-                }
-            }
-        }
-
         public static bool AtDebug = false;
         public static string UIDebugType = "";
         public static List<string> ItemsForDebug = new List<string>();
@@ -13252,122 +12657,9 @@ namespace SkyCoop
         public static bool DebugGUI = false;
         public static bool DebugBind = false;
 
-        public class CarTest : MonoBehaviour
-        {
-            public CarTest(IntPtr ptr) : base(ptr) { }
-
-            public float MotorForce, SteerForce, BreakForce, friction;
-            public UnityEngine.WheelCollider Wheel_L;
-            public UnityEngine.WheelCollider Wheel_R;
-            public UnityEngine.WheelCollider Wheel_BR;
-            public UnityEngine.WheelCollider Wheel_BL;
-            public GameObject car;
-
-            public GameObject Wheel_R_obj;
-            public GameObject Wheel_L_obj;
-            public GameObject Wheel_BR_obj;
-            public GameObject Wheel_BL_obj;
-
-            void Update()
-            {
-                if(car == null)
-                {
-                    return;
-                }
-                
-                float v = 0;
-                if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.W) == true)
-                {
-                    v = 1 * MotorForce;
-                }else{
-                    v = 0;
-                }
-                Wheel_L_obj.transform.Rotate(Wheel_L.rpm / 60 * 360 * Time.deltaTime, 0, 0);
-                Wheel_R_obj.transform.Rotate(Wheel_R.rpm / 60 * 360 * Time.deltaTime, 0, 0);
-                Wheel_BR_obj.transform.Rotate(Wheel_L.rpm / 60 * 360 * Time.deltaTime, 0, 0);
-                Wheel_BL_obj.transform.Rotate(Wheel_R.rpm / 60 * 360 * Time.deltaTime, 0, 0);
-
-
-                Wheel_BR.motorTorque = v;
-                Wheel_BL.motorTorque = v;
-
-                int steering = 0;
-
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.A))
-                {
-                    steering = -1;
-                }
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.D))
-                {
-                    steering = 1;
-                }
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.D) == false && InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.A) == false)
-                {
-                    steering = 0;
-                }
-                car.transform.Rotate(Vector3.up * SteerForce * Time.deltaTime * steering, Space.World);
-
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Space))
-                {
-                    Wheel_BR.brakeTorque = BreakForce;
-                    Wheel_BL.brakeTorque = BreakForce;
-                }else{
-                    Wheel_BR.brakeTorque = 0;
-                    Wheel_BL.brakeTorque = 0;
-                }
-
-                if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.W))
-                {
-                    Wheel_BR.brakeTorque = 0;
-                    Wheel_BL.brakeTorque = 0;
-                }else{
-                    if (Wheel_BR.brakeTorque <= BreakForce && Wheel_BL.brakeTorque <= BreakForce)
-                    {
-                        Wheel_BR.brakeTorque += friction * Time.deltaTime * BreakForce;
-                        Wheel_BL.brakeTorque += friction * Time.deltaTime * BreakForce;
-                    }
-                    else
-                    {
-                        Wheel_BR.brakeTorque = BreakForce;
-                        Wheel_BL.brakeTorque = BreakForce;
-                    }
-                }
-            }
-        }  
-
         public override void OnGUI()
         {
             DeBugMenu.Render();
-
-
-            if (NoUI == true && ForcedUiOn == false)
-            {
-                return;
-            }
-
-            //if (anotherbutt != null)
-            //{
-            //    float dist = Vector3.Distance(GameManager.GetPlayerTransform().position, anotherbutt.transform.position);
-
-            //    if(dist < 1 && AnimState == "Knock" && CarryingPlayer == false)
-            //    {
-            //        string name;
-            //        if(GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar") == true)
-            //        {
-            //            name = "Press N to revive\n(Requires a First Aid Kit)";
-            //        }else
-            //        {
-            //            name = "You need first aid kit to revive";
-            //        }
-
-            //        GUI.Label(new Rect(Screen.width / 2 - 50, Screen.height / 2 - 25, 500, 100), name);
-            //    }
-            //}
-
-            if(NeedTryReconnect == true)
-            {
-                GUI.Label(new Rect(700, 30, 500, 100), "Connection Lost,\n Trying reconnect... Attempts: " + AttempsToReconnect);
-            }
         }
 
         public static void SetRevivedStats(bool health = true)
@@ -13381,37 +12673,6 @@ namespace SkyCoop
             GameManager.GetFatigueComponent().m_CurrentFatigue = 25;
             GameManager.GetThirstComponent().m_CurrentThirst = 25;
             GameManager.GetHungerComponent().m_CurrentReserveCalories = GameManager.GetHungerComponent().m_MaxReserveCalories/4;
-        }
-
-        public static GameObject GetExitPointByName(string exitName, Vector3 posBeforeInteriorLoad)
-        {
-            GameObject gameObject = (GameObject)null;
-            GameObject[] gameObjectsWithTag = GameObject.FindGameObjectsWithTag("InteriorExitPoint");
-            if (gameObjectsWithTag.Length == 0)
-            {
-                gameObject = GameObject.Find(exitName);
-            }
-            else
-            {
-                float num1 = float.PositiveInfinity;
-                for (int index = 0; index < gameObjectsWithTag.Length; ++index)
-                {
-                    if (gameObjectsWithTag[index].name != exitName)
-                    {
-                        float num2 = Vector3.Distance(gameObjectsWithTag[index].transform.position, posBeforeInteriorLoad);
-                        if ((double)num2 < (double)num1)
-                        {
-                            num1 = num2;
-                            gameObject = gameObjectsWithTag[index];
-                        }
-                    }
-                }
-                if (gameObject == null)
-                {
-                    gameObject = GameObject.Find(exitName);
-                }
-            }
-            return gameObject;
         }
 
         public static bool RollChanceSeeded(float percent, System.Random RNG) => !Utils.IsZero(percent, 0.0001f) && (Utils.Approximately(percent, 100f, 0.0001f) || (double)RNG.Next(0, 100) < (double)percent);
@@ -13438,64 +12699,6 @@ namespace SkyCoop
             }
             //MelonLogger.Msg("[Seeded GUIDs] Final GUID "+ newGUID);
             return newGUID;
-        }
-
-        //public static string GenerateSeededGUID(int gameSeed, Matrix4x4 matrixRef)
-        //{
-
-        //    float matResult = matrixRef.transpose.m00;
-        //    matResult = matResult + matrixRef.transpose.m01;
-        //    matResult = matResult + matrixRef.transpose.m02;
-        //    matResult = matResult + matrixRef.transpose.m03;
-        //    matResult = matResult + matrixRef.transpose.m10;
-        //    matResult = matResult + matrixRef.transpose.m11;
-        //    matResult = matResult + matrixRef.transpose.m12;
-        //    matResult = matResult + matrixRef.transpose.m13;
-        //    matResult = matResult + matrixRef.transpose.m20;
-        //    matResult = matResult + matrixRef.transpose.m21;
-        //    matResult = matResult + matrixRef.transpose.m22;
-        //    matResult = matResult + matrixRef.transpose.m23;
-        //    matResult = matResult + matrixRef.transpose.m30;
-        //    matResult = matResult + matrixRef.transpose.m31;
-        //    matResult = matResult + matrixRef.transpose.m32;
-        //    matResult = matResult + matrixRef.transpose.m33;
-        //    int MatrixInt = (int)matResult;
-
-        //    int newSeed = gameSeed + MatrixInt;
-        //    MelonLogger.Msg("[Seeded GUIDs] Input Seed " + gameSeed + " Matrix Seed " + MatrixInt + " Combined seed "+ newSeed);
-        //    string _chars = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        //    System.Random newRNG = new System.Random(newSeed);
-        //    string newGUID = "";
-        //    for (int i = 1; i < 36; i++)
-        //    {
-        //        if (i == 9 || i == 14 || i == 19 || i == 24)
-        //        {
-        //            newGUID = newGUID + "-";
-        //        }
-        //        int charIndex = newRNG.Next(0, _chars.Length);
-        //        newGUID = newGUID + _chars[charIndex];
-        //    }
-        //    //MelonLogger.Msg("[Seeded GUIDs] Final GUID "+ newGUID);
-        //    return newGUID;
-        //}
-
-        public static void WarpBody(string _GUID)
-        {
-            MelonLogger.Msg("Trying warping with door " + _GUID);
-            GameObject Door = ObjectGuidManager.Lookup(_GUID);
-            if (Door != null)
-            {
-                MelonLogger.Msg("Simulating entering to door "+ _GUID);
-
-                if(GameManager.m_PlayerManager.PlayerIsDead() == true)
-                {
-                    KillAfterLoad = true;
-                }
-                Door.GetComponent<LoadScene>().Activate();
-            }
-            else{
-                MelonLogger.Msg("Not found door" + _GUID);
-            }
         }
 
         public static void ResetDataForSlot(int _from)
@@ -13775,11 +12978,6 @@ namespace SkyCoop
             }
         }
 
-        public static void UsedBandage(AfflictionBodyArea bodyArea)
-        {
-            MelonLogger.Msg("Bandaged " + bodyArea.ToString());
-        }
-
         public static string GetClothForSlot(ClothingRegion s, ClothingLayer l)
         {
             if(GameManager.m_PlayerManager == null || GameManager.m_PlayerManager.m_Clothing == null)
@@ -13984,13 +13182,6 @@ namespace SkyCoop
                 MelonLogger.Msg("CantBeUsedForMP "+ CantBeUsedForMP+ " LastLoadedGenVersion "+ LastLoadedGenVersion+ " RandomGenVersion "+ BuildInfo.RandomGenVersion);
                 return;
             }
-
-
-            //if (GameManager.GetExperienceModeManagerComponent().GetCurrentExperienceMode().m_ModeType == ExperienceModeType.Custom)
-            //{
-            //    NoCustomExp();
-            //    return;
-            //}
 
             if (UiCanvas != null && UIHostMenu == null)
             {
