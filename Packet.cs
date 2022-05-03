@@ -116,6 +116,16 @@ namespace GameServer
         SENDMYAFFLCTIONS,
         CUREAFFLICTION,
         ANIMALTEST,
+        ANIMALKILLED,
+        ANIMALCORPSE,
+        REQUESTANIMALCORPSE,
+        QUARTERANIMAL,
+        ANIMALAUDIO,
+        PICKUPRABBIT,
+        GOTRABBIT,
+        RELEASERABBIT,
+        HITRABBIT,
+        RABBITREVIVED,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -227,6 +237,16 @@ namespace GameServer
         SENDMYAFFLCTIONS,
         CUREAFFLICTION,
         ANIMALTEST,
+        ANIMALKILLED,
+        ANIMALCORPSE,
+        REQUESTANIMALCORPSE,
+        QUARTERANIMAL,
+        ANIMALAUDIO,
+        PICKUPRABBIT,
+        GOTRABBIT,
+        RELEASERABBIT,
+        HITRABBIT,
+        RABBITREVIVED,
     }
 
     public class Packet : IDisposable
@@ -517,26 +537,6 @@ namespace GameServer
             Write(obj.m_name);
             Write(obj.m_Hp);
             Write(obj.m_Bleeding);
-            Write(obj.m_Meat);
-            Write(obj.m_Guts);
-            Write(obj.m_Hide);
-            Write(obj.m_Frozen);
-
-            Write(obj.AP_TurnAngle);
-            Write(obj.AP_TurnSpeed);
-            Write(obj.AP_Speed);
-            Write(obj.AP_Wounded);
-            Write(obj.AP_Roll);
-            Write(obj.AP_Pitch);
-            Write(obj.AP_TargetHeading);
-            Write(obj.AP_TargetHeadingSmooth);
-            Write(obj.AP_TapMeter);
-            Write(obj.AP_AiState);
-            Write(obj.AP_Corpse);
-            Write(obj.AP_Dead);
-            Write(obj.AP_DeadSide);
-            Write(obj.AP_DamageBodyPart);
-            Write(obj.AP_AttackId);
 
             Write(obj.m_Controller);
             Write(obj.m_ProxySave);
@@ -561,6 +561,7 @@ namespace GameServer
             Write(obj.AP_DeadSide);
             Write(obj.AP_DamageBodyPart);
             Write(obj.AP_AttackId);
+            Write(obj.AP_Stunned);
         }
 
         public void Write(MyMod.AnimalTrigger obj)
@@ -746,6 +747,24 @@ namespace GameServer
             Write(obj.m_TimeOfBleeding);
             Write(obj.m_RegionGUID);
             Write(obj.m_LastController);
+            Write(obj.m_LastAiMode);
+        }
+        public void Write(MyMod.AnimalKilled obj)
+        {
+            Write(obj.m_Position);
+            Write(obj.m_Rotation);
+            Write(obj.m_PrefabName);
+            Write(obj.m_GUID);
+            Write(obj.m_LevelGUID);
+            Write(obj.m_CreatedTime);
+
+            Write(obj.m_Meat);
+            Write(obj.m_Guts);
+            Write(obj.m_Hide);
+
+            Write(obj.m_Knocked);
+
+            Write(obj.m_RegionGUID);
         }
 
         #endregion
@@ -1047,26 +1066,7 @@ namespace GameServer
             obj.m_name = ReadString();
             obj.m_Hp = ReadFloat();
             obj.m_Bleeding = ReadBool();
-            obj.m_Meat = ReadFloat();
-            obj.m_Guts = ReadInt();
-            obj.m_Hide = ReadInt();
-            obj.m_Frozen = ReadFloat();
 
-            obj.AP_TurnAngle = ReadFloat();
-            obj.AP_TurnSpeed = ReadFloat();
-            obj.AP_Speed = ReadFloat();
-            obj.AP_Wounded = ReadFloat();
-            obj.AP_Roll = ReadFloat();
-            obj.AP_Pitch = ReadFloat();
-            obj.AP_TargetHeading = ReadFloat();
-            obj.AP_TargetHeadingSmooth = ReadFloat();
-            obj.AP_TapMeter = ReadFloat();
-            obj.AP_AiState = ReadInt();
-            obj.AP_Corpse = ReadBool();
-            obj.AP_Dead = ReadBool();
-            obj.AP_DeadSide = ReadInt();
-            obj.AP_DamageBodyPart = ReadInt();
-            obj.AP_AttackId = ReadInt();
             obj.m_Controller = ReadInt();
             obj.m_ProxySave = ReadString();
             obj.m_LevelD = ReadInt();
@@ -1094,6 +1094,7 @@ namespace GameServer
             obj.AP_DeadSide = ReadInt();
             obj.AP_DamageBodyPart = ReadInt();
             obj.AP_AttackId = ReadInt();
+            obj.AP_Stunned = ReadBool();
 
             return obj;
         }
@@ -1377,7 +1378,28 @@ namespace GameServer
             obj.m_TimeOfBleeding = ReadInt();
             obj.m_RegionGUID = ReadString();
             obj.m_LastController = ReadInt();
+            obj.m_LastAiMode = ReadInt();
 
+            return obj;
+        }
+
+        public MyMod.AnimalKilled ReadAnimalCorpse()
+        {
+            MyMod.AnimalKilled obj = new MyMod.AnimalKilled();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_PrefabName = ReadString();
+            obj.m_GUID = ReadString();
+            obj.m_LevelGUID = ReadString();
+            obj.m_CreatedTime = ReadInt();
+
+            obj.m_Meat = ReadFloat();
+            obj.m_Guts = ReadInt();
+            obj.m_Hide = ReadInt();
+
+            obj.m_Knocked = ReadBool();
+
+            obj.m_RegionGUID = ReadString();
             return obj;
         }
 

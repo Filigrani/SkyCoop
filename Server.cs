@@ -39,18 +39,18 @@ namespace GameServer
 
             MelonLoader.MelonLogger.Msg($"Server started on port {Port}.");
         }
-        public static void StartSteam(int _maxPlayers, string[] whitelist = null)
+        public static void StartSteam(int _maxPlayers, string[] whitelist = null, int lobbytype = 0)
         {
             MaxPlayers = _maxPlayers;
             MyMod.MaxPlayers = MaxPlayers;
-            MelonLoader.MelonLogger.Msg("Starting server...");
+            MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Starting multiplayer...");
             InitializeServerData();
-            MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Server started!");
             if(whitelist != null)
             {
                 SteamConnect.Main.ProcessWhitelist(whitelist);
             }
             UsingSteamWorks = true;
+            SteamConnect.Main.MakeLobby(lobbytype, _maxPlayers);
             MyMod.InitAllPlayers(); // Prepare players objects based on amount of max players
             MyMod.iAmHost = true;
             MyMod.OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
@@ -62,7 +62,7 @@ namespace GameServer
             //MyMod.LoadAllDropsForScene();
             //MyMod.LoadAllOpenableThingsForScene();
             //MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
-            MyMod.DisableOriginalAnimalSpawns();
+            MyMod.DisableOriginalAnimalSpawns(true);
             MyMod.SetFixedSpawn();
             MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
         }
@@ -290,6 +290,13 @@ namespace GameServer
                 { (int)ClientPackets.SENDMYAFFLCTIONS, ServerHandle.SENDMYAFFLCTIONS},
                 { (int)ClientPackets.CUREAFFLICTION, ServerHandle.CUREAFFLICTION},
                 { (int)ClientPackets.ANIMALTEST, ServerHandle.ANIMALTEST},
+                { (int)ClientPackets.ANIMALKILLED, ServerHandle.ANIMALKILLED},
+                { (int)ClientPackets.REQUESTANIMALCORPSE, ServerHandle.REQUESTANIMALCORPSE},
+                { (int)ClientPackets.QUARTERANIMAL, ServerHandle.QUARTERANIMAL},
+                { (int)ClientPackets.ANIMALAUDIO, ServerHandle.ANIMALAUDIO},
+                { (int)ClientPackets.PICKUPRABBIT, ServerHandle.PICKUPRABBIT},
+                { (int)ClientPackets.RELEASERABBIT, ServerHandle.RELEASERABBIT},
+                { (int)ClientPackets.HITRABBIT, ServerHandle.HITRABBIT},
             };
             Console.WriteLine("Initialized packets.");
         }

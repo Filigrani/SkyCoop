@@ -7,28 +7,18 @@ using MelonLoader;
 using UnityEngine;
 
 using GameServer;
+using System.Collections.Generic;
 
 namespace SkyCoop
 {
     public class MenuChange
     {
+        public static string MenuMode = "Original";
+        
         public static void MoveUpMainMenuWordmark(int numOfMainMenuItems)
         {
             GameObject.Find("Panel_MainMenu/MainPanel/Main/TLD_wordmark").transform.localPosition += new Vector3(0, (numOfMainMenuItems - 6) * 30, 0);
         }
-
-        //public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
-        //{
-        //    Panel_MainMenu.MainMenuItem mainMenuItem = new Panel_MainMenu.MainMenuItem();
-        //    mainMenuItem.m_LabelLocalizationId = name;
-        //    mainMenuItem.m_Type = Panel_MainMenu.MainMenuItem.MainMenuItemType.Story + plus;
-        //    __instance.m_MenuItems.Insert(order, mainMenuItem);
-
-        //    string id = __instance.m_MenuItems[order].m_Type.ToString();
-        //    int type = (int)__instance.m_MenuItems[order].m_Type;
-
-        //    __instance.m_BasicMenu.AddItem(id, type, order, name, "", "", new Action(__instance.OnSandbox), Color.gray, Color.white);
-        //}
         public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
         {
             Panel_MainMenu.MainMenuItem mainMenuItem = new Panel_MainMenu.MainMenuItem();
@@ -57,7 +47,7 @@ namespace SkyCoop
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description31")
                 {
-                    __instance.m_DescriptionLabel.text = "Connect by IP adress. If you plan to join by steam invite, quit the game first, game should not be runned, and then press join from steam chat.";
+                    __instance.m_DescriptionLabel.text = "Host or join the server.";
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description32")
                 {
@@ -73,8 +63,149 @@ namespace SkyCoop
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description35")
                 {
-                    __instance.m_DescriptionLabel.text = "Invite your steam friend to your P2P server. Only invites from this menu will work, invites from steam overlay won't work at all.";
+                    __instance.m_DescriptionLabel.text = "Invite your steam friend to this P2P server. Once you invite person, they firstly will join lobby, and then will be connected to this server.";
                 }
+
+                if(__instance.m_ItemModelList[buttonIndex].m_Id == "Quit")
+                {
+                    if(MenuMode == "Multiplayer")
+                    {
+                        __instance.m_DescriptionLabel.text = "Return to main menu.";
+                    }
+                    else if(MenuMode == "Join")
+                    {
+                        __instance.m_DescriptionLabel.text = "Return to multiplayer menu.";
+                    }
+                }
+                if (MenuMode == "Multiplayer")
+                {
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Extras")
+                    {
+                        __instance.m_DescriptionLabel.text = "Configure and host the server.";
+                    }
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Options")
+                    {
+                        __instance.m_DescriptionLabel.text = "Find server or join by IP address.";
+                    }
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Quit")
+                    {
+                        __instance.m_DescriptionLabel.text = "Return to main menu.";
+                    }
+                }
+                if (MenuMode == "Join")
+                {
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "31")
+                    {
+                        __instance.m_DescriptionLabel.text = "Browse public servers.";
+                    }
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Extras")
+                    {
+                        __instance.m_DescriptionLabel.text = "Connect to local or interent server by IP address.";
+                    }
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Options")
+                    {
+                        __instance.m_DescriptionLabel.text = "Opens steam friends overlay.";
+                    }
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Quit")
+                    {
+                        __instance.m_DescriptionLabel.text = "Return to multiplayer menu";
+                    }
+                }
+            }
+        }
+
+        public static Dictionary<int, string> OldMenuData = new Dictionary<int, string>();
+        public static bool OldMenuSaved = false;
+
+
+        public static void SaveOldMenuStuff()
+        {
+            if (MyMod.m_Panel_MainMenu)
+            {
+                // Panel_MainMenu/MainPanel/MenuRoot/Menu/Left_Align/Grid
+                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+                for (int i = 0; i <= 6; i++)
+                {
+                    if (!OldMenuData.ContainsKey(i))
+                    {
+                        string text = Grid.GetChild(i).GetChild(0).GetComponent<UILabel>().text;
+                        OldMenuData.Add(i, text);
+                    }
+                }
+            }
+        }
+
+        public static void BackToOriginalMenu()
+        {
+            if (MyMod.m_Panel_MainMenu)
+            {
+                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+                BasicMenu Basic = MyMod.m_Panel_MainMenu.m_BasicMenu;
+                for (int i = 0; i <= 6; i++)
+                {
+                    UILabel Label = Grid.GetChild(i).GetChild(0).GetComponent<UILabel>();
+                    string Old;
+                    if(OldMenuData.TryGetValue(i, out Old))
+                    {
+                        Label.mText = Old;
+                        Label.text = Old;
+                        Label.ProcessText();
+                        UnityEngine.Object.Destroy(Grid.GetChild(i).gameObject.GetComponent<MyMod.UiButtonPressHook>());
+                        Grid.GetChild(i).gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        public static void OverrideMenuButton(Transform Grid, int index, string txt)
+        {
+            UILabel Label = Grid.GetChild(index).GetChild(0).GetComponent<UILabel>();
+            Label.mText = txt;
+            Label.text = txt;
+            Label.ProcessText();
+            Grid.GetChild(index).gameObject.SetActive(true);
+        }
+
+        public static void ClearMenuButtons(Transform Grid)
+        {
+            for (int i = 0; i <= 6; i++)
+            {
+                Grid.GetChild(i).gameObject.SetActive(false);
+            }
+        }
+
+        // Panel_MainMenu/MainPanel/MenuRoot/Menu/Left_Align/Grid
+        //0 Winter mute
+        //1 Survival mode
+        //2 Challange
+        //3 Multiplayer
+        //4 Extra
+        //5 Options
+        //6 Quit
+
+        public static void GoToMultiplayer()
+        {
+            if (MyMod.m_Panel_MainMenu)
+            {
+                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+
+                ClearMenuButtons(Grid);
+                OverrideMenuButton(Grid, 4, "HOST SERVER");
+                OverrideMenuButton(Grid, 5, "JOIN SERVER");
+                OverrideMenuButton(Grid, 6, "BACK TO MENU");
+            }
+        }
+        public static void GoToJoinServer()
+        {
+            if (MyMod.m_Panel_MainMenu)
+            {
+                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+
+                ClearMenuButtons(Grid);
+                OverrideMenuButton(Grid, 3, "BROWSE SERVERS");
+                OverrideMenuButton(Grid, 4, "CONNECT BY IP");
+                OverrideMenuButton(Grid, 5, "CONNECT TO FRIEND");
+                OverrideMenuButton(Grid, 6, "BACK ");
             }
         }
 
@@ -154,7 +285,7 @@ namespace SkyCoop
                                     text = "INVITE";
                                     if(__instance.m_BasicMenu.m_ItemModelList[3] != null)
                                     {
-                                        if (MyMod.iAmHost == true && Server.UsingSteamWorks == true)
+                                        if (MyMod.MyLobby != "")
                                         {
                                             __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = true;
                                         }else{
@@ -198,7 +329,6 @@ namespace SkyCoop
             Action act = new Action(() => CustomButtonClick(order));
             string id = __instance.m_MenuItems[order].ToString();
             int menuItem = (int)__instance.m_MenuItems[order];
-
             __instance.m_BasicMenu.AddItem(id, menuItem, order, name, "", "", act, Color.green, Color.white);
         }
 
@@ -210,8 +340,9 @@ namespace SkyCoop
                 MelonLogger.Msg("[UI] Trying modify main menu...");
                 //if (!InterfaceManager.IsMainMenuEnabled()) return;
                 //MelonLogger.Msg("[UI] Main main enabled starting modify...");
-                AddButton(__instance, "Donaters", 1, 0);
-                AddButton(__instance, "Connect", 5, 1);
+                //AddButton(__instance, "Donaters", 1, 0);
+                //AddButton(__instance, "MULTIPLAYER", 4, 1);
+                AddButton(__instance, "CONNECT BY IP", 4, 1);
 
                 MoveUpMainMenuWordmark(Convert.ToInt16(__instance.m_BasicMenu.m_MenuItems.Count.ToString()));
             }
@@ -241,6 +372,196 @@ namespace SkyCoop
             }
         }
 
+        //public static bool SkipButtonActionOnce = false;
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnStory", null)]
+        //public class Panel_MainMenu_OnStory
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        if (SkipButtonActionOnce)
+        //        {
+        //            SkipButtonActionOnce = false;
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSandbox", null)]
+        //public class Panel_MainMenu_OnSandbox
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        if (SkipButtonActionOnce)
+        //        {
+        //            SkipButtonActionOnce = false;
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnChallenges", null)]
+        //public class Panel_MainMenu_OnChallenges
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        if (SkipButtonActionOnce)
+        //        {
+        //            SkipButtonActionOnce = false;
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnExtras", null)]
+        //public class Panel_MainMenu_OnExtras
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        if (SkipButtonActionOnce)
+        //        {
+        //            SkipButtonActionOnce = false;
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnOptions", null)]
+        //public class Panel_MainMenu_OnOptions
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        if (SkipButtonActionOnce)
+        //        {
+        //            SkipButtonActionOnce = false;
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnQuit", null)]
+        //public class Panel_MainMenu_OnQuit
+        //{
+        //    public static bool Prefix()
+        //    {
+        //        if (SkipButtonActionOnce)
+        //        {
+        //            SkipButtonActionOnce = false;
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+
+        public static void ConnectByIp()
+        {
+            //For Debug Alone
+            bool DebugAlone = false;
+            bool ConnectedScreenTest = false;
+            bool KickTest = false;
+
+            if (ConnectedScreenTest == true)
+            {
+                MyMod.DoWaitForConnect();
+                if (KickTest == true)
+                {
+                    MyMod.DoKickMessage("Wrong mod version! Server using version " + MyMod.BuildInfo.Version);
+                }
+            }else{
+                if (DebugAlone == true)
+                {
+                    MyMod.SaveSlotSync SaveData = new MyMod.SaveSlotSync();
+                    SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
+                    SaveData.m_Episode = (int)Episode.One;
+                    SaveData.m_ExperienceMode = (int)ExperienceModeType.Custom;
+                    SaveData.m_Location = (int)GameRegion.LakeRegion;
+                    SaveData.m_Seed = -1294300353;
+                    SaveData.m_CustomExperienceStr = "gsHMbj8PKxsjmaGO98IB";
+                    SaveData.m_FixedSpawnScene = "";
+                    MyMod.PendingSave = SaveData;
+                    MyMod.InterloperHook = true;
+                    MyMod.CheckHaveSaveFileToJoin(SaveData);
+                }else{
+                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                }
+            }
+        }
+
+        //[HarmonyLib.HarmonyPatch(typeof(BasicMenu), "InternalClickAction", null)]
+        //internal class BasicMenu_InternalClickAction_Pre
+        //{
+        //    private static bool Prefix(BasicMenu __instance, int index)
+        //    {
+        //        IL2CPP.List<BasicMenu.BasicMenuItemModel> list = __instance.m_ItemModelList;
+        //        Transform Grid;
+        //        UILabel Label;
+        //        if (list != null)
+        //        {
+        //            Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+        //            Label = Grid.GetChild(index).GetChild(0).GetComponent<UILabel>();
+        //        }else{
+        //            return true;
+        //        }
+
+        //        if(Label.mText == "CONNECT BY IP")
+        //        {
+        //            ConnectByIp();
+        //        }
+        //        return true; // Future code  will be added later.
+
+        //        //MelonLogger.Msg("Clicked " + Label.mText);
+        //        if (Label.mText == "Donaters")
+        //        {
+        //            Application.OpenURL("https://filigrani.github.io/SkyCoop/");
+        //            return false;
+        //        }
+        //        else if(Label.mText == "MULTIPLAYER")
+        //        {
+        //            if (!OldMenuSaved)
+        //            {
+        //                SaveOldMenuStuff();
+        //            }
+        //            GoToMultiplayer();
+        //            MenuMode = "Multiplayer";
+        //            return false;
+        //        }
+        //        else if(Label.text == "BACK TO MENU")
+        //        {
+        //            BackToOriginalMenu();
+        //            MenuMode = "Original";
+        //            GameAudioManager.PlayGUIButtonClick();
+        //            return false;
+        //        }
+        //        else if(Label.text == "BACK ")
+        //        {
+        //            GoToMultiplayer();
+        //            MenuMode = "Multiplayer";
+        //            GameAudioManager.PlayGUIButtonClick();
+        //            return false;
+        //        }
+        //        else if(Label.text == "JOIN SERVER")
+        //        {
+        //            GoToJoinServer();
+        //            MenuMode = "Join";
+        //            GameAudioManager.PlayGUIButtonClick();
+        //            return false;
+        //        }
+        //        else if(Label.text == "CONNECT TO FRIEND")
+        //        {
+        //            if (SteamConnect.CanUseSteam)
+        //            {
+        //                SteamConnect.Main.OpenFriends();
+        //            }
+        //            GameAudioManager.PlayGUIButtonClick();
+        //            return false;
+        //        }
+        //        else if(Label.text == "CONNECT BY IP")
+        //        {
+        //            ConnectByIp();
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(BasicMenu), "InternalClickAction", null)]
         internal class BasicMenu_InternalClickAction_Pre
         {
@@ -252,38 +573,9 @@ namespace SkyCoop
                 {
                     Application.OpenURL("https://filigrani.github.io/SkyCoop/");
                 }
-                if (list[index].m_LabelText == "Connect")
+                if (list[index].m_LabelText == "Connect by ip")
                 {
-                    //For Debug Alone
-                    bool DebugAlone = false;
-                    bool ConnectedScreenTest = false;
-                    bool KickTest = false;
-
-                    if(ConnectedScreenTest == true)
-                    {
-                        MyMod.DoWaitForConnect();
-                        if(KickTest == true)
-                        {
-                            MyMod.DoKickMessage("Wrong mod version! Server using version " + MyMod.BuildInfo.Version);
-                        }
-                    }else{
-                        if (DebugAlone == true)
-                        {
-                            MyMod.SaveSlotSync SaveData = new MyMod.SaveSlotSync();
-                            SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
-                            SaveData.m_Episode = (int)Episode.One;
-                            SaveData.m_ExperienceMode = (int)ExperienceModeType.Custom;
-                            SaveData.m_Location = (int)GameRegion.LakeRegion;
-                            SaveData.m_Seed = -1294300353;
-                            SaveData.m_CustomExperienceStr = "gsHMbj8PKxsjmaGO98IB";
-                            SaveData.m_FixedSpawnScene = "";
-                            MyMod.PendingSave = SaveData;
-                            MyMod.InterloperHook = true;
-                            MyMod.CheckHaveSaveFileToJoin(SaveData);
-                        }else{
-                            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
-                        }
-                    }
+                    ConnectByIp();
                 }
             }
         }
@@ -295,29 +587,36 @@ namespace SkyCoop
                 if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.UiButtonPressHook>() != null)
                 {
                     int CustomId = __instance.gameObject.GetComponent<MyMod.UiButtonPressHook>().m_CustomId;
-
-                    if(InterfaceManager.m_Panel_PauseMenu.m_BasicMenu.m_ItemModelList[CustomId].m_Selectable == false)
+                    //MelonLogger.Msg("Clicked m_CustomId " + CustomId);
+                    if (CustomId != -1)
                     {
-                        return false;
-                    }
-
-
-                    if (CustomId == 0)
-                    {
-                        MyMod.HostMenu();
-                    }else if (CustomId == 1)
-                    {
-                        MyMod.DoIPConnectWindow();
-                    }else if (CustomId == 2)
-                    {
-                        MelonLogger.Msg("Disconnect case pressed disconnect button");
-                        MyMod.LastConnectedIp = "";
-                        MyMod.Disconnect();
-                    }else if (CustomId == 3)
-                    {
-                        if (Server.UsingSteamWorks == true)
+                        if (CustomId < 4)
                         {
-                            SteamConnect.Main.MakeFriendListUI();
+                            if (InterfaceManager.m_Panel_PauseMenu.m_BasicMenu.m_ItemModelList[CustomId].m_Selectable == false)
+                            {
+                                return false;
+                            }
+                            if (CustomId == 0)
+                            {
+                                MyMod.HostMenu();
+                            }
+                            else if (CustomId == 1)
+                            {
+                                MyMod.DoIPConnectWindow();
+                            }
+                            else if (CustomId == 2)
+                            {
+                                MelonLogger.Msg("Disconnect case pressed disconnect button");
+                                MyMod.LastConnectedIp = "";
+                                MyMod.Disconnect();
+                            }
+                            else if (CustomId == 3)
+                            {
+                                if (MyMod.MyLobby != "")
+                                {
+                                    SteamConnect.Main.MakeFriendListUI();
+                                }
+                            }
                         }
                     }
                     return false;

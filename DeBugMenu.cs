@@ -31,12 +31,13 @@ namespace SkyCoop
             if (MyMod.AdvancedDebugMode != "")
             {
                 int animalcount = BaseAiManager.m_BaseAis.Count;
+                int animalActors = MyMod.ActorsList.Count;
 
                 if (MyMod.AdvancedDebugMode == "AnimalsGUID" || MyMod.AdvancedDebugMode == "AnimalsAllStats")
                 {
                     int offset = 20;
 
-                    GUI.Label(new Rect(700, 10, 500, 100), "Animals around: " + animalcount + " Animal controller " + MyMod.AnimalsController);
+                    GUI.Label(new Rect(700, 10, 500, 100), "Animals: " + animalcount + " Actors: "+ animalActors + " Controller " + MyMod.AnimalsController);
                     GUI.Label(new Rect(700, 10 + offset * 1, 500, 100), "GUID: " + MyMod.DebugAnimalGUID);
                     GUI.Label(new Rect(700, 10 + offset * 2, 500, 100), "Last GUID: " + MyMod.DebugAnimalGUIDLast);
 

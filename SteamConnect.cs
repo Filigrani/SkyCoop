@@ -8,6 +8,7 @@ using System.Net;
 using System.Runtime.InteropServices;
 
 using GameServer;
+using System.Collections.Generic;
 
 namespace SkyCoop
 {
@@ -19,65 +20,321 @@ namespace SkyCoop
 
         public static void Init()
         {
-            if (SteamManager.Initialized == true)
-            {
-                MelonLogger.Msg("SteamManager Initialized");
-                SteamAPI.Init();
-                string str = "";
-                int num = 2555;
-                SteamApps.GetLaunchCommandLine(out str, num);
-            }
+            MelonLogger.Msg("[SteamWorks.NET] Trying to Init SteamAPI");
+            SteamAPI.Init();
+            StartSteam();
+            MelonLogger.Msg("[SteamWorks.NET] SteamAPI is initialized");
         }
 
         public static bool StartSteam()
         {
-            if(SteamManager.Initialized == false)
-            {
-                MelonLogger.Msg(ConsoleColor.Red,"STEAM IN OFFLINE MODE! Please shutdown your game, and run steam/log in to steam freinds, to be able use STEAM P2P multiplayer.");
-                return false;
-            }
             CanUseSteam = true;
             Main.Run();
             return true;
         }
+
         public static void DoUpdate()
         {
-            if (CanUseSteam == false)
-            {
+            if (!CanUseSteam)
                 return;
-            }
             Main.ListenData();
             SteamAPI.RunCallbacks();
         }
-
-        public class Main : MelonMod
+        public class Main
         {
             private static Callback<GameRichPresenceJoinRequested_t> _GameRichPresenceJoinRequested_t;
+            private static Callback<GameLobbyJoinRequested_t> _GameLobbyJoinRequested_t;
+            private static Callback<LobbyEnter_t> _LobbyEnter_t;
+            private static CallResult<LobbyCreated_t> OnLobbyCreatedCallResult;
+            private static Callback<LobbyGameCreated_t> _LobbyGameCreated_t;
+            private static Callback<LobbyChatUpdate_t> _LobbyChatUpdate_t;
+            public static void Run()
+            {
+                _GameRichPresenceJoinRequested_t = Callback<GameRichPresenceJoinRequested_t>.Create(new Callback<GameRichPresenceJoinRequested_t>.DispatchDelegate(OnP2PSessionAccept));
+                _LobbyEnter_t = Callback<LobbyEnter_t>.Create(new Callback<LobbyEnter_t>.DispatchDelegate(OnEnterLobby));
+                _GameLobbyJoinRequested_t = Callback<GameLobbyJoinRequested_t>.Create(new Callback<GameLobbyJoinRequested_t>.DispatchDelegate(ShouldJoinLobby));
+                OnLobbyCreatedCallResult = CallResult<LobbyCreated_t>.Create(new CallResult<LobbyCreated_t>.APIDispatchDelegate(OnLobbyCreated));
+                _LobbyGameCreated_t = Callback<LobbyGameCreated_t>.Create(new Callback<LobbyGameCreated_t>.DispatchDelegate(OnLobbyServerCreated));
+                _LobbyChatUpdate_t = Callback<LobbyChatUpdate_t>.Create(new Callback<LobbyChatUpdate_t>.DispatchDelegate(OnLobbyPlayersUpdate));
+                
+                string personaName = SteamFriends.GetPersonaName();
+                MelonLogger.Msg("[SteamWorks.NET] Logins as " + personaName + " SteamID " + SteamUser.GetSteamID().ToString());
+                MyMod.LoadChatName(personaName);
+            }
 
             public static void OnP2PSessionAccept(GameRichPresenceJoinRequested_t request)
             {
                 if(MyMod.level_name == "MainMenu")
                 {
                     MelonLogger.Msg("[SteamWorks.NET] Got accpeted invite message");
-                    if (request.m_steamIDFriend != null)
+                    if (request.m_rgchConnect != null)
                     {
-                        CSteamID clientId = request.m_steamIDFriend;
-                        string IDstr = clientId.ToString();
-                        MyMod.ConnectedSteamWorks = true;
-                        MyMod.SteamServerWorks = IDstr;
-                        MyMod.DoWaitForConnect();
-                        ConnectToHost(MyMod.SteamServerWorks);
+                        MelonLogger.Msg("[SteamWorks.NET] m_rgchConnect " + request.m_rgchConnect);
+                        if (request.m_rgchConnect.Contains("+connect_lobby"))
+                        {
+                            JoinToLobby(request.m_rgchConnect.Replace("+connect_lobby ", ""));
+                        }
+                    }else{
+                        if (request.m_steamIDFriend != null)
+                        {
+                            CSteamID clientId = request.m_steamIDFriend;
+                            string IDstr = clientId.ToString();
+                            MyMod.ConnectedSteamWorks = true;
+                            MyMod.SteamServerWorks = IDstr;
+                            MyMod.DoWaitForConnect();
+                            ConnectToHost(MyMod.SteamServerWorks);
+                        }
+                    }
+                }
+            }
+            public static void OnEnterLobby(LobbyEnter_t request)
+            {
+                if(request.m_EChatRoomEnterResponse == 1)
+                {
+                    MelonLogger.Msg("[SteamWorks.NET] Jointed to Lobby "+ request.m_ulSteamIDLobby);
+                    MyMod.MyLobby = request.m_ulSteamIDLobby.ToString();
+                    if (SteamMatchmaking.GetLobbyOwner(new CSteamID(request.m_ulSteamIDLobby)) != SteamUser.GetSteamID())
+                    {
+                        MelonLogger.Msg("[SteamWorks.NET] Going to connect to server of the lobby");
+                        SteamFriends.SetRichPresence("connect", "+connect_lobby " + request.m_ulSteamIDLobby);
+                        SteamFriends.SetRichPresence("steam_player_group", request.m_ulSteamIDLobby.ToString());
+                        SteamFriends.SetRichPresence("steam_player_group_size", SteamMatchmaking.GetNumLobbyMembers(new CSteamID(request.m_ulSteamIDLobby)).ToString());
+
+                        //ulong MySteamID = ulong.Parse(SteamUser.GetSteamID().ToString());
+
+                        //if (!MyMod.LobbyContains(MySteamID))
+                        //{
+                        //    int Descripter = SteamFriends.GetMediumFriendAvatar(SteamUser.GetSteamID());
+                        //    if (Descripter != 0)
+                        //    {
+                        //        Texture2D Avatar = GetImageFromDescripter(Descripter, 64, 64);
+                        //        MyMod.AddPersonToLobby(SteamFriends.GetPersonaName(), MySteamID, Avatar);
+                        //    }else{
+                        //        MelonLogger.Msg(ConsoleColor.Yellow, "[SteamWorks.NET] Player has not avatar ");
+                        //    }
+                        //}
+                        //MyMod.LobbyUI.SetActive(true);
+
+                        uint _;
+                        ushort __;
+                        CSteamID server;
+                        SteamMatchmaking.GetLobbyGameServer(new CSteamID(request.m_ulSteamIDLobby), out _, out __, out server);
+                        if (server != null)
+                        {
+                            int InLobby = SteamMatchmaking.GetNumLobbyMembers(new CSteamID(request.m_ulSteamIDLobby));
+                            int LobbyLimit = SteamMatchmaking.GetLobbyMemberLimit(new CSteamID(request.m_ulSteamIDLobby));
+                            SteamFriends.SetRichPresence("status", "Playing Online " + InLobby + "/" + LobbyLimit);
+                            MyMod.ConnectedSteamWorks = true;
+                            MyMod.SteamServerWorks = server.ToString();
+                            MyMod.DoWaitForConnect();
+                            ConnectToHost(MyMod.SteamServerWorks);
+                        }
+                    }
+                }else{
+                    MelonLogger.Msg(ConsoleColor.Red, "[SteamWorks.NET] Can't joing to lobby!");
+                }
+            }
+            public static void ShouldJoinLobby(GameLobbyJoinRequested_t request)
+            {
+                MelonLogger.Msg("[SteamWorks.NET] Trying to join to lobby from invite " + request.m_steamIDLobby);
+                if (MyMod.SteamServerWorks == "" && MyMod.MyLobby == "" && MyMod.iAmHost == false && MyMod.sendMyPosition == false)
+                {
+                    SteamMatchmaking.JoinLobby(request.m_steamIDLobby);
+                }else{
+                    if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                    {
+                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "YOU ALREADY ON SERVER", "\n" + "You already on the server, restart the game if you want to join to another server", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                     }
                 }
             }
 
-            public static void Run()
+            public static Texture2D GetImageFromDescripter(int AvatarDescripter, int width, int height)
             {
-                _GameRichPresenceJoinRequested_t = Callback<GameRichPresenceJoinRequested_t>.Create(OnP2PSessionAccept);
-                string name = SteamFriends.GetPersonaName();
-                MelonLogger.Msg("[SteamWorks.NET] Logins as " + name + " SteamID " + SteamUser.GetSteamID().ToString());
-                MyMod.LoadChatName(name);
-                //AllDels();
+                int ImageSizeInBytes = width * height * 4; 
+                byte[] Avatar = new byte[ImageSizeInBytes];
+                SteamUtils.GetImageRGBA(AvatarDescripter, Avatar, ImageSizeInBytes);
+                Texture2D texture = new Texture2D(width, height, TextureFormat.RGBA32, false, true);
+                texture.LoadRawTextureData(Avatar);
+                texture.Apply();
+                return texture;
+            }
+
+            public static void OnLobbyCreated(LobbyCreated_t pCallback, bool bIOFailure)
+            {
+                if (!bIOFailure)
+                {
+                    if(pCallback.m_eResult == EResult.k_EResultOK)
+                    {
+                        MelonLogger.Msg("[SteamWorks.NET] Lobby created " + pCallback.m_ulSteamIDLobby);
+                        SteamMatchmaking.SetLobbyGameServer(new CSteamID(pCallback.m_ulSteamIDLobby), 0, 0, SteamUser.GetSteamID());
+                        SteamFriends.SetRichPresence("steam_player_group", pCallback.m_ulSteamIDLobby.ToString());
+                        SteamFriends.SetRichPresence("steam_player_group_size", "1");
+                        MyMod.MyLobby = pCallback.m_ulSteamIDLobby.ToString();
+                    }else{
+                        MelonLogger.Msg(ConsoleColor.Red, "[SteamWorks.NET] Can't create lobby: Error " + pCallback.m_eResult);
+                        MelonLogger.Msg(ConsoleColor.Green, "[SteamWorks.NET] Going to try again in 5 seconds");
+                        MyMod.TryMakeLobbyAgain = 5;
+                    }
+                }else{
+                    MelonLogger.Msg(ConsoleColor.Red, "[SteamWorks.NET] Can't create lobby: Error bIOFailure");
+                    MelonLogger.Msg(ConsoleColor.Green, "[SteamWorks.NET] Going to try again in 5 seconds");
+                    MyMod.TryMakeLobbyAgain = 5;
+                }
+
+                //if (MyMod.LobbyUI)
+                //{
+                //    MyMod.LobbyUI.SetActive(true);
+
+                //    ulong MySteamID = ulong.Parse(SteamUser.GetSteamID().ToString());
+
+                //    if (!MyMod.LobbyContains(MySteamID))
+                //    {
+                //        int Descripter = SteamFriends.GetMediumFriendAvatar(SteamUser.GetSteamID());
+                //        if (Descripter != 0)
+                //        {
+                //            Texture2D Avatar = GetImageFromDescripter(Descripter, 64, 64);
+                //            MyMod.AddPersonToLobby(SteamFriends.GetPersonaName(), MySteamID, Avatar);
+                //        }else{
+                //            MelonLogger.Msg(ConsoleColor.Yellow, "[SteamWorks.NET] Player has not avatar ");
+                //        }
+                //    }
+                //}
+            }
+
+            public static void OnLobbyServerCreated(LobbyGameCreated_t request)
+            {
+                MelonLogger.Msg("[SteamWorks.NET] Lobby server set to " + request.m_ulSteamIDGameServer);
+                int InLobby = SteamMatchmaking.GetNumLobbyMembers(new CSteamID(request.m_ulSteamIDLobby));
+                int LobbyLimit = SteamMatchmaking.GetLobbyMemberLimit(new CSteamID(request.m_ulSteamIDLobby));
+                SteamFriends.SetRichPresence("status", "Playing Online "+ InLobby + "/"+ LobbyLimit);
+                SteamFriends.SetRichPresence("connect", "+connect_lobby "+ request.m_ulSteamIDLobby);
+                if (SteamMatchmaking.GetLobbyOwner(new CSteamID(request.m_ulSteamIDLobby)) != SteamUser.GetSteamID())
+                {
+                    MyMod.ConnectedSteamWorks = true;
+                    MyMod.SteamServerWorks = request.m_ulSteamIDGameServer.ToString();
+                    MyMod.DoWaitForConnect();
+                    ConnectToHost(MyMod.SteamServerWorks);
+                }
+            }
+            public static void OnLobbyPlayersUpdate(LobbyChatUpdate_t request)
+            {
+                if (request.m_rgfChatMemberStateChange == 0x0001) // Joined
+                {
+                    MelonLogger.Msg("[SteamWorks.NET] Played joined lobby " + request.m_ulSteamIDUserChanged);
+                    if (SteamMatchmaking.GetLobbyOwner(new CSteamID(request.m_ulSteamIDLobby)) == SteamUser.GetSteamID())
+                    {
+                        SteamNetworking.AcceptP2PSessionWithUser(new CSteamID(request.m_ulSteamIDUserChanged));
+                    }
+                    //if (MyMod.LobbyUI)
+                    //{
+                    //    MyMod.LobbyUI.SetActive(true);
+                    //}
+                }else{
+                    MelonLogger.Msg("[SteamWorks.NET] Player disconnected from lobby " + request.m_ulSteamIDUserChanged);
+                    if (SteamMatchmaking.GetLobbyOwner(new CSteamID(request.m_ulSteamIDLobby)) == SteamUser.GetSteamID())
+                    {
+                        SteamNetworking.CloseP2PSessionWithUser(new CSteamID(request.m_ulSteamIDUserChanged));
+                    }
+                    //if (MyMod.LobbyUI)
+                    //{
+                    //    MyMod.LobbyUI.SetActive(true);
+                    //    ulong PersonSteamID = request.m_ulSteamIDUserChanged;
+                    //    MyMod.RemovePersonFromLobby(PersonSteamID);
+                    //}
+                }
+
+                SteamFriends.SetRichPresence("steam_player_group", request.m_ulSteamIDLobby.ToString());
+                SteamFriends.SetRichPresence("steam_player_group_size", SteamMatchmaking.GetNumLobbyMembers(new CSteamID(request.m_ulSteamIDLobby)).ToString());
+                int InLobby = SteamMatchmaking.GetNumLobbyMembers(new CSteamID(request.m_ulSteamIDLobby));
+                int LobbyLimit = SteamMatchmaking.GetLobbyMemberLimit(new CSteamID(request.m_ulSteamIDLobby));
+                SteamFriends.SetRichPresence("status", "Playing Online " + InLobby + "/" + LobbyLimit);
+            }
+
+            public static void MayUpdatePlayerInLobby(ulong playerID)
+            {
+                if (!MyMod.LobbyContains(playerID))
+                {
+                    int Descripter = SteamFriends.GetMediumFriendAvatar(new CSteamID(playerID));
+                    if (Descripter != 0)
+                    {
+                        Texture2D Avatar = GetImageFromDescripter(Descripter, 64, 64);
+                        MyMod.AddPersonToLobby(SteamFriends.GetFriendPersonaName(new CSteamID(playerID)), playerID, Avatar);
+                    }
+                }else{
+                    MyMod.SetPersonNameFromLobby(playerID, SteamFriends.GetFriendPersonaName(new CSteamID(playerID)));
+                }
+            }
+
+            public static void OnRegularUpdate()
+            {
+                //if (MyMod.MyLobby != "")
+                //{
+                //    CSteamID lobbyID = new CSteamID(ulong.Parse(MyMod.MyLobby));
+                //    int Peoples = SteamMatchmaking.GetNumLobbyMembers(lobbyID);
+
+                //    for (int i = 0; i < Peoples; i++)
+                //    {
+                //        ulong playerID = ulong.Parse(SteamMatchmaking.GetLobbyMemberByIndex(lobbyID, i).ToString());
+                //        MayUpdatePlayerInLobby(playerID);
+                //    }
+                //}
+            }
+
+            private static int LastLobbyType = 0;
+            private static int LastLobbyLimit = 0;
+
+            public static void MakeLobby(int type, int limit)
+            {
+                LastLobbyType = type;
+                LastLobbyLimit = limit;
+
+                ELobbyType LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
+
+                switch (type)
+                {
+                    case 0:
+                        LobbyType = ELobbyType.k_ELobbyTypePrivate;
+                        break;
+                    case 1:
+                        LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
+                        break;
+                    case 2:
+                        LobbyType = ELobbyType.k_ELobbyTypePublic;
+                        break;
+                    default:
+                        LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
+                        break;
+                }
+
+                MelonLogger.Msg("[SteamWorks.NET] Creating new lobby");
+                SteamAPICall_t handle = SteamMatchmaking.CreateLobby(LobbyType, limit);
+                OnLobbyCreatedCallResult.Set(handle);
+            }
+            public static void MakeLobby()
+            {
+                MelonLogger.Msg("[SteamWorks.NET] Retrying to creating new lobby");
+                ELobbyType LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
+
+                switch (LastLobbyType)
+                {
+                    case 0:
+                        LobbyType = ELobbyType.k_ELobbyTypePrivate;
+                        break;
+                    case 1:
+                        LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
+                        break;
+                    case 2:
+                        LobbyType = ELobbyType.k_ELobbyTypePublic;
+                        break;
+                    default:
+                        LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
+                        break;
+                }
+
+                MelonLogger.Msg("[SteamWorks.NET] Creating new lobby");
+
+                SteamAPICall_t handle = SteamMatchmaking.CreateLobby(LobbyType, LastLobbyLimit);
+                OnLobbyCreatedCallResult.Set(handle);
             }
 
             public static string GetFriends()
@@ -104,62 +361,24 @@ namespace SkyCoop
                 }
             }
 
-            public static void ClickInvitePerson(CSteamID sid)
+            public static void TestLobbyUI()
             {
-                InviteFriendBySid(sid);
-                UnityEngine.Object.Destroy(MyMod.UISteamFreindsMenuObj);
-            }
-            public static void ClickCloseFriendList()
-            {
-                UnityEngine.Object.Destroy(MyMod.UISteamFreindsMenuObj);
+
             }
 
             public static void MakeFriendListUI()
             {
-                if (MyMod.UiCanvas != null && MyMod.UISteamFreindsMenuObj == null)
+                if(MyMod.MyLobby != "")
                 {
-                    MyMod.UISteamFreindsMenuObj = MyMod.MakeModObject("MP_FriendList", MyMod.UiCanvas.transform);
-                    int friends = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
-
-                    Transform ButtonsParent = MyMod.UISteamFreindsMenuObj.transform.GetChild(0).GetChild(0).gameObject.transform;
-                    GameObject CloseButton = MyMod.UISteamFreindsMenuObj.transform.GetChild(3).gameObject;
-                    Action actBack = new Action(() => ClickCloseFriendList());
-                    CloseButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(actBack);
-
-                    for (int i = 0; i < friends; i++)
-                    {
-                        CSteamID sid = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
-                        string fName = SteamFriends.GetFriendPersonaName(sid);
-                        GameObject newButton = MyMod.MakeModObject("MP_FriendButtonInvite", ButtonsParent);
-                        newButton.transform.GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>().text = fName;
-
-                        Action act = new Action(() => ClickInvitePerson(sid));
-                        newButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
-                    }
+                    SteamFriends.ActivateGameOverlayInviteDialog(new CSteamID(ulong.Parse(MyMod.MyLobby)));
                 }
             }
-
-            public static string InviteFriendByIndex(int index)
+            public static void OpenFriends()
             {
-                int friends = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
-
-                if(index < 0 || index > friends-1)
-                {
-                    return "Invalid friend index!";
-                }else{
-                    CSteamID sid = SteamFriends.GetFriendByIndex(index, EFriendFlags.k_EFriendFlagImmediate);
-                    InviteFriendBySid(sid);
-                    return SteamFriends.GetFriendPersonaName(sid) + " invited to your server!";
-                }
-                return "Error";
+                SteamFriends.ActivateGameOverlay("friends");
             }
 
-            public static void InviteFriendBySid(CSteamID reciver)
-            {
-                MelonLogger.Msg("[SteamWorks.NET] Inviting friend " + SteamFriends.GetFriendPersonaName(reciver));
-                SteamFriends.InviteUserToGame(reciver, "join " + SteamUser.GetSteamID().ToString());
-                SteamNetworking.AcceptP2PSessionWithUser(reciver);
-            }
+
             public static void ConnectToHost(string hostid)
             {
                 MyMod.instance.myId = 0;
@@ -169,6 +388,14 @@ namespace SkyCoop
                 SteamNetworking.AcceptP2PSessionWithUser(reciver);
                 MelonLogger.Msg("[SteamWorks.NET] Trying connecting to " + hostid);
                 MyMod.DoSteamWorksConnect(SteamUser.GetSteamID().ToString());
+            }
+            public static void JoinToLobby(string hostid)
+            {
+                MyMod.instance.myId = 0;
+                CSteamID reciver = new CSteamID(ulong.Parse(hostid));
+                MyMod.InitializeClientData();
+
+                SteamMatchmaking.JoinLobby(reciver);
             }
             public static void SendUDPData(Packet _packet, CSteamID receiver)
             {
@@ -321,24 +548,9 @@ namespace SkyCoop
 
                     if (SteamNetworking.ReadP2PPacket(_data, size, out bytesRead, out remoteId, 0))
                     {
-                        //MelonLogger.Msg("[SteamWorks.NET] Got data packet from " + remoteId.ToString());
-                        //MelonLogger.Msg("[SteamWorks.NET] _data.Length " + _data.Length);
-                        //string datString = "";
-
-                        //for (int i = 0; i < _data.Length; i++)
-                        //{
-                        //    datString = datString + _data[i].ToString();
-                        //}
-
-                        //MelonLogger.Msg("Bytes: " + datString);
-
                         if (_data.Length > 4)
                         {
-                            //MelonLogger.Msg("[SteamWorks.NET] Starting Handle...");
                             HandleData(_data);
-                        }
-                        else{
-                            //MelonLogger.Msg("[SteamWorks.NET] _data is null");
                         }
                     }
                 }

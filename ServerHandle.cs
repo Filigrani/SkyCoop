@@ -337,17 +337,17 @@ namespace GameServer
         }
         public static void HARVESTINGANIMAL(int _fromClient, Packet _packet)
         {
+            string GUID = _packet.ReadString();
             if (MyMod.playersData[_fromClient] != null)
             {
-                MyMod.playersData[_fromClient].m_HarvestingAnimal = _packet.ReadString();
+                MyMod.playersData[_fromClient].m_HarvestingAnimal = GUID;
             }
+            ServerSend.HARVESTINGANIMAL(_fromClient, GUID, false);
         }
         public static void DONEHARVASTING(int _fromClient, Packet _packet)
         {
-            MyMod.HarvestStats got = _packet.ReadHarvest();
-            MyMod.DoForcedHarvestAnimal(got.m_Guid, got);
-
-            ServerSend.DONEHARVASTING(0, got, true);
+            MyMod.HarvestStats Harvey = _packet.ReadHarvest();
+            MyMod.OnAnimalCorpseChanged(Harvey.m_Guid, Harvey.m_Meat, Harvey.m_Guts, Harvey.m_Hide);
         }
         public static void ANIMALTEST(int _fromClient, Packet _packet)
         {
@@ -371,12 +371,13 @@ namespace GameServer
         public static void BULLETDAMAGE(int _fromClient, Packet _packet)
         {
             float damage = _packet.ReadFloat();
+            int BodyPart = _packet.ReadInt();
             int _for = _packet.ReadInt();
             if(_for == 0)
             {
-                MyMod.DamageByBullet(damage, _fromClient);
+                MyMod.DamageByBullet(damage, _fromClient, BodyPart);
             }else{
-                ServerSend.BULLETDAMAGE(_for, damage, _fromClient);
+                ServerSend.BULLETDAMAGE(_for, damage, BodyPart, _fromClient);
             }
         }
         public static void MULTISOUND(int _fromClient, Packet _packet)
@@ -443,6 +444,7 @@ namespace GameServer
         {
             string AnimalGuid = _packet.ReadString();
             MyMod.DeleteAnimal(AnimalGuid);
+            ServerSend.ANIMALDELETE(_fromClient, AnimalGuid);
         }
         public static void KEEPITALIVE(int _fromClient, Packet _packet)
         {
@@ -851,14 +853,8 @@ namespace GameServer
         {
             string guid = _packet.ReadString();
             float damage = _packet.ReadFloat();
-            int to = _packet.ReadInt();
-
-            if(to == 0)
-            {
-                MyMod.DoAnimalDamage(guid, damage);
-            }else{
-                ServerSend.ANIMALDAMAGE(_fromClient, guid, damage, to);
-            }
+            MyMod.DoAnimalDamage(guid, damage);
+            ServerSend.ANIMALDAMAGE(_fromClient, guid, damage);
         }
         public static void DROPITEM(int _fromClient, Packet _packet)
         {
@@ -914,6 +910,38 @@ namespace GameServer
             }
         }
 
+        public static void SendAnimalCorpse(MyMod.AnimalKilled Animal, int forWho = -1)
+        {
+            if(forWho != -1)
+            {
+                ServerSend.ANIMALCORPSE(forWho, Animal);
+            }else{
+                ServerSend.ANIMALCORPSE(forWho, Animal, true);
+            }
+        }
+
+        public static void RequestAnimalCorpses(int _fromClient, string LevelGUID)
+        {
+            List<string> ToRemove = new List<string>();
+
+            foreach (var item in MyMod.AnimalsKilled)
+            {
+                int DespawnTime = item.Value.m_CreatedTime+14400;
+                if (DespawnTime < MyMod.MinutesFromStartServer)
+                {
+                    ToRemove.Add(item.Key);
+                }else{
+                    if(item.Value.m_LevelGUID == LevelGUID)
+                    {
+                        SendAnimalCorpse(item.Value, _fromClient);
+                    }
+                }
+            }
+            foreach (var item in ToRemove)
+            {
+                MyMod.AnimalsKilled.Remove(item);
+            }
+        }
 
         public static void REQUESTDROPSFORSCENE(int _fromClient, Packet _packet)
         {
@@ -930,7 +958,7 @@ namespace GameServer
 
             MyMod.MarkSearchedContainers(lvlKey, _fromClient);
             SendAllOpenables(_fromClient, lvlKey);
-
+            RequestAnimalCorpses(_fromClient, lvlGUID);
 
             if (MyMod.DroppedGears.ContainsKey(lvlKey) == false)
             {
@@ -1030,6 +1058,37 @@ namespace GameServer
                 ServerSend.CUREAFFLICTION(ForWho, toCure);
             }
         }
+        public static void ANIMALKILLED(int _fromClient, Packet _packet)
+        {
+            MyMod.AnimalKilled Data = _packet.ReadAnimalCorpse();
+            MyMod.OnAnimalKilled(Data.m_PrefabName, Data.m_Position, Data.m_Rotation, Data.m_GUID, Data.m_LevelGUID, Data.m_RegionGUID, Data.m_Knocked);
+
+            ServerSend.ANIMALCORPSE(0, Data, true);
+        }
+        public static void PICKUPRABBIT(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            int result = MyMod.PickUpRabbit(GUID);
+            ServerSend.GOTRABBIT(_fromClient, result);
+        }
+        public static void HITRABBIT(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            int For = _packet.ReadInt();
+            if(For != 0)
+            {
+                ServerSend.HITRABBIT(For, GUID);
+            }else{
+                MyMod.OnHitRabbit(GUID);
+            }
+            
+        }
+        public static void RELEASERABBIT(int _fromClient, Packet _packet)
+        {
+            string levelGUID = _packet.ReadString();
+            MyMod.OnReleaseRabbit(_fromClient);
+            ServerSend.RELEASERABBIT(_fromClient, levelGUID);
+        }
         public static void SENDMYAFFLCTIONS(int _fromClient, Packet _packet)
         {
             int forWho = _packet.ReadInt();
@@ -1050,6 +1109,61 @@ namespace GameServer
                 MyMod.CheckOtherPlayer(Affs, _fromClient, hp);
             }else{
                 ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, _fromClient);
+            }
+        }
+        public static void REQUESTANIMALCORPSE(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            MelonLogger.Msg("Client "+_fromClient+" requested animal corpse "+GUID);
+            MyMod.AnimalKilled Animal;
+            if (MyMod.AnimalsKilled.TryGetValue(GUID, out Animal))
+            {
+                float Meat = Animal.m_Meat;
+                int Guts = Animal.m_Guts;
+                int Hide = Animal.m_Hide;
+                MelonLogger.Msg("Sending responce");
+                ServerSend.REQUESTANIMALCORPSE(_fromClient, Meat, Guts, Hide);
+            }else{
+                ServerSend.REQUESTANIMALCORPSE(_fromClient, -1, 0, 0);
+            }
+        }
+        public static void QUARTERANIMAL(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            MelonLogger.Msg("QUARTERANIMAL " + GUID);
+            MyMod.OnAnimalQuarted(GUID);
+            MyMod.SpawnQuartedMess(GUID);
+            ServerSend.QUARTERANIMAL(_fromClient, GUID, false);
+        }
+        public static void ANIMALAUDIO(int _fromClient, Packet _packet)
+        {
+            bool InInt = _packet.ReadBool();
+            string GUID = _packet.ReadString();
+            if (InInt)
+            {
+                int soundID = _packet.ReadInt();
+                string SenderLevelGUID = "";
+                if (MyMod.playersData[_fromClient] != null)
+                {
+                    SenderLevelGUID = MyMod.playersData[_fromClient].m_LevelGuid;
+                    if (MyMod.level_guid == MyMod.playersData[_fromClient].m_LevelGuid)
+                    {
+                        Pathes.Play3dAudioOnAnimal(GUID, soundID);
+                    }
+                }
+                ServerSend.ANIMALAUDIO(_fromClient, soundID, GUID, SenderLevelGUID);
+            }else{
+                string soundID = _packet.ReadString();
+                string SenderLevelGUID = "";
+                if (MyMod.playersData[_fromClient] != null)
+                {
+                    SenderLevelGUID = MyMod.playersData[_fromClient].m_LevelGuid;
+                    if (MyMod.level_guid == MyMod.playersData[_fromClient].m_LevelGuid)
+                    {
+                        Pathes.Play3dAudioOnAnimal(GUID, soundID);
+                    }
+                }
+                ServerSend.ANIMALAUDIO(_fromClient, soundID, GUID, SenderLevelGUID);
             }
         }
     }

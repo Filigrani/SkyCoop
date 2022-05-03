@@ -49,6 +49,20 @@ namespace GameServer
                 }
             }
         }
+        public static void SendUDPDataToAll(Packet _packet, string level_guid)
+        {
+            _packet.WriteLength();
+            for (int i = 1; i < MyMod.playersData.Count; i++)
+            {
+                if (MyMod.playersData[i] != null)
+                {
+                    if (MyMod.playersData[i].m_LevelGuid == level_guid)
+                    {
+                        Server.clients[i].udp.SendData(_packet);
+                    }
+                }
+            }
+        }
         public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId)
         {
             _packet.WriteLength();
@@ -57,6 +71,20 @@ namespace GameServer
                 if (i != SenderId && Server.clients[i].IsBusy() == true)
                 {
                     Server.clients[i].udp.SendData(_packet);
+                }
+            }
+        }
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid)
+        {
+            _packet.WriteLength();
+            for (int i = 1; i < MyMod.playersData.Count; i++)
+            {
+                if (i != SenderId && MyMod.playersData[i] != null)
+                {
+                    if (MyMod.playersData[i].m_LevelGuid == level_guid)
+                    {
+                        Server.clients[i].udp.SendData(_packet);
+                    }
                 }
             }
         }
@@ -532,36 +560,22 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void HARVESTINGANIMAL(int _toClient, string _msg)
+        public static void HARVESTINGANIMAL(int _From, string _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.HARVESTINGANIMAL))
-            {
-                _packet.Write(_msg);
-                _packet.Write(_toClient);
-
-                SendTCPData(_toClient, _packet);
-            }
-        }
-        public static void DONEHARVASTING(int _From, MyMod.HarvestStats _msg, bool toEveryOne, int OnlyFor = -1)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.DONEHARVASTING))
             {
                 if (toEveryOne == true)
                 {
                     _packet.Write(_msg);
                     _packet.Write(0);
                     SendUDPDataToAll(_packet);
-                }
-                else
-                {
+                }else{
                     if (OnlyFor == -1)
                     {
                         _packet.Write(_msg);
                         _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
-                    else
-                    {
+                    }else{
                         _packet.Write(_msg);
                         _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
@@ -579,11 +593,12 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void BULLETDAMAGE(int _toClient, float _msg, int _From)
+        public static void BULLETDAMAGE(int _toClient, float _msg,int bodypart, int _From)
         {
             using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
             {
                 _packet.Write(_msg);
+                _packet.Write(bodypart);
                 _packet.Write(_From);
 
                 SendTCPData(_toClient, _packet);
@@ -685,14 +700,14 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void ANIMALDELETE(int _toClient, string _msg)
+        public static void ANIMALDELETE(int from, string _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALDELETE))
             {
                 _packet.Write(_msg);
-                _packet.Write(_toClient);
+                _packet.Write(from);
 
-                SendTCPData(_toClient, _packet);
+                SendUDPDataToAllButNotSender(_packet, from);
             }
         }
         public static void KEEPITALIVE(int _toClient, bool _msg)
@@ -1757,15 +1772,13 @@ namespace GameServer
             }
         }
 
-        public static void ANIMALDAMAGE(int _From, string guid, float damage, int to)
+        public static void ANIMALDAMAGE(int _From, string guid, float damage)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALDAMAGE))
             {
                 _packet.Write(guid);
                 _packet.Write(damage);
-                _packet.Write(to);
-                _packet.Write(_From);
-                SendUDPData(to, _packet);
+                SendUDPDataToAllButNotSender(_packet, _From);
             }
         }
 
@@ -1902,6 +1915,109 @@ namespace GameServer
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
+            }
+        }
+        public static void ANIMALCORPSE(int _toClient, MyMod.AnimalKilled data, bool toAll = false)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ANIMALCORPSE))
+            {
+                _packet.Write(data);
+                _packet.Write(_toClient);
+
+                if (toAll == false)
+                {
+                    SendTCPData(_toClient, _packet);
+                }else{
+                    SendUDPDataToAll(_packet);
+                }
+            }
+        }
+        public static void REQUESTANIMALCORPSE(int _toClient, float Meat, int Guts, int Hide)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTANIMALCORPSE))
+            {
+                _packet.Write(Meat);
+                _packet.Write(Guts);
+                _packet.Write(Hide);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void GOTRABBIT(int _toClient, int result)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.GOTRABBIT))
+            {
+                _packet.Write(result);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void QUARTERANIMAL(int _toClient, string data, bool toAll = false)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.QUARTERANIMAL))
+            {
+                _packet.Write(data);
+                _packet.Write(_toClient);
+
+                if (toAll == false)
+                {
+                    SendTCPData(_toClient, _packet);
+                }else{
+                    SendUDPDataToAll(_packet);
+                }
+            }
+        }
+        public static void ANIMALAUDIO(int _from, string soundID, string GUID, string LEVELGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ANIMALAUDIO))
+            {
+                _packet.Write(false);
+                _packet.Write(GUID);
+                _packet.Write(soundID);
+                _packet.Write(_from);
+
+                SendUDPDataToAllButNotSender(_packet, _from, LEVELGUID);
+            }
+        }
+        public static void ANIMALAUDIO(int _from, int soundID, string GUID, string LEVELGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ANIMALAUDIO))
+            {
+                _packet.Write(true);
+                _packet.Write(GUID);
+                _packet.Write(soundID);
+                _packet.Write(_from);
+
+                SendUDPDataToAllButNotSender(_packet, _from, LEVELGUID);
+            }
+        }
+        public static void RELEASERABBIT(int _from, string LEVELGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RELEASERABBIT))
+            {
+                _packet.Write(_from);
+
+                SendUDPDataToAllButNotSender(_packet, _from, LEVELGUID);
+            }
+        }
+        public static void HITRABBIT(int For, string GUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.HITRABBIT))
+            {
+                _packet.Write(GUID);
+
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void RABBITREVIVED(int _from, Vector3 v3, string LEVELGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RABBITREVIVED))
+            {
+                _packet.Write(v3);
+
+                SendUDPDataToAllButNotSender(_packet, _from, LEVELGUID);
             }
         }
     }

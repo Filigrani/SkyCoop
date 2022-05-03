@@ -256,6 +256,12 @@ namespace SkyCoop
             {
                 MyMod.AnimalsController = New;
                 MyMod.DisableOriginalAnimalSpawns();
+
+                if(MyMod.AnimalsController)
+                {
+                    MyMod.SwitchToAnimalController();
+                }
+
                 MelonLogger.Msg("Got new animal controller role: " + MyMod.AnimalsController);
             }
         }
@@ -298,6 +304,7 @@ namespace SkyCoop
 
         public static void KEEPITALIVE(Packet _packet)
         {
+            MyMod.LastResponceTime = Time.time;
             MyMod.NoHostResponceSeconds = 0;
         }
 
@@ -452,7 +459,7 @@ namespace SkyCoop
         {
             MyMod.ShootSync shoot = _packet.ReadShoot();
             int from = _packet.ReadInt();
-            MelonLogger.Msg("Client " + from + " shoot!");
+            //MelonLogger.Msg("Client " + from + " shoot!");
 
             MyMod.DoShootSync(shoot, from);
         }
@@ -475,19 +482,20 @@ namespace SkyCoop
 
         public static void HARVESTINGANIMAL(Packet _packet)
         {
-            MyMod.OtherHarvetingAnimal = _packet.ReadString();
-        }
-        public static void DONEHARVASTING(Packet _packet)
-        {
-            MyMod.HarvestStats Harvey = _packet.ReadHarvest();
-            MyMod.DoForcedHarvestAnimal(Harvey.m_Guid, Harvey);
+            string GUID = _packet.ReadString();
+            int FromWho = _packet.ReadInt();
+            if (MyMod.playersData[FromWho] != null)
+            {
+                MyMod.playersData[FromWho].m_HarvestingAnimal = GUID;
+            }
         }
 
         public static void BULLETDAMAGE(Packet _packet)
         {
             float damage = _packet.ReadFloat();
+            int BodyPart = _packet.ReadInt();
             int from = _packet.ReadInt();
-            MyMod.DamageByBullet(damage, from);
+            MyMod.DamageByBullet(damage, from, BodyPart);
         }
         public static void MULTISOUND(Packet _packet)
         {
@@ -1077,6 +1085,86 @@ namespace SkyCoop
         {
             MyMod.AffictionSync toCure = _packet.ReadAffiction();
             MyMod.OtherPlayerCuredMyAffiction(toCure);
+        }
+        public static void ANIMALCORPSE(Packet _packet)
+        {
+            MyMod.AnimalKilled Data = _packet.ReadAnimalCorpse();
+            MyMod.ProcessAnimalCorpseSync(Data);
+        }
+        public static void GOTRABBIT(Packet _packet)
+        {
+            int result = _packet.ReadInt();
+            MyMod.FinallyPickupRabbit(result);
+        }
+        public static void RELEASERABBIT(Packet _packet)
+        {
+            int from = _packet.ReadInt();
+            MyMod.OnReleaseRabbit(from);
+        }
+        public static void HITRABBIT(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            MyMod.OnHitRabbit(GUID);
+        }
+        public static void RABBITREVIVED(Packet _packet)
+        {
+            Vector3 v3 = _packet.ReadVector3();
+            if(MyMod.AnimalsController == true)
+            {
+                MyMod.OnRabbitRevived(v3);
+            }
+        }
+        public static void REQUESTANIMALCORPSE(Packet _packet)
+        {
+            float Meat = _packet.ReadFloat();
+            int Guts = _packet.ReadInt();
+            int Hide = _packet.ReadInt();
+            if (Meat != -1)
+            {
+                if (MyMod.GoingToHarvest)
+                {
+                    MyMod.GoingToHarvest.m_MeatAvailableKG = Meat;
+                    MyMod.GoingToHarvest.m_GutAvailableUnits = Guts;
+                    MyMod.GoingToHarvest.m_HideAvailableUnits = Hide;
+                    MyMod.OpenBodyHarvest(MyMod.GoingToHarvest);
+                }
+            }else{
+                MyMod.RemovePleaseWait();
+                HUDMessage.AddMessage("Nothing to harvest");
+            }
+        }
+        public static void QUARTERANIMAL(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            MelonLogger.Msg("QUARTERANIMAL "+ GUID);
+            MyMod.SpawnQuartedMess(GUID);
+        }
+        public static void ANIMALAUDIO(Packet _packet)
+        {
+            bool InInt = _packet.ReadBool();
+            string GUID = _packet.ReadString();
+            if (InInt)
+            {
+                int soundID = _packet.ReadInt();
+                int From = _packet.ReadInt();
+                if (MyMod.playersData[From] != null)
+                {
+                    if (MyMod.level_guid == MyMod.playersData[From].m_LevelGuid)
+                    {
+                        Pathes.Play3dAudioOnAnimal(GUID, soundID);
+                    }
+                }
+            }else{
+                string soundID = _packet.ReadString();
+                int From = _packet.ReadInt();
+                if (MyMod.playersData[From] != null)
+                {
+                    if (MyMod.level_guid == MyMod.playersData[From].m_LevelGuid)
+                    {
+                        Pathes.Play3dAudioOnAnimal(GUID, soundID);
+                    }
+                }
+            }
         }
     }
 }
