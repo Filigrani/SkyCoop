@@ -47,7 +47,8 @@ namespace SkyCoop
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description31")
                 {
-                    __instance.m_DescriptionLabel.text = "Host or join the server.";
+                    //__instance.m_DescriptionLabel.text = "Host or join the server.";
+                    __instance.m_DescriptionLabel.text = "Connect to local or interent server by IP address.";
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description32")
                 {
@@ -573,7 +574,7 @@ namespace SkyCoop
                 {
                     Application.OpenURL("https://filigrani.github.io/SkyCoop/");
                 }
-                if (list[index].m_LabelText == "Connect by ip")
+                if (list[index].m_LabelText == "CONNECT BY IP")
                 {
                     ConnectByIp();
                 }

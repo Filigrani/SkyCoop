@@ -1730,7 +1730,7 @@ namespace SkyCoop
                 }
                 if (__instance.m_ThrownItem != null)
                 {
-                    MelonLogger.Msg("[PlayerManager][PreFix] ReleaseThrownObject " + __instance.m_ThrownItem.m_GearName);
+                    //MelonLogger.Msg("[PlayerManager][PreFix] ReleaseThrownObject " + __instance.m_ThrownItem.m_GearName);
                     MyMod.SaveThrowingItem = __instance.m_ThrownItem;
                 }
                 else
@@ -1755,7 +1755,12 @@ namespace SkyCoop
                         Vector3 V3 = MyMod.SaveThrowingItem.transform.position;
                         Quaternion Qu = MyMod.SaveThrowingItem.transform.rotation;
 
-                        MelonLogger.Msg("[PlayerManager][Postfix] Throwing stone " + V3.x + " y " + V3.y + " z " + V3.z);
+                        //MelonLogger.Msg("[PlayerManager][Postfix] Throwing stone " + V3.x + " y " + V3.y + " z " + V3.z);
+                        if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
+                        {
+                            MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageInflictionInRadius = 15;
+                            MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageRadius = MyMod.SaveThrowingItem.m_NoiseMakerItem.m_AIDamageRadius;
+                        }
 
                         MyMod.ShootSync stone = new MyMod.ShootSync();
                         stone.m_position = V3;
@@ -1815,6 +1820,7 @@ namespace SkyCoop
                 bomb.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
                 bomb.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
                 bomb.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+                MelonLogger.Msg("[ProcessItemInHandDetonated] NoiseMaker burn explotion sync");
 
                 if (MyMod.sendMyPosition == true)
                 {

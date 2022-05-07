@@ -32,7 +32,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.0";
+            public const string Version = "0.9.2";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 2;
         }
@@ -242,6 +242,9 @@ namespace SkyCoop
         public static bool KillOnUpdate = false;
         public static bool KillEverySecond = false;
         public static bool NoAnimalSync = false;
+
+        // Other stuff
+        public static Dictionary<string, string> BoardGamesSessions = new Dictionary<string, string>();
 
         public static void KillConsole()
         {
@@ -4368,9 +4371,8 @@ namespace SkyCoop
                 }
             }
         }
-        public static void SimulateSpawnFromRegionSpawn(string GUID)
+        public static void SimulateSpawnFromRegionSpawn(string GUID, SpawnRegion spRobj)
         {
-            GameObject spRobj = ObjectGuidManager.Lookup(GUID);
             if(spRobj != null && spRobj.GetComponent<SpawnRegion>() != null)
             {
                 SpawnRegion spR = spRobj.GetComponent<SpawnRegion>();
@@ -4399,6 +4401,10 @@ namespace SkyCoop
                     }else{
                         AnimalUpdates au = animal.AddComponent<AnimalUpdates>();
                         au.m_RegionGUID = GUID;
+                    }
+                    if (spRobj.GetComponent<SpawnRegionSimple>())
+                    {
+                        spRobj.GetComponent<SpawnRegionSimple>().m_Spawned++;
                     }
                     //MelonLogger.Msg("Region " + GUID + " spawned animal " + animalGUID);
                 }
@@ -4934,6 +4940,10 @@ namespace SkyCoop
                 }
             }
             MatchTransform.EnableCollidersForAllActive(true);
+            if (!AnimalCorplesList.ContainsKey(GUID))
+            {
+                AnimalCorplesList.Add(GUID, CorpseComp);
+            }
             MelonLogger.Msg("Animal corpse spawned "+ GUID);
         }
 
@@ -5327,11 +5337,78 @@ namespace SkyCoop
 
         public static void SwitchToAnimalController()
         {
+            Dictionary<string, int> AnimalsInRegions = new Dictionary<string, int>();
             if(ActorsList.Count > 0)
             {
                 foreach (var item in ActorsList)
                 {
                     item.Value.m_ClientController = instance.myId;
+                    string RegionGUID = item.Value.m_RegionGUID;
+                    if (RegionGUID != "")
+                    {
+                        int val;
+                        if (!AnimalsInRegions.TryGetValue(RegionGUID, out val))
+                        {
+                            AnimalsInRegions.Add(RegionGUID, 1);
+                        }else{
+                            AnimalsInRegions.Remove(RegionGUID);
+                            AnimalsInRegions.Add(RegionGUID, val+1);
+                        }
+                    }
+                }
+            }
+            if(BaseAiManager.m_BaseAis.Count > 0)
+            {
+                foreach (var item in BaseAiManager.m_BaseAis)
+                {
+                    if(item != null && item.gameObject != null)
+                    {
+                        if (item.gameObject.GetComponent<AnimalUpdates>())
+                        {
+                            string RegionGUID = item.gameObject.GetComponent<AnimalUpdates>().m_RegionGUID;
+                            if (RegionGUID != "")
+                            {
+                                int val;
+                                if (!AnimalsInRegions.TryGetValue(RegionGUID, out val))
+                                {
+                                    AnimalsInRegions.Add(RegionGUID, 1);
+                                }else{
+                                    AnimalsInRegions.Remove(RegionGUID);
+                                    AnimalsInRegions.Add(RegionGUID, val + 1);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (AnimalCorplesList.Count > 0)
+            {
+                foreach (var item in AnimalCorplesList)
+                {
+                    string RegionGUID = item.Value.m_RegionGUID;
+                    if (RegionGUID != "")
+                    {
+                        int val;
+                        if (!AnimalsInRegions.TryGetValue(RegionGUID, out val))
+                        {
+                            AnimalsInRegions.Add(RegionGUID, 1);
+                        }else{
+                            AnimalsInRegions.Remove(RegionGUID);
+                            AnimalsInRegions.Add(RegionGUID, val + 1);
+                        }
+                    }
+                }
+            }
+            // Final
+            if(AnimalsInRegions.Count > 0)
+            {
+                foreach (var item in AnimalsInRegions)
+                {
+                    GameObject Region = ObjectGuidManager.Lookup(item.Key);
+                    if (Region && Region.GetComponent<SpawnRegionSimple>() != null)
+                    {
+                        Region.GetComponent<SpawnRegionSimple>().m_Spawned = item.Value;
+                    }
                 }
             }
         }
@@ -5399,6 +5476,7 @@ namespace SkyCoop
         }
 
         public static Dictionary<string, AnimalActor> ActorsList = new Dictionary<string, AnimalActor>();
+        public static Dictionary<string, AnimalCorpseObject> AnimalCorplesList = new Dictionary<string, AnimalCorpseObject>();
 
         public class AnimalActor : MonoBehaviour
         {
@@ -6008,9 +6086,10 @@ namespace SkyCoop
             }
             void OnDestroy()
             {
-                if (m_RegionGUID != "")
+                if(m_Animal.GetComponent<ObjectGuid>() != null)
                 {
-                    if (m_Animal.GetComponent<ObjectGuid>())
+                    AnimalCorplesList.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
+                    if (m_RegionGUID != "")
                     {
                         GameObject SpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
                         if (SpawnObj)
@@ -6057,19 +6136,30 @@ namespace SkyCoop
             public string m_GUID = "";
             public bool m_RolledToBeDisabled = false;
             public bool m_ChanceRolled = false;
+            public int m_Spawned = 0;
             public Dictionary<string, GameObject> m_Animals = new Dictionary<string, GameObject>();
             public void UpdateFromManager()
             {
                 if(m_ChanceRolled == false)
                 {
-                    float percent = m_Region.m_ChanceActive * GameManager.GetExperienceModeManagerComponent().GetSpawnRegionChanceActiveScale();
+                    float newProcent = m_Region.m_ChanceActive;
+                    if(m_Region.m_ChanceActive > 85)
+                    {
+                        newProcent = 85;
+                    }
+
+                    //float percent = m_Region.m_ChanceActive * GameManager.GetExperienceModeManagerComponent().GetSpawnRegionChanceActiveScale();
                     int seed = GameManager.GetRandomSeed((int)m_Region.m_Center.x + (int)m_Region.m_Center.y + (int)m_Region.m_Center.z);
                     System.Random RNG = new System.Random(seed);
-                    if (!RollChanceSeeded(percent, RNG))
+                    bool Active = RollChanceSeeded(newProcent, RNG);
+                    if (!Active)
                     {
                         m_RolledToBeDisabled = true;
                     }
                     m_ChanceRolled = true;
+                    //MelonLogger.Msg("[SpawnRegion] Procent "+ m_Region.m_ChanceActive);
+                    //MelonLogger.Msg("[SpawnRegion] Scaler " + GameManager.GetExperienceModeManagerComponent().GetSpawnRegionChanceActiveScale());
+                    //MelonLogger.Msg("[SpawnRegion] Roll " + percent);
                 }
                 if(!m_RolledToBeDisabled && !m_Region.SpawningSupppressedByExperienceMode())
                 {
@@ -6078,10 +6168,10 @@ namespace SkyCoop
                     {
                         if (m_Region != null && AnimalsController == true)
                         {
-                            if (m_Animals.Count < CalculateTargetPopulation(m_Region)) // If animals less than should be
+                            if (m_Spawned < CalculateTargetPopulation(m_Region)) // If animals less than should be
                             {
                                 //MelonLogger.Msg("Region "+ m_Region.GetComponent<ObjectGuid>().Get()+" going to spawn, for "+ WhoClose);
-                                SimulateSpawnFromRegionSpawn(m_Region.GetComponent<ObjectGuid>().Get()); // Spawn new animals for this region
+                                SimulateSpawnFromRegionSpawn(m_Region.GetComponent<ObjectGuid>().Get(), m_Region); // Spawn new animals for this region
                             }
                         }
                     }else{
@@ -6120,7 +6210,8 @@ namespace SkyCoop
                                         }
                                     }
                                    // MelonLogger.Msg("Animal deleted from region " + m_Region.GetComponent<ObjectGuid>().Get()+" Anyone close "+WhoClose);
-                                    UnityEngine.Object.Destroy(ToDelete[i]); 
+                                    UnityEngine.Object.Destroy(ToDelete[i]);
+                                    m_Spawned--;
                                 }
                             }
                         }
@@ -7295,7 +7386,6 @@ namespace SkyCoop
             //MelonLogger.Msg("Rotation Y: " + shoot.m_rotation.y);
             //MelonLogger.Msg("Rotation Z: " + shoot.m_rotation.z);
             //MelonLogger.Msg("Rotation W: " + shoot.m_rotation.w);
-
             if (shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
             {
                 FlareGunRoundItem.SpawnAndFire(GetGearItemObject("GEAR_FlareGunAmmoSingle"), shoot.m_position, shoot.m_rotation);
@@ -7346,35 +7436,47 @@ namespace SkyCoop
                 float throwForce = GameManager.m_PlayerManager.m_ThrowForce;
                 float num = GameManager.m_PlayerManager.m_ThrowTorque;
                 GearItem component = gameObject.GetComponent<GearItem>();
-                component.m_NoiseMakerItem.m_CanThrow = false;
-                NoiseMakerItem component1 = component.m_NoiseMakerItem;
-                component1.Ignite();
-
-                if(shoot.m_skill == 0)
+                if (component)
                 {
-                    component1.PrepareForThrow();
-                    component1.m_Thrown = true;
-                    throwForce = component1.m_ThrowForce;
-                    num = component1.m_ThrowTorque;
-                    Rigidbody component2 = component.GetComponent<Rigidbody>();
-                    if (component2 == null)
+                    NoiseMakerItem component1 = component.m_NoiseMakerItem;
+                    
+                    if (component1)
                     {
-                        return;
+                        component1.m_CanThrow = false;
+                        component1.Ignite();
+                        component1.m_PlayerDamageInflictionInRadius = 15;
+                        component1.m_PlayerDamageRadius = component1.m_AIDamageRadius;
+                        if (shoot.m_skill == 0)
+                        {
+                            MelonLogger.Msg("GEAR_NoiseMaker Throw sync");
+                            component1.PrepareForThrow();
+                            component1.m_Thrown = true;
+                            throwForce = component1.m_ThrowForce;
+                            num = component1.m_ThrowTorque;
+                            Rigidbody component2 = component.GetComponent<Rigidbody>();
+                            if (component2 == null)
+                            {
+                                return;
+                            }
+                            Utils.SetIsKinematic(component2, false);
+                            component2.velocity = shoot.m_camera_forward * throwForce;
+                            Rigidbody rigidbody = component2;
+                            Vector3 vector3 = shoot.m_camera_right + UnityEngine.Random.Range(-0.2f, 0.2f) * shoot.m_camera_up;
+                            vector3.Normalize();
+                            component2.angularVelocity = vector3 * num;
+                            component2.angularDrag = 0.0f;
+                            component2.drag = 0.0f;
+                        }else{
+                            MelonLogger.Msg("GEAR_NoiseMaker in hand detonation sync");
+                            component1.PerformDetonation((ContactPoint[])null);
+                        }
+                    }else{
+                        MelonLogger.Msg(ConsoleColor.Red, "GEAR_NoiseMaker NoiseMakerItem!!!");
                     }
-                    Utils.SetIsKinematic(component2, false);
-                    component2.velocity = shoot.m_camera_forward * throwForce;
-                    Rigidbody rigidbody = component2;
-                    Vector3 vector3 = shoot.m_camera_right + UnityEngine.Random.Range(-0.2f, 0.2f) * shoot.m_camera_up;
-                    vector3.Normalize();
-                    component2.angularVelocity = vector3 * num;
-                    component2.angularDrag = 0.0f;
-                    component2.drag = 0.0f;
                 }else{
-                    component1.PerformDetonation((ContactPoint[])null);
+                    MelonLogger.Msg(ConsoleColor.Red, "GEAR_NoiseMaker Has not GearItem!!!");
                 }
-            }
-            else
-            {
+            }else{
                 //MelonLogger.Msg("Got remote shoot event " + shoot.m_projectilename);
 
                 GameObject gameObject = null;
