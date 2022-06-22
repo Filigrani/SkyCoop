@@ -495,7 +495,13 @@ namespace SkyCoop
             float damage = _packet.ReadFloat();
             int BodyPart = _packet.ReadInt();
             int from = _packet.ReadInt();
-            MyMod.DamageByBullet(damage, from, BodyPart);
+            bool Melee = _packet.ReadBool();
+            string MeleeWeapon = "";
+            if (Melee)
+            {
+                MeleeWeapon = _packet.ReadString();
+            }
+            MyMod.DamageByBullet(damage, from, BodyPart, Melee, MeleeWeapon);
         }
         public static void MULTISOUND(Packet _packet)
         {
@@ -951,11 +957,29 @@ namespace SkyCoop
         }
         public static void VOICECHAT(Packet _packet)
         {
-            int readLength = _packet.ReadInt();
-            int samples = _packet.ReadInt();
-            byte[] CompressedData = _packet.ReadBytes(readLength);
-            int from = _packet.ReadInt();
-            MyMod.ProcessVoiceChatData(from, CompressedData, samples);
+            int BytesWritten = _packet.ReadInt();
+            int ReadLength = _packet.ReadInt();
+            byte[] CompressedData = _packet.ReadBytes(ReadLength);
+            float RecordTime = _packet.ReadFloat();
+            float RadioF = _packet.ReadFloat();
+            int from = _packet.ReadInt(); // Play from
+            int Sender = _packet.ReadInt(); // Play whos voice
+
+            if (MyMod.playersData[from] != null && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
+            {
+                bool IsRadio = false;
+                if(from != Sender)
+                {
+                    IsRadio = true;
+                }
+                
+                MyMod.ProcessVoiceChatData(from, CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime, IsRadio);
+            }
+            if(MyMod.RadioFrequency == RadioF && MyMod.playersData[from].m_PlayerEquipmentData.m_HoldingItem == "GEAR_HandheldShortwave" && !MyMod.DoingRecord)
+            {
+                MyMod.ProcessRadioChatData(CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime);
+                MyMod.SendMyRadioAudio(CompressedData, BytesWritten, RecordTime, Sender);
+            }
         }
         public static void SLICEDBYTES(Packet _packet)
         {
@@ -1165,6 +1189,37 @@ namespace SkyCoop
                     }
                 }
             }
+        }
+        public static void MELEESTART(Packet _packet)
+        {
+            int from = _packet.ReadInt();
+            if (MyMod.players[from] != null && MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+            {
+                MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().MeleeAttack();
+            }
+        }
+
+        public static void TRYBORROWGEAR(Packet _packet)
+        {
+            string GearName = _packet.ReadString();
+            int For = _packet.ReadInt();
+            MyMod.GiveBorrowedItem(GearName, For);
+        }
+
+        public static void CHALLENGEINIT(Packet _packet)
+        {
+            int ID = _packet.ReadInt();
+            int CurrentTask = _packet.ReadInt();
+            MyMod.LoadCustomChallenge(ID, CurrentTask);
+        }
+        public static void CHALLENGEUPDATE(Packet _packet)
+        {
+            MyMod.CurrentCustomChalleng = _packet.ReadChallengeData();
+        }
+        public static void CHALLENGETRIGGER(Packet _packet)
+        {
+            string TRIGGER = _packet.ReadString();
+            MyMod.ProcessCustomChallengeTrigger(TRIGGER);
         }
     }
 }

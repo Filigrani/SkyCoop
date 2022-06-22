@@ -21,6 +21,11 @@ namespace SkyCoop
 {
     public class DeBugMenu
     {
+        public static int DebugVal = 0;
+        public static uint DebugSound = 0U;
+
+        public static DecalProjectorInstance Replica;
+
         public static void Render()
         {
             if (MyMod.DebugGUI == false)
@@ -235,6 +240,13 @@ namespace SkyCoop
                     //MyMod.DebugDiagnosis = true;
                     //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
+                    //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
+
+                    MyMod.LoadCustomChallenge(1, 0);
+                    MyMod.StartCustomChallenge();
+                    //MyMod.AddSpray(Replica);
+
+                    //MyMod.PoiskMujikov();
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {

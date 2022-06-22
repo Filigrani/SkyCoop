@@ -126,6 +126,12 @@ namespace GameServer
         RELEASERABBIT,
         HITRABBIT,
         RABBITREVIVED,
+        CHANGEDFREQUENCY,
+        MELEESTART,
+        TRYBORROWGEAR,
+        CHALLENGEINIT,
+        CHALLENGEUPDATE,
+        CHALLENGETRIGGER,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -247,6 +253,12 @@ namespace GameServer
         RELEASERABBIT,
         HITRABBIT,
         RABBITREVIVED,
+        CHANGEDFREQUENCY,
+        MELEESTART,
+        TRYBORROWGEAR,
+        CHALLENGEINIT,
+        CHALLENGEUPDATE,
+        CHALLENGETRIGGER,
     }
 
     public class Packet : IDisposable
@@ -765,6 +777,78 @@ namespace GameServer
             Write(obj.m_Knocked);
 
             Write(obj.m_RegionGUID);
+        }
+
+        public void Write(DecalProjectorInstance obj)
+        {
+            Write(obj.m_Guid);
+            Write(obj.m_DecalName);
+            Write((int)obj.m_ProjectileType);
+            Write(obj.m_Indoors);
+            Write(obj.m_Pos);
+            Write(obj.m_Normal);
+            Write(obj.m_Yaw);
+            Write(obj.m_Alpha);
+            Write(obj.m_ColorTint.r);
+            Write(obj.m_ColorTint.g);
+            Write(obj.m_ColorTint.b);
+            Write(obj.m_RevealAmount);
+            Write(obj.m_RevealedOnMap);
+        }
+
+        public void Write(List<int> LIST)
+        {
+            Write(LIST.Count);
+            for (int i = 0; i < LIST.Count; i++)
+            {
+                Write(LIST[i]);
+            }
+        }
+
+        public void Write(MyMod.CustomChallengeData DAT)
+        {
+            Write(DAT.m_CurrentTask);
+            Write(DAT.m_Time);
+            Write(DAT.m_Started);
+            Write(DAT.m_Done);
+        }
+        public MyMod.CustomChallengeData ReadChallengeData()
+        {
+            MyMod.CustomChallengeData obj = new MyMod.CustomChallengeData();
+            obj.m_CurrentTask = ReadInt();
+            obj.m_Time = ReadInt();
+            obj.m_Started = ReadBool();
+            obj.m_Done = ReadIntList();
+            return obj;
+        }
+
+        public List<int> ReadIntList()
+        {
+            List<int> LIST = new List<int>();
+            int Count = ReadInt();
+            for (int i = 0; i < Count; i++)
+            {
+                LIST.Add(ReadInt());
+            }
+            return LIST;
+        }
+
+        public DecalProjectorInstance ReadSprayDecal()
+        {
+            DecalProjectorInstance obj = new DecalProjectorInstance();
+            obj.m_Guid = ReadString();
+            obj.m_DecalName = ReadString();
+            obj.m_ProjectileType = (ProjectileType)ReadInt();
+            obj.m_Indoors = ReadBool();
+            obj.m_Pos = ReadVector3();
+            obj.m_Normal = ReadVector3();
+            obj.m_Yaw = ReadFloat();
+            obj.m_Alpha = ReadFloat();
+            obj.m_ColorTint = new Color(ReadFloat(), ReadFloat(), ReadFloat());
+            obj.m_RevealAmount = ReadFloat();
+            obj.m_RevealedOnMap = ReadBool();
+
+            return obj;
         }
 
         #endregion

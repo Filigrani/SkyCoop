@@ -4,8 +4,6 @@ using Harmony;
 using UnityEngine;
 using IL2CPP = Il2CppSystem.Collections.Generic;
 using MelonLoader;
-using UnityEngine;
-
 using GameServer;
 using System.Collections.Generic;
 
@@ -14,6 +12,7 @@ namespace SkyCoop
     public class MenuChange
     {
         public static string MenuMode = "Original";
+        public static int TempExperience = 0;
         
         public static void MoveUpMainMenuWordmark(int numOfMainMenuItems)
         {
@@ -37,7 +36,7 @@ namespace SkyCoop
         {
             private static void Postfix(BasicMenu __instance, int buttonIndex)
             {
-                if(buttonIndex >= __instance.m_ItemModelList.Count && __instance.m_ItemModelList[buttonIndex] == null )
+                if(__instance == null || buttonIndex >= __instance.m_ItemModelList.Count || __instance.m_ItemModelList[buttonIndex] == null )
                 {
                     return;
                 }
@@ -47,120 +46,134 @@ namespace SkyCoop
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description31")
                 {
-                    //__instance.m_DescriptionLabel.text = "Host or join the server.";
-                    __instance.m_DescriptionLabel.text = "Connect to local or interent server by IP address.";
+                    if(MyMod.MyLobby == "")
+                    {
+                        __instance.m_DescriptionLabel.text = "Host or join the server.";
+                    }else{
+                        __instance.m_DescriptionLabel.text = "Show lobby you are currently in.";
+                    }
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description32")
                 {
-                    __instance.m_DescriptionLabel.text = "Configure and host the server.";
-                }
-                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description33")
-                {
-                    __instance.m_DescriptionLabel.text = "Reconnect to server. NOT CONNECT! Never use this option for first connect! Because you will miss tone of inital information about sync.";
-                }
-                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description34")
-                {
-                    __instance.m_DescriptionLabel.text = "Disconnect from current server. Make sure you still alive, cause if you does not. Your savefile will be deleted same as in singleplayer game when you die.";
-                }
-                if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description35")
-                {
                     __instance.m_DescriptionLabel.text = "Invite your steam friend to this P2P server. Once you invite person, they firstly will join lobby, and then will be connected to this server.";
-                }
-
-                if(__instance.m_ItemModelList[buttonIndex].m_Id == "Quit")
-                {
-                    if(MenuMode == "Multiplayer")
-                    {
-                        __instance.m_DescriptionLabel.text = "Return to main menu.";
-                    }
-                    else if(MenuMode == "Join")
-                    {
-                        __instance.m_DescriptionLabel.text = "Return to multiplayer menu.";
-                    }
                 }
                 if (MenuMode == "Multiplayer")
                 {
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Extras")
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
                         __instance.m_DescriptionLabel.text = "Configure and host the server.";
                     }
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Options")
+                    else if(__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
-                        __instance.m_DescriptionLabel.text = "Find server or join by IP address.";
-                    }
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Quit")
-                    {
-                        __instance.m_DescriptionLabel.text = "Return to main menu.";
+                        if (SteamConnect.CanUseSteam)
+                        {
+                            __instance.m_DescriptionLabel.text = "Find server or join by IP address.";
+                        }else{
+                            __instance.m_DescriptionLabel.text = "Join by IP address.";
+                        }
                     }
                 }
-                if (MenuMode == "Join")
+                else if(MenuMode == "Join")
                 {
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "31")
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
                     {
                         __instance.m_DescriptionLabel.text = "Browse public servers.";
                     }
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Extras")
+                    else if(__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
                         __instance.m_DescriptionLabel.text = "Connect to local or interent server by IP address.";
                     }
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Options")
+                    else if(__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
                         __instance.m_DescriptionLabel.text = "Opens steam friends overlay.";
                     }
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "Quit")
-                    {
-                        __instance.m_DescriptionLabel.text = "Return to multiplayer menu";
-                    }
                 }
-            }
-        }
-
-        public static Dictionary<int, string> OldMenuData = new Dictionary<int, string>();
-        public static bool OldMenuSaved = false;
-
-
-        public static void SaveOldMenuStuff()
-        {
-            if (MyMod.m_Panel_MainMenu)
-            {
-                // Panel_MainMenu/MainPanel/MenuRoot/Menu/Left_Align/Grid
-                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
-                for (int i = 0; i <= 6; i++)
+                else if(MenuMode == "Lobby")
                 {
-                    if (!OldMenuData.ContainsKey(i))
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "ResumeSurvival")
                     {
-                        string text = Grid.GetChild(i).GetChild(0).GetComponent<UILabel>().text;
-                        OldMenuData.Add(i, text);
+                        __instance.m_DescriptionLabel.text = "Start server if everyone is ready, or you not want wait for players.\n(Players will be able to join, even after server is already started).";
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
+                    {
+                        if (MyMod.LobbyState != "Vote")
+                        {
+                            __instance.m_DescriptionLabel.text = "Create or load sandbox save.";
+                        }else{
+                            __instance.m_DescriptionLabel.text = "Vote for game settings.";
+                        }
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
+                    {
+                        __instance.m_DescriptionLabel.text = "Invite your steam friend to this lobby.";
+                    }
+                    else if(__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
+                    {
+                        __instance.m_DescriptionLabel.text = "Copy invite link to clipboard.";
                     }
                 }
-            }
-        }
-
-        public static void BackToOriginalMenu()
-        {
-            if (MyMod.m_Panel_MainMenu)
-            {
-                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
-                BasicMenu Basic = MyMod.m_Panel_MainMenu.m_BasicMenu;
-                for (int i = 0; i <= 6; i++)
+                else if(MenuMode == "NewGameSelect")
                 {
-                    UILabel Label = Grid.GetChild(i).GetChild(0).GetComponent<UILabel>();
-                    string Old;
-                    if(OldMenuData.TryGetValue(i, out Old))
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
-                        Label.mText = Old;
-                        Label.text = Old;
-                        Label.ProcessText();
-                        UnityEngine.Object.Destroy(Grid.GetChild(i).gameObject.GetComponent<MyMod.UiButtonPressHook>());
-                        Grid.GetChild(i).gameObject.SetActive(true);
+                        __instance.m_DescriptionLabel.text = "Start vote for game settings.";
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
+                    {
+                        __instance.m_DescriptionLabel.text = "Create new sanbox game without vote.";
+                    }
+                }
+                else if(MenuMode == "Vote")
+                {
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
+                    {
+                        __instance.m_DescriptionLabel.text = "Vote for starting region.";
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
+                    {
+                        __instance.m_DescriptionLabel.text = "Vote for experience mode.";
                     }
                 }
             }
         }
 
-        public static void OverrideMenuButton(Transform Grid, int index, string txt)
+        public static void SetLobbyState(string state)
+        {
+            SteamConnect.Main.SetLobbyState(state);
+        }
+
+        public static void ReturnOriginalButtons(Transform Grid, int index)
         {
             UILabel Label = Grid.GetChild(index).GetChild(0).GetComponent<UILabel>();
+            UIButton Button = Grid.GetChild(index).GetComponent<UIButton>();
+            if (Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>() != null)
+            {
+                MyMod.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>();
+                Button.onClick = Skip.m_Click;
+            }
+        }
+
+        public static void OverrideMenuButton(Transform Grid, int index, string txt, bool onClickHack = true)
+        {
+            UILabel Label = Grid.GetChild(index).GetChild(0).GetComponent<UILabel>();
+            UIButton Button = Grid.GetChild(index).GetComponent<UIButton>();
+
+            if (onClickHack)
+            {
+                if (Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>() == null)
+                {
+                    MyMod.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.AddComponent<MyMod.UiButtonKeyboardPressSkip>();
+                    Skip.m_Click = Button.onClick;
+                    Button.onClick = null;
+                }
+                else if (Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>() != null)
+                {
+                    MyMod.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>();
+                    Skip.m_Click = Button.onClick;
+                    Button.onClick = null;
+                }
+            }
+
             Label.mText = txt;
             Label.text = txt;
             Label.ProcessText();
@@ -172,41 +185,6 @@ namespace SkyCoop
             for (int i = 0; i <= 6; i++)
             {
                 Grid.GetChild(i).gameObject.SetActive(false);
-            }
-        }
-
-        // Panel_MainMenu/MainPanel/MenuRoot/Menu/Left_Align/Grid
-        //0 Winter mute
-        //1 Survival mode
-        //2 Challange
-        //3 Multiplayer
-        //4 Extra
-        //5 Options
-        //6 Quit
-
-        public static void GoToMultiplayer()
-        {
-            if (MyMod.m_Panel_MainMenu)
-            {
-                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
-
-                ClearMenuButtons(Grid);
-                OverrideMenuButton(Grid, 4, "HOST SERVER");
-                OverrideMenuButton(Grid, 5, "JOIN SERVER");
-                OverrideMenuButton(Grid, 6, "BACK TO MENU");
-            }
-        }
-        public static void GoToJoinServer()
-        {
-            if (MyMod.m_Panel_MainMenu)
-            {
-                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
-
-                ClearMenuButtons(Grid);
-                OverrideMenuButton(Grid, 3, "BROWSE SERVERS");
-                OverrideMenuButton(Grid, 4, "CONNECT BY IP");
-                OverrideMenuButton(Grid, 5, "CONNECT TO FRIEND");
-                OverrideMenuButton(Grid, 6, "BACK ");
             }
         }
 
@@ -235,80 +213,41 @@ namespace SkyCoop
 
                             string text = "";
 
-                            if(i == 0)
-                            {
-                                text = "HOST";
-                                if(__instance.m_BasicMenu.m_ItemModelList[0] != null)
-                                {
-                                    if (MyMod.iAmHost == false && MyMod.sendMyPosition == false)
-                                    {
-                                        __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = true;
-                                    }else{
-                                        __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = false;
-                                    }
-                                }
-                            }else if(i == 1)
-                            {
-                                text = "RECONNECT";
-                                if (__instance.m_BasicMenu.m_ItemModelList[1] != null)
-                                {
-                                    if (MyMod.iAmHost == false && MyMod.sendMyPosition == false)
-                                    {
-                                        __instance.m_BasicMenu.m_ItemModelList[1].m_Selectable = true;
-                                    }else{
-                                        __instance.m_BasicMenu.m_ItemModelList[1].m_Selectable = false;
-                                    }
-                                }
-                            }
-                            else if (i == 2)
-                            {
-                                text = "DISCONNECT";
-
-                                if(__instance.m_BasicMenu.m_ItemModelList[2] != null)
-                                {
-                                    if (MyMod.sendMyPosition == true)
-                                    {
-                                        __instance.m_BasicMenu.m_ItemModelList[2].m_Selectable = true;
-                                    }else{
-                                        __instance.m_BasicMenu.m_ItemModelList[2].m_Selectable = false;
-                                    }
-                                }
-                            }else if (i == 3)
+                            if (i == 0)
                             {
                                 if(SteamConnect.CanUseSteam == false)
                                 {
                                     text = "INVITE (ONLY STEAM)";
-                                    if (__instance.m_BasicMenu.m_ItemModelList[3] != null)
+                                    if (__instance.m_BasicMenu.m_ItemModelList[0] != null)
                                     {
-                                        __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = false;
+                                        __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = false;
                                     }
                                 }else{
                                     text = "INVITE";
-                                    if(__instance.m_BasicMenu.m_ItemModelList[3] != null)
+                                    if(__instance.m_BasicMenu.m_ItemModelList[0] != null)
                                     {
                                         if (MyMod.MyLobby != "")
                                         {
-                                            __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = true;
+                                            __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = true;
                                         }else{
-                                            __instance.m_BasicMenu.m_ItemModelList[3].m_Selectable = false;
+                                            __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = false;
                                         }
                                     }
                                 }
-                            }
-
-                            if (Lable.GetComponent<UILabel>() != null)
-                            {
-                                UILabel UiLab = Lable.GetComponent<UILabel>();
-                                UiLab.mText = text;
-                                UiLab.text = text;
-                                UiLab.ProcessText();
-                            }
-                            if (Button.GetComponent<UIButton>() != null)
-                            {
-                                if(Button.GetComponent<MyMod.UiButtonPressHook>() == null)
+                                if (Lable.GetComponent<UILabel>() != null)
                                 {
-                                    Button.AddComponent<MyMod.UiButtonPressHook>();
-                                    Button.GetComponent<MyMod.UiButtonPressHook>().m_CustomId = i;
+                                    UILabel UiLab = Lable.GetComponent<UILabel>();
+                                    UiLab.mText = text;
+                                    UiLab.text = text;
+                                    UiLab.ProcessText();
+                                }
+                                if (Button.GetComponent<UIButton>() != null)
+                                {
+                                    if (Button.GetComponent<MyMod.UiButtonPressHook>() == null)
+                                    {
+                                        Button.AddComponent<MyMod.UiButtonPressHook>();
+                                        Button.GetComponent<MyMod.UiButtonPressHook>().m_CustomId = i;
+                                    }
                                 }
                             }
                         }
@@ -339,11 +278,9 @@ namespace SkyCoop
             public static void Postfix(Panel_MainMenu __instance)
             {
                 MelonLogger.Msg("[UI] Trying modify main menu...");
-                //if (!InterfaceManager.IsMainMenuEnabled()) return;
-                //MelonLogger.Msg("[UI] Main main enabled starting modify...");
-                //AddButton(__instance, "Donaters", 1, 0);
-                //AddButton(__instance, "MULTIPLAYER", 4, 1);
-                AddButton(__instance, "CONNECT BY IP", 4, 1);
+                AddButton(__instance, "MULTIPLAYER", 4, 1);
+
+                //AddButton(__instance, "CONNECT BY IP", 4, 1);
 
                 MoveUpMainMenuWordmark(Convert.ToInt16(__instance.m_BasicMenu.m_MenuItems.Count.ToString()));
             }
@@ -353,10 +290,10 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_PauseMenu __instance)
             {
-                AddButtonPause(__instance, "HOST A SERVER", 0, 2);
-                AddButtonPause(__instance, "RECONNECT", 1, 3);
-                AddButtonPause(__instance, "DISCONNECT", 2, 4);
-                AddButtonPause(__instance, "INVITE", 3, 5);
+                //AddButtonPause(__instance, "HOST A SERVER", 0, 2);
+                //AddButtonPause(__instance, "RECONNECT", 1, 3);
+                //AddButtonPause(__instance, "DISCONNECT", 2, 4);
+                AddButtonPause(__instance, "INVITE", 0, 2);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "Update", null)]
@@ -365,93 +302,310 @@ namespace SkyCoop
             public static void Postfix(Panel_PauseMenu __instance)
             {
                 FixUpButtonStrings(__instance);
-                if (__instance.gameObject != null && __instance.gameObject.transform.GetChild(4))
+                //if (__instance.gameObject != null && __instance.gameObject.transform.GetChild(4))
+                //{
+                //    GameObject Icons = __instance.gameObject.transform.GetChild(4).gameObject;
+                //    Icons.transform.position = new Vector3(Icons.transform.position.x, 0.27f, Icons.transform.position.z);
+                //}
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Sandbox), "Update", null)]
+        public class Panel_Sandbox_Update
+        {
+            public static void Postfix(Panel_PauseMenu __instance)
+            {
+                Transform Grid = __instance.gameObject.transform.GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+                for (int i = 0; i <= 6; i++)
                 {
-                    GameObject Icons = __instance.gameObject.transform.GetChild(4).gameObject;
-                    Icons.transform.position = new Vector3(Icons.transform.position.x, 0.27f, Icons.transform.position.z);
+                    GameObject Button = Grid.GetChild(i).gameObject;
+
+                    if (Button.GetComponent<UIButton>() != null)
+                    {
+                        if (Button.GetComponent<MyMod.UiButtonPressHook>() == null)
+                        {
+                            Button.AddComponent<MyMod.UiButtonPressHook>();
+                            Button.GetComponent<MyMod.UiButtonPressHook>().m_CustomId = i;
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Sandbox), "OnClickBack", null)]
+        public class Panel_Sandbox_OnClickBack
+        {
+            public static bool Prefix(Panel_Sandbox __instance)
+            {
+                if(MenuMode == "Join")
+                {
+                    ChangeMenuItems("Multiplayer");
+                    return false;
+                }else if(MenuMode == "Nothing")
+                {
+                    MyMod.HostMenuClose();
+                    return false;
+                }else if(MenuMode == "Lobby")
+                {
+                    MyMod.LobbyUI.SetActive(false);
+                    MyMod.LobbyRegion.SetActive(false);
+                    MyMod.LobbyExperience.SetActive(false);
+                }else if(MenuMode == "LobbySettings")
+                {
+                    if (!MyMod.StartServerAfterSelectSave)
+                    {
+                        ChangeMenuItems("Lobby");
+                    }else{
+                        MyMod.StartServerAfterSelectSave = false;
+                        ChangeMenuItems("Multiplayer");
+                    }
+                    return false;
+                }else if(MenuMode == "NewGameSelect")
+                {
+                    ChangeMenuItems("LobbySettings");
+                    return false;
+                }
+                else if(MenuMode == "Vote")
+                {
+                    ChangeMenuItems("Lobby");
+                    return false;
+                }
+                else if(MenuMode == "Multiplayer")
+                {
+                    ChangeMenuItems("Original");
+                    return true;
+                }else if(MenuMode == "Browser")
+                {
+                    MenuMode = "Join";
+                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
+                    Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
+                    Align.GetChild(2).gameObject.SetActive(true); //Grid
+                    Align.GetChild(4).gameObject.SetActive(true); //Description
+                    Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                    MyMod.ServerBrowser.SetActive(false);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ChooseSandbox), "OnClickBack", null)]
+        public class Panel_ChooseSandbox_OnClickBack
+        {
+            public static bool Prefix(Panel_ChooseSandbox __instance)
+            {
+                if (MenuMode == "LobbySettings")
+                {
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    ChangeMenuItems("LobbySettings");
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        public static bool SetSaveSlotInfo(int Seed, string name)
+        {
+            SaveSlotInfo SaveToLoad = null;
+            Il2CppSystem.Collections.Generic.List<SaveSlotInfo> Slots = SaveGameSystem.GetSortedSaveSlots(Episode.One, SaveSlotType.SANDBOX);
+            for (int i = 0; i < Slots.Count; i++)
+            {
+                SaveSlotInfo Slot = Slots[i];
+
+                if(Seed != 0)
+                {
+                    if (Slot.m_UserDefinedName == Seed.ToString())
+                    {
+                        SaveToLoad = Slot;
+                        break;
+                    }
+                }else{
+                    if (Slot.m_SaveSlotName == name)
+                    {
+                        SaveToLoad = Slot;
+                        break;
+                    }
+                }
+            }
+            if (SaveToLoad != null)
+            {
+                UtilsPanelChoose.RefreshDetails(SaveToLoad, MyMod.LobbyDeitailsStrct, UtilsPanelChoose.DetailsType.Sandbox);
+                return true;
+            }
+            return false;
+        }
+
+        public static int GetSaveSeed(int index)
+        {
+            SaveSlotInfo saveSlotInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, index);
+            if (saveSlotInfo == null)
+            {
+                MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 0");
+                return 0;
+            }else{
+                string name = saveSlotInfo.m_SaveSlotName;
+                string text = SaveGameSlots.LoadDataFromSlot(name, "global");
+                if (string.IsNullOrEmpty(text))
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 1");
+                    return 0;
+                }
+                GlobalSaveGameFormat GSF = Utils.DeserializeObject<GlobalSaveGameFormat>(text);
+                if (string.IsNullOrEmpty(GSF.m_GameManagerSerialized))
+                {
+                    MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 2");
+                    return 0;
+                }
+                GameManagerSaveDataProxy managerSaveDataProxy = Utils.DeserializeObject<GameManagerSaveDataProxy>(GSF.m_GameManagerSerialized);
+                if (managerSaveDataProxy != null)
+                {
+                    if (!string.IsNullOrEmpty(managerSaveDataProxy.m_SceneTransitionDataSerialized))
+                    {
+                        SceneTransitionData TData = Utils.DeserializeObject<SceneTransitionData>(managerSaveDataProxy.m_SceneTransitionDataSerialized);
+                        return TData.m_GameRandomSeed;
+                    }else{
+                        MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 4 " + managerSaveDataProxy.m_SceneTransitionDataSerialized);
+                        return 0;
+                    }
+                }else{
+                    MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 3 "+ managerSaveDataProxy.m_SceneTransitionDataSerialized);
+                    return 0;
                 }
             }
         }
 
-        //public static bool SkipButtonActionOnce = false;
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnStory", null)]
-        //public class Panel_MainMenu_OnStory
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        if (SkipButtonActionOnce)
-        //        {
-        //            SkipButtonActionOnce = false;
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSandbox", null)]
-        //public class Panel_MainMenu_OnSandbox
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        if (SkipButtonActionOnce)
-        //        {
-        //            SkipButtonActionOnce = false;
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnChallenges", null)]
-        //public class Panel_MainMenu_OnChallenges
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        if (SkipButtonActionOnce)
-        //        {
-        //            SkipButtonActionOnce = false;
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnExtras", null)]
-        //public class Panel_MainMenu_OnExtras
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        if (SkipButtonActionOnce)
-        //        {
-        //            SkipButtonActionOnce = false;
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnOptions", null)]
-        //public class Panel_MainMenu_OnOptions
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        if (SkipButtonActionOnce)
-        //        {
-        //            SkipButtonActionOnce = false;
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnQuit", null)]
-        //public class Panel_MainMenu_OnQuit
-        //{
-        //    public static bool Prefix()
-        //    {
-        //        if (SkipButtonActionOnce)
-        //        {
-        //            SkipButtonActionOnce = false;
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnLoadSaveSlot", null)]
+        public class Panel_MainMenu_OnLoadSaveSlot
+        {
+            public static bool Prefix(Panel_MainMenu __instance, SaveSlotType saveSlotType, int slotIndex)
+            {
+                if (MenuMode == "LobbySettings" && !MyMod.StartServerAfterSelectSave)
+                {
+                    InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(false);
+                    MyMod.SelectedSaveSeed = GetSaveSeed(slotIndex);
+
+                    SaveSlotInfo SaveInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, slotIndex);
+                    MyMod.SelectedSaveName = SaveInfo.m_SaveSlotName;
+
+                    if (Utils.SceneIsTransition(SaveInfo.m_Location))
+                    {
+                        SaveInfo.m_Region = Utils.GetHardcodedRegionForLocation(SaveInfo.m_Location);
+                    }
+
+                    string Test = "";
+                    
+                    if (string.IsNullOrEmpty(SaveInfo.m_Region))
+                    {
+                        string regionForLocation = Utils.GetHardcodedRegionForLocation(SaveInfo.m_Location);
+                        if (regionForLocation != "")
+                        {
+                            Test = regionForLocation;
+                        }
+                        else if (SaveInfo.m_Location == "MineTransitionZone" || SaveInfo.m_Location == "HighwayMineTransitionZone")
+                        {
+                            Test = SaveInfo.m_Location;
+                        }
+                        else
+                        {
+                            Test = SaveInfo.m_Location;
+                        }
+                    }else{
+                        Test = SaveInfo.m_Region;
+                    }
+
+                    GameRegion Reg;
+                    RegionManager.GetRegionFromString(Test, out Reg);
+
+                    MyMod.LobbyStartingRegion = (int)Reg;
+                    MyMod.LobbyStartingExperience = (int)SaveInfo.m_XPMode;
+
+                    SteamConnect.Main.SetSaveSlotSeed(MyMod.SelectedSaveSeed);
+                    SteamConnect.Main.SetNewGameSettings(MyMod.LobbyStartingRegion, MyMod.LobbyStartingExperience);
+                    MelonLogger.Msg("Selected save with seed "+ MyMod.SelectedSaveSeed);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    ChangeMenuItems("Lobby");
+                    SetLobbyState("SelectedSave");
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnClickBack", null)]
+        public class Panel_SelectExperience_OnClickBack
+        {
+            public static bool Prefix(Panel_SelectExperience __instance)
+            {
+                if (MenuMode == "NewGameSelect")
+                {
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    ChangeMenuItems("NewGameSelect");
+                    return false;
+                }else if(MenuMode == "Vote")
+                {
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    ChangeMenuItems("Lobby");
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnExperienceClicked", null)]
+        public class Panel_SelectExperience_OnExperienceClicked
+        {
+            public static bool Prefix(Panel_SelectExperience __instance)
+            {
+                if (MenuMode == "Vote")
+                {
+                    Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
+                    if (selectedMenuItem == null)
+                    {
+                        return false;
+                    }
+                    if (SteamConnect.CanUseSteam)
+                    {
+                        SteamConnect.Main.VoteForExperienceMode((int)selectedMenuItem.m_Type);
+                    }
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    ChangeMenuItems("Lobby");
+                    return false;
+                }else if (MenuMode == "NewGameSelect")
+                {
+                    Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
+                    if (selectedMenuItem == null)
+                    {
+                        return false;
+                    }
+                    TempExperience = (int)selectedMenuItem.m_Type;
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Badges), "OnCancel", null)]
+        public class Panel_Badges_OnCancel
+        {
+            public static bool Prefix(Panel_PauseMenu __instance)
+            {
+                if (MenuMode == "LobbySettings")
+                {
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    ChangeMenuItems("LobbySettings");
+                    return false;
+                }
+
+                return true;
+            }
+        }
 
         public static void ConnectByIp()
         {
@@ -487,82 +641,218 @@ namespace SkyCoop
             }
         }
 
-        //[HarmonyLib.HarmonyPatch(typeof(BasicMenu), "InternalClickAction", null)]
-        //internal class BasicMenu_InternalClickAction_Pre
-        //{
-        //    private static bool Prefix(BasicMenu __instance, int index)
-        //    {
-        //        IL2CPP.List<BasicMenu.BasicMenuItemModel> list = __instance.m_ItemModelList;
-        //        Transform Grid;
-        //        UILabel Label;
-        //        if (list != null)
-        //        {
-        //            Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
-        //            Label = Grid.GetChild(index).GetChild(0).GetComponent<UILabel>();
-        //        }else{
-        //            return true;
-        //        }
+        public static bool CanVoteForRegion()
+        {
+            int T = MyMod.ServerConfig.m_PlayersSpawnType;
 
-        //        if(Label.mText == "CONNECT BY IP")
-        //        {
-        //            ConnectByIp();
-        //        }
-        //        return true; // Future code  will be added later.
+            if(T == 0 || T == 3)
+            {
+                return true;
+            }else{
+                return false;
+            }
+        }
 
-        //        //MelonLogger.Msg("Clicked " + Label.mText);
-        //        if (Label.mText == "Donaters")
-        //        {
-        //            Application.OpenURL("https://filigrani.github.io/SkyCoop/");
-        //            return false;
-        //        }
-        //        else if(Label.mText == "MULTIPLAYER")
-        //        {
-        //            if (!OldMenuSaved)
-        //            {
-        //                SaveOldMenuStuff();
-        //            }
-        //            GoToMultiplayer();
-        //            MenuMode = "Multiplayer";
-        //            return false;
-        //        }
-        //        else if(Label.text == "BACK TO MENU")
-        //        {
-        //            BackToOriginalMenu();
-        //            MenuMode = "Original";
-        //            GameAudioManager.PlayGUIButtonClick();
-        //            return false;
-        //        }
-        //        else if(Label.text == "BACK ")
-        //        {
-        //            GoToMultiplayer();
-        //            MenuMode = "Multiplayer";
-        //            GameAudioManager.PlayGUIButtonClick();
-        //            return false;
-        //        }
-        //        else if(Label.text == "JOIN SERVER")
-        //        {
-        //            GoToJoinServer();
-        //            MenuMode = "Join";
-        //            GameAudioManager.PlayGUIButtonClick();
-        //            return false;
-        //        }
-        //        else if(Label.text == "CONNECT TO FRIEND")
-        //        {
-        //            if (SteamConnect.CanUseSteam)
-        //            {
-        //                SteamConnect.Main.OpenFriends();
-        //            }
-        //            GameAudioManager.PlayGUIButtonClick();
-        //            return false;
-        //        }
-        //        else if(Label.text == "CONNECT BY IP")
-        //        {
-        //            ConnectByIp();
-        //            return false;
-        //        }
-        //        return true;
-        //    }
-        //}
+        public static bool CanStartServer()
+        {
+            if (MyMod.LobbyState == "SelectedSave" || MyMod.LobbyState == "SelectedNewSave")
+            {
+                return true;
+            }else{
+                return false;
+            }
+        }
+        public static bool VoteInProcess()
+        {
+            if (MyMod.LobbyState == "Vote")
+            {
+                return true;
+            }else{
+                return false;
+            }
+        }
+
+        public static void SetUILableText(UILabel lab, string Txt)
+        {
+            lab.mText = Txt;
+            lab.text = Txt;
+            lab.ProcessText();
+            if(lab.gameObject.GetComponent<UILocalize>() != null)
+            {
+                UnityEngine.Object.Destroy(lab.gameObject.GetComponent<UILocalize>());
+            }
+        }
+
+        public static void SetNewGameInfo(int Region, int ExpMode)
+        {
+            Transform Texts = MyMod.LobbyNewGame.transform.GetChild(1);
+            SetUILableText(MyMod.LobbyNewGame.transform.GetChild(0).GetChild(0).gameObject.GetComponent<UILabel>(), Localization.Get("GAMEPLAY_NewGame"));
+
+            SetUILableText(Texts.GetChild(2).GetChild(0).gameObject.GetComponent<UILabel>(), "INFO");
+            SetUILableText(Texts.GetChild(2).GetChild(1).gameObject.GetComponent<UILabel>(), "NEW SAVE WILL BE CREATED");
+
+            SetUILableText(Texts.GetChild(3).GetChild(0).gameObject.GetComponent<UILabel>(), Localization.Get("GAMEPLAY_XPMode"));
+            SetUILableText(Texts.GetChild(3).GetChild(1).gameObject.GetComponent<UILabel>(), Utils.GetLocalizedExperienceMode((ExperienceModeType)ExpMode));
+
+            SetUILableText(Texts.GetChild(4).GetChild(0).gameObject.GetComponent<UILabel>(), Localization.Get("GAMEPLAY_Region"));
+            SetUILableText(Texts.GetChild(4).GetChild(1).gameObject.GetComponent<UILabel>(), Utils.GetLocalizedRegion((GameRegion)Region));
+
+            Texts.GetChild(5).gameObject.SetActive(false);
+            Texts.GetChild(6).gameObject.SetActive(false);
+            Texts.GetChild(7).gameObject.SetActive(false);
+            Texts.GetChild(8).gameObject.SetActive(false);
+            Texts.GetChild(9).gameObject.SetActive(false);
+
+            GameRegion GRegion = (GameRegion)Region;
+            string RegionTxtName = UtilsPanelChoose.GetRegionSaveSlotTextureName(GRegion.ToString());
+            string RegionTexture = UtilsPanelChoose.GetRegionLargeTextureName(GRegion.ToString());
+            MyMod.LobbyNewGame.transform.GetChild(2).gameObject.GetComponent<UISprite>().spriteName = RegionTxtName;
+            MyMod.LobbyNewGame.transform.GetChild(3).gameObject.GetComponent<UITexture>().mainTexture = Utils.GetLargeTexture(RegionTexture);
+
+            Texture LoadedAssets = MyMod.LoadedBundle.LoadAsset<Texture>("NewGamePreview");
+            Texts.GetChild(1).gameObject.GetComponent<UITexture>().mainTexture = LoadedAssets;
+        }
+
+        public static void ChangeMenuItems(string mode)
+        {
+            Transform Grid = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+
+            if(mode == "Original")
+            {
+                ReturnOriginalButtons(Grid, 0);
+                ReturnOriginalButtons(Grid, 1);
+                ReturnOriginalButtons(Grid, 2);
+                ReturnOriginalButtons(Grid, 3);
+                MenuMode = mode;
+                return;
+            }
+
+            ClearMenuButtons(Grid);
+            MenuMode = mode;
+            if(mode == "Multiplayer")
+            {
+                OverrideMenuButton(Grid, 2, "HOST SERVER");
+                OverrideMenuButton(Grid, 3, "JOIN SERVER");
+            }
+            else if(mode == "Join")
+            {
+                OverrideMenuButton(Grid, 1, "BROWSE SERVERS");
+                OverrideMenuButton(Grid, 2, "CONNECT BY IP");
+                OverrideMenuButton(Grid, 3, "CONNECT TO FRIEND");
+            }
+            else if(mode == "Lobby")
+            {
+                if (!VoteInProcess())
+                {
+                    if (SteamConnect.IsMyLobby)
+                    {
+                        if (SteamConnect.IsMyLobby == true)
+                        {
+                            if (CanStartServer())
+                            {
+                                OverrideMenuButton(Grid, 0, "START SERVER");
+                            }
+                            OverrideMenuButton(Grid, 1, "SELECT SAVE");
+                        }
+                    }
+                }else{
+                    OverrideMenuButton(Grid, 1, "VOTE");
+                }
+
+                OverrideMenuButton(Grid, 2, "INVITE FRIEND");
+                OverrideMenuButton(Grid, 3, "COPY INVITE LINK");
+                MyMod.LobbyUI.SetActive(true);
+                MyMod.LobbyRegion.SetActive(VoteInProcess() && CanVoteForRegion());
+                MyMod.LobbyExperience.SetActive(VoteInProcess());
+
+                if(MyMod.LobbyDeitails == null)
+                {
+                    MelonLogger.Msg("[UI] Trying to copy details panel...");
+
+                    if (MyMod.m_Panel_ChooseSandbox.m_DetailObjects.m_Details)
+                    {
+                        GameObject DObj = UnityEngine.Object.Instantiate<GameObject>(MyMod.m_Panel_ChooseSandbox.m_DetailObjects.m_Details, MyMod.m_Panel_Sandbox.transform);
+                        MelonLogger.Msg("[UI] Details copied!");
+                        MyMod.LobbyDeitails = DObj;
+                        MyMod.LobbyDeitailsStrct = new UtilsPanelChoose.DetailsObjets();
+
+                        GameObject DObj2 = UnityEngine.Object.Instantiate<GameObject>(MyMod.m_Panel_ChooseSandbox.m_DetailObjects.m_Details, MyMod.m_Panel_Sandbox.transform);
+                        MyMod.LobbyNewGame = DObj2;
+                        MyMod.LobbyNewGame.SetActive(false);
+                        UtilsPanelChoose.DetailsObjets st = MyMod.LobbyDeitailsStrct;
+                        GameObject obj = MyMod.LobbyDeitails;
+                        Transform Texts = obj.transform.GetChild(1);
+                        st.m_TitleLabel = obj.transform.GetChild(0).GetChild(0).gameObject.GetComponent<UILabel>();
+                        st.m_ThumbnailTexture = Texts.GetChild(1).gameObject.GetComponent<UITexture>();
+                        st.m_BackgroundTexture = obj.transform.GetChild(3).gameObject.GetComponent<UITexture>();
+                        st.m_DateLabel = Texts.GetChild(2).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_SurvivorLabel = Texts.GetChild(3).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_ConditionLabel = Texts.GetChild(4).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_XPLabel = Texts.GetChild(5).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_SurvivedLabel = Texts.GetChild(6).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_ExploredLabel = Texts.GetChild(7).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_RegionLabel = Texts.GetChild(8).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_LocationLabel = Texts.GetChild(9).GetChild(1).gameObject.GetComponent<UILabel>();
+                        st.m_RegionSprite = obj.transform.GetChild(2).gameObject.GetComponent<UISprite>();
+                        st.m_CenteredTexture = null;
+                    }
+                }
+
+                bool ShowDeitails = false;
+                bool ShowNewSave = false;
+
+                if(MyMod.LobbyDeitails && MyMod.LobbyNewGame)
+                {
+                    if (MyMod.LobbyState == "SelectedSave")
+                    {
+                        bool Found = false;
+
+                        if (SteamConnect.IsMyLobby)
+                        {
+                            Found = SetSaveSlotInfo(0, MyMod.SelectedSaveName);
+                        }else{
+                            Found = SetSaveSlotInfo(MyMod.SelectedSaveSeed, "");
+                        }
+
+                        if (Found)
+                        {
+                            ShowDeitails = true;
+                        }else{
+                            SetNewGameInfo(MyMod.LobbyStartingRegion, MyMod.LobbyStartingExperience);
+                            ShowNewSave = true;
+                        }
+                    }else if(MyMod.LobbyState == "SelectedNewSave")
+                    {
+                        SetNewGameInfo(MyMod.LobbyStartingRegion, MyMod.LobbyStartingExperience);
+                        ShowNewSave = true;
+                    }
+
+                    MyMod.LobbyDeitails.SetActive(ShowDeitails);
+                    MyMod.LobbyNewGame.SetActive(ShowNewSave);
+                }
+            }
+            else if (mode == "LobbySettings")
+            {
+                OverrideMenuButton(Grid, 1, "NEW GAME");
+                OverrideMenuButton(Grid, 2, "LOAD SAVE");
+                OverrideMenuButton(Grid, 3, "FEATS");
+            }
+            else if (mode == "NewGameSelect")
+            {
+                OverrideMenuButton(Grid, 2, "START VOTE");
+                OverrideMenuButton(Grid, 3, "CHOOSE MYSELF");
+            }
+            else if (mode == "Vote")
+            {
+                if(CanVoteForRegion() == true)
+                {
+                    OverrideMenuButton(Grid, 2, "REGION");
+                }
+                
+                OverrideMenuButton(Grid, 3, "EXPERIENCE MODE");
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(BasicMenu), "InternalClickAction", null)]
         internal class BasicMenu_InternalClickAction_Pre
         {
@@ -574,12 +864,36 @@ namespace SkyCoop
                 {
                     Application.OpenURL("https://filigrani.github.io/SkyCoop/");
                 }
-                if (list[index].m_LabelText == "CONNECT BY IP")
+                else if (list[index].m_LabelText == "MULTIPLAYER")
                 {
-                    ConnectByIp();
+                    MyMod.m_Panel_Sandbox.Enable(true);
+                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
+                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+
+                    if(MyMod.MyLobby == "")
+                    {
+                        ChangeMenuItems("Multiplayer");
+                    }else{
+                        ChangeMenuItems("Lobby");
+                    }
+                }
+                else if(list[index].m_LabelText == "LOBBY")
+                {
+                    MyMod.m_Panel_Sandbox.Enable(true);
+                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
+                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                    ChangeMenuItems("Lobby");
                 }
             }
         }
+
+        public static void CloseLobbyUI()
+        {
+            MyMod.LobbyUI.SetActive(false);
+            MyMod.LobbyRegion.SetActive(false);
+            MyMod.LobbyExperience.SetActive(false);
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(UIButton), "OnClick")]
         internal class UIButton_Press
         {
@@ -591,33 +905,163 @@ namespace SkyCoop
                     //MelonLogger.Msg("Clicked m_CustomId " + CustomId);
                     if (CustomId != -1)
                     {
-                        if (CustomId < 4)
+                        if (InterfaceManager.m_Panel_PauseMenu.isActiveAndEnabled)
                         {
-                            if (InterfaceManager.m_Panel_PauseMenu.m_BasicMenu.m_ItemModelList[CustomId].m_Selectable == false)
-                            {
-                                return false;
-                            }
                             if (CustomId == 0)
-                            {
-                                MyMod.HostMenu();
-                            }
-                            else if (CustomId == 1)
-                            {
-                                MyMod.DoIPConnectWindow();
-                            }
-                            else if (CustomId == 2)
-                            {
-                                MelonLogger.Msg("Disconnect case pressed disconnect button");
-                                MyMod.LastConnectedIp = "";
-                                MyMod.Disconnect();
-                            }
-                            else if (CustomId == 3)
                             {
                                 if (MyMod.MyLobby != "")
                                 {
                                     SteamConnect.Main.MakeFriendListUI();
                                 }
                             }
+                        }
+                        else if(MyMod.m_Panel_Sandbox != null && MyMod.m_Panel_Sandbox.isActiveAndEnabled && MenuMode != "Original")
+                        {
+                            GameAudioManager.PlayGUIButtonClick();
+                            if (MenuMode == "Multiplayer")
+                            {
+                                if (CustomId == 2)
+                                {
+                                    MyMod.HostMenu(true);
+                                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
+                                    Align.GetChild(1).gameObject.SetActive(false); //SelectIcon
+                                    Align.GetChild(2).gameObject.SetActive(false); //Grid
+                                    Align.GetChild(4).gameObject.SetActive(false); //Description
+                                    Align.GetChild(5).gameObject.SetActive(false); //Linebreaker
+                                    MenuMode = "Nothing";
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    if (SteamConnect.CanUseSteam)
+                                    {
+                                        ChangeMenuItems("Join");
+                                    }else{
+                                        ConnectByIp();
+                                    }
+                                }
+                            }
+                            else if(MenuMode == "Join")
+                            {
+                                if (CustomId == 1)
+                                {
+                                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
+                                    Align.GetChild(1).gameObject.SetActive(false); //SelectIcon
+                                    Align.GetChild(2).gameObject.SetActive(false); //Grid
+                                    Align.GetChild(4).gameObject.SetActive(false); //Description
+                                    Align.GetChild(5).gameObject.SetActive(false); //Linebreaker                                    
+                                    MenuMode = "Browser";
+                                    SteamConnect.Main.BrowseServers();
+                                }
+                                else if (CustomId == 2)
+                                {
+                                    ConnectByIp();
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    if (SteamConnect.CanUseSteam)
+                                    {
+                                        SteamConnect.Main.OpenFriends();
+                                    }
+                                }
+                            }
+                            else if (MenuMode == "Lobby")
+                            {
+                                if (CustomId == 0)
+                                {
+                                    CloseLobbyUI();
+                                    if (SteamConnect.CanUseSteam)
+                                    {
+                                        if(MyMod.LobbyState == "SelectedNewSave")
+                                        {
+                                            SteamConnect.Main.CreateSaveForHosting();
+                                        }
+                                        else if(MyMod.LobbyState == "SelectedSave")
+                                        {
+                                            SteamConnect.Main.LoadSaveForHosting();
+                                        }
+                                        SetLobbyState("StartingGame");
+                                    }
+                                }
+                                else if (CustomId == 1)
+                                {
+                                    if (MyMod.LobbyState != "Vote")
+                                    {
+                                        ChangeMenuItems("LobbySettings");
+                                    }else{
+                                        ChangeMenuItems("Vote");
+                                    }
+                                }
+                                else if (CustomId == 2)
+                                {
+                                    if (SteamConnect.CanUseSteam)
+                                    {
+                                        SteamConnect.Main.MakeFriendListUI();
+                                    }
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    if (SteamConnect.CanUseSteam)
+                                    {
+                                        SteamConnect.Main.CopyInviteLink();
+                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Link copied to clipboard.", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                    }
+                                }
+                            }
+                            else if (MenuMode == "LobbySettings")
+                            {
+                                if (CustomId == 1)
+                                {
+                                    if (!MyMod.StartServerAfterSelectSave)
+                                    {
+                                        ChangeMenuItems("NewGameSelect");
+                                    }else{
+                                        MyMod.m_Panel_Sandbox.OnClickNew();
+                                    }
+                                }
+                                else if (CustomId == 2)
+                                {
+                                    CloseLobbyUI();
+                                    MyMod.m_Panel_Sandbox.OnClickLoad();
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    CloseLobbyUI();
+                                    MyMod.m_Panel_Sandbox.OnClickFeats();
+                                }
+                            }
+                            else if (MenuMode == "NewGameSelect")
+                            {
+                                if (CustomId == 2)
+                                {
+                                    MyMod.SelectedSaveName = "";
+                                    MyMod.SelectedSaveSeed = 0;
+                                    SteamConnect.Main.SetSaveSlotSeed(0);
+                                    SetLobbyState("Vote");
+                                    ChangeMenuItems("Lobby");
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    CloseLobbyUI();
+                                    MyMod.m_Panel_Sandbox.OnClickNew();
+                                }
+                            }
+                            else if (MenuMode == "Vote")
+                            {
+                                if (CustomId == 2)
+                                {
+                                    CloseLobbyUI();
+                                    MyMod.m_Panel_Sandbox.Enable(false);
+                                    InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    CloseLobbyUI();
+                                    MyMod.m_Panel_Sandbox.Enable(false);
+                                    InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(true);
+                                }
+                            }
+                        }else{
+                            return true;
                         }
                     }
                     return false;

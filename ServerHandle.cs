@@ -373,11 +373,17 @@ namespace GameServer
             float damage = _packet.ReadFloat();
             int BodyPart = _packet.ReadInt();
             int _for = _packet.ReadInt();
-            if(_for == 0)
+            bool Melee = _packet.ReadBool();
+            string MeleeWeapon = "";
+            if (Melee)
             {
-                MyMod.DamageByBullet(damage, _fromClient, BodyPart);
+                MeleeWeapon = _packet.ReadString();
+            }
+            if (_for == 0)
+            {
+                MyMod.DamageByBullet(damage, _fromClient, BodyPart, Melee, MeleeWeapon);
             }else{
-                ServerSend.BULLETDAMAGE(_for, damage, BodyPart, _fromClient);
+                ServerSend.BULLETDAMAGE(_for, damage, BodyPart, _fromClient, Melee, MeleeWeapon);
             }
         }
         public static void MULTISOUND(int _fromClient, Packet _packet)
@@ -820,14 +826,41 @@ namespace GameServer
         }
         public static void VOICECHAT(int _fromClient, Packet _packet)
         {
-            int readLength = _packet.ReadInt();
-            int samples = _packet.ReadInt();
-            byte[] CompressedData = _packet.ReadBytes(readLength);
-            //MelonLogger.Msg("Compressed data " + CompressedData.Length + " bytes");
-            MyMod.ProcessVoiceChatData(_fromClient, CompressedData, samples);
-            ServerSend.VOICECHAT(_fromClient, CompressedData, samples, false);
-        }
+            int BytesWritten = _packet.ReadInt();
+            int ReadLength = _packet.ReadInt();
+            byte[] CompressedData = _packet.ReadBytes(ReadLength);
+            float RecordTime = _packet.ReadFloat();
+            int Sender = _packet.ReadInt();
 
+            if(MyMod.playersData[_fromClient] != null)
+            {
+                string SourceLevel = MyMod.playersData[_fromClient].m_LevelGuid;
+                float Radio = -66;
+
+                if(_fromClient == Sender && MyMod.playersData[_fromClient].m_PlayerEquipmentData.m_HoldingItem == "GEAR_HandheldShortwave")
+                {
+                    Radio = MyMod.playersData[_fromClient].m_RadioFrequency;
+                }
+
+                if (SourceLevel == MyMod.level_guid)
+                {
+                    bool IsRadio = false;
+                    if (_fromClient != Sender)
+                    {
+                        IsRadio = true;
+                    }
+                    MyMod.ProcessVoiceChatData(_fromClient, CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime, IsRadio);
+                }
+
+                if(Radio == MyMod.RadioFrequency && !MyMod.DoingRecord)
+                {
+                    MyMod.ProcessRadioChatData(CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime);
+                    ServerSend.VOICECHAT(0, CompressedData, BytesWritten, RecordTime, MyMod.level_guid, -66, Sender);
+                }
+
+                ServerSend.VOICECHAT(_fromClient, CompressedData, BytesWritten, RecordTime, SourceLevel, Radio, Sender);
+            }
+        }
         public static void SLICEDBYTES(int _fromClient, Packet _packet)
         {
             MyMod.SlicedBytesData got = _packet.ReadSlicedBytes();
@@ -1165,6 +1198,39 @@ namespace GameServer
                 }
                 ServerSend.ANIMALAUDIO(_fromClient, soundID, GUID, SenderLevelGUID);
             }
+        }
+        public static void CHANGEDFREQUENCY(int _fromClient, Packet _packet)
+        {
+            float FQ = _packet.ReadFloat();
+            if(MyMod.playersData[_fromClient] != null)
+            {
+                MyMod.playersData[_fromClient].m_RadioFrequency = FQ;
+            }
+        }
+        public static void MELEESTART(int _fromClient, Packet _packet)
+        {
+            if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+            {
+                MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().MeleeAttack();
+            }
+            ServerSend.MELEESTART(_fromClient);
+        }
+        public static void TRYBORROWGEAR(int _fromClient, Packet _packet)
+        {
+            int For = _packet.ReadInt();
+            string GearName = _packet.ReadString();
+            if(For == 0)
+            {
+                MyMod.GiveBorrowedItem(GearName, For);
+            }else{
+                ServerSend.TRYBORROWGEAR(For, _fromClient, GearName);
+            }
+        }
+        public static void CHALLENGETRIGGER(int _fromClient, Packet _packet)
+        {
+            string TRIGGER = _packet.ReadString();
+            MyMod.ProcessCustomChallengeTrigger(TRIGGER);
+            ServerSend.CHALLENGETRIGGER(TRIGGER);
         }
     }
 }

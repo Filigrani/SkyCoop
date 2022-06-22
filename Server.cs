@@ -39,7 +39,7 @@ namespace GameServer
 
             MelonLoader.MelonLogger.Msg($"Server started on port {Port}.");
         }
-        public static void StartSteam(int _maxPlayers, string[] whitelist = null, int lobbytype = 0)
+        public static void StartSteam(int _maxPlayers, string[] whitelist = null)
         {
             MaxPlayers = _maxPlayers;
             MyMod.MaxPlayers = MaxPlayers;
@@ -50,7 +50,6 @@ namespace GameServer
                 SteamConnect.Main.ProcessWhitelist(whitelist);
             }
             UsingSteamWorks = true;
-            SteamConnect.Main.MakeLobby(lobbytype, _maxPlayers);
             MyMod.InitAllPlayers(); // Prepare players objects based on amount of max players
             MyMod.iAmHost = true;
             MyMod.OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
@@ -65,6 +64,8 @@ namespace GameServer
             MyMod.DisableOriginalAnimalSpawns(true);
             MyMod.SetFixedSpawn();
             MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
+            SteamConnect.Main.SetLobbyServer();
+            SteamConnect.Main.SetLobbyState("Playing");
         }
 
         private static void TCPConnectCallback(IAsyncResult _result)
@@ -297,6 +298,9 @@ namespace GameServer
                 { (int)ClientPackets.PICKUPRABBIT, ServerHandle.PICKUPRABBIT},
                 { (int)ClientPackets.RELEASERABBIT, ServerHandle.RELEASERABBIT},
                 { (int)ClientPackets.HITRABBIT, ServerHandle.HITRABBIT},
+                { (int)ClientPackets.CHANGEDFREQUENCY, ServerHandle.CHANGEDFREQUENCY},
+                { (int)ClientPackets.MELEESTART, ServerHandle.MELEESTART},
+                { (int)ClientPackets.TRYBORROWGEAR, ServerHandle.TRYBORROWGEAR},
             };
             Console.WriteLine("Initialized packets.");
         }

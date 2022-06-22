@@ -88,6 +88,20 @@ namespace GameServer
                 }
             }
         }
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, float RadioF)
+        {
+            _packet.WriteLength();
+            for (int i = 1; i < MyMod.playersData.Count; i++)
+            {
+                if (i != SenderId && MyMod.playersData[i] != null)
+                {                    
+                    if (MyMod.playersData[i].m_LevelGuid == level_guid || MyMod.playersData[i].m_RadioFrequency == RadioF)
+                    {
+                        Server.clients[i].udp.SendData(_packet);
+                    }
+                }
+            }
+        }
         /// <summary>Sends a packet to all clients except one via UDP.</summary>
         /// <param name="_exceptClient">The client to NOT send the data to.</param>
         /// <param name="_packet">The packet to send.</param>
@@ -593,13 +607,19 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void BULLETDAMAGE(int _toClient, float _msg,int bodypart, int _From)
+        public static void BULLETDAMAGE(int _toClient, float _msg,int bodypart, int _From, bool Melee = false, string MeleeWeapon = "")
         {
             using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
             {
                 _packet.Write(_msg);
                 _packet.Write(bodypart);
                 _packet.Write(_From);
+                _packet.Write(Melee);
+
+                if(Melee && MeleeWeapon != "")
+                {
+                    _packet.Write(MeleeWeapon);
+                }
 
                 SendTCPData(_toClient, _packet);
             }
@@ -1742,33 +1762,18 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void VOICECHAT(int _From, byte[] _msg, int samples, bool toEveryOne, int OnlyFor = -1)
+        public static void VOICECHAT(int _From, byte[] _msg, int ReadLength, float RecordTime, string LevelGUID, float RadioF, int Sender)
         {
             using (Packet _packet = new Packet((int)ServerPackets.VOICECHAT))
             {
-                if (toEveryOne == true)
-                {
-                    _packet.Write(_msg.Length);
-                    _packet.Write(samples);
-                    _packet.Write(_msg);
-                    _packet.Write(0);
-                    SendUDPDataToAll(_packet);
-                }else{
-                    if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg.Length);
-                        _packet.Write(samples);
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPDataToAllButNotSender(_packet, _From);
-                    }else{
-                        _packet.Write(_msg.Length);
-                        _packet.Write(samples);
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPData(OnlyFor, _packet);
-                    }
-                }
+                _packet.Write(ReadLength);
+                _packet.Write(_msg.Length);
+                _packet.Write(_msg);
+                _packet.Write(RecordTime);
+                _packet.Write(RadioF);
+                _packet.Write(_From);
+                _packet.Write(Sender);
+                SendUDPDataToAllButNotSender(_packet, _From, LevelGUID, RadioF);
             }
         }
 
@@ -1866,6 +1871,18 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void TRYBORROWGEAR(int _toClient, int _fromClient, string GearName)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.TRYBORROWGEAR))
+            {
+                _packet.Write(GearName);
+                _packet.Write(_fromClient);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+
         public static void CUREAFFLICTION(int _toClient, MyMod.AffictionSync _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CUREAFFLICTION))
@@ -2018,6 +2035,43 @@ namespace GameServer
                 _packet.Write(v3);
 
                 SendUDPDataToAllButNotSender(_packet, _from, LEVELGUID);
+            }
+        }
+        public static void MELEESTART(int _from)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.MELEESTART))
+            {
+                _packet.Write(_from);
+
+                SendUDPDataToAllButNotSender(_packet, _from);
+            }
+        }
+        public static void CHALLENGEINIT(int ID, int StartFrom)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHALLENGEINIT))
+            {
+                _packet.Write(ID);
+                _packet.Write(StartFrom);
+
+                SendUDPDataToAll(_packet);
+            }
+        }
+        public static void CHALLENGEUPDATE(MyMod.CustomChallengeData DAT)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHALLENGEUPDATE))
+            {
+                _packet.Write(DAT);
+
+                SendUDPDataToAll(_packet);
+            }
+        }
+        public static void CHALLENGETRIGGER(string TRIGGER)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHALLENGETRIGGER))
+            {
+                _packet.Write(TRIGGER);
+
+                SendUDPDataToAll(_packet);
             }
         }
     }
