@@ -132,6 +132,8 @@ namespace GameServer
         CHALLENGEINIT,
         CHALLENGEUPDATE,
         CHALLENGETRIGGER,
+        ADDDEATHCONTAINER,
+        DEATHCREATEEMPTYNOW,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -259,6 +261,8 @@ namespace GameServer
         CHALLENGEINIT,
         CHALLENGEUPDATE,
         CHALLENGETRIGGER,
+        ADDDEATHCONTAINER,
+        DEATHCREATEEMPTYNOW,
     }
 
     public class Packet : IDisposable
@@ -850,6 +854,28 @@ namespace GameServer
 
             return obj;
         }
+
+        public void Write(MyMod.DeathContainerData obj)
+        {
+            Write(obj.m_Guid);
+            Write(obj.m_LevelKey);
+            Write(obj.m_Position);
+            Write(obj.m_Rotation);
+            Write(obj.m_Owner);
+            Write(obj.m_ContainerPrefab);
+        }
+        public MyMod.DeathContainerData ReadDeathContainer()
+        {
+            MyMod.DeathContainerData obj = new MyMod.DeathContainerData();
+            obj.m_Guid = ReadString();
+            obj.m_LevelKey = ReadString();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_Owner = ReadString();
+            obj.m_ContainerPrefab = ReadString();
+            return obj;
+        }
+
 
         #endregion
 

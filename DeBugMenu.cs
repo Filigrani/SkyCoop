@@ -242,10 +242,38 @@ namespace SkyCoop
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
                     //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
 
-                    MyMod.LoadCustomChallenge(1, 0);
-                    MyMod.StartCustomChallenge();
+                    //MyMod.LoadCustomChallenge(1, 0);
+                    //MyMod.StartCustomChallenge();
                     //MyMod.AddSpray(Replica);
+                    //MyMod.DropAll();
+                    //MyMod.OriginalRadioSeaker = true;
 
+                    //if (MyMod.ViewModelRadio)
+                    //{
+                    //    FirstPersonHandheldShortwave FPHS = MyMod.ViewModelRadio.GetComponent<FirstPersonHandheldShortwave>();
+                    //    if (FPHS == null)
+                    //    {
+                    //        FPHS = MyMod.ViewModelRadio.AddComponent<FirstPersonHandheldShortwave>();
+                    //        FPHS.m_NeedleTransform = MyMod.ViewModelRadioNeedle.transform;
+                    //        GameObject obj = new GameObject("LIGHT");
+                    //        obj.transform.SetParent(MyMod.ViewModelRadio.transform);
+                    //        Light L = obj.AddComponent<Light>();
+                    //        L.color = Color.green;
+                    //        FPHS.m_Light = L;
+                    //        FPHS.m_FarRangeBlinkRate = 5;
+                    //        FPHS.m_MidRangeBlinkRate = 2;
+                    //        FPHS.m_FarRangeBlinkRate = 1;
+                    //        FPHS.m_MinAngle = -25f;
+                    //        FPHS.m_MaxAngle = 25f;
+                    //        FPHS.Awake();
+                    //    }else{
+                    //        GameObject reference = MyMod.GetGearItemObject("CONTAINER_ForestryCrate");
+                    //        GameObject Stash = UnityEngine.Object.Instantiate<GameObject>(reference, GameManager.GetPlayerTransform().position, GameManager.GetPlayerTransform().rotation);
+                    //        Stash.AddComponent<TrackableCache>();
+                    //        GameObject reference2 = MyMod.GetGearItemObject("GEAR_RawCohoSalmon");
+                    //        Stash.GetComponent<Container>().InstantiateGearPrefabInContainer(reference2);
+                    //    }
+                    //}
                     //MyMod.PoiskMujikov();
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
@@ -287,6 +315,7 @@ namespace SkyCoop
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Clothes"))
                 {
                     MyMod.UIDebugType = "Clothes";
+                    MyMod.playersData[0].m_PlayerClothingData.m_Boots = "GEAR_CombatBoots";
                 }
                 if (GUI.Button(new Rect(160, 190, 80, 20), "Fake"))
                 {
@@ -421,9 +450,9 @@ namespace SkyCoop
                         MyMod.playersData[0].m_AnimState = "Idle";
                     }
                 }
-                if (GUI.Button(new Rect(160, 160, 80, 20), "Knock"))
+                if (GUI.Button(new Rect(160, 160, 80, 20), "Flex"))
                 {
-                    MyMod.playersData[0].m_AnimState = "Knock";
+                    MyMod.playersData[0].m_AnimState = "Cringe2";
                 }
                 if (GUI.Button(new Rect(160, 190, 80, 20), "Aim"))
                 {

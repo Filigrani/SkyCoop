@@ -491,7 +491,14 @@ namespace SkyCoop
                     if(Regions[i] > 0)
                     {
                         GameObject Element = MyMod.LobbyRegion.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(NextRegionObj).gameObject;
-                        Element.transform.GetChild(1).GetComponent<UnityEngine.UI.Text>().text = Utils.GetLocalizedRegion((GameRegion)i)+": "+ Regions[i];
+                        string RegionName;
+                        if ((GameRegion)i == GameRegion.RandomRegion)
+                        {
+                            RegionName = Localization.Get("GAMEPLAY_RandomRegion");
+                        }else{
+                            RegionName = Utils.GetLocalizedRegion((GameRegion)i);
+                        }
+                        Element.transform.GetChild(1).GetComponent<UnityEngine.UI.Text>().text = RegionName+ ": " + Regions[i];
                         Element.SetActive(true);
                         NextRegionObj++;
                     }
@@ -532,6 +539,15 @@ namespace SkyCoop
                 }
                 MyMod.LobbyStartingRegion = BestRegion;
                 MyMod.LobbyStartingExperience = BestExp;
+
+                if(MyMod.ServerConfig.m_PlayersSpawnType == 2)
+                {
+                    MyMod.LobbyStartingRegion = (int)GameRegion.RandomRegion;
+                }else if(MyMod.ServerConfig.m_PlayersSpawnType == 1)
+                {
+                    MyMod.LobbyStartingRegion = (int)GameRegion.RandomRegion;
+                }
+
                 SetNewGameSettings(MyMod.LobbyStartingRegion, MyMod.LobbyStartingExperience);
                 OnSaveSlotChanged();
             }
@@ -849,10 +865,15 @@ namespace SkyCoop
             {
                 SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "SpawnStyle", MyMod.ServerConfig.m_PlayersSpawnType.ToString());
             }
-            public static void SetLobbyName()
+            public static void SetLobbyName(string CustomName = "")
             {
-                SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "Name", SteamFriends.GetPersonaName());
-                SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "State", "WaitForPlayers");
+                if (CustomName == "")
+                {
+                    SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "Name", SteamFriends.GetPersonaName());
+                    SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "State", "WaitForPlayers");
+                }else{
+                    SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "Name", CustomName);
+                }
             }
             public static void SetLobbyServer()
             {

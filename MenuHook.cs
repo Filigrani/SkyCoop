@@ -4,6 +4,7 @@ using Harmony;
 using UnityEngine;
 using IL2CPP = Il2CppSystem.Collections.Generic;
 using MelonLoader;
+using MelonLoader.TinyJSON;
 using GameServer;
 using System.Collections.Generic;
 
@@ -479,12 +480,27 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_MainMenu __instance, SaveSlotType saveSlotType, int slotIndex)
             {
+                if (MenuMode == "LobbySettings" || MyMod.StartServerAfterSelectSave)
+                {
+                    SaveSlotInfo SaveInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, slotIndex);
+                    if (CheckSaveRNG(SaveInfo.m_SaveSlotName) == false)
+                    {
+                        MelonLogger.Msg("[Panel_MainMenu][OnLoadSaveSlot] CheckSaveRNG == false");
+                        InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(true);
+                        return false;
+                    }
+                    MelonLogger.Msg("[Panel_MainMenu][OnLoadSaveSlot] CheckSaveRNG == true");
+                }
+
+
                 if (MenuMode == "LobbySettings" && !MyMod.StartServerAfterSelectSave)
                 {
+                    SaveSlotInfo SaveInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, slotIndex);
+                    
                     InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(false);
                     MyMod.SelectedSaveSeed = GetSaveSeed(slotIndex);
 
-                    SaveSlotInfo SaveInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, slotIndex);
+                    
                     MyMod.SelectedSaveName = SaveInfo.m_SaveSlotName;
 
                     if (Utils.SceneIsTransition(SaveInfo.m_Location))
@@ -583,7 +599,20 @@ namespace SkyCoop
                     }
                     TempExperience = (int)selectedMenuItem.m_Type;
                     __instance.Enable(false);
-                    InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
+
+                    if(MyMod.ServerConfig.m_PlayersSpawnType != 2)
+                    {
+                        InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
+                    }else{
+                        MyMod.LobbyStartingRegion = (int)GameRegion.RandomRegion;
+                        MyMod.LobbyStartingExperience = TempExperience;
+                        SteamConnect.Main.SetNewGameSettings(MyMod.LobbyStartingRegion, MyMod.LobbyStartingExperience);
+                        SteamConnect.Main.SetLobbyState("SelectedNewSave");
+                        __instance.Enable(false);
+                        MyMod.m_Panel_Sandbox.Enable(true);
+                        ChangeMenuItems("Lobby");
+                    }
+                    
                     return false;
                 }
 
@@ -695,7 +724,19 @@ namespace SkyCoop
             SetUILableText(Texts.GetChild(3).GetChild(1).gameObject.GetComponent<UILabel>(), Utils.GetLocalizedExperienceMode((ExperienceModeType)ExpMode));
 
             SetUILableText(Texts.GetChild(4).GetChild(0).gameObject.GetComponent<UILabel>(), Localization.Get("GAMEPLAY_Region"));
-            SetUILableText(Texts.GetChild(4).GetChild(1).gameObject.GetComponent<UILabel>(), Utils.GetLocalizedRegion((GameRegion)Region));
+            
+
+            if((GameRegion)Region == GameRegion.RandomRegion)
+            {
+                if(MyMod.ServerConfig.m_PlayersSpawnType != 1)
+                {
+                    SetUILableText(Texts.GetChild(4).GetChild(1).gameObject.GetComponent<UILabel>(), Localization.Get("GAMEPLAY_RandomRegion"));
+                }else{
+                    SetUILableText(Texts.GetChild(4).GetChild(1).gameObject.GetComponent<UILabel>(), Localization.Get("GAMEPLAY_Custom"));
+                }
+            }else{
+                SetUILableText(Texts.GetChild(4).GetChild(1).gameObject.GetComponent<UILabel>(), Utils.GetLocalizedRegion((GameRegion)Region));
+            }
 
             Texts.GetChild(5).gameObject.SetActive(false);
             Texts.GetChild(6).gameObject.SetActive(false);
@@ -795,12 +836,38 @@ namespace SkyCoop
                         st.m_LocationLabel = Texts.GetChild(9).GetChild(1).gameObject.GetComponent<UILabel>();
                         st.m_RegionSprite = obj.transform.GetChild(2).gameObject.GetComponent<UISprite>();
                         st.m_CenteredTexture = null;
+
+                        for (int i = 0; i < MyMod.LobbyDeitails.transform.GetChild(4).GetChild(1).childCount; i++)
+                        {
+                            GameObject ObjActive = MyMod.LobbyDeitails.transform.GetChild(4).GetChild(1).GetChild(i).gameObject;
+                            GameObject BG = ObjActive.transform.GetChild(1).gameObject;
+                            if (BG.GetComponent<AnimatedAlpha>())
+                            {
+                                UnityEngine.GameObject.Destroy(BG.GetComponent<AnimatedAlpha>());
+                            }
+                            if (BG.GetComponent<UITexture>())
+                            {
+                                BG.GetComponent<UITexture>().alpha = 0.4f;
+                            }
+                        }
+                        for (int i = 0; i < MyMod.LobbyNewGame.transform.GetChild(4).GetChild(1).childCount; i++)
+                        {
+                            GameObject ObjActive = MyMod.LobbyNewGame.transform.GetChild(4).GetChild(1).GetChild(i).gameObject;
+                            GameObject BG = ObjActive.transform.GetChild(1).gameObject;
+                            if (BG.GetComponent<AnimatedAlpha>())
+                            {
+                                UnityEngine.GameObject.Destroy(BG.GetComponent<AnimatedAlpha>());
+                            }
+                            if (BG.GetComponent<UITexture>())
+                            {
+                                BG.GetComponent<UITexture>().alpha = 0.4f;
+                            }
+                        }
                     }
                 }
 
                 bool ShowDeitails = false;
                 bool ShowNewSave = false;
-
                 if(MyMod.LobbyDeitails && MyMod.LobbyNewGame)
                 {
                     if (MyMod.LobbyState == "SelectedSave")
@@ -829,13 +896,55 @@ namespace SkyCoop
 
                     MyMod.LobbyDeitails.SetActive(ShowDeitails);
                     MyMod.LobbyNewGame.SetActive(ShowNewSave);
+
+                    GameObject ObjToUse = null;
+
+                    if (ShowDeitails)
+                    {
+                        ObjToUse = MyMod.LobbyDeitails;
+                    }
+                    else if (ShowNewSave)
+                    {
+                        ObjToUse = MyMod.LobbyNewGame;
+                    }
+
+                    if (ObjToUse)
+                    {
+                        ExperienceModeType expMode = (ExperienceModeType)MyMod.LobbyStartingExperience;
+                        int SelectID = 0;
+                        if(expMode == ExperienceModeType.Pilgrim)
+                        {
+                            SelectID = 0;
+                        }else if (expMode == ExperienceModeType.Voyageur)
+                        {
+                            SelectID = 1;
+                        }
+                        else if (expMode == ExperienceModeType.Stalker)
+                        {
+                            SelectID = 2;
+                        }
+                        else if (expMode == ExperienceModeType.Interloper)
+                        {
+                            SelectID = 3;
+                        }
+
+                        for (int i = 0; i < ObjToUse.transform.GetChild(4).GetChild(1).childCount; i++)
+                        {
+                            ObjToUse.transform.GetChild(4).GetChild(1).GetChild(i).gameObject.SetActive(i == SelectID);
+                        }
+                    }
                 }
             }
             else if (mode == "LobbySettings")
             {
                 OverrideMenuButton(Grid, 1, "NEW GAME");
-                OverrideMenuButton(Grid, 2, "LOAD SAVE");
-                OverrideMenuButton(Grid, 3, "FEATS");
+
+                bool EverPlayer = SaveGameSlotHelper.GetNumSaveSlots(SaveSlotType.SANDBOX) > 0;
+                if (EverPlayer)
+                {
+                    OverrideMenuButton(Grid, 2, "LOAD SAVE");
+                    OverrideMenuButton(Grid, 3, "FEATS");
+                }
             }
             else if (mode == "NewGameSelect")
             {
@@ -866,9 +975,17 @@ namespace SkyCoop
                 }
                 else if (list[index].m_LabelText == "MULTIPLAYER")
                 {
-                    MyMod.m_Panel_Sandbox.Enable(true);
-                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
-                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                    
+                    MyMod.m_Panel_Sandbox = InterfaceManager.LoadPanel<Panel_Sandbox>();
+                    bool result = InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                    if (result)
+                    {
+                        MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
+                        MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                    }else{
+                        return;
+                    }
+
 
                     if(MyMod.MyLobby == "")
                     {
@@ -1068,6 +1185,74 @@ namespace SkyCoop
                 }
                 return true;
             }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Sandbox), "ConfigureMenu")]
+        private static class Panel_Sandbox_ConfigureMenu
+        {
+            private static bool Prefix(Panel_Sandbox __instance)
+            {
+                bool EverPlayer = SaveGameSlotHelper.GetNumSaveSlots(SaveSlotType.SANDBOX) > 0;
+                if (!EverPlayer)
+                {
+                    MelonLogger.Msg(ConsoleColor.Yellow, "No saves found, patching menu to not shitup ui");
+                    if (__instance.m_BasicMenu == null)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Red, "OH NO __instance.m_BasicMenu null");
+                        return false;
+                    }
+
+                    __instance.m_BasicMenu.Reset();
+                    __instance.m_BasicMenu.UpdateTitle(__instance.m_TitleLocalizationId, "", Vector3.zero);
+                    for (int index = 0; index < __instance.m_MenuItems.Count; ++index)
+                    {
+                        __instance.AddMenuItem(index);
+                    }
+                    __instance.m_BasicMenu.SetBackAction(new System.Action(__instance.OnClickBack));
+                    __instance.m_BasicMenu.EnableConfirm(false, "GAMEPLAY_Select");
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        public static bool CheckSaveRNG(string name)
+        {
+            int GenVersion = 0;
+            string textToShow;
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_genversion");
+            if (data != null)
+            {
+                int[] saveProxy = JSON.Load(data).Make<int[]>();
+                GenVersion = saveProxy[0];
+                if (GenVersion != MyMod.BuildInfo.RandomGenVersion)
+                {
+                    MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because we created on old version of the mod, with Generation version " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
+                }
+            }else{
+                MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
+            }
+
+            if (GenVersion != MyMod.BuildInfo.RandomGenVersion)
+            {
+                if (GenVersion == 0)
+                {
+                    textToShow = "You can't use this save file for hosting multiplayer! Because this save file has been created before mod has been installed, or on old version of the mod that isn't compatible with current one!";
+                }else{
+                    textToShow = "You can't use this save file for hosting multiplayer! Because this save file has been created on old version of the mod that isn't compatible with current one! Save file Generation version " + GenVersion + ". Current one mod use now " + MyMod.BuildInfo.RandomGenVersion + "!";
+                }
+
+                if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                {
+                    //if (SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
+                    //{
+                    //    textToShow = "Story mode never has been planned to be synced. Mod works only in SANDBOX game mode. I not know why you even try to host story mode, we never announced it will ever work! Please play regular sandbox!";
+                    //}
+
+                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, textToShow, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                }
+                return false;
+            }
+            return true;
         }
     }
 }

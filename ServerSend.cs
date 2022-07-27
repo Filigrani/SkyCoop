@@ -74,16 +74,25 @@ namespace GameServer
                 }
             }
         }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid)
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, bool IsKey = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
             {
                 if (i != SenderId && MyMod.playersData[i] != null)
                 {
-                    if (MyMod.playersData[i].m_LevelGuid == level_guid)
+                    if (!IsKey)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        if (MyMod.playersData[i].m_LevelGuid == level_guid)
+                        {
+                            Server.clients[i].udp.SendData(_packet);
+                        }
+                    }else{
+                        string Key = MyMod.playersData[i].m_Levelid + MyMod.playersData[i].m_LevelGuid;
+                        if(Key == level_guid)
+                        {
+                            Server.clients[i].udp.SendData(_packet);
+                        }
                     }
                 }
             }
@@ -2072,6 +2081,31 @@ namespace GameServer
                 _packet.Write(TRIGGER);
 
                 SendUDPDataToAll(_packet);
+            }
+        }
+        public static void ADDDEATHCONTAINER(MyMod.DeathContainerData data, string LevelKey, int Sender)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDDEATHCONTAINER))
+            {
+                _packet.Write(data);
+                SendUDPDataToAllButNotSender(_packet, Sender, LevelKey);
+            }
+        }
+        public static void ADDDEATHCONTAINER(MyMod.DeathContainerData data, int JustFor)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDDEATHCONTAINER))
+            {
+                _packet.Write(data);
+                SendUDPData(JustFor, _packet);
+            }
+        }
+        public static void DEATHCREATEEMPTYNOW(string data, string Scene, int NotFor)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.DEATHCREATEEMPTYNOW))
+            {
+                _packet.Write(data);
+                _packet.Write(Scene);
+                SendUDPDataToAllButNotSender(_packet, NotFor);
             }
         }
     }

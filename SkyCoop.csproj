@@ -38,6 +38,7 @@
     <Compile Include="DeBugMenu.cs" />
     <Compile Include="GameLogic.cs" />
     <Compile Include="MenuHook.cs" />
+    <Compile Include="MPSaveManager.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="Server.cs" />

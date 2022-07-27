@@ -45,10 +45,6 @@ namespace GameServer
             MyMod.MaxPlayers = MaxPlayers;
             MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Starting multiplayer...");
             InitializeServerData();
-            if(whitelist != null)
-            {
-                SteamConnect.Main.ProcessWhitelist(whitelist);
-            }
             UsingSteamWorks = true;
             MyMod.InitAllPlayers(); // Prepare players objects based on amount of max players
             MyMod.iAmHost = true;
@@ -60,7 +56,6 @@ namespace GameServer
             MyMod.HadEverPingedMaster = false;
             //MyMod.LoadAllDropsForScene();
             //MyMod.LoadAllOpenableThingsForScene();
-            //MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
             MyMod.DisableOriginalAnimalSpawns(true);
             MyMod.SetFixedSpawn();
             MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
@@ -301,6 +296,8 @@ namespace GameServer
                 { (int)ClientPackets.CHANGEDFREQUENCY, ServerHandle.CHANGEDFREQUENCY},
                 { (int)ClientPackets.MELEESTART, ServerHandle.MELEESTART},
                 { (int)ClientPackets.TRYBORROWGEAR, ServerHandle.TRYBORROWGEAR},
+                { (int)ClientPackets.ADDDEATHCONTAINER, ServerHandle.ADDDEATHCONTAINER},
+                { (int)ClientPackets.DEATHCREATEEMPTYNOW, ServerHandle.DEATHCREATEEMPTYNOW},
             };
             Console.WriteLine("Initialized packets.");
         }

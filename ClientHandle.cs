@@ -962,6 +962,7 @@ namespace SkyCoop
             byte[] CompressedData = _packet.ReadBytes(ReadLength);
             float RecordTime = _packet.ReadFloat();
             float RadioF = _packet.ReadFloat();
+            RadioF = Mathf.Round(RadioF * 10.0f) * 0.1f;
             int from = _packet.ReadInt(); // Play from
             int Sender = _packet.ReadInt(); // Play whos voice
 
@@ -1007,12 +1008,7 @@ namespace SkyCoop
         public static void DROPITEM(Packet _packet)
         {
             MyMod.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
-            if (GearData.m_LevelID != MyMod.levelid || GearData.m_LevelGUID != MyMod.level_guid)
-            {
-                return;
-            }
-            int from = _packet.ReadInt();
-            MyMod.FakeDropItem(GearData.m_GearID, GearData.m_Position, GearData.m_Rotation, GearData.m_Hash, GearData.m_Extra);
+            MyMod.FakeDropItem(GearData);
         }
         public static void PICKDROPPEDGEAR(Packet _packet)
         {
@@ -1082,7 +1078,7 @@ namespace SkyCoop
         {
             string _GUID = _packet.ReadString();
             bool state = _packet.ReadBool();
-            MyMod.ChangeOpenableThingState(MyMod.levelid+MyMod.level_guid, _GUID, state);
+            MyMod.ChangeOpenableThingState(MyMod.level_guid, _GUID, state);
         }
         public static void TRYDIAGNISISPLAYER(Packet _packet)
         {
@@ -1220,6 +1216,20 @@ namespace SkyCoop
         {
             string TRIGGER = _packet.ReadString();
             MyMod.ProcessCustomChallengeTrigger(TRIGGER);
+        }
+        public static void ADDDEATHCONTAINER(Packet _packet)
+        {
+            MyMod.DeathContainerData Con = _packet.ReadDeathContainer();
+            if(MyMod.level_guid == Con.m_LevelKey)
+            {
+                MyMod.MakeDeathCreate(Con);
+            }
+        }
+        public static void DEATHCREATEEMPTYNOW(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            string Scene = _packet.ReadString();
+            MyMod.RemoveDeathContainer(GUID, Scene);
         }
     }
 }

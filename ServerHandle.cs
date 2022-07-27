@@ -892,11 +892,7 @@ namespace GameServer
         public static void DROPITEM(int _fromClient, Packet _packet)
         {
             MyMod.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
-            if (GearData.m_LevelID == MyMod.levelid && GearData.m_LevelGUID == MyMod.level_guid)
-            {
-                MyMod.FakeDropItem(GearData.m_GearID, GearData.m_Position, GearData.m_Rotation, GearData.m_Hash, GearData.m_Extra);
-            }
-
+            MyMod.FakeDropItem(GearData);
             ServerSend.DROPITEM(_fromClient, GearData, true);
         }
         public static void GOTDROPSLICE(int _fromClient, Packet _packet)
@@ -907,9 +903,9 @@ namespace GameServer
         public static void REQUESTPICKUP(int _fromClient, Packet _packet)
         {
             int Hash = _packet.ReadInt();
-            string lvlKey = _packet.ReadString();
+            string Scene = _packet.ReadString();
             MelonLogger.Msg("Client "+ _fromClient+" trying to pickup gear with hash "+ Hash);
-            MyMod.ClientTryPickupItem(Hash, _fromClient, lvlKey, false);
+            MyMod.ClientTryPickupItem(Hash, _fromClient, Scene, false);
         }
         public static void REQUESTPLACE(int _fromClient, Packet _packet)
         {
@@ -919,27 +915,19 @@ namespace GameServer
             MyMod.ClientTryPickupItem(Hash, _fromClient, lvlKey, true);
         }
 
-        public static void SendAllOpenables(int _fromClient, string lvlKey)
+        public static void SendAllOpenables(int _fromClient, string scene)
         {
-            if (MyMod.OpenableThings.ContainsKey(lvlKey) == false)
+            Dictionary<string, bool> Opens = MPSaveManager.LoadOpenableThings(scene);
+            if(Opens == null)
             {
-                bool FoundSaves = MyMod.LoadOpenables(lvlKey);
-                if (FoundSaves == false)
-                {
-                    return;
-                }
+                return;
             }
-            Dictionary<string, bool> LevelOpenables;
-            if (MyMod.OpenableThings.TryGetValue(lvlKey, out LevelOpenables) == true)
+
+            foreach (var cur in Opens)
             {
-                int index = 0;
-                foreach (var cur in LevelOpenables)
-                {
-                    index++;
-                    string currentKey = cur.Key;
-                    bool currentValue = cur.Value;
-                    ServerSend.USEOPENABLE(_fromClient, currentKey, currentValue);
-                }
+                string currentKey = cur.Key;
+                bool currentValue = cur.Value;
+                ServerSend.USEOPENABLE(_fromClient, currentKey, currentValue);
             }
         }
 
@@ -979,56 +967,42 @@ namespace GameServer
         public static void REQUESTDROPSFORSCENE(int _fromClient, Packet _packet)
         {
             int lvl = _packet.ReadInt();
-            string lvlGUID = _packet.ReadString();
-            string lvlKey = lvl+lvlGUID;
-            Dictionary<int, MyMod.SlicedJsonDroppedGear> LevelDrops;
-            MelonLogger.Msg("Client "+ _fromClient+" request all drops for scene "+ lvlKey);
+            string Scene = _packet.ReadString();
+            MelonLogger.Msg("Client "+ _fromClient+" request all drops for scene "+ Scene);
             if(MyMod.playersData[_fromClient] != null)
             {
                 MyMod.playersData[_fromClient].m_Levelid = lvl;
-                MyMod.playersData[_fromClient].m_LevelGuid = lvlGUID;
+                MyMod.playersData[_fromClient].m_LevelGuid = Scene;
             }
+            SendAllOpenables(_fromClient, Scene);
+            RequestAnimalCorpses(_fromClient, Scene);
 
-            MyMod.MarkSearchedContainers(lvlKey, _fromClient);
-            SendAllOpenables(_fromClient, lvlKey);
-            RequestAnimalCorpses(_fromClient, lvlGUID);
-
-            if (MyMod.DroppedGears.ContainsKey(lvlKey) == false)
+            foreach (MyMod.DeathContainerData create in MyMod.DeathCreates)
             {
-                bool FoundSaves = MyMod.LoadDropsForScene(lvlKey);
-                if (FoundSaves == false)
+                if(create.m_LevelKey == Scene)
                 {
-                    MelonLogger.Msg("Requested scene has no drops " + lvlKey);
-                    ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
-                    return;
+                    ServerSend.ADDDEATHCONTAINER(create, _fromClient);
                 }
             }
 
-            if (MyMod.DroppedGears.TryGetValue(lvlKey, out LevelDrops) == true)
-            {
-                MelonLogger.Msg("Sending... ");
-                int index = 0;
-                foreach (var cur in LevelDrops)
-                {
-                    index++;
-                    int currentKey = cur.Key;
-                    MyMod.SlicedJsonDroppedGear currentValue = cur.Value;
-                    MyMod.DroppedGearItemDataPacket SyncData = new MyMod.DroppedGearItemDataPacket();
-                    GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(currentValue.m_Json);
+            MyMod.ModifyDynamicGears(Scene);
+            Dictionary<int, MyMod.DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
+            Dictionary<int, MyMod.SlicedJsonDroppedGear> Drops = MPSaveManager.LoadDropData(Scene);
 
-                    SyncData.m_GearID = MyMod.GetGearIDByName(currentValue.m_GearName);
-                    SyncData.m_Position = DummyGear.m_Position;
-                    SyncData.m_Rotation = DummyGear.m_Rotation;
-                    SyncData.m_LevelID = lvl;
-                    SyncData.m_LevelGUID = lvlGUID;
-                    SyncData.m_Hash = cur.Key;
-                    SyncData.m_Extra = currentValue.m_Extra;
-                    ServerSend.DROPITEM(_fromClient, SyncData, true);
-                }
-                MelonLogger.Msg("Sending done, "+ index+" packets has been sent");
+
+            if(Drops == null || Visuals == null)
+            {
+                MelonLogger.Msg("Requested scene has no drops " + Scene);
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }else{
-                MelonLogger.Msg("Requested scene does isn't loaded so, it has not drops? "+ lvlKey);
+                int index = 0;
+                foreach (var cur in Visuals)
+                {
+                    index++;
+                    ServerSend.DROPITEM(0, cur.Value, false, _fromClient);
+                }
+                MelonLogger.Msg("Sending done, "+ index+" packets has been sent");                
+                
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }
         }
@@ -1039,10 +1013,10 @@ namespace GameServer
         }
         public static void REQUESTOPENCONTAINER(int _fromClient, Packet _packet)
         {
-            string LevelKey = _packet.ReadString();
+            string Scene = _packet.ReadString();
             string boxGUID = _packet.ReadString();
             MelonLogger.Msg("Client " + _fromClient + " request container data for " + boxGUID);
-            string CompressedData = MyMod.LoadFakeContainer(boxGUID, LevelKey);
+            string CompressedData = MPSaveManager.LoadContainer(Scene, boxGUID);
 
             if (CompressedData == "")
             {
@@ -1050,7 +1024,7 @@ namespace GameServer
                 ServerSend.OPENEMPTYCONTAINER(_fromClient, true);
             }else{
                 MelonLogger.Msg("Send to client data about container");
-                MyMod.SendContainerData(CompressedData, LevelKey, boxGUID, _fromClient);
+                MyMod.SendContainerData(CompressedData, Scene, boxGUID, _fromClient);
             }
         }
         public static void CHANGEAIM(int _fromClient, Packet _packet)
@@ -1064,10 +1038,10 @@ namespace GameServer
         }
         public static void USEOPENABLE(int _fromClient, Packet _packet)
         {
-            string LevelKey = _packet.ReadString();
+            string Scene = _packet.ReadString();
             string _GUID = _packet.ReadString();
             bool state = _packet.ReadBool();
-            MyMod.ChangeOpenableThingState(LevelKey, _GUID, state);
+            MyMod.ChangeOpenableThingState(Scene, _GUID, state);
         }
         public static void TRYDIAGNISISPLAYER(int _fromClient, Packet _packet)
         {
@@ -1202,9 +1176,11 @@ namespace GameServer
         public static void CHANGEDFREQUENCY(int _fromClient, Packet _packet)
         {
             float FQ = _packet.ReadFloat();
+            float FixedFloat = Mathf.Round(FQ * 10.0f) * 0.1f;
+
             if(MyMod.playersData[_fromClient] != null)
             {
-                MyMod.playersData[_fromClient].m_RadioFrequency = FQ;
+                MyMod.playersData[_fromClient].m_RadioFrequency = FixedFloat;
             }
         }
         public static void MELEESTART(int _fromClient, Packet _packet)
@@ -1231,6 +1207,30 @@ namespace GameServer
             string TRIGGER = _packet.ReadString();
             MyMod.ProcessCustomChallengeTrigger(TRIGGER);
             ServerSend.CHALLENGETRIGGER(TRIGGER);
+        }
+        public static void ADDDEATHCONTAINER(int _fromClient, Packet _packet)
+        {
+            MyMod.DeathContainerData Con = _packet.ReadDeathContainer();
+            if (!MyMod.DeathCreates.Contains(Con))
+            {
+                MyMod.DeathCreates.Add(Con);
+            }
+
+            if (Con.m_LevelKey == MyMod.level_guid)
+            {
+                MyMod.MakeDeathCreate(Con);
+            }
+
+            ServerSend.ADDDEATHCONTAINER(Con, Con.m_LevelKey, _fromClient);
+        }
+        public static void DEATHCREATEEMPTYNOW(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            string Scene = _packet.ReadString();
+            MyMod.RemoveDeathContainer(GUID, Scene);
+
+            ServerSend.DEATHCREATEEMPTYNOW(GUID, Scene, _fromClient);
+            MPSaveManager.RemoveContainer(Scene, GUID);
         }
     }
 }

@@ -21,7 +21,7 @@ using GameServer;
 
 namespace SkyCoop
 {
-    public class Pathes : MelonMod
+    public class Pathes
     {
         public static void SendTCPData(Packet _packet)
         {
@@ -1948,7 +1948,7 @@ namespace SkyCoop
                         Vector3 V3 = MyMod.SaveThrowingItem.transform.position;
                         Quaternion Qu = MyMod.SaveThrowingItem.transform.rotation;
 
-                        //MelonLogger.Msg("[PlayerManager][Postfix] Throwing stone " + V3.x + " y " + V3.y + " z " + V3.z);
+                        MelonLogger.Msg("[PlayerManager][Postfix] Throwing stone " + V3.x + " y " + V3.y + " z " + V3.z);
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
                         {
                             MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageInflictionInRadius = 15;
@@ -2251,14 +2251,6 @@ namespace SkyCoop
                 if (MyMod.level_name != "Empty" && MyMod.level_name != "Boot" && MyMod.level_name != "MainMenu")
                 {
                     MelonLogger.Msg("Loading scene finished " + MyMod.level_name + " health is: " + GameManager.GetConditionComponent().m_CurrentHP);
-                    if (MyMod.KillAfterLoad == true && GameManager.GetConditionComponent().m_CurrentHP > 0)
-                    {
-                        MelonLogger.Msg("Should dead but has " + GameManager.GetConditionComponent().m_CurrentHP + " health ");
-                        MyMod.IsDead = true;
-                        GameManager.GetConditionComponent().m_CurrentHP = 0.0f;
-                        MyMod.SetRevivedStats(false);
-                        MelonLogger.Msg("Has set it to zero, now health is " + GameManager.GetConditionComponent().m_CurrentHP + " health ");
-                    }
 
 
                     MyMod.NotNeedToPauseUntilLoaded = false;
@@ -2424,6 +2416,19 @@ namespace SkyCoop
                 //MelonLogger.Msg("[Saving][PickedGearSync] Fail!");
             }
         }
+        public static void SaveDeathCreates(SaveSlotType gameMode, string name)
+        {
+            //MelonLogger.Msg("[Saving][SaveDeathCreates] Saving...");
+            MyMod.DeathContainerData[] saveProxy = MyMod.DeathCreates.ToArray();
+            string data = JSON.Dump(saveProxy);
+            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_DeathCreates", data);
+            if (ok == true)
+            {
+                //MelonLogger.Msg("[Saving][SaveDeathCreates] Successfully!");
+            }else{
+                //MelonLogger.Msg("[Saving][SaveDeathCreates] Fail!");
+            }
+        }
 
         public static void SaveDeployedRopes(SaveSlotType gameMode, string name)
         {
@@ -2508,22 +2513,6 @@ namespace SkyCoop
                 //MelonLogger.Msg("[Saving][SnowShelters] Fail!");
             }
         }
-        public static void SaveMPDeath(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][MultiplayerDeath] Saving...");
-            bool[] saveProxy = { MyMod.IsDead };
-            string data = JSON.Dump(saveProxy);
-
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_death", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][MultiplayerDeath] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][MultiplayerDeath] Fail!");
-            }
-        }
 
         public static void SaveGenVersion(SaveSlotType gameMode, string name)
         {
@@ -2546,6 +2535,14 @@ namespace SkyCoop
 
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_seed", data);
         }
+        public static void SaveSeedRadioFQ(SaveSlotType gameMode, string name)
+        {
+            float[] saveProxy = { MyMod.RadioFrequency };
+            string data = JSON.Dump(saveProxy);
+
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_FQ", data);
+        }
+
         public static void SaveRealtimeTime(SaveSlotType gameMode, string name)
         {
             int[] saveProxy = { MyMod.MinutesFromStartServer };
@@ -2612,16 +2609,19 @@ namespace SkyCoop
                 SaveLootedBoxes(gameMode, name);
                 SavePlants(gameMode, name);
                 SaveSnowShelters(gameMode, name);
-                SaveMPDeath(gameMode, name);
                 SaveGenVersion(gameMode, name);
                 SaveSeedInt(gameMode, name);
                 SaveRealtimeTime(gameMode, name);
-                MyMod.SaveAllLoadedDrops();
-                MyMod.SaveAllLoadedOpenables();
-                SaveFixedSpawn(gameMode, name);
-                SaveFixedSpawnPosition(gameMode, name);
+
+                if (MyMod.ServerConfig.m_PlayersSpawnType != 3 && MyMod.iAmHost) // Fixed spawn only
+                {
+                    SaveFixedSpawn(gameMode, name);
+                    SaveFixedSpawnPosition(gameMode, name);
+                }
                 SaveKilledAnimals(gameMode, name);
                 SaveBookReaded(gameMode, name);
+                SaveSeedRadioFQ(gameMode, name);
+                SaveDeathCreates(gameMode, name);
             }
         }
 
@@ -2674,6 +2674,28 @@ namespace SkyCoop
             else
             {
                 //MelonLogger.Msg("[Saving][PickedGearSync] No saves found!");
+            }
+        }
+
+        public static void LoadDeathCreates(string name)
+        {
+            //MelonLogger.Msg("[Saving][DeathCreates] Loading...");
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_DeathCreates");
+            if (data != null)
+            {
+                MyMod.DeathContainerData[] saveProxy = JSON.Load(data).Make<MyMod.DeathContainerData[]>();
+                List<MyMod.DeathContainerData> loadedData = saveProxy.ToList<MyMod.DeathContainerData>();
+
+                MyMod.DeathCreates = loadedData;
+
+                //for (int i = 0; i < loadedData.Count; i++)
+                //{
+                //    MyMod.DeathContainerData ToAdd = loadedData[i];
+                //    if (!MyMod.DeathCreates.Contains(ToAdd))
+                //    {
+                //        MyMod.DeathCreates.Add(ToAdd);
+                //    }
+                //}
             }
         }
 
@@ -2804,21 +2826,6 @@ namespace SkyCoop
                 //MelonLogger.Msg("[Saving][ServerConfig] No saves found!");
             }
         }
-        public static void LoadMPDeath(string name)
-        {
-            //MelonLogger.Msg("[Saving][MultiplayerDeath] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_death");
-            if (data != null)
-            {
-                bool[] saveProxy = JSON.Load(data).Make<bool[]>();
-                //MelonLogger.Msg("[Saving][MultiplayerDeath] IsDead: " + saveProxy[0]);
-                MyMod.IsDead = saveProxy[0];
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][MultiplayerDeath] No saves found!");
-            }
-        }
         public static void LoadGenVersion(string name)
         {
             //MelonLogger.Msg("[Saving][MultiplayerDeath] Loading...");
@@ -2851,6 +2858,17 @@ namespace SkyCoop
             else
             {
                 return 0;
+            }
+        }
+        public static float LoadRadioFQ(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_FQ");
+            if (data != null)
+            {
+                float[] saveProxy = JSON.Load(data).Make<float[]>();
+                return saveProxy[0];
+            }else{
+                return UnityEngine.Random.Range(-25,25);
             }
         }
 
@@ -2993,13 +3011,15 @@ namespace SkyCoop
                 LoadLootedBoxes(name);
                 LoadPlants(name);
                 LoadSnowShelters(name);
-                LoadMPDeath(name);
                 LoadGenVersion(name);
                 LoadRealtimeTime(name);
                 LoadFixedSpawn(name);
                 LoadFixedSpawnPosition(name);
                 LoadKilledAnimals(name);
                 LoadReadedBooks(name);
+                float FQ = LoadRadioFQ(name);
+                MyMod.RadioFrequency = Mathf.Round(FQ * 10.0f) * 0.1f;
+                LoadDeathCreates(name);
             }
         }
 
@@ -3035,7 +3055,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                FlushAllSavable();
+                //FlushAllSavable();
             }
         }
 
@@ -3926,6 +3946,10 @@ namespace SkyCoop
                     {
                         __result = "Borrow "+Utils.GetGearDisplayName(interactiveObject.gameObject.GetComponent<MyMod.Borrowable>().m_GearName);
                     }
+                    else if(interactiveObject.gameObject.GetComponent<MyMod.DeathDropContainer>() != null)
+                    {
+                        __result = interactiveObject.gameObject.GetComponent<MyMod.DeathDropContainer>().m_Owner + "'s Backpack";
+                    }
                 }
             }
         }
@@ -4116,11 +4140,11 @@ namespace SkyCoop
             MyMod.MultiPlayerClientData pData = MyMod.playersData[m_ID];
             MyMod.PriorityActionForOtherPlayer act = new MyMod.PriorityActionForOtherPlayer();
 
-            if (pData != null && MyMod.playersData[mP.m_ID].m_AnimState == "Knock")
-            {
-                act = MyMod.GetActionForOtherPlayer("Revive");
-            }
-            else if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
+            //if (pData != null && MyMod.playersData[mP.m_ID].m_AnimState == "Knock")
+            //{
+            //    act = MyMod.GetActionForOtherPlayer("Revive");
+            //}
+            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
             {
                 act = MyMod.GetActionForOtherPlayer("Stim");
             }
@@ -5101,6 +5125,7 @@ namespace SkyCoop
                 }
             }
         }
+        
         [HarmonyLib.HarmonyPatch(typeof(Condition), "KillPlayer")] // Once
         public class Condition_Test
         {
@@ -5194,13 +5219,20 @@ namespace SkyCoop
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading done!");
             MyMod.DroppedGearsObjs.Clear();
             MyMod.TrackableDroppedGearsObjs.Clear();
+            MyMod.OpenableThings.Clear();
 
             if (MyMod.iAmHost == true || MyMod.InOnline() == false)
             {
                 MyMod.LoadAllDropsForScene();
-                MyMod.MarkSearchedContainers(MyMod.levelid + MyMod.level_guid);
                 MyMod.LoadAllOpenableThingsForScene();
                 MyMod.LoadAniamlCorpsesForScene();
+                foreach (MyMod.DeathContainerData create in MyMod.DeathCreates)
+                {
+                    if (create.m_LevelKey == MyMod.level_guid)
+                    {
+                        MyMod.MakeDeathCreate(create);
+                    }
+                }
             }
             if (MyMod.sendMyPosition == true)
             {
@@ -5337,7 +5369,6 @@ namespace SkyCoop
             return false;
         }
 
-
         [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "PostTreatment")] // Once
         public static class Panel_Diagnosis_PostTreatment
         {
@@ -5363,6 +5394,31 @@ namespace SkyCoop
                     }
 
                     MyMod.SendCureAffliction(aff);
+                }
+
+                List<string> MakenzyDiagnosis = new List<string>();
+                MakenzyDiagnosis.Add("PLAY_SNDVOSMMAC2150"); // Good to see you’re still breathing. I found some supplies that should help.
+                MakenzyDiagnosis.Add("PLAY_SNDVOSMMACE422950_01"); // That doesn't look good...
+                MakenzyDiagnosis.Add("PLAY_SNDVOSMMAC1770"); // What can I do?
+                MakenzyDiagnosis.Add("PLAY_SNDVOSMMAC1820"); // You’re losing blood. Just stay awake. We’ll get there.
+                MakenzyDiagnosis.Add("PLAY_SNDVOSMMAC1750"); // You ok?
+
+
+
+                ///PLAY_SURVIVORDIAGNOSIS CHECK BEGIN
+
+                if (GameManager.GetPlayerManagerComponent().m_VoicePersona == VoicePersona.Male) // If Makenzy
+                {
+                    List<string> MakenzyCure = new List<string>();
+                    MakenzyCure.Add("PLAY_SNDVOSMMAC590"); // I know how hard it’s been...
+                    MakenzyCure.Add("PLAY_SNDVOSMMAC1175UNCLESAM"); // Eh Thank you uncle Sam...
+                    MakenzyCure.Add("PLAY_SNDVOSMMAC2250"); // Rest up. I’ll look around.
+                    MakenzyCure.Add("PLAY_SNDVOSMMAC2300"); // I see you’re feeling better. Good.
+                    MakenzyCure.Add("PLAY_SNDVOSMMAC1980"); // Here...take these. They should help with the pain.
+                    System.Random rnd = new System.Random();
+                    __instance.m_TreatmentSuccessVO = MakenzyCure[rnd.Next(MakenzyCure.Count)];
+                }else{
+                    __instance.m_TreatmentSuccessVO = "Play_SurvivorTreat"; // Astrid default
                 }
             }
         }
@@ -5876,23 +5932,6 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "OnBack")] // Once
-        internal static class Panel_Log_Dead
-        {
-            private static void Prefix(Panel_Log __instance)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                if (MyMod.InOnline() == true && MyMod.IsDead == true)
-                {
-                    Application.Quit();
-                }
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "DoQuitGame")]  // Once
         internal static class Panel_PauseMenu_Quit
         {
@@ -5952,11 +5991,9 @@ namespace SkyCoop
                 {
                     if (MyMod.iAmHost == true)
                     {
-                        MyMod.ChangeOpenableThingState(MyMod.levelid + MyMod.level_guid, _GUID, true);
-                    }
-                    else
-                    {
-                        MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, true);
+                        MyMod.ChangeOpenableThingState(MyMod.level_guid, _GUID, true);
+                    }else{
+                        MyMod.SendOpenableThing(MyMod.level_guid, _GUID, true);
                     }
                 }
             }
@@ -5988,11 +6025,9 @@ namespace SkyCoop
                 {
                     if (MyMod.iAmHost == true)
                     {
-                        MyMod.ChangeOpenableThingState(MyMod.levelid + MyMod.level_guid, _GUID, false);
-                    }
-                    else
-                    {
-                        MyMod.SendOpenableThing(MyMod.levelid + MyMod.level_guid, _GUID, false);
+                        MyMod.ChangeOpenableThingState(MyMod.level_guid, _GUID, false);
+                    }else{
+                        MyMod.SendOpenableThing(MyMod.level_guid, _GUID, false);
                     }
                 }
             }
@@ -6028,6 +6063,7 @@ namespace SkyCoop
                     sceneName = MyMod.OverridedSceneForSpawn;
                     MyMod.OverridedSceneForSpawn = "";
                 }
+                MelonLogger.Msg(ConsoleColor.Magenta, "[LoadSceneWithLoadingScreen] " + sceneName);
             }
         }
 
@@ -6045,6 +6081,7 @@ namespace SkyCoop
                 if (MyMod.OverridedPositionForSpawn != Vector3.zero)
                 {
                     __instance.TeleportPlayer(MyMod.OverridedPositionForSpawn, GameManager.GetPlayerTransform().rotation);
+                    MelonLogger.Msg(ConsoleColor.Magenta, "[TeleportPlayerAfterSceneLoad] X " + MyMod.OverridedPositionForSpawn.x+" Y "+ MyMod.OverridedPositionForSpawn.y+" Z "+ MyMod.OverridedPositionForSpawn.z);
                     MyMod.OverridedPositionForSpawn = Vector3.zero;
                 }
             }
@@ -6479,7 +6516,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
 
-                if (__instance.m_ItemInHands && __instance.m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
+                if (!MyMod.VanilaRadio && __instance.m_ItemInHands && __instance.m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
                 {
                     GameManager.GetPlayerManagerComponent().UnequipItemInHandsSkipAnimation();
                     return false;
@@ -6595,9 +6632,26 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if(gi.m_GearName == "GEAR_HandheldShortwave")
+                if (!MyMod.VanilaRadio && gi.m_GearName == "GEAR_HandheldShortwave")
                 {
-                    __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__HandheldShortwaveRadio");
+                    __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__HandheldShortwave");
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Utils), "GetInventoryGridIconTexture")] // A lot
+        private static class Utils_GetInventoryGridIconTexture
+        {
+            private static void Postfix(Utils __instance, string name, ref Texture2D __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (!MyMod.VanilaRadio && name == "ico_GearItem__HandheldShortwave")
+                {
+                    __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__HandheldShortwave");
                 }
             }
         }
@@ -6684,6 +6738,131 @@ namespace SkyCoop
             private static void Prefix(Panel_ChallengeComplete __instance)
             {
                 MyMod.m_Panel_ChallengeComplete = __instance;
+            }
+        }
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerCameraAnim), "Start")]
+        //private static class PlayerCameraAnim_Start
+        //{
+        //    private static void Postfix(PlayerCameraAnim __instance)
+        //    {
+        //        if (__instance.gameObject)
+        //        {
+        //            if (__instance.gameObject.name == "NEW_FPHand_Rig")
+        //            {
+        //                MyMod.LeftHandHelper Helper = __instance.gameObject.GetComponent<MyMod.LeftHandHelper>();
+        //                if (Helper == null)
+        //                {
+        //                    Helper = __instance.gameObject.AddComponent<MyMod.LeftHandHelper>();
+        //                    Helper.MirrorThis = __instance.gameObject;
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "OnQuitToMainMenu")]
+        private static class Panel_Log_OnQuitToMainMenu
+        {
+            private static bool Prefix(Panel_Log __instance)
+            {
+                MyMod.BeginRespawn();
+
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "HandlePlayerDeath")]
+        private static class GameManager_HandlePlayerDeath
+        {
+            private static bool Prefix(GameManager __instance)
+            {
+
+                if (InterfaceManager.m_Panel_Log.IsEnabled())
+                {
+                    InterfaceManager.m_Panel_Log.ExitInterfaceOnDeath();
+                }
+                if (GameManager.m_Rest.IsSleeping())
+                {
+                    GameManager.m_Rest.EndSleeping(true);
+                }
+                GameManager.m_PlayerManager.UnequipImmediate(false);
+                GameManager.m_PlayerManager.SetControlMode(PlayerControlMode.Dead);
+                foreach (AudioCallback componentsInChild in (AudioCallback[])((Component)GameManager.GetPlayerObject().transform.parent).GetComponentsInChildren<AudioCallback>())
+                    componentsInChild.ToggleDisableAudioEvents(true);
+                switch (ExperienceModeManager.GetCurrentExperienceModeType())
+                {
+                    case ExperienceModeType.ChallengeRescue:
+                    case ExperienceModeType.ChallengeHunted:
+                    case ExperienceModeType.ChallengeWhiteout:
+                    case ExperienceModeType.ChallengeNomad:
+                    case ExperienceModeType.ChallengeHuntedPart2:
+                    case ExperienceModeType.ChallengeArchivist:
+                    case ExperienceModeType.ChallengeDeadManWalking:
+                    case ExperienceModeType.ChallengeNowhereToHide:
+                        BaseAiManager.ResetAudioLoops();
+                        UIInput.selection = (UIInput)null;
+                        GameManager.m_Log.WriteLogToFile();
+                        GameManager.CancelPendingSave();
+                        InterfaceManager.m_Panel_OptionsMenu.ApplyHudType();
+                        if (ExperienceModeManager.IsCurrentEpisodeExperienceMode())
+                            break;
+                        //SaveGameSystem.DeleteSaveFilesForGameId(SaveGameSystem.m_CurrentGameId);
+                        break;
+                    default:
+                        if (ExperienceModeManager.IsCurrentEpisodeExperienceMode())
+                        {
+                            InterfaceManager.LoadPanel<Panel_ChallengeComplete>().ShowPanel(Panel_ChallengeComplete.Options.None);
+                            goto case ExperienceModeType.ChallengeRescue;
+                        }
+                        else
+                        {
+                            InterfaceManager.m_Panel_Log.EnableDeathView();
+                            goto case ExperienceModeType.ChallengeRescue;
+                        }
+                }
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveCompletedInternal")]
+        private static class SaveGameSystem_SaveCompletedInternal
+        {
+            private static void Postfix(SaveGameSystem __instance)
+            {
+                if (MyMod.PendingRespawn)
+                {
+                    SaveGameSystem.SetAsyncEnabled(true);
+                    MyMod.PendingRespawn = false;
+                    MelonLogger.Msg("[SaveGameSystem] SaveCompletedInternal PendingRespawn");
+                    SaveSlotInfo SSI = SaveGameSlotHelper.GetCurrentSaveSlotInfo();
+                    if (SSI == null)
+                    {
+                        MelonLogger.Msg("Woops Save info is null, trying other way...");
+                        MelonLogger.Msg("SaveGameSystem.GetCurrentSaveName() = " + SaveGameSystem.GetCurrentSaveName());
+                        GameManager.LoadSaveGameSlot(SaveGameSystem.GetCurrentSaveName(), 0);
+                    }else{
+                        MelonLogger.Msg("[SaveGameSystem] SaveCompletedInternal Saving done, loading");
+                        GameManager.LoadSaveGameSlot(SSI);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "EnableDeathView")]
+        private static class Panel_Log_EnableDeathView
+        {
+            private static void Postfix(Panel_Log __instance)
+            {
+                MyMod.IsDead = true;
+                MyMod.DropAll();
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "GetOnBackText")]
+        private static class Panel_Log_GetOnBackText
+        {
+            private static void Postfix(Panel_Log __instance, ref string __result)
+            {
+                if (__instance.QuitToMainMenuOnBack())
+                {
+                    __result = "Respawn";
+                }
             }
         }
     }
