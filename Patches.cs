@@ -261,6 +261,11 @@ namespace SkyCoop
                         else
                         {
                             GearItem gi = saveObj.gameObject.GetComponent<GearItem>();
+                            if(gi == null)
+                            {
+                                MelonLogger.Msg(saveObj.gameObject.name + " has not GearItem");
+                                return;
+                            }
                             if (gi.m_Cookable == null || gi.m_Cookable.IsNearFire() == false)
                             {
                                 DFL = saveObj.AddComponent<MyMod.DropFakeOnLeave>();
@@ -1219,36 +1224,6 @@ namespace SkyCoop
                 }
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UpdateInspectGear")] // Always $!!! Maybe can be reworked
-        //private static class Inventory_LeaveIt
-        //{
-        //    internal static void Prefix(PlayerManager __instance)
-        //    {
-        //        if (MyMod.CrazyPatchesLogger == true)
-        //        {
-        //            StackTrace st = new StackTrace(new StackFrame(true));
-        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-        //        }
-        //        if (__instance.m_Gear != null && __instance.m_InspectModeActive == true)
-        //        {
-        //            if (InputManager.GetPutBackPressed(InputManager.m_CurrentContext) == true)
-        //            {
-        //                if (__instance.m_Gear.gameObject.GetComponent<MyMod.DropFakeOnLeave>() != null)
-        //                {
-        //                    MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
-        //                    int variant = 0;
-        //                    if ((__instance.m_Gear.gameObject.GetComponent<FoodItem>() != null && __instance.m_Gear.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
-        //                        (__instance.m_Gear.gameObject.GetComponent<SmashableItem>() != null && __instance.m_Gear.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
-        //                    {
-        //                        variant = 1;
-        //                    }
-        //                    MyMod.SendDropItem(__instance.m_Gear, 0, 0, true, variant);
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ProcessPickupWithNoInspectScreen")] // Once
         private static class Inventory_Pickup2
         {

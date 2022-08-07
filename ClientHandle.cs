@@ -988,17 +988,6 @@ namespace SkyCoop
             int from = _packet.ReadInt();
             MyMod.AddSlicedBytesData(got, from);
         }
-        public static void SLEEPPOSE(Packet _packet)
-        {
-            Vector3 Position = _packet.ReadVector3();
-            Quaternion Rotation = _packet.ReadQuaternion();
-            int from = _packet.ReadInt();
-            if (MyMod.playersData[from] != null)
-            {
-                MyMod.playersData[from].m_SleepV3 = Position;
-                MyMod.playersData[from].m_SleepQuat = Rotation;
-            }
-        }
         public static void ANIMALDAMAGE(Packet _packet)
         {
             string guid = _packet.ReadString();

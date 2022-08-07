@@ -871,17 +871,6 @@ namespace GameServer
                 ServerSend.SLICEDBYTES(_fromClient, got, false, got.m_SendTo);
             }
         }
-        public static void SLEEPPOSE(int _fromClient, Packet _packet)
-        {
-            Vector3 Position = _packet.ReadVector3();
-            Quaternion Rotation = _packet.ReadQuaternion();
-            if (MyMod.playersData[_fromClient] != null)
-            {
-                MyMod.playersData[_fromClient].m_SleepV3 = Position;
-                MyMod.playersData[_fromClient].m_SleepQuat = Rotation;
-            }
-            ServerSend.SLEEPPOSE(_fromClient, Position, Rotation, false);
-        }
         public static void ANIMALDAMAGE(int _fromClient, Packet _packet)
         {
             string guid = _packet.ReadString();

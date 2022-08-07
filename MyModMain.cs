@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.6 pre";
+            public const string Version = "0.9.7";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -816,8 +816,6 @@ namespace SkyCoop
             public bool m_Female = false;
             public int m_Character = 0;
             public ShowShelterByOther m_Shelter = null;
-            public Vector3 m_SleepV3 = new Vector3(0, 0, 0);
-            public Quaternion m_SleepQuat = new Quaternion(0, 0, 0, 0);
             public bool m_Aiming = false;
             public float m_RadioFrequency = 0;
         }
@@ -4543,15 +4541,6 @@ namespace SkyCoop
                         m_XYZ = new Vector3(pD.m_Position.x, pD.m_Position.y - 0.194f, pD.m_Position.z);
                         m_Player.transform.localScale = new Vector3(0.867f, 1, 0.867f);
                     }
-
-                    if(pD.m_AnimState == "Sleep")
-                    {
-                        if(pD.m_SleepV3 != new Vector3(0, 0, 0))
-                        {
-                            m_XYZ = pD.m_SleepV3;
-                            m_XYZW = pD.m_SleepQuat;
-                        }
-                    }
                     if(m_HoldingItem == "Book")
                     {
                         if(pD.m_AnimState == "Idle")
@@ -7442,7 +7431,6 @@ namespace SkyCoop
             { (int)ServerPackets.GOTITEMSLICE, ClientHandle.GOTITEMSLICE},
             { (int)ServerPackets.VOICECHAT, ClientHandle.VOICECHAT},
             { (int)ServerPackets.SLICEDBYTES, ClientHandle.SLICEDBYTES},
-            { (int)ServerPackets.SLEEPPOSE, ClientHandle.SLEEPPOSE},
             { (int)ServerPackets.ANIMALDAMAGE, ClientHandle.ANIMALDAMAGE},
             { (int)ServerPackets.FIREFUEL, ClientHandle.FIREFUEL},
             { (int)ServerPackets.DROPITEM, ClientHandle.DROPITEM},
@@ -11386,7 +11374,19 @@ namespace SkyCoop
             {
                 SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
             }else{
-                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy is not exist by somereason...");
+                //MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy is not exist by somereason...");
+
+
+                GearItem GI = obj.GetComponent<GearItem>();
+
+                if (GI != null && !GI.m_BeenInPlayerInventory && !ServerConfig.m_DuppedSpawns)
+                {
+                    DropFakeOnLeave DFL = obj.AddComponent<DropFakeOnLeave>();
+                    DFL.m_OldPossition = obj.transform.position;
+                    DFL.m_OldRotation = obj.transform.rotation;
+                    MelonLogger.Msg("Trying place pre-spawned gear, so dropping fake on cancle");
+                }
+
                 return;
             }
 
@@ -11481,7 +11481,13 @@ namespace SkyCoop
 
             MelonLogger.Msg("Searching for " + GearName + " with hash " + SearchKey + " ID " + GearID);
 
-            string gearName = GetGearNameByID(GearID);
+            string gearName;
+            if (GearID != -1)
+            {
+                gearName = GetGearNameByID(GearID);
+            }else{
+                gearName = GearName;
+            }
             GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject(gearName), v3, rot);
             newGear.name = CloneTrimer(newGear.name);
             newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
@@ -12302,6 +12308,11 @@ namespace SkyCoop
             }
 
             return 7200;
+        }
+
+        public static void BuildStoneStash()
+        {
+
         }
 
         public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0)
@@ -13867,7 +13878,7 @@ namespace SkyCoop
         public static void SyncMovement(bool InFight, Transform target)
         {
             if (IsDead == false && InFight == false)
-            {
+            {          
                 if (GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
                 {
                     if (GameManager.GetPlayerManagerComponent().PlayerCanSprint() == true && GameManager.GetPlayerManagerComponent().PlayerIsSprinting())
@@ -13886,28 +13897,50 @@ namespace SkyCoop
                 }
             }
 
+            Vector3 v3 = target.position;
+
+            if (GameManager.GetRestComponent().IsSleeping() == true && GameManager.GetRestComponent().m_Bed != null)
+            {
+                Bed _Bed = GameManager.GetRestComponent().m_Bed;
+                if (_Bed != null && _Bed.m_BodyPlacementTransform != null)
+                {
+                    v3 = _Bed.m_BodyPlacementTransform.position;
+                }
+            }
+
             if (sendMyPosition == true) // CLIENT
             {
                 using (Packet _packet = new Packet((int)ClientPackets.XYZ))
                 {
-                    _packet.Write(target.position);
+                    _packet.Write(v3);
                     SendTCPData(_packet);
                 }
             }
 
             if(iAmHost == true)
             {
-                ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, true);
+                ServerSend.XYZ(0, v3, true);
             }
         }
 
         public static void SyncRotation(Transform target)
         {
+            Quaternion rot = target.rotation;
+
+            if (GameManager.GetRestComponent().IsSleeping() == true && GameManager.GetRestComponent().m_Bed != null)
+            {
+                Bed _Bed = GameManager.GetRestComponent().m_Bed;
+                if (_Bed != null)
+                {
+                    rot = GetBedRotation(_Bed);
+                }
+            }
+
             if (sendMyPosition == true) // CLIENT
             {
                 using (Packet _packet = new Packet((int)ClientPackets.XYZW))
                 {
-                    _packet.Write(target.rotation);
+                    _packet.Write(rot);
                     SendTCPData(_packet);
                 }
             }
@@ -13915,7 +13948,7 @@ namespace SkyCoop
             {
                 using (Packet _packet = new Packet((int)ServerPackets.XYZW))
                 {
-                    ServerSend.XYZW(0, target.rotation, true);
+                    ServerSend.XYZW(0, rot, true);
                 }
             }
         }
@@ -14149,6 +14182,23 @@ namespace SkyCoop
                 }
             }
         }
+
+        public static Quaternion GetBedRotation(Bed bed)
+        {
+            GameObject obj = bed.gameObject;
+            Quaternion rot = new Quaternion(0,0,0,0);
+            if (obj)
+            {
+                if(obj.GetComponent<Bed>().m_Bedroll == null)
+                {
+                    rot = Quaternion.Inverse(obj.GetComponent<Bed>().m_BodyPlacementTransform.rotation);
+                }else{
+                    rot = obj.transform.rotation;
+                }
+            }
+
+            return rot;
+        }
         
         public static void SyncSleeping()
         {
@@ -14161,53 +14211,26 @@ namespace SkyCoop
             if (PreviousSleeping != IsSleeping)
             {
                 PreviousSleeping = IsSleeping;
-                if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true || (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true))
+                if (GameManager.GetRestComponent().IsSleeping() == true || (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true))
                 {
                     MelonLogger.Msg("Going to sleep");
                     MelonLogger.Msg("Skiping Cycle time " + MyCycleSkip);
-                    GameObject bed = LastObjectUnderCrosshair;
-                    if (bed != null && bed.GetComponent<Bed>() != null)
-                    {
-                        if (bed.GetComponent<Bed>().m_BodyPlacementTransform == true)
-                        {
-                            Vector3 SleepV3 = bed.GetComponent<Bed>().m_BodyPlacementTransform.position;
-                            Quaternion SleepQuat = bed.GetComponent<Bed>().m_BodyPlacementTransform.rotation;
 
-                            if (iAmHost == true)
-                            {
-                                ServerSend.SLEEPPOSE(0, SleepV3, SleepQuat, true);
-                            }
-                            if (sendMyPosition == true)
-                            {
-                                using (Packet _packet = new Packet((int)ClientPackets.SLEEPPOSE))
-                                {
-                                    _packet.Write(SleepV3);
-                                    _packet.Write(SleepQuat);
-                                    SendTCPData(_packet);
-                                }
-                            }
-                        }
-                        else
+                    Bed bed = GameManager.GetRestComponent().m_Bed;
+                    
+                    if (bed != null)
+                    {
+                        if (bed.m_BodyPlacementTransform != null)
                         {
-                            MelonLogger.Msg(ConsoleColor.DarkRed, "Bed has not sleep pose transform! AAAAAAAAAAAAAA");
+                            SyncRotation(GameManager.GetPlayerObject().transform);
+                            SyncMovement(false, GameManager.GetPlayerObject().transform);
                         }
                     }
                 }else{
                     MyCycleSkip = 0;
-                    if (iAmHost == true)
-                    {
-                        ServerSend.SLEEPPOSE(0, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0), true);
-                    }
-                    if (sendMyPosition == true)
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.SLEEPHOURS))
-                        {
-                            _packet.Write(new Vector3(0, 0, 0));
-                            _packet.Write(new Quaternion(0, 0, 0, 0));
-                            SendTCPData(_packet);
-                        }
-                    }
                     MelonLogger.Msg("Has wakeup or cancle sleep");
+                    SyncRotation(GameManager.GetPlayerObject().transform);
+                    SyncMovement(false, GameManager.GetPlayerObject().transform);
                 }
 
                 if (sendMyPosition == true)
@@ -15036,16 +15059,25 @@ namespace SkyCoop
                     {
                         GearItem GI = __PM.m_Gear;
                         GameObject GIobj = GI.gameObject;
-                        if (GI.gameObject.GetComponent<MyMod.DropFakeOnLeave>() != null)
+                        int variant = 0;
+                        if ((GIobj.GetComponent<FoodItem>() != null && GIobj.GetComponent<FoodItem>().m_Opened == true) ||
+                            (GIobj.GetComponent<SmashableItem>() != null && GIobj.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
                         {
-                            MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
-                            int variant = 0;
-                            if ((GIobj.GetComponent<FoodItem>() != null && GIobj.GetComponent<FoodItem>().m_Opened == true) ||
-                                (GIobj.GetComponent<SmashableItem>() != null && GIobj.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                            variant = 1;
+                        }
+
+                        if (__PM.m_Container != null)
+                        {
+                            MelonLogger.Msg("Refuse taking gear, from container, make it fake");
+
+                            SendDropItem(GI, 0, 0, false, variant);
+                        }else{
+                            if (GI.gameObject.GetComponent<DropFakeOnLeave>() != null)
                             {
-                                variant = 1;
+                                MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
+
+                                SendDropItem(GI, 0, 0, true, variant);
                             }
-                            SendDropItem(GI, 0, 0, true, variant);
                         }
                     }
                 }
@@ -15269,11 +15301,24 @@ namespace SkyCoop
             {
                 return;
             }
-            
+
+            Vector3 v3 = GameManager.GetPlayerTransform().position;
+            Quaternion rot = GameManager.GetPlayerTransform().rotation;
+
+            if (GameManager.GetRestComponent().IsSleeping() == true && GameManager.GetRestComponent().m_Bed != null)
+            {
+                Bed _Bed = GameManager.GetRestComponent().m_Bed;
+                if (_Bed != null)
+                {
+                    rot = GetBedRotation(_Bed);
+                    v3 = _Bed.m_BodyPlacementTransform.position;
+                }
+            }
+
             if (iAmHost == true)
             {
-                ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, true);
-                ServerSend.XYZW(0, GameManager.GetPlayerTransform().rotation, true);
+                ServerSend.XYZ(0, v3, true);
+                ServerSend.XYZW(0, rot, true);
                 ServerSend.LEVELID(0, levelid, true);
                 ServerSend.LEVELGUID(0, level_guid, true);
                 ServerSend.ANIMSTATE(0, MyAnimState, true);
@@ -15282,12 +15327,12 @@ namespace SkyCoop
             {
                 using (Packet _packet = new Packet((int)ClientPackets.XYZ))
                 {
-                    _packet.Write(GameManager.GetPlayerTransform().position);
+                    _packet.Write(v3);
                     SendTCPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.XYZW))
                 {
-                    _packet.Write(GameManager.GetPlayerTransform().rotation);
+                    _packet.Write(rot);
                     SendTCPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.LEVELID))
