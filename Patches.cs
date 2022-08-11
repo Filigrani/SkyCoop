@@ -5175,7 +5175,7 @@ namespace SkyCoop
             {
                 _packet.Write(MyMod.levelid);
                 _packet.Write(MyMod.level_guid);
-                MyMod.SetRepeatPacket(_packet);
+                MyMod.SetRepeatPacket(MyMod.ResendPacketType.Scene);
                 SendTCPData(_packet);
             }
         }

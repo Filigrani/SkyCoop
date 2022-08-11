@@ -198,6 +198,10 @@ namespace GameServer
                 {
                     MelonLogger.Msg("Player " + _fromClient + "  transition to level " + lel);
                 }
+                if(lel == 0)
+                {
+                    MyMod.AddLoadingClient(_fromClient);
+                }
             }
             ServerSend.LEVELID(_fromClient, lel, false);
         }
@@ -455,7 +459,16 @@ namespace GameServer
         public static void KEEPITALIVE(int _fromClient, Packet _packet)
         {
             MyMod.NoHostResponceSeconds = 0;
+
+            int Been = Server.clients[_fromClient].TimeOutTime;
+
             Server.clients[_fromClient].TimeOutTime = 0;
+
+            if(Been > 10)
+            {
+                MelonLogger.Msg(ConsoleColor.Yellow,"Last request from client "+_fromClient+ " took longer than expected");
+                MelonLogger.Msg(ConsoleColor.Yellow, "Client[" + _fromClient + "] KeepItAlive took "+ Been+"s");
+            }
         }
         public static void SYNCWEATHER(int _fromClient, Packet _packet)
         {
@@ -994,6 +1007,8 @@ namespace GameServer
                 
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }
+
+            MyMod.RemoveLoadingClient(_fromClient);
         }
         public static void GOTCONTAINERSLICE(int _fromClient, Packet _packet)
         {

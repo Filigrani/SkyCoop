@@ -645,7 +645,7 @@ namespace SkyCoop
 
             if (ConnectedScreenTest == true)
             {
-                MyMod.DoWaitForConnect();
+                MyMod.DoWaitForConnect(true);
                 if (KickTest == true)
                 {
                     MyMod.DoKickMessage("Wrong mod version! Server using version " + MyMod.BuildInfo.Version);

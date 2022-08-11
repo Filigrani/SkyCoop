@@ -107,7 +107,7 @@ namespace SkyCoop
                             string IDstr = clientId.ToString();
                             MyMod.ConnectedSteamWorks = true;
                             MyMod.SteamServerWorks = IDstr;
-                            MyMod.DoWaitForConnect();
+                            MyMod.DoWaitForConnect(true);
                             ConnectToHost(MyMod.SteamServerWorks);
                         }
                     }
@@ -170,7 +170,7 @@ namespace SkyCoop
                                 MyMod.ConnectedSteamWorks = true;
                                 MyMod.SteamServerWorks = server.ToString();
                                 MyMod.RemovePleaseWait();
-                                MyMod.DoWaitForConnect();
+                                MyMod.DoWaitForConnect(true);
                                 ConnectToHost(MyMod.SteamServerWorks);
                                 MyMod.LobbyUI.SetActive(false);
                             }
@@ -372,7 +372,7 @@ namespace SkyCoop
                     MenuChange.ChangeMenuItems("Original");
                     MyMod.ConnectedSteamWorks = true;
                     MyMod.SteamServerWorks = request.m_ulSteamIDGameServer.ToString();
-                    MyMod.DoWaitForConnect();
+                    MyMod.DoWaitForConnect(true);
                     ConnectToHost(MyMod.SteamServerWorks);
                 }
             }
@@ -977,81 +977,6 @@ namespace SkyCoop
                 CSteamID sid = new Steamworks.CSteamID(ulong.Parse(receiver));
 
                 SendUDPData(_packet, sid);
-            }
-
-            public static void Detail_DownloadStringCompleted(object sender, DownloadStringCompletedEventArgs e)
-            {
-                PiningMaster = false;
-                if (e.Error != null)
-                {
-                    //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Error " + e.Error.Message);
-                    return;
-                }
-                if(e.Result != "")
-                {
-                    string[] newClinets = e.Result.Split(new[] { Environment.NewLine }, StringSplitOptions.None);
-
-                    for (int i = 0; i < newClinets.Length; i++)
-                    {
-                        CSteamID sid = new CSteamID(ulong.Parse(newClinets[i]));
-                        MyMod.MultiplayerChatMessage msg = new MyMod.MultiplayerChatMessage();
-                        msg.m_Type = 0;
-                        msg.m_By = MyMod.MyChatName;
-                        msg.m_Message = "Someone connecting from master server";
-                        MyMod.SendMessageToChat(msg, true);
-                        SteamNetworking.AcceptP2PSessionWithUser(sid);
-                    }
-                }
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Responce " + e.Result);
-            }
-            public static void PingMasterServer()
-            {
-                if(PiningMaster == true || MyMod.PlayersOnServer >= Server.MaxPlayers)
-                {
-                    //MelonLogger.Msg("PiningMaster "+ PiningMaster+ " PlayersOnServer" + MyMod.PlayersOnServer+ " Server.MaxPlayers "+ Server.MaxPlayers);
-                    return;
-                }
-                PiningMaster = true;
-                WebClient web = new WebClient();
-                string url = "http://168.119.36.188:35131/app/servers/SkyCoopServer.php";
-                string sid = SteamUser.GetSteamID().ToString();
-                string userName = SteamFriends.GetPersonaName();
-                int slots = Server.MaxPlayers;
-                int players = MyMod.PlayersOnServer;
-                int xpmode = 1;
-                int currxp = (int)ExperienceModeManager.s_CurrentModeType;
-                    
-                if (currxp == 0) // Pilgrim
-                {
-                    xpmode = 2;
-                }else if(currxp == 1){ // Voyageur
-                    xpmode = 1;
-                }
-                else if (currxp == 2){ // Stalker
-                    xpmode = 3;
-                }
-                else if (currxp == 9){ // Interloper
-                    xpmode = 4;
-                }
-
-                if(MyMod.CustomServerName != "")
-                {
-                    userName = MyMod.CustomServerName;
-                }
-
-                string data = "?sid="+sid+"&name="+userName+"&players="+players+"&slots="+slots+"&xpmode="+xpmode;
-
-                if(MyMod.HadEverPingedMaster == false)
-                {
-                    data = data + "&firststart=1";
-                    MyMod.HadEverPingedMaster = true;
-                }
-
-                url = url + data;
-                Uri uri = new Uri(url);
-                //MelonLogger.Msg(ConsoleColor.Blue, "[Master server] Pinging...");
-                web.DownloadStringCompleted += new DownloadStringCompletedEventHandler(Detail_DownloadStringCompleted);
-                web.DownloadStringAsync(uri);
             }
 
             public static void Disconnect(string hostid)

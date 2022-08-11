@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.7";
+            public const string Version = "0.9.7c";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -204,6 +204,9 @@ namespace SkyCoop
         public static int TryMakeLobbyAgain = -1;
         public static int RegularUpdateSeconds = 7;
         public static int MinutesFromStartServer = 0;
+        public static int TimeOutSeconds = 30;
+        public static int TimeOutSecondsForLoaders = 300;
+        public static int TimeToWorryAboutLastRequest = 10;
         public static bool SkipEverythingForConnect = false;
         public static GameObject UISteamFreindsMenuObj = null;
         public static int PlayersOnServer = 0;
@@ -7861,6 +7864,18 @@ namespace SkyCoop
             //MyMod.instance.tcp.SendData(_packet);
             SendUDPData(_packet);
         }
+
+        public static void RepeatUDPData(Packet _packet)
+        {
+            if (SteamConnect.CanUseSteam == true && ConnectedSteamWorks == true)
+            {
+                _packet.InsertInt(instance.myId);
+                SteamConnect.Main.SendUDPData(_packet, SteamServerWorks);
+            }else{
+                instance.udp.SendData(_packet);
+            }
+        }
+
         public static void SendUDPData(Packet _packet)
         {
             _packet.WriteLength();
@@ -8924,6 +8939,27 @@ namespace SkyCoop
             }
         }
 
+
+        public static Dictionary<int, bool> LoadersList = new Dictionary<int, bool>();
+
+        public static void AddLoadingClient(int clientID)
+        {
+            if (!LoadersList.ContainsKey(clientID))
+            {
+                LoadersList.Add(clientID, true);
+                MelonLogger.Msg("Client "+ clientID+" loading scene...");
+            }
+        }
+        public static void RemoveLoadingClient(int clientID)
+        {
+            LoadersList.Remove(clientID);
+            MelonLogger.Msg("Client " + clientID + " finished loading scene");
+        }
+        public static bool ClientIsLoading(int clientID)
+        {
+            return LoadersList.ContainsKey(clientID);
+        }
+
         public static List<MultiPlayerClientStatus> SleepTrackerAndTimeOutAndAnimalControllers()
         {
             List<MultiPlayerClientStatus> L = new List<MultiPlayerClientStatus>();
@@ -9004,12 +9040,20 @@ namespace SkyCoop
                             SleepingHours.Add(playersData[other.m_ID].m_SleepHours);
                         }
                         L.Add(other);
+
+
+                        int TimeOutForClient = TimeOutSeconds;
+                        if (ClientIsLoading(i))
+                        {
+                            TimeOutForClient = TimeOutSecondsForLoaders;
+                        }
+
                         Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
-                        if (Server.clients[i].TimeOutTime > 10)
+                        if (Server.clients[i].TimeOutTime > 15)
                         {
                             MelonLogger.Msg("Client " + i + " no responce time " + Server.clients[i].TimeOutTime);
                         }
-                        if (Server.clients[i].TimeOutTime > 30)
+                        if (Server.clients[i].TimeOutTime > TimeOutForClient)
                         {
                             Server.clients[i].TimeOutTime = 0;
                             MyMod.MultiplayerChatMessage DisconnectMessage = new MyMod.MultiplayerChatMessage();
@@ -9436,10 +9480,6 @@ namespace SkyCoop
 
                 if (iAmHost == true)
                 {
-                    using (Packet _packet = new Packet((int)ServerPackets.KEEPITALIVE))
-                    {
-                        ServerSend.KEEPITALIVE(0, true);
-                    }
                     ServerSend.SELECTEDCHARACTER(0, character, true);
                 }
 
@@ -9451,12 +9491,6 @@ namespace SkyCoop
                     }else{
                         //double Ping = Math.Round(Time.time - MyMod.LastResponceTime, 2) * 100;
                         //MelonLogger.Msg("Ping " + Ping + "ms");
-                    }
-
-                    using (Packet _packet = new Packet((int)ClientPackets.KEEPITALIVE))
-                    {
-                        _packet.Write(true);
-                        SendTCPData(_packet);
                     }
                     using (Packet _packet = new Packet((int)ClientPackets.SELECTEDCHARACTER))
                     {
@@ -10753,7 +10787,7 @@ namespace SkyCoop
         public static Panel_ChooseSandbox m_Panel_ChooseSandbox;
         public static Panel_ChallengeComplete m_Panel_ChallengeComplete;
 
-        public static void DoWaitForConnect()
+        public static void DoWaitForConnect(bool Steam = false)
         {
             if (HasWaitForConnect == false)
             {
@@ -10766,33 +10800,68 @@ namespace SkyCoop
                             m_Panel_MainMenu.m_Sprite_FadeOverlay.gameObject.SetActive(false);
                         }
                     }
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, "Connecting...", "\nPlease wait, if you see this message for too long, you have connection problems. If you using local emulators this total sure your connection problem.", Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+                    string Txt;
+
+                    if (Steam)
+                    {
+                        Txt = "\nPlease wait a moment...";
+                    }else{
+                        if (DefaultIsRussian)
+                        {
+                            Txt = "\nЕсли вы используйте hamachi/radmin или другой эмулятор локалки, и у вас проблемы с подключением, не простите о помощи нас.";
+                        }else{
+                            Txt = "\nPlease wait, if you using hamachi/radmin or any other lan emulator and you have connection problems, please don't ask us for help.";
+                        }
+                    }
+
+
+                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, "Connecting...", Txt, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
                     HasWaitForConnect = true;
                 }
             }
         }
-        public static Packet LastPacketForRepeat = null;
+
+        public enum ResendPacketType
+        {
+            None = 0,
+            Scene = 1,
+            Container = 2,
+            Gear = 3,
+        }
+        public static ResendPacketType LastPacketForRepeat = ResendPacketType.None;
         public static int SecondsLeftUntilWorryAboutPacket = -1;
-        public static void SetRepeatPacket(Packet Pak)
+        public static void SetRepeatPacket(ResendPacketType Pak)
         {
             LastPacketForRepeat = Pak;
-            SecondsLeftUntilWorryAboutPacket = 20;
+            SecondsLeftUntilWorryAboutPacket = TimeToWorryAboutLastRequest;
         }
         public static void DiscardRepeatPacket()
         {
             SecondsLeftUntilWorryAboutPacket = -1;
-            LastPacketForRepeat = null;
+            LastPacketForRepeat = ResendPacketType.None;
+        }
+
+        public static void SimulateAnotherRequest(ResendPacketType request)
+        {
+            if(request == ResendPacketType.Scene)
+            {
+                Pathes.RequestDropsForScene();
+            }else{
+                MelonLogger.Msg("Can't simulate request "+ request);
+                DiscardRepeatPacket();
+                DoPleaseWait("Request failed", "Something wrong with #"+request+" request, please reconnect to the server!");
+            }
         }
 
         public static void RepeatLastRequest()
         {
             RemovePleaseWait();
-            if(LastPacketForRepeat != null)
+            if(LastPacketForRepeat != ResendPacketType.None)
             {
                 SlicedJsonDataBuffer.Clear();
-                SecondsLeftUntilWorryAboutPacket = 20;
+                SecondsLeftUntilWorryAboutPacket = TimeToWorryAboutLastRequest;
                 DoPleaseWait("Something wrong", "Timed out on response from host for last request. Trying to repeat request to correct the situation, please wait...");
-                SendUDPData(LastPacketForRepeat);
+                SimulateAnotherRequest(LastPacketForRepeat);
             }
         }
 
@@ -11399,7 +11468,7 @@ namespace SkyCoop
                 {
                     _packet.Write(SearchKey);
                     _packet.Write(lvlKey);
-                    SetRepeatPacket(_packet);
+                    SetRepeatPacket(ResendPacketType.Gear);
                     SendTCPData(_packet);
                 }
                 return;
@@ -11535,7 +11604,7 @@ namespace SkyCoop
                 {
                     _packet.Write(SearchKey);
                     _packet.Write(level_guid);
-                    SetRepeatPacket(_packet);
+                    SetRepeatPacket(ResendPacketType.Gear);
                     SendTCPData(_packet);
                 }
                 return;
@@ -12956,7 +13025,7 @@ namespace SkyCoop
                 {
                     _packet.Write(level_guid);
                     _packet.Write(boxGUID);
-                    SetRepeatPacket(_packet);
+                    SetRepeatPacket(ResendPacketType.Container);
                     SendTCPData(_packet);
                 }
                 return;
@@ -14841,6 +14910,20 @@ namespace SkyCoop
             if (Time.time > nextActionTimeSecond)
             {
                 nextActionTimeSecond += periodSecond;
+
+                if (iAmHost == true)
+                {
+                    ServerSend.KEEPITALIVE(0, true);
+                }
+                if (sendMyPosition == true)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.KEEPITALIVE))
+                    {
+                        _packet.Write(true);
+                        SendTCPData(_packet);
+                    }
+                }
+
                 if (KillEverySecond == false)
                 {
                     EverySecond(); // Triggering this code very second
@@ -14851,7 +14934,7 @@ namespace SkyCoop
             {
                 if(NeedConnectAfterLoad != -1 && InterfaceManager.m_Panel_Confirmation != null)
                 {
-                    DoWaitForConnect(); // Showing connection message after startup connection
+                    DoWaitForConnect(true); // Showing connection message after startup connection
                 }
                 if(InterfaceManager.m_Panel_SnowShelterInteract != null)
                 {
@@ -15115,7 +15198,7 @@ namespace SkyCoop
                 MelonLogger.Msg("Going to connect to "+instance.ip+":"+instance.port);
             }
             instance.ConnectToServer();
-            DoWaitForConnect();
+            DoWaitForConnect(false);
         }
 
 
