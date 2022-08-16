@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.7c";
+            public const string Version = "0.9.8";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -59,13 +59,9 @@ namespace SkyCoop
         public static GameObject playerbody = null;
         public static List<GameObject> players = new List<GameObject>();
         public static List<MultiPlayerClientData> playersData = new List<MultiPlayerClientData>();
-        public static Campfire FlexFire = null;
-        public static Animator MenuErjan1 = null;
-        public static Animator MenuErjan2 = null;
-        public static bool CarryingPlayer = false;
-        public static bool IsCarringMe = false;
+        public static GameObject MyPlayerDoll = null;
+        public static GameObject DollCameraDummy = null;
         public static bool IsDead = false;
-        public static string PlayerBodyGUI = "";
         public static InvisibleEntityManager ShatalkerObject = null;
         public static HUDNowhereToHide DarkWalkerHUD = null;
         public static GameObject WardWidget = null;
@@ -96,6 +92,7 @@ namespace SkyCoop
         public static GearItem LastSelectedGear = null;
         public static bool NeedRefreshInv = false;
         public static string MyAnimState = "Idle";
+        public static MultiplayerEmote MyEmote = null;
         public static string MyPreviousAnimState = "Idle";
         public static bool MyHasRifle = false;
         public static bool HasRevolver = false;
@@ -206,7 +203,7 @@ namespace SkyCoop
         public static int MinutesFromStartServer = 0;
         public static int TimeOutSeconds = 30;
         public static int TimeOutSecondsForLoaders = 300;
-        public static int TimeToWorryAboutLastRequest = 10;
+        public static int TimeToWorryAboutLastRequest = 35;
         public static bool SkipEverythingForConnect = false;
         public static GameObject UISteamFreindsMenuObj = null;
         public static int PlayersOnServer = 0;
@@ -220,6 +217,8 @@ namespace SkyCoop
         public static GameObject ServerBrowser = null;
         public static UtilsPanelChoose.DetailsObjets LobbyDeitailsStrct = null;
         public static GameObject LobbyNewGame = null;
+        public static GameObject EmoteWheel = null;
+
         public static string CustomServerName = "";
         public static string MyLobby = "";
         public static bool ApplyOtherCampfires = false;
@@ -241,6 +240,7 @@ namespace SkyCoop
         //Misc
         public static GameObject ViewModelRadio = null;
         public static GameObject ViewModelRadioNeedle = null;
+        public static GameObject ViewModelRadioLED = null;
         public static GameObject MyRadioAudio = null;
         public static GameObject ViewModelHatchet = null;
         public static GameObject ViewModelHatchet2 = null;//mesh_Hatchet_improvised
@@ -1464,16 +1464,29 @@ namespace SkyCoop
             //}
 
             bool ForceNoSteam = Environment.GetCommandLineArgs().Contains("-nosteam");
-
+            bool ForceNoEgs= Environment.GetCommandLineArgs().Contains("-noegs");
             if (typeof(SteamManager).GetMethod("Awake") == null || ForceNoSteam)
             {
                 if (ForceNoSteam)
                 {
                     MelonLogger.Msg(ConsoleColor.DarkMagenta, "[SteamWorks.NET] Force no steam enabled");
-                }else{
-                    MelonLogger.Msg("[SteamWorks.NET] This game version has not SteamManager");
                 }
-                
+                MelonLogger.Msg("[SteamWorks.NET] This game version has not SteamManager");
+                var original = typeof(EpicOnlineServicesManager).GetMethod("Start");
+                if (original == null || ForceNoEgs)
+                {
+                    MelonLogger.Msg("[EpicOnlineServicesManager] This game version has not EpicOnlineServicesManager");
+                    MelonLogger.Msg("[EpicOnlineServicesManager] This probably pirated GOG version, can't verify, so good bye");
+                    //Watch out this is GOG
+                    Application.OpenURL("https://youtu.be/-2ySzV-HGxM");
+                    Application.OpenURL("https://www.google.com/search?q=how+to+buy+The+Long+Dark+on+steam+if+I+am+pirate");
+                    Application.Quit();
+                }else{
+                    MelonLogger.Msg("[EpicOnlineServicesManager] This game version has EpicOnlineServicesManager");
+                    var postfix = typeof(Pathes).GetMethod("EGSHook");
+                    HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
+                    MelonLogger.Msg("[EpicOnlineServicesManager] Patching EpicOnlineServicesManager complete!");
+                }
             }else{
                 MelonLogger.Msg("[SteamWorks.NET] This game version has SteamManager");
                 var original = typeof(SteamManager).GetMethod("Awake");
@@ -1481,7 +1494,6 @@ namespace SkyCoop
                 HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
                 MelonLogger.Msg("[SteamWorks.NET] Patching SteamManager complete!");
             }
-            
 
             Debug.Log($"[{InfoAttribute.Name}] Version {InfoAttribute.Version} loaded!");
             ClassInjector.RegisterTypeInIl2Cpp<AnimalUpdates>();
@@ -2186,6 +2198,12 @@ namespace SkyCoop
                     {
                         UnityEngine.Object.Destroy(ViewModelRadio.GetComponent<LODGroup>());
                     }
+                    GameObject obj = new GameObject("LIGHT");
+                    obj.transform.SetParent(ViewModelRadio.transform);
+                    Light L = obj.AddComponent<Light>();
+                    L.color = Color.green;
+                    obj.SetActive(false);
+                    ViewModelRadioLED = obj;
                 }
             }
             
@@ -2878,22 +2896,29 @@ namespace SkyCoop
             public string m_PreAnimStateHands = "";
             public string m_AnimStateFingers = "No";
             public bool m_IsDrink = false;
+            public bool m_MyDoll = false;
 
             void Update()
             {
                 if (m_Animer != null)
                 {
                     GameObject m_Player = m_Animer.gameObject;
-                    int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    string HoldingItem = m_Player.GetComponent<MultiplayerPlayer>().m_HoldingItem;
-
-                    if(playersData[m_ID] != null && playersData[m_ID].m_Levelid != levelid)
+                    int m_ID = instance.myId;
+                    string HoldingItem;
+                    string m_AnimState;
+                    if (!m_MyDoll)
                     {
-                        return;
+                        m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                        if (playersData[m_ID] != null && playersData[m_ID].m_Levelid != levelid)
+                        {
+                            return;
+                        }
+                        m_AnimState = playersData[m_ID].m_AnimState;
+                        HoldingItem = m_Player.GetComponent<MultiplayerPlayer>().m_HoldingItem;
+                    }else{
+                        m_AnimState = MyAnimState;
+                        HoldingItem = MyLightSourceName;
                     }
-
-                    string m_AnimState = playersData[m_ID].m_AnimState;
-
                     int currentTagHash = m_Animer.GetCurrentAnimatorStateInfo(0).tagHash; // This what tag is now
                     int neededTagHash = Animator.StringToHash(m_AnimState); // This is what tag we need.
                     m_Animer.cullingMode = AnimatorCullingMode.AlwaysAnimate;
@@ -3106,7 +3131,7 @@ namespace SkyCoop
                                 {
                                     m_PreAnimStateHands = "Pick";
                                 }
-                                if(playersData[m_ID].m_Aiming == true)
+                                if(!m_MyDoll && playersData[m_ID].m_Aiming == true)
                                 {
                                     m_AnimStateHands = "RifleAim";
                                 }else{
@@ -3117,7 +3142,7 @@ namespace SkyCoop
                                 {
                                     m_PreAnimStateHands = "Pick_Sit";
                                 }
-                                if (playersData[m_ID].m_Aiming == true)
+                                if (!m_MyDoll && playersData[m_ID].m_Aiming == true)
                                 {
                                     m_AnimStateHands = "RifleAim_Sit";
                                 }else{
@@ -3229,7 +3254,7 @@ namespace SkyCoop
                         m_Animer.Play(m_AnimStateFingers, 2);
                     }
 
-                    if (m_AnimState == "Walk" || m_AnimState == "Run")
+                    if (!m_MyDoll && (m_AnimState == "Walk" || m_AnimState == "Run"))
                     {
                         GameObject foot_l = m_Player.transform.GetChild(3).GetChild(8).GetChild(1).GetChild(0).GetChild(0).GetChild(0).gameObject;
                         GameObject foot_r = m_Player.transform.GetChild(3).GetChild(8).GetChild(2).GetChild(0).GetChild(0).GetChild(0).gameObject;
@@ -3257,9 +3282,7 @@ namespace SkyCoop
                             string ground_Tag = Utils.GetMaterialTagForObjectAtPosition(m_Player, foot_l.transform.position);
                             GameAudioManager.Play3DSound(AK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
                         }
-                    }
-                    else
-                    {
+                    }else{
                         StepState = 0;
                     }
                 }
@@ -5123,6 +5146,7 @@ namespace SkyCoop
                 Vector3 zero = Vector3.zero;
                 Quaternion identity = Quaternion.identity;
                 BaseAi newAnimal = null;
+
                 if (spR.TryGetSpawnPositionAndRotation(ref zero, ref identity) == true)
                 {
                     if(spR.PositionValidForSpawn(zero) == true)
@@ -5151,6 +5175,11 @@ namespace SkyCoop
                         spRobj.GetComponent<SpawnRegionSimple>().m_Spawned++;
                     }
                     //MelonLogger.Msg("Region " + GUID + " spawned animal " + animalGUID);
+                    BaseAi Bai = animal.GetComponent<BaseAi>();
+                    if (Bai != null)
+                    {
+                        Bai.TeleportToRandomWaypointAndPathfind();
+                    }
                 }
             }
         }
@@ -5505,6 +5534,8 @@ namespace SkyCoop
                 if (knocked)
                 {
                     OnAnimalStunned(GUID);
+                }else{
+                    BanSpawnRegion(RegionGUID);
                 }
             }
         }
@@ -6874,6 +6905,33 @@ namespace SkyCoop
             }
         }
 
+        public static Dictionary<string, int> BannedSpawnRegions = new Dictionary<string, int>();
+
+        public static bool CheckSpawnRegionBanned(string GUID)
+        {
+            int CanBeUnbannedIn;
+            if(BannedSpawnRegions.TryGetValue(GUID, out CanBeUnbannedIn))
+            {
+                if(MinutesFromStartServer > CanBeUnbannedIn)
+                {
+                    BannedSpawnRegions.Remove(GUID);
+                    return false;
+                }else{
+                    return true;
+                }
+            }
+            return false;
+        }
+        public static void BanSpawnRegion(string GUID)
+        {
+            int CanBeUnbannedIn = MinutesFromStartServer + 1440;
+            if (!BannedSpawnRegions.ContainsKey(GUID))
+            {
+                BannedSpawnRegions.Add(GUID, CanBeUnbannedIn);
+                ServerSend.SPAWNREGIONBANCHECK(GUID);
+            }
+        }
+
 
         public class SpawnRegionSimple : MonoBehaviour
         {
@@ -6883,9 +6941,39 @@ namespace SkyCoop
             public bool m_RolledToBeDisabled = false;
             public bool m_ChanceRolled = false;
             public int m_Spawned = 0;
+            public bool m_Banned = false;
+            public bool m_CheckedForBan = false;
+            public bool m_PendingBanCheck = false;
             public Dictionary<string, GameObject> m_Animals = new Dictionary<string, GameObject>();
-            public void UpdateFromManager()
+            public void SetBanned(bool Banned)
             {
+                m_CheckedForBan = true;
+                m_PendingBanCheck = false;
+                m_Banned = Banned;
+                if (m_Banned)
+                {
+                    MelonLogger.Msg(ConsoleColor.Cyan, "SpawnRegion " + m_Region.GetComponent<ObjectGuid>().Get() + " is banned");
+                }
+            }
+            public void BanCheck()
+            {
+                m_PendingBanCheck = true;
+
+                if (iAmHost)
+                {
+                    SetBanned(CheckSpawnRegionBanned(m_Region.GetComponent<ObjectGuid>().Get()));
+                }
+                if (sendMyPosition)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.SPAWNREGIONBANCHECK))
+                    {
+                        _packet.Write(m_Region.GetComponent<ObjectGuid>().Get());
+                        SendTCPData(_packet);
+                    }
+                }
+            }
+            public void UpdateFromManager()
+            {                
                 if(m_ChanceRolled == false)
                 {
                     float newProcent = m_Region.m_ChanceActive;
@@ -6917,7 +7005,18 @@ namespace SkyCoop
                             if (m_Spawned < CalculateTargetPopulation(m_Region)) // If animals less than should be
                             {
                                 //MelonLogger.Msg("Region "+ m_Region.GetComponent<ObjectGuid>().Get()+" going to spawn, for "+ WhoClose);
-                                SimulateSpawnFromRegionSpawn(m_Region.GetComponent<ObjectGuid>().Get(), m_Region); // Spawn new animals for this region
+
+                                if (m_CheckedForBan)
+                                {
+                                    if (!m_Banned)
+                                    {
+                                        SimulateSpawnFromRegionSpawn(m_Region.GetComponent<ObjectGuid>().Get(), m_Region); // Spawn new animals for this region
+                                    }
+                                }
+                                else if(!m_PendingBanCheck)
+                                {
+                                    BanCheck();
+                                }
                             }
                         }
                     }else{
@@ -7467,6 +7566,8 @@ namespace SkyCoop
             { (int)ServerPackets.CHALLENGETRIGGER, ClientHandle.CHALLENGETRIGGER},
             { (int)ServerPackets.ADDDEATHCONTAINER, ClientHandle.ADDDEATHCONTAINER},
             { (int)ServerPackets.DEATHCREATEEMPTYNOW, ClientHandle.DEATHCREATEEMPTYNOW},
+            { (int)ServerPackets.SPAWNREGIONBANCHECK, ClientHandle.SPAWNREGIONBANCHECK},
+            { (int)ServerPackets.CAIRNS, ClientHandle.CAIRNS},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -9452,6 +9553,14 @@ namespace SkyCoop
                         }
                     }
                 }
+                if (GameManager.m_PlayerObject)
+                {
+                    GearItem Item = GameManager.GetPlayerManagerComponent().m_ItemInHands;
+                    if (Item && Item.m_HandheldShortwaveItem && CairnsSearchActive() == true)
+                    {
+                        DoRadioSearch();
+                    }
+                }
             }
 
             if(chatInput != null && chatInput.gameObject.activeSelf == false && ChatObject != null && ChatObject.activeSelf == true)
@@ -10774,6 +10883,19 @@ namespace SkyCoop
 
                     mP.m_TorchIgniter = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(8).GetChild(1).gameObject; //Tourch Fire
                 }
+            }
+
+            if(MyPlayerDoll == null)
+            {
+                GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("multiplayerPlayer");
+                GameObject m_Player = GameObject.Instantiate(LoadedAssets);
+                m_Player.name = "MyPlayerDoll";
+                MyPlayerDoll = m_Player;
+                MyPlayerDoll.SetActive(false);
+                MultiplayerPlayerAnimator Anim = m_Player.AddComponent<MultiplayerPlayerAnimator>();
+                Anim.m_MyDoll = true;
+                Anim.m_Animer = m_Player.GetComponent<Animator>();
+                DollCameraDummy = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(0).GetChild(0).gameObject;
             }
         }
 
@@ -13293,6 +13415,22 @@ namespace SkyCoop
                     UnityEngine.UI.Text text = RadioIdicator.transform.GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>();
                     text.color = new Color(text.color.r, text.color.g, text.color.b, 0f);
                 }
+
+                GameObject LoadedAssets10 = LoadedBundle.LoadAsset<GameObject>("MP_EmoteWheel");
+                EmoteWheel = GameObject.Instantiate(LoadedAssets10, UiCanvas.transform);
+                if(EmoteWheel != null)
+                {
+                    EmoteWheel.SetActive(false);
+
+                    for (int i = 0; i <= 7; i++)
+                    {
+                        int AnimID = i;
+                        GameObject btnObj = EmoteWheel.transform.GetChild(i).GetChild(0).gameObject;
+                        UnityEngine.UI.Button btn = btnObj.GetComponent<UnityEngine.UI.Button>();
+                        Action act = new Action(() => PerformEmote(AnimID));
+                        btn.onClick.AddListener(act);
+                    }
+                }
             }
         }
 
@@ -14032,9 +14170,14 @@ namespace SkyCoop
                 }else{
                     MyAnimState = "Fight";
                 }
-            }
-            else
-            {
+            }else{
+                
+                if(MyEmote != null)
+                {
+                    MyAnimState = MyEmote.m_Animation;
+                    return;
+                }
+                
                 if (GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
                 {
                     if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true)
@@ -14477,6 +14620,37 @@ namespace SkyCoop
             float Correct = 325+ID;
             return Correct.ToString();
         }
+        public static float nextLEDBlink = 0.0f;
+        public static float LastSearchDistance = MaxRadioSearchDistance;
+        public static float MaxRadioSearchDistance = 400;
+        public static float BlinkRateConstant = 210;
+        public static float MinimalBlink = 0.03f;
+
+        public static void DoRadioSearch()
+        {
+            LastSearchDistance = GetDistanceToCairn(GameManager.GetPlayerTransform().position);
+        }
+
+        public static void DoRadioBeep()
+        {
+            AudioClip LoadedAssets = LoadedBundle.LoadAsset<AudioClip>("RadioBeep");
+            if (MyRadioAudio)
+            {
+                GameObject Generic = MyRadioAudio.transform.GetChild(0).gameObject;
+                AudioSource AudioSo = Generic.GetComponent<AudioSource>();
+                AudioSo.PlayOneShot(LoadedAssets);
+            }
+        }
+        public static bool SearchModeActive = false;
+        public static bool CairnsSearchActive()
+        {
+            if(CurrentCustomChalleng.m_Started && CurrentChallengeRules.m_Name == "Lost in action" && CurrentCustomChalleng.m_CurrentTask == 0 && SearchModeActive)
+            {
+                return true;
+            }else{
+                return false;
+            }
+        }
 
         public static void UpdateRadio()
         {
@@ -14509,6 +14683,38 @@ namespace SkyCoop
                 HUDMessage.ShowMessage(msg);
                 SendNewRadioFrequency();
             }
+            bool LEDState = ViewModelRadioLED.activeSelf;
+
+            if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
+            {
+                SearchModeActive = !SearchModeActive;
+            }
+
+            if (LastSearchDistance != float.PositiveInfinity && CairnsSearchActive())
+            {
+                float Rate = GetRadioBeepRate(LastSearchDistance);
+                if(nextLEDBlink == 0.0f)
+                {
+                    nextLEDBlink = Time.time + Rate;
+                }
+
+                if(Time.time > nextLEDBlink)
+                {
+                    nextLEDBlink = Time.time + Rate;
+
+                    if(LEDState == false)
+                    {
+                        DoRadioBeep();
+                        LEDState = true;
+                    }else{
+                        LEDState = false;
+                    }
+                }
+            }else{
+                LEDState = false;
+            }
+
+            ViewModelRadioLED.SetActive(LEDState);
         }
 
         public static bool IsCustomHandItem(string item)
@@ -14871,6 +15077,102 @@ namespace SkyCoop
                 }
             }
         }
+        public static bool IgnoreEmoteKeyDownUntilReleased = false;
+
+        public class MultiplayerEmote
+        {
+            public string m_Name = "Anim";
+            public string m_Animation = "Idle";
+            public bool m_ForceCrouch = false;
+            public bool m_ForceStandup = false;
+            public bool m_FollowDollCamera = false;
+            public bool m_NeedFreeHands = false;
+        }
+
+        public static MultiplayerEmote GetEmoteByID(int ID)
+        {
+            MultiplayerEmote Emote = new MultiplayerEmote();
+            if (ID == 0)
+            {
+                Emote.m_Name = "Maraschino";
+                Emote.m_Animation = "Cringe1";
+                Emote.m_ForceStandup = true;
+            }
+            else if (ID == 1)
+            {
+                Emote.m_Name = "Breakdance";
+                Emote.m_Animation = "Cringe2";
+                Emote.m_ForceStandup = true;
+            }
+            else if (ID == 2)
+            {
+                Emote.m_Name = "Samba";
+                Emote.m_Animation = "Flex";
+                Emote.m_ForceStandup = true;
+            }else{
+                Emote.m_Name = "Maraschino";
+                Emote.m_Animation = "Cringe1";
+                Emote.m_ForceStandup = true;
+            }
+            return Emote;
+        }
+
+        public static void PerformEmote(int EmoteID)
+        {
+            if (MyPlayerDoll)
+            {
+                MyPlayerDoll.transform.rotation = GameManager.GetPlayerTransform().rotation;
+            }
+            IgnoreEmoteKeyDownUntilReleased = true;
+            MyEmote = GetEmoteByID(EmoteID);
+        }
+
+        public static void UpdateEmoteWheel()
+        {
+            if (EmoteWheel)
+            {
+                bool IsDown = KeyboardUtilities.InputManager.GetKey(KeyCode.T);
+
+                if((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
+                {
+                    IsDown = false;
+                }
+
+
+                if(IsDown && IgnoreEmoteKeyDownUntilReleased == false)
+                {
+                    EmoteWheel.SetActive(true);
+                    InputManager.m_CursorState = InputManager.CursorState.Show;
+                    Cursor.visible = true;
+                    Cursor.lockState = CursorLockMode.None;
+                    int Selected = -1;
+                    for (int i = 0; i <= 7; i++)
+                    {
+                        UnityEngine.UI.Button btn = EmoteWheel.transform.GetChild(i).GetChild(0).gameObject.GetComponent<UnityEngine.UI.Button>();
+                        if (btn._isPointerInside_k__BackingField)
+                        {
+                            Selected = i;
+                            break;
+                        }
+                    }
+                    if(Selected != -1)
+                    {
+                        EmoteWheel.transform.GetChild(8).gameObject.SetActive(true);
+                        EmoteWheel.transform.GetChild(8).GetChild(1).gameObject.GetComponent<UnityEngine.UI.Text>().text = GetEmoteByID(Selected).m_Name;
+                    }else{
+                        EmoteWheel.transform.GetChild(8).gameObject.SetActive(false);
+                    }
+                }
+                else{
+                    EmoteWheel.SetActive(false);
+                }
+
+                if(IgnoreEmoteKeyDownUntilReleased && !IsDown)
+                {
+                    IgnoreEmoteKeyDownUntilReleased = false;
+                }
+            }
+        }
 
         public override void OnUpdate()
         {
@@ -14966,6 +15268,7 @@ namespace SkyCoop
                     }
                     PatchChallange();
                 }
+                UpdateEmoteWheel();
             }
             if (SteamServerWorks != "" || Server.UsingSteamWorks == true)
             {
@@ -15029,9 +15332,10 @@ namespace SkyCoop
                     }
                 }else{
                     ViewModelRadio.SetActive(false);
+                    SearchModeActive = false;
                 }
 
-                if(IsCustomHandItem(InHandName))
+                if (IsCustomHandItem(InHandName))
                 {
                     ViewModelDummy.SetActive(false);
 
@@ -15109,6 +15413,7 @@ namespace SkyCoop
                 {
                     if(previoustickpos != transf.position) // If moving
                     {
+                        MyEmote = null;
                         previoustickpos = GameManager.GetPlayerTransform().position;
                         SyncMovement(InFight, transf); // Send movement position and sets runing/walking animation.
                     }else{
@@ -15125,6 +15430,32 @@ namespace SkyCoop
                 if(PlayerInteractionWith != null && InputManager.GetInteractReleased(InputManager.m_CurrentContext))
                 {
                     LongActionCanceled(PlayerInteractionWith);
+                }
+                if(MyEmote != null)
+                {
+                    if (MyEmote.m_FollowDollCamera)
+                    {
+                        vp_FPSCamera vpFpsCamera = GameManager.GetVpFPSCamera();
+                        Quaternion quaternion = DollCameraDummy.transform.rotation;
+                        float pitch = quaternion.eulerAngles.x + vpFpsCamera.m_BasePitch;
+                        float y = quaternion.eulerAngles.y;
+                        vpFpsCamera.SetAngle(y, pitch);
+                    }
+                    bool IsCrouched = GameManager.GetPlayerManagerComponent().PlayerIsCrouched();
+                    if (MyEmote.m_ForceStandup)
+                    {
+                        if (IsCrouched)
+                        {
+                            GameManager.GetVpFPSPlayer().InputCrouch();
+                        }
+                    }
+                    else if(MyEmote.m_ForceCrouch)
+                    {
+                        if (!IsCrouched)
+                        {
+                            GameManager.GetVpFPSPlayer().InputCrouch();
+                        }
+                    }
                 }
             }
 
@@ -16131,6 +16462,84 @@ namespace SkyCoop
             }
         }
 
+        public static Dictionary<int, bool> FoundCairns = new Dictionary<int, bool>();
+        public static Dictionary<int, Vector3> PossibleCairns = new Dictionary<int, Vector3>();
+
+        public static void CreateCairnsSearchList()
+        {
+            Il2CppArrayBase<Cairn> All = Resources.FindObjectsOfTypeAll<Cairn>();
+            PossibleCairns = new Dictionary<int, Vector3>();
+            for (int i = 0; i < All.Count; i++)
+            {
+                if (All[i].gameObject)
+                {
+                    Vector3 pos = All[i].gameObject.transform.position;
+                    int ID = All[i].m_JournalEntryNumber;
+                    if (!FoundCairns.ContainsKey(ID))
+                    {
+                        PossibleCairns.Add(ID, pos);
+                    }
+                }
+            }
+        }
+        public static void RemoveCairnFromSearch(int ID)
+        {
+            if (PossibleCairns.ContainsKey(ID))
+            {
+                PossibleCairns.Remove(ID);
+                DoRadioSearch();
+            }
+        }
+        public static float GetDistanceToCairn(Vector3 playerPos)
+        {
+            float LastFoundDistance = float.PositiveInfinity;
+            foreach (var cairn in PossibleCairns)
+            {
+                float Dist = Vector3.Distance(playerPos, cairn.Value);
+                if(Dist < MaxRadioSearchDistance)
+                {
+                    if (LastFoundDistance > Dist)
+                    {
+                        LastFoundDistance = Dist;
+                    }
+                }
+            }
+            return LastFoundDistance;
+        }
+        public static float GetRadioBeepRate(float Distance)
+        {
+            float BeepRate = Distance / BlinkRateConstant;
+            if(BeepRate < MinimalBlink)
+            {
+                BeepRate = MinimalBlink;
+            }
+            return BeepRate;
+        }
+
+
+
+        public static void AddFoundCairn(int CairnID, bool sync = true)
+        {
+            if (!FoundCairns.ContainsKey(CairnID))
+            {
+                FoundCairns.Add(CairnID, true);
+                RemoveCairnFromSearch(CairnID);
+            }
+
+            if (CurrentCustomChalleng.m_Started && CurrentChallengeRules.m_Name == "Lost in action" && CurrentCustomChalleng.m_CurrentTask == 0)
+            {
+                if (iAmHost)
+                {
+                    CurrentCustomChalleng.m_Done[0] = FoundCairns.Count;
+                }
+
+                if (sync)
+                {
+                    SendCustomChallengeTrigger("CairnID" + CairnID);
+                }
+            }
+        }
+
         public class CustomChallengeTaskData
         {
             public string m_Task = "";
@@ -16152,6 +16561,7 @@ namespace SkyCoop
             public List<CustomChallengeTaskData> m_Tasks = new List<CustomChallengeTaskData>();
             public bool m_Lineal = true;
             public bool m_CompetitiveMode = false;
+            public int m_ID = 0;
         }
 
         public class CustomChallengeData
@@ -16173,6 +16583,17 @@ namespace SkyCoop
                 c.m_Tasks.Add(new CustomChallengeTaskData("Enter any building", 600, 1));
                 c.m_Lineal = true;
                 c.m_CompetitiveMode = false;
+                c.m_ID = 1;
+            }
+            else if (ID == 2)
+            {
+                c.m_Name = "Lost in action";
+                c.m_Description = "Find cairn of poor souls who had bad luck to end up here for forever.";
+                c.m_Tasks.Add(new CustomChallengeTaskData("Find cairns", 5400, 30));
+                c.m_Tasks.Add(new CustomChallengeTaskData("Meet with other survivors on Camp Office", 2200, 1));
+                c.m_Lineal = true;
+                c.m_CompetitiveMode = false;
+                c.m_ID = 2;
             }
             return c;
         }
@@ -16233,6 +16654,39 @@ namespace SkyCoop
                         SendCustomChallengeTrigger("Lose");
                     }
                 }
+            }else if (CurrentChallengeRules.m_Name == "Lost in action")
+            {
+                if(CurrentCustomChalleng.m_CurrentTask == 1)
+                {
+                    if(iAmHost == true)
+                    {
+                        int HowManyOnCamp = 0;
+                        int HowManyOnServer = 1;
+                        if (levelid == 10) // If I in Camp Office
+                        {
+                            HowManyOnCamp++;
+                        }
+
+                        for (int i = 1; i <= Server.MaxPlayers; i++)
+                        {
+                            if (Server.clients[i].IsBusy())
+                            {
+                                HowManyOnServer++;
+                                if (ClientIsLoading(i) == false && playersData[i].m_Levelid == 10)
+                                {
+                                    HowManyOnCamp++;
+                                }
+                            }
+                        }
+
+                        if(HowManyOnCamp == HowManyOnServer)
+                        {
+                            CurrentCustomChalleng.m_Started = false;
+                            ProcessCustomChallengeTrigger("Win");
+                            SendCustomChallengeTrigger("Win");
+                        }
+                    }
+                }
             }
         }
 
@@ -16258,6 +16712,11 @@ namespace SkyCoop
                 }
                 m_Panel_ChallengeComplete.ShowPanel(Panel_ChallengeComplete.Options.Succeeded);
                 m_Panel_ChallengeComplete.SetStatInfoText("Ну молодец", "Оставшиеся время:", CurrentCustomChalleng.m_Time, "Обкакался раз:", 0);
+            }
+            else if (TRIGGER.StartsWith("CairnID"))
+            {
+                int ID = int.Parse(TRIGGER.Replace("CairnID", ""));
+                AddFoundCairn(ID, false);
             }
         }
         public static void SendCustomChallengeTrigger(string TRIGGER)
@@ -16299,6 +16758,12 @@ namespace SkyCoop
 
         public static void PatchChallange()
         {
+            if(CurrentChallengeRules.m_ID == 0)
+            {
+                return;
+            }
+            
+            
             string Cname = CurrentChallengeRules.m_Name;
             string Cdesc;
             string Ctime = GetFormatedTextForChallange();
@@ -16308,24 +16773,37 @@ namespace SkyCoop
             {
                 Cdesc = CurrentChallengeRules.m_Tasks[CurrentCustomChalleng.m_CurrentTask].m_Task;
                 DisplayIndex = CurrentCustomChalleng.m_CurrentTask + 1;
+
+                int NeedToGoal = CurrentChallengeRules.m_Tasks[CurrentCustomChalleng.m_CurrentTask].m_GoalVal;
+                int CurrentResult = CurrentCustomChalleng.m_Done[CurrentCustomChalleng.m_CurrentTask];
+
+                if (NeedToGoal > 1)
+                {
+                    Cdesc = Cdesc + " " + CurrentResult + "/" + NeedToGoal;
+                }
             }else{
                 Cdesc = "";
 
                 for (int i = 0; i < CurrentChallengeRules.m_Tasks.Count; i++)
                 {
+
+                    int NeedToGoal = CurrentChallengeRules.m_Tasks[i].m_GoalVal;
+                    int CurrentResult = CurrentCustomChalleng.m_Done[i];
+                    string TaskText = CurrentChallengeRules.m_Tasks[i].m_Task;
+
                     string element = "[";
                     if (i != 0)
                     {
                         element = element + "\n";
                     }
                     element = element+ "[";
-                    if (CurrentCustomChalleng.m_Done[i] >= CurrentChallengeRules.m_Tasks[i].m_GoalVal)
+                    if (CurrentResult >= NeedToGoal)
                     {
                         element = element + "X] ";
                     }else{
                         element = element + " ] ";
                     }
-                    element = element + CurrentChallengeRules.m_Tasks[i].m_Task;
+                    element = element + TaskText;
                     Cdesc = Cdesc+element;
                 }
 

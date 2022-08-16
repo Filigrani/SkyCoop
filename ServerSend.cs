@@ -2077,5 +2077,42 @@ namespace GameServer
                 SendUDPDataToAllButNotSender(_packet, NotFor);
             }
         }
+        public static void SPAWNREGIONBANCHECK(string GUID, bool Result, int For)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.SPAWNREGIONBANCHECK))
+            {
+                _packet.Write(GUID);
+                _packet.Write(Result);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void SPAWNREGIONBANCHECK(string GUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.SPAWNREGIONBANCHECK))
+            {
+                _packet.Write(GUID);
+                _packet.Write(true);
+                SendUDPDataToAll(_packet);
+            }
+        }
+
+        public static void CAIRNS(int For = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CAIRNS))
+            {
+                _packet.Write(MyMod.FoundCairns.Count);
+                foreach (var item in MyMod.FoundCairns)
+                {
+                    _packet.Write(item.Key);
+                }
+
+                if(For == -1)
+                {
+                    SendUDPDataToAll(_packet);
+                }else{
+                    SendUDPData(For,_packet);
+                }
+            }
+        }
     }
 }

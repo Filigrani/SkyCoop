@@ -133,6 +133,8 @@ namespace GameServer
         CHALLENGETRIGGER,
         ADDDEATHCONTAINER,
         DEATHCREATEEMPTYNOW,
+        SPAWNREGIONBANCHECK,
+        CAIRNS,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -261,6 +263,8 @@ namespace GameServer
         CHALLENGETRIGGER,
         ADDDEATHCONTAINER,
         DEATHCREATEEMPTYNOW,
+        SPAWNREGIONBANCHECK,
+        CAIRNS,
     }
 
     public class Packet : IDisposable

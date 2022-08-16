@@ -138,6 +138,12 @@ namespace GameServer
             MyMod.SendMessageToChat(joinMessage, false);
 
             ServerSend.CHAT(_fromClient, joinMessage, false);
+
+
+            if (MyMod.CurrentCustomChalleng.m_Started)
+            {
+                ServerSend.CHALLENGEINIT(MyMod.CurrentChallengeRules.m_ID, MyMod.CurrentCustomChalleng.m_CurrentTask);
+            }
         }
         public static void XYZ(int _fromClient, Packet _packet)
         {
@@ -444,7 +450,6 @@ namespace GameServer
         }
         public static void CARRYBODY(int _fromClient, Packet _packet)
         {
-            MyMod.IsCarringMe = _packet.ReadBool();
         }
         public static void BODYWARP(int _fromClient, Packet _packet)
         {
@@ -978,6 +983,11 @@ namespace GameServer
             }
             SendAllOpenables(_fromClient, Scene);
             RequestAnimalCorpses(_fromClient, Scene);
+            
+            if(MyMod.CurrentCustomChalleng.m_Started && MyMod.CurrentChallengeRules.m_Name == "Lost in action")
+            {
+                ServerSend.CAIRNS(_fromClient);
+            }
 
             foreach (MyMod.DeathContainerData create in MyMod.DeathCreates)
             {
@@ -1235,6 +1245,12 @@ namespace GameServer
 
             ServerSend.DEATHCREATEEMPTYNOW(GUID, Scene, _fromClient);
             MPSaveManager.RemoveContainer(Scene, GUID);
+        }
+        public static void SPAWNREGIONBANCHECK(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            bool Result = MyMod.CheckSpawnRegionBanned(GUID);
+            ServerSend.SPAWNREGIONBANCHECK(GUID, Result, _fromClient);
         }
     }
 }

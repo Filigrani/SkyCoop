@@ -297,6 +297,8 @@ namespace GameServer
                 { (int)ClientPackets.TRYBORROWGEAR, ServerHandle.TRYBORROWGEAR},
                 { (int)ClientPackets.ADDDEATHCONTAINER, ServerHandle.ADDDEATHCONTAINER},
                 { (int)ClientPackets.DEATHCREATEEMPTYNOW, ServerHandle.DEATHCREATEEMPTYNOW},
+                { (int)ClientPackets.SPAWNREGIONBANCHECK, ServerHandle.SPAWNREGIONBANCHECK},
+                { (int)ClientPackets.CHALLENGETRIGGER, ServerHandle.CHALLENGETRIGGER},
             };
             Console.WriteLine("Initialized packets.");
         }

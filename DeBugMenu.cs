@@ -241,9 +241,13 @@ namespace SkyCoop
                     //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
                     //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
-
-                    //MyMod.LoadCustomChallenge(1, 0);
-                    //MyMod.StartCustomChallenge();
+                    if (MyMod.iAmHost)
+                    {
+                        MyMod.LoadCustomChallenge(2, 1);
+                        MyMod.StartCustomChallenge();
+                        MyMod.CreateCairnsSearchList();
+                        ServerSend.CAIRNS();
+                    }
                     //MyMod.AddSpray(Replica);
                     //MyMod.DropAll();
                     //MyMod.OriginalRadioSeaker = true;

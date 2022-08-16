@@ -541,7 +541,6 @@ namespace SkyCoop
         }
         public static void CARRYBODY(Packet _packet)
         {
-            MyMod.IsCarringMe = _packet.ReadBool();
         }
         public static void BODYWARP(Packet _packet)
         {
@@ -1219,6 +1218,27 @@ namespace SkyCoop
             string GUID = _packet.ReadString();
             string Scene = _packet.ReadString();
             MyMod.RemoveDeathContainer(GUID, Scene);
+        }
+        public static void SPAWNREGIONBANCHECK(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            bool Result = _packet.ReadBool();
+            GameObject obj = ObjectGuidManager.Lookup(GUID);
+            if (obj.GetComponent<MyMod.SpawnRegionSimple>())
+            {
+                obj.GetComponent<MyMod.SpawnRegionSimple>().SetBanned(Result);
+            }
+        }
+        public static void CAIRNS(Packet _packet)
+        {
+            int HowMuch = _packet.ReadInt();
+            for (int i = 0; i < HowMuch; i++)
+            {
+                int Cairn = _packet.ReadInt();
+                MyMod.AddFoundCairn(Cairn);
+            }
+
+            MyMod.CreateCairnsSearchList();
         }
     }
 }

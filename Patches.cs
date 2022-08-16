@@ -5208,6 +5208,7 @@ namespace SkyCoop
                         MyMod.MakeDeathCreate(create);
                     }
                 }
+                MyMod.CreateCairnsSearchList();
             }
             if (MyMod.sendMyPosition == true)
             {
@@ -6838,6 +6839,26 @@ namespace SkyCoop
                 {
                     __result = "Respawn";
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Cairn), "ProcessInteraction")]
+        private static class Cairn_ProcessInteraction
+        {
+            private static void Postfix(Cairn __instance)
+            {
+                MyMod.AddFoundCairn(__instance.m_JournalEntryNumber);
+            }
+        }
+
+        public static void EGSHook()
+        {
+            Il2CppArrayBase<EpicOnlineServicesManager> All = Resources.FindObjectsOfTypeAll<EpicOnlineServicesManager>();
+
+            if (All.Count != 0)
+            {
+                //MelonLogger.Msg("[EpicOnlineServicesManager] m_ClientId " + All[0].m_ClientId);
+            }else{
+                MelonLogger.Msg("[EpicOnlineServicesManager] null");
             }
         }
     }
