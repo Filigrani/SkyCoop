@@ -241,13 +241,6 @@ namespace SkyCoop
                     //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
                     //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
-                    if (MyMod.iAmHost)
-                    {
-                        MyMod.LoadCustomChallenge(2, 1);
-                        MyMod.StartCustomChallenge();
-                        MyMod.CreateCairnsSearchList();
-                        ServerSend.CAIRNS();
-                    }
                     //MyMod.AddSpray(Replica);
                     //MyMod.DropAll();
                     //MyMod.OriginalRadioSeaker = true;
@@ -279,6 +272,14 @@ namespace SkyCoop
                     //    }
                     //}
                     //MyMod.PoiskMujikov();
+                    //if (MyMod.iAmHost)
+                    //{
+                    //    MyMod.LoadCustomChallenge(2, 1);
+                    //    MyMod.StartCustomChallenge();
+                    //    MyMod.CreateCairnsSearchList();
+                    //    ServerSend.CAIRNS();
+                    //}
+                    GameManager.GetPlayerAnimationComponent().Trigger_Breakdown_Intro(StruggleBonus.StruggleWeaponType.Hammer);
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {

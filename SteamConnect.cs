@@ -44,6 +44,15 @@ namespace SkyCoop
             {
                 MelonLogger.Msg("[Steamworks.NET] DllCheck Test returned false, One or more of the Steamworks binaries seems to be the wrong version.");
             }
+            if (!SteamApps.BIsAppInstalled(new AppId_t(305620))) // Check if The long dark not installed.
+            {
+                MelonLogger.Msg("[SteamApps] The long dark not installed on steam");
+                MelonLogger.Msg("[SteamApps] Ye-ye of course you not pirate, playing game that not even installed");
+                Application.Quit();
+
+                return;
+            }
+
             MelonLogger.Msg("[SteamWorks.NET] Trying to Init SteamAPI");
             SteamAPI.Init();
             StartSteam();

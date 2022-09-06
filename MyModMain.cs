@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.8";
+            public const string Version = "0.9.8c";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -1149,22 +1149,6 @@ namespace SkyCoop
                 act.m_CancleOnMove = false;
                 act.m_ActionDuration = 1;
             }
-            else if (ActName == "Bandage")
-            {
-                act.m_Action = "Bandage";
-                act.m_DisplayText = "Bandage wound";
-                act.m_ProcessText = "Bandaging wound...";
-                act.m_CancleOnMove = true;
-                act.m_ActionDuration = 3;
-            }
-            else if (ActName == "Sterilize")
-            {
-                act.m_Action = "Sterilize";
-                act.m_DisplayText = "Sterilize wound";
-                act.m_ProcessText = "Sterilizing wound...";
-                act.m_CancleOnMove = true;
-                act.m_ActionDuration = 3;
-            }
             else if (ActName == "Lit")
             {
                 act.m_Action = "Lit";
@@ -1437,31 +1421,56 @@ namespace SkyCoop
             }
         }
 
+        private static void CreateZipFromText(string text)
+        {
+            MelonLogger.Msg("[Plugins] Preparing to unzip virual archive with plugins...");
+            byte[] zipBytes = Convert.FromBase64String(text);
+            using (var memoryStream = new MemoryStream(zipBytes))
+            {
+                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read))
+                {
+                    archive.ExtractToDirectory("Plugins");
+                }
+            }
+            MelonLogger.Msg("[Plugins] Unzip finished! Now need to restart the game!");
+        }
+
+        public static bool CheckPlugins()
+        {
+            MelonLogger.Msg("[Plugins] Checking plugins...");
+            
+            if (Directory.Exists("Plugins"))
+            {
+                if (!File.Exists("Plugins\\AutoUpdatingPlugin.dll"))
+                {
+                    MelonLogger.Msg("[Plugins] There no AutoUpdatingPlugin.dll");
+                    return false;
+                }
+
+                if (!File.Exists("Plugins\\AudioCore.dll"))
+                {
+                    MelonLogger.Msg("[Plugins] There no AudioCore.dll");
+                    return false;
+                }
+                return true;
+            }else{
+                MelonLogger.Msg("[Plugins] No plugins folder, creating one");
+                Directory.CreateDirectory("Plugins");
+                return false;
+            }
+        }
+
         public override void OnApplicationStart()
         {
-            //PoiskMujikov();
-            //Assembly[] dlls = AppDomain.CurrentDomain.GetAssemblies();
-            //Assembly GameAssembly = null;
-            //for (int i = 0; i < dlls.Length; i++)
-            //{
-            //    if(dlls[i].GetName().Name == "Assembly-CSharp")
-            //    {
-            //        GameAssembly = dlls[i];
-            //        break;
-            //    }
-            //}
-            //if(GameAssembly != null)
-            //{
-            //    if (GameAssembly.GetType("SteamManager").GetMethod("Awake") == null)
-            //    {
-            //        MelonLogger.Msg("This game version has not SteamManager");
-            //    }else{
-            //        MelonLogger.Msg("This game version has SteamManager");
-            //        var original = typeof(SteamManager).GetMethod("Awake");
-            //        var postfix = typeof(SteamConnect).GetMethod("Init");
-            //        HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
-            //    }
-            //}
+            if (CheckPlugins())
+            {
+                MelonLogger.Msg(ConsoleColor.Green, "[Plugins] Everything is alright!");
+            }else{
+                MelonLogger.Msg(ConsoleColor.Yellow, "[Plugins] Need install plugins!");
+                CreateZipFromText(Base64Files.PluginsZip);
+                KillOnUpdate = true;
+                return;
+            }
 
             bool ForceNoSteam = Environment.GetCommandLineArgs().Contains("-nosteam");
             bool ForceNoEgs= Environment.GetCommandLineArgs().Contains("-noegs");
@@ -1799,6 +1808,11 @@ namespace SkyCoop
 
         public override void OnLevelWasInitialized(int level)
         {
+            if(KillOnUpdate == true)
+            {
+                return;
+            }
+            
             OpenablesObjs.Clear();
             MelonLogger.Msg("Level initialized: " + level);
             levelid = level;
@@ -3131,7 +3145,7 @@ namespace SkyCoop
                                 {
                                     m_PreAnimStateHands = "Pick";
                                 }
-                                if(!m_MyDoll && playersData[m_ID].m_Aiming == true)
+                                if((m_MyDoll && MyIsAiming) || (!m_MyDoll && playersData[m_ID].m_Aiming))
                                 {
                                     m_AnimStateHands = "RifleAim";
                                 }else{
@@ -3142,7 +3156,7 @@ namespace SkyCoop
                                 {
                                     m_PreAnimStateHands = "Pick_Sit";
                                 }
-                                if (!m_MyDoll && playersData[m_ID].m_Aiming == true)
+                                if ((m_MyDoll && MyIsAiming) || (!m_MyDoll && playersData[m_ID].m_Aiming))
                                 {
                                     m_AnimStateHands = "RifleAim_Sit";
                                 }else{
@@ -3290,18 +3304,22 @@ namespace SkyCoop
             public void Pickup()
             {
                 GameObject m_Player = m_Animer.gameObject;
-                int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                //MelonLogger.Msg("Player "+m_ID +" Picked up something");
-
-                if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
-                {
-                    return;
-                }
-                //MelonLogger.Msg("You on same scene with  " + m_ID + " to play pickup");
-
-                string m_AnimState = playersData[m_ID].m_AnimState;
+                int m_ID = instance.myId;
+                string m_AnimState = MyAnimState;
                 int armTagHash = m_Animer.GetCurrentAnimatorStateInfo(3).tagHash;
                 int armNeededTagHash = Animator.StringToHash("Pickup");
+
+                if (!m_MyDoll)
+                {
+                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                    {
+                        return;
+                    }
+                    m_AnimState = playersData[m_ID].m_AnimState;
+                }
+
+
                 //MelonLogger.Msg("Current state of  " + m_ID + " is "+ m_AnimState);
                 //MelonLogger.Msg("ArmTagHash  " + armTagHash + " TagHash we need " + armNeededTagHash);
                 if (armTagHash != armNeededTagHash)
@@ -3319,14 +3337,18 @@ namespace SkyCoop
             public void MeleeAttack()
             {
                 GameObject m_Player = m_Animer.gameObject;
-                int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-
-                if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                int m_ID = instance.myId;
+                string m_AnimState = MyAnimState;
+                if (!m_MyDoll)
                 {
-                    return;
+                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                    {
+                        return;
+                    }
+                    m_AnimState = playersData[m_ID].m_AnimState;
                 }
 
-                string m_AnimState = playersData[m_ID].m_AnimState;
                 int armTagHash = m_Animer.GetCurrentAnimatorStateInfo(4).tagHash;
                 int armNeededTagHash = Animator.StringToHash("Melee");
                 if (armTagHash != armNeededTagHash)
@@ -3337,11 +3359,15 @@ namespace SkyCoop
             public void Consumption()
             {
                 GameObject m_Player = m_Animer.gameObject;
-                int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                int m_ID = instance.myId;
 
-                if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                if (!m_MyDoll)
                 {
-                    return;
+                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                    {
+                        return;
+                    }
                 }
 
                 if(m_IsDrink == true)
@@ -3352,22 +3378,29 @@ namespace SkyCoop
                     playersData[m_ID].m_AnimState = "Eating";
                     m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood = "Food";
                 }
-                m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
+
+                if (!m_MyDoll)
+                {
+                    m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
+                }
             }
             public void StopConsumption()
             {
                 GameObject m_Player = m_Animer.gameObject;
-                int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                int m_ID = instance.myId;
 
-                if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                if (!m_MyDoll)
                 {
-                    return;
-                }
-
-                if(m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood != "")
-                {
-                    m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood = "";
-                    m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
+                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
+                    {
+                        return;
+                    }
+                    if (m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood != "")
+                    {
+                        m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood = "";
+                        m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
+                    }
                 }
             }
         }
@@ -8558,6 +8591,13 @@ namespace SkyCoop
             if (iAmHost == true)
             {
                 ServerSend.CONSUME(0, IsDrink, true);
+            }
+
+            if (IsDrink)
+            {
+                PushActionToMyDoll("Drink");
+            }else{
+                PushActionToMyDoll("Eat");
             }
         }
 
@@ -14929,6 +14969,7 @@ namespace SkyCoop
 
         public static void MeleeHit()
         {
+            PushActionToMyDoll("Melee");
             GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(MyMod.GetGearItemObject("GEAR_Arrow"), new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0));
             GearItem componentArrow = gameObject.GetComponent<GearItem>();
             componentArrow.m_ArrowItem.Fire();
@@ -15174,11 +15215,61 @@ namespace SkyCoop
             }
         }
 
+        public static void PushActionToMyDoll(string Act)
+        {
+            if (MyPlayerDoll)
+            {
+                MultiplayerPlayerAnimator Anim = MyPlayerDoll.GetComponent<MultiplayerPlayerAnimator>();
+                if (Anim)
+                {
+                    if(Act == "Pickup")
+                    {
+                        Anim.Pickup();
+                    }else if(Act == "Eat" || Act == "Drink")
+                    {
+                        Anim.m_IsDrink = Act == "Drink";
+                        Anim.Consumption();
+                    }else if(Act == "Shoot")
+                    {
+                        if(MyLightSourceName == "GEAR_Rifle")
+                        {
+                            string shootStrhing = "RifleShoot";
+                            if (MyAnimState == "Ctrl")
+                            {
+                                shootStrhing = "RifleShoot_Sit";
+                            }
+                            Anim.m_PreAnimStateHands = shootStrhing;
+                        }
+                        if (MyPlayerDoll.activeSelf)
+                        {
+                            DoShootFX(MyPlayerDoll.transform.position);
+                        }
+                    }else if(Act == "Melee")
+                    {
+                        Anim.MeleeAttack();
+                    }
+                }
+            }
+        }
+
+        public static void UpdateDoll()
+        {
+            if (MyPlayerDoll)
+            {
+                MyPlayerDoll.SetActive(FlyMode.m_Enabled);
+                if (FlyMode.m_Enabled)
+                {
+                    MyPlayerDoll.transform.position = GameManager.GetPlayerTransform().position;
+                    MyPlayerDoll.transform.rotation = GameManager.GetPlayerTransform().rotation;
+                }
+            }
+        }
+
         public override void OnUpdate()
         {
             if(KillOnUpdate == true)
             {
-                DebugCrap(); // Debug for debuging and debuging debug.
+                //DebugCrap(); // Debug for debuging and debuging debug.
                 return;
             }
 
@@ -15392,6 +15483,7 @@ namespace SkyCoop
                 {
                     LastObjectUnderCrosshair = GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair;
                 }
+                UpdateDoll();
 
                 if (GameManager.m_PlayerManager)
                 {

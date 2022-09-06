@@ -1020,6 +1020,7 @@ namespace SkyCoop
                                 ServerSend.SHOOTSYNC(0, shoot, true);
                             }
                         }
+                        MyMod.PushActionToMyDoll("Shoot");
                     }
                 }
             }
@@ -1960,6 +1961,7 @@ namespace SkyCoop
                                 ServerSend.SHOOTSYNC(0, stone, true);
                             }
                         }
+                        MyMod.PushActionToMyDoll("Shoot");
                     }
                 }
                 else
@@ -2577,7 +2579,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                SaveServerConfig(gameMode, name);
+                //SaveServerConfig(gameMode, name);
                 SaveBrokenFurtiture(gameMode, name);
                 SavePickedGears(gameMode, name);
                 SaveDeployedRopes(gameMode, name);
@@ -2979,7 +2981,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
                 MelonLogger.Msg(ConsoleColor.Yellow, "[Saving] Loading " + name + "...");
-                LoadServerConfig(name);
+                //LoadServerConfig(name);
                 LoadBrokenFurtiture(name);
                 LoadPickedGears(name);
                 LoadDeployedRopes(name);
@@ -4496,6 +4498,43 @@ namespace SkyCoop
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Update")] // Once
+        public class BootUpdate_Update
+        {
+            public static bool Prefix(BootUpdate __instance)
+            {
+                if (MyMod.KillOnUpdate)
+                {
+                    return false;
+                }else{
+                    return true;
+                }
+            }
+            public static void Postfix(BootUpdate __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+
+                if (MyMod.KillOnUpdate)
+                {
+                    if (InputManager.instance && InputManager.GetEscapePressed(InputManager.m_CurrentContext))
+                    {
+                        Application.Quit();
+                    }
+                }else{
+                    if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
+                    {
+                        return;
+                    }
+                    __instance.m_Label_Continue.gameObject.SetActive(false);
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Start")] // Once
         public class BootUpdate_Start
         {
@@ -4511,34 +4550,61 @@ namespace SkyCoop
                 {
                     MyMod.DefaultIsRussian = true;
                 }
-                if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
-                {
-                    return;
-                }
-                for (int i = 1; i <= 3; i++)
-                {
-                    __instance.gameObject.transform.Find($"Label_Disclaimer_{i}")?.gameObject.SetActive(false);
-                }
-                __instance.LoadMainMenu();
-            }
-        }
+                MelonLogger.Msg(ConsoleColor.Blue, "MyMod.KillOnUpdate "+ MyMod.KillOnUpdate);
 
-        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Update")] // Only on booting screen
-        public class BootUpdate_Update
-        {
-            public static void Postfix(BootUpdate __instance)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
+                if (MyMod.KillOnUpdate)
                 {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                    UnityEngine.Object.Destroy(__instance.m_Label_Continue.gameObject.GetComponent<UILocalize>());
+                    __instance.m_Label_Continue.text = "Press Esc to Exit";
+                    __instance.m_Label_Continue.mText = "Press Esc to Exit";
+                    __instance.m_Label_Continue.ProcessText();
+                    __instance.m_Label_Continue.gameObject.SetActive(true);
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        Transform LabT = __instance.gameObject.transform.Find("Label_Disclaimer_" + i);
+                        GameObject Lab;
+                        if (LabT)
+                        {
+                            Lab = LabT.gameObject;
+
+                            if(i < 3)
+                            {
+                                UILabel LabCom = Lab.GetComponent<UILabel>();
+                                UILocalize LabLoca = Lab.GetComponent<UILocalize>();
+                                if (LabLoca)
+                                {
+                                    UnityEngine.Object.Destroy(LabLoca);
+                                }
+
+                                string txt = "Installation of missing plugins finished!";
+                                if(i == 2)
+                                {
+                                    txt = "The missing plugins for the mod have been installed. Please restart the game.\nIf this your first installation, autoupating plugin will download dependencies, so it can take a while.";
+                                }
+
+                                if (LabCom)
+                                {
+                                    LabCom.mText = txt;
+                                    LabCom.text = txt;
+                                    LabCom.ProcessText();
+                                }
+                                Lab.gameObject.SetActive(true);
+                            }else{
+                                Lab.gameObject.SetActive(false);
+                            }
+                        }
+                    }
+                }else{
+                    if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
+                    {
+                        return;
+                    }
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        __instance.gameObject.transform.Find($"Label_Disclaimer_{i}")?.gameObject.SetActive(false);
+                    }
+                    __instance.LoadMainMenu();
                 }
-                if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
-                {
-                    return;
-                }
-                __instance.m_Label_Continue.gameObject.SetActive(false);
             }
         }
 
