@@ -358,5 +358,20 @@ namespace SkyCoop
             }
             return Gear;
         }
+
+        public static bool SaveServerCFG(MyMod.ServerSettingsData CFG)
+        {
+            return SaveData("ServerSettingsData", JSON.Dump(CFG));
+        }
+        public static MyMod.ServerSettingsData RequestServerCFG()
+        {
+            string Data = LoadData("ServerSettingsData");
+            if (Data != "")
+            {
+                return JSON.Load(Data).Make<MyMod.ServerSettingsData>();
+            }else{
+                return null;
+            }
+        }
     }
 }

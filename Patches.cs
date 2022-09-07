@@ -2194,15 +2194,6 @@ namespace SkyCoop
                         string[] arguments = Environment.GetCommandLineArgs();
                         for (int i = 0; i < arguments.Length; i++)
                         {
-                            if (arguments[i] == "slot" || arguments[i] == "-slot")
-                            {
-                                if (i + 1 <= arguments.Length - 1)
-                                {
-                                    MyMod.AutoStartSlot = arguments[i + 1];
-                                    MyMod.NeedLoadSaveAfterLoad = 3;
-                                    MyMod.NeedApplyAutoCMDs = true;
-                                }
-                            }
                             if (arguments[i] == "cmd" || arguments[i] == "-cmd")
                             {
                                 if (i + 1 <= arguments.Length - 1)
@@ -2210,10 +2201,6 @@ namespace SkyCoop
                                     string cmd = arguments[i + 1].Replace("@", " ");
                                     MyMod.AutoCMDs.Add(cmd);
                                 }
-                            }
-                            if (arguments[i] == "host" || arguments[i] == "-host")
-                            {
-                                MyMod.AutoHostWhenLoaded = true;
                             }
                         }
                     }

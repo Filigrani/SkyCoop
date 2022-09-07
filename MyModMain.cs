@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.8c";
+            public const string Version = "0.9.9";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -246,6 +246,7 @@ namespace SkyCoop
         public static GameObject ViewModelHatchet2 = null;//mesh_Hatchet_improvised
         public static GameObject ViewModelKnife = null; //mesh_knife
         public static GameObject ViewModelKnife2 = null; //mesh_knife_improvised
+        public static GameObject ViewModelJeremiahKnife = null; 
         public static GameObject ViewModelPrybar = null; //mesh_prybar
         public static GameObject ViewModelHammer = null; //mesh_hammer
         public static GameObject ViewModelShovel = null;
@@ -723,6 +724,14 @@ namespace SkyCoop
             public int m_PlayersSpawnType = 0;
             public int m_FireSync = 2;
             public int m_CheatsMode = 2;
+        }
+        public class ServerSettingsData
+        {
+            public ServerConfigData m_CFG = new ServerConfigData();
+            public int m_MaxPlayers = 2;
+            public int m_Port = 26950;
+            public int m_Accessibility = 0;
+            public bool m_P2P = true;
         }
         public class SlicedJsonData
         {
@@ -2325,7 +2334,19 @@ namespace SkyCoop
                 ViewModelFireAxe.transform.localEulerAngles = new Vector3(0, 0, 90);
                 ViewModelFireAxe.transform.localPosition = new Vector3(0, 0.15f, 0.01f);
             }
+            if (ViewModelJeremiahKnife == null)
+            {
+                GameObject reference = GetGearItemObject("GEAR_JeremiahKnife");
 
+                if (reference == null)
+                {
+                    return;
+                }
+                ViewModelJeremiahKnife = UnityEngine.Object.Instantiate<GameObject>(ViewModelKnife, ViewModelKnife.transform.position, ViewModelKnife.transform.rotation, RadioTransform.transform);
+                ViewModelJeremiahKnife.name = "FPH_JeremiahKnife";
+                ViewModelJeremiahKnife.SetActive(false);
+                ViewModelJeremiahKnife.GetComponent<MeshRenderer>().SetMaterial(reference.transform.GetChild(0).GetComponent<MeshRenderer>().materials[0]);
+            }
 
             if(ViewModelBolt == null)
             {
@@ -14765,6 +14786,7 @@ namespace SkyCoop
                 || item == "GEAR_Knife" 
                 || item == "GEAR_KnifeImprovised" 
                 || item == "GEAR_KnifeScrapMetal" 
+                || item == "GEAR_JeremiahKnife"
                 || item == "GEAR_Prybar"
                 || item == "GEAR_FireAxe"
                 || item == "GEAR_Shovel")
@@ -14880,7 +14902,7 @@ namespace SkyCoop
                 Info.m_RetakeTime = 1f;
                 return Info;
             }
-            if (weapon == "GEAR_Knife" || weapon == "GEAR_KnifeImprovised" || weapon == "GEAR_KnifeScrapMetal")
+            if (weapon == "GEAR_Knife" || weapon == "GEAR_KnifeImprovised" || weapon == "GEAR_KnifeScrapMetal" || weapon == "GEAR_JeremiahKnife")
             {
                 Info.m_PlayerDamage = 17;
                 Info.m_AnimalDamage = 57;
@@ -15433,7 +15455,7 @@ namespace SkyCoop
                     if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
                     {
                         bool ShouldAttack = true;
-                        if (ShouldReEquipFaster &&(InHandName == "GEAR_Knife" || InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal"))
+                        if (ShouldReEquipFaster &&(InHandName == "GEAR_Knife" || InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal" || InHandName == "GEAR_JeremiahKnife"))
                         {
                             ShouldAttack = false;
                         }
@@ -15447,6 +15469,7 @@ namespace SkyCoop
                 ViewModelHatchet2.SetActive(InHandName == "GEAR_HatchetImprovised");
                 ViewModelHammer.SetActive(InHandName == "GEAR_Hammer");
                 ViewModelKnife.SetActive(InHandName == "GEAR_Knife");
+                ViewModelJeremiahKnife.SetActive(InHandName == "GEAR_JeremiahKnife");
                 ViewModelKnife2.SetActive(InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal");
                 ViewModelPrybar.SetActive(InHandName == "GEAR_Prybar");
                 ViewModelShovel.SetActive(InHandName == "GEAR_Shovel");
@@ -16211,6 +16234,16 @@ namespace SkyCoop
                 UnityEngine.Object.Destroy(UIHostMenu);
                 HostMenuHints = new List<GameObject>();
                 GameManager.m_IsPaused = false;
+
+
+                ServerSettingsData SaveData = new ServerSettingsData();
+                SaveData.m_CFG = ServerConfig;
+                SaveData.m_MaxPlayers = MaxPlayers;
+                SaveData.m_P2P = ShouldUseSteam;
+                SaveData.m_Accessibility = LobbyType;
+                SaveData.m_Port = PortToHost;
+
+                MPSaveManager.SaveServerCFG(SaveData);
             }
         }
 
@@ -16269,6 +16302,12 @@ namespace SkyCoop
             {
                 UIHostMenu = MakeModObject("MP_HostSettings", UiCanvas.transform);
 
+                ServerSettingsData SavedSettings = MPSaveManager.RequestServerCFG();
+                if (SavedSettings != null)
+                {
+                    ServerConfig = SavedSettings.m_CFG;
+                }
+
                 GameObject CloseButton = UIHostMenu.transform.GetChild(6).gameObject;
                 Action actBack = new Action(() => HostMenuClose());
                 CloseButton.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(actBack);
@@ -16285,7 +16324,7 @@ namespace SkyCoop
                 SpawnStyleList.GetComponent<UnityEngine.UI.Dropdown>().Set(ServerConfig.m_PlayersSpawnType);
 
 
-                GameObject P2PtxBox = UIHostMenu.transform.GetChild(4).gameObject;
+                GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
                 GameObject PortsObject = UIHostMenu.transform.GetChild(8).gameObject;
                 GameObject FireSyncObj = UIHostMenu.transform.GetChild(9).gameObject;
                 GameObject CheatModeListObj = UIHostMenu.transform.GetChild(10).gameObject;
@@ -16295,14 +16334,24 @@ namespace SkyCoop
 
                 if (SteamConnect.CanUseSteam == false)
                 {
-                    GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
                     IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                     IsSteamHost.SetActive(false);
                     SteamLobbyType.SetActive(false);
-                    PortsObject.SetActive(false);
-                }else{
                     PortsObject.SetActive(true);
-                    SteamLobbyType.SetActive(true);
+                }else{
+
+                    IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().Set(SavedSettings.m_P2P);
+
+                    if (SavedSettings.m_P2P)
+                    {
+                        SteamLobbyType.SetActive(true);
+                        SteamLobbyType.GetComponent<UnityEngine.UI.Dropdown>().Set(SavedSettings.m_Accessibility);
+                        PortsObject.SetActive(false);
+                    }else{
+                        SteamLobbyType.SetActive(false);
+                        PortsObject.SetActive(true);
+                        PortsObject.GetComponent<UnityEngine.UI.InputField>().SetText(SavedSettings.m_Port.ToString());
+                    }
                 }
                 //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
 
@@ -16310,7 +16359,7 @@ namespace SkyCoop
                 AddHintScript(dupesBoxesCheckbox);
                 AddHintScript(SpawnStyleList);
                 AddHintScript(FireSyncObj);
-                AddHintScript(P2PtxBox);
+                AddHintScript(IsSteamHost);
                 AddHintScript(PortsObject);
                 AddHintScript(CheatModeListObj);
                 AddHintScript(SteamLobbyType);
