@@ -753,6 +753,23 @@ namespace GameServer
             Write(obj.m_ShouldBeTreated);
         }
 
+        public void Write(MyMod.AnimalArrow Arrow)
+        {
+            Write(Arrow.m_Condition);
+            Write(Arrow.m_Position);
+            Write(Arrow.m_Angle);
+            Write(Arrow.m_Depth);
+            Write(Arrow.m_LocaName);
+        }
+        public void Write(List<MyMod.AnimalArrow> Arrows, int Count)
+        {
+            Write(Count);
+            for (int i = 0; i < Arrows.Count; i++)
+            {
+                Write(Arrows[i]);
+            }
+        }
+
         public void Write(MyMod.AnimalCompactData obj)
         {
             Write(obj.m_PrefabName);
@@ -766,6 +783,7 @@ namespace GameServer
             Write(obj.m_RegionGUID);
             Write(obj.m_LastController);
             Write(obj.m_LastAiMode);
+            Write(obj.m_Arrows, obj.m_ArrowsCount);
         }
         public void Write(MyMod.AnimalKilled obj)
         {
@@ -1477,6 +1495,27 @@ namespace GameServer
             return obj;
         }
 
+
+        public class AnimalArrow
+        {
+            public float m_Condition = 100;
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Vector3 m_Angle = new Vector3(0, 0, 0);
+            public float m_Depth = 0;
+            public string m_LocaName = "";
+        }
+        public MyMod.AnimalArrow ReadArrow()
+        {
+            MyMod.AnimalArrow Arrow = new MyMod.AnimalArrow();
+
+            Arrow.m_Condition = ReadFloat();
+            Arrow.m_Position = ReadVector3();
+            Arrow.m_Angle = ReadVector3();
+            Arrow.m_Depth = ReadFloat();
+            Arrow.m_LocaName = ReadString();
+            return Arrow;
+        }
+
         public MyMod.AnimalCompactData ReadAnimalCompactData()
         {
             MyMod.AnimalCompactData obj = new MyMod.AnimalCompactData();
@@ -1491,6 +1530,12 @@ namespace GameServer
             obj.m_RegionGUID = ReadString();
             obj.m_LastController = ReadInt();
             obj.m_LastAiMode = ReadInt();
+            obj.m_ArrowsCount = ReadInt();
+
+            for (int i = 0; i < obj.m_ArrowsCount; i++)
+            {
+                obj.m_Arrows.Add(ReadArrow());
+            }
 
             return obj;
         }

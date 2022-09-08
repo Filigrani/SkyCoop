@@ -373,5 +373,14 @@ namespace SkyCoop
                 return null;
             }
         }
+        public static void SaveMyName(string Name)
+        {
+            SaveData("MultiplayerNickName", Name);
+        }
+        public static string LoadMyName()
+        {
+            string Name = LoadData("MultiplayerNickName");
+            return Name;
+        }
     }
 }

@@ -1224,7 +1224,7 @@ namespace SkyCoop
             string GUID = _packet.ReadString();
             bool Result = _packet.ReadBool();
             GameObject obj = ObjectGuidManager.Lookup(GUID);
-            if (obj.GetComponent<MyMod.SpawnRegionSimple>())
+            if (obj != null && obj.GetComponent<MyMod.SpawnRegionSimple>())
             {
                 obj.GetComponent<MyMod.SpawnRegionSimple>().SetBanned(Result);
             }

@@ -177,27 +177,24 @@ namespace SkyCoop
                 }
                 if (MyMod.InOnline() == true)
                 {
-                    if (MyMod.InOnline() == true)
+                    if (saveObj != null)
                     {
-                        if (saveObj != null)
+                        MelonLogger.Msg("Return gear to fake one");
+                        int variant = 0;
+                        if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
                         {
-                            MelonLogger.Msg("Return gear to fake one");
-                            int variant = 0;
-                            if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
-                            {
-                                variant = 1;
-                            }
-                            if ((saveObj.gameObject.GetComponent<FoodItem>() != null && saveObj.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
-                                (saveObj.gameObject.GetComponent<SmashableItem>() != null && saveObj.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
-                            {
-                                variant = 1;
-                            }
-                            if (saveObj.gameObject.GetComponent<KeroseneLampItem>() != null && saveObj.gameObject.GetComponent<KeroseneLampItem>().m_On)
-                            {
-                                variant = 1;
-                            }
-                            MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
+                            variant = 1;
                         }
+                        if ((saveObj.gameObject.GetComponent<FoodItem>() != null && saveObj.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
+                            (saveObj.gameObject.GetComponent<SmashableItem>() != null && saveObj.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                        {
+                            variant = 1;
+                        }
+                        if (saveObj.gameObject.GetComponent<KeroseneLampItem>() != null && saveObj.gameObject.GetComponent<KeroseneLampItem>().m_On)
+                        {
+                            variant = 1;
+                        }
+                        MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
                     }
                 }
             }
@@ -442,9 +439,19 @@ namespace SkyCoop
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
                     MyMod.DoConnectToIp(text);
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "LOCAL OR STEAM?")
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "HOW YOU WANT THEY CALL YOU?")
                 {
-                    MyMod.HostAServer();
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    if (!MyMod.ValidNickName(text))
+                    {
+                        if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                        {
+                            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + "Sorry nickname should not contain non latin symbols", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                        }
+                    }else{
+                        MyMod.MyChatName = text;
+                        MPSaveManager.SaveMyName(text);
+                    }
                 }
                 if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TELEPORT TO")
                 {
@@ -657,7 +664,7 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "HandleCollisionWithObject")] // Once, but be triggered a lot
         internal class ArrowItem_Shoot
         {
-            public static void Postfix(ArrowItem __instance)
+            public static void Postfix(ArrowItem __instance, GameObject collider, Vector3 collisionPoint, Vector3 collisionNormal)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -665,6 +672,47 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
+
+                if(__instance.m_EmbeddedInAi != null)
+                {
+                    BaseAi _Ai = __instance.m_EmbeddedInAi;
+                    GameObject Animal = _Ai.gameObject;
+                    if(Animal.GetComponent<MyMod.AnimalUpdates>() != null)
+                    {
+                        MyMod.AnimalUpdates AU = Animal.GetComponent<MyMod.AnimalUpdates>();
+                        ArrowSaveData asd = __instance.Serialize();
+                        MyMod.AnimalArrow Arrow = new MyMod.AnimalArrow();
+                        Arrow.m_Position = asd.m_LocalPosition;
+                        Arrow.m_Angle = asd.m_LocalAngles;
+                        Arrow.m_Depth = asd.m_EmbeddedDepth;
+                        Arrow.m_LocaName = asd.m_LocalName;
+                        AU.m_Arrows.Add(Arrow);
+                        MyMod.AddFakeArrowToAnimal(AU, AU.m_Arrows.Count - 1);
+                        UnityEngine.Object.Destroy(__instance.gameObject);
+                        return;
+                    }
+                    else if(Animal.GetComponent<MyMod.AnimalActor>() != null)
+                    {
+                        UnityEngine.Object.Destroy(__instance.gameObject);
+                    }
+                }
+                else
+                {
+                    ArrowItem.SurfaceResponseInfo surfaceResponseInfo = __instance.GetSurfaceResponseInfo(Utils.GetMaterialTagForObjectAtPosition(collider, collisionPoint), false);
+                    if(surfaceResponseInfo.impactEffect == ArrowImpactEffectType.ArrowImpactEffect_Flesh)
+                    {
+                        Transform t = collider.transform;
+                        while (t.gameObject.GetComponent<MyMod.AnimalActor>() == null && t.parent != null)
+                        {
+                            t = t.parent;
+                        }
+                        if(t.gameObject.GetComponent<MyMod.AnimalActor>() != null)
+                        {
+                            UnityEngine.Object.Destroy(__instance.gameObject);
+                        }
+                    }
+                }
+
                 if (__instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() != null)
                 {
                     UnityEngine.Object.Destroy(__instance.gameObject);
@@ -1808,12 +1856,12 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                BaseAi baseAi = (BaseAi)null;
+                BaseAi baseAi = null;
                 if (victim.layer == 16)
                     baseAi = victim.GetComponent<BaseAi>();
                 else if (victim.layer == 27)
                     baseAi = victim.transform.GetComponentInParent<BaseAi>();
-                if ((UnityEngine.Object)baseAi == (UnityEngine.Object)null)
+                if (baseAi == null)
                 {
                     __result = null;
                     return;
@@ -1842,6 +1890,12 @@ namespace SkyCoop
                 }
                 baseAi.SetupDamageForAnim(collisionPoint, GameManager.GetPlayerTransform().position, component);
                 baseAi.ApplyDamage(damage, !stickIn ? 0.0f : bleedOutMinutes, DamageSource.Player, collider);
+
+                if (__instance.m_EmbeddedDepth > 0.0)
+                {
+                    __instance.m_EmbeddedInAi = baseAi;
+                }
+
                 __result = baseAi;
                 return;
             }
@@ -2148,9 +2202,7 @@ namespace SkyCoop
                     {
                         v_type = "EGS";
                         MyMod.LoadChatName();
-                    }
-                    else
-                    {
+                    }else{
                         v_type = "Unknown";
                         MyMod.LoadChatName();
                     }
@@ -4537,7 +4589,6 @@ namespace SkyCoop
                 {
                     MyMod.DefaultIsRussian = true;
                 }
-                MelonLogger.Msg(ConsoleColor.Blue, "MyMod.KillOnUpdate "+ MyMod.KillOnUpdate);
 
                 if (MyMod.KillOnUpdate)
                 {
