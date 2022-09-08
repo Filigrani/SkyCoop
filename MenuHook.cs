@@ -336,53 +336,47 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_Sandbox __instance)
             {
-                if(MenuMode == "Join")
+
+                switch( MenuMode )
                 {
-                    ChangeMenuItems("Multiplayer");
-                    return false;
-                }else if(MenuMode == "Nothing")
-                {
-                    MyMod.HostMenuClose();
-                    return false;
-                }else if(MenuMode == "Lobby")
-                {
-                    MyMod.LobbyUI.SetActive(false);
-                    MyMod.LobbyRegion.SetActive(false);
-                    MyMod.LobbyExperience.SetActive(false);
-                }else if(MenuMode == "LobbySettings")
-                {
-                    if (!MyMod.StartServerAfterSelectSave)
-                    {
-                        ChangeMenuItems("Lobby");
-                    }else{
-                        MyMod.StartServerAfterSelectSave = false;
+                    case "Join":
                         ChangeMenuItems("Multiplayer");
-                    }
-                    return false;
-                }else if(MenuMode == "NewGameSelect")
-                {
-                    ChangeMenuItems("LobbySettings");
-                    return false;
-                }
-                else if(MenuMode == "Vote")
-                {
-                    ChangeMenuItems("Lobby");
-                    return false;
-                }
-                else if(MenuMode == "Multiplayer")
-                {
-                    ChangeMenuItems("Original");
-                    return true;
-                }else if(MenuMode == "Browser")
-                {
-                    MenuMode = "Join";
-                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                    Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
-                    Align.GetChild(2).gameObject.SetActive(true); //Grid
-                    Align.GetChild(4).gameObject.SetActive(true); //Description
-                    Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
-                    MyMod.ServerBrowser.SetActive(false);
-                    return false;
+                        return false;
+                    case "Nothing":
+                        MyMod.HostMenuClose();
+                        return false;
+                    case "Lobby":
+                        MyMod.LobbyUI.SetActive(false);
+                        MyMod.LobbyRegion.SetActive(false);
+                        MyMod.LobbyExperience.SetActive(false);
+                        break;
+                    case "LobbySettings":
+                        if (!MyMod.StartServerAfterSelectSave)
+                            ChangeMenuItems("Lobby");
+                        else
+                        {
+                            MyMod.StartServerAfterSelectSave = false;
+                            ChangeMenuItems("Multiplayer");
+                        }
+                        return false;
+                    case "NewGameSelect":
+                        ChangeMenuItems("LobbySettings");
+                        return false;
+                    case "Vote":
+                        ChangeMenuItems("Lobby");
+                        return false;
+                    case "Multiplayer":
+                        ChangeMenuItems("Original");
+                        return false;
+                    case "Browser":
+                        MenuMode = "Join";
+                        Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
+                        Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
+                        Align.GetChild(2).gameObject.SetActive(true); //Grid
+                        Align.GetChild(4).gameObject.SetActive(true); //Description
+                        Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                        MyMod.ServerBrowser.SetActive(false);
+                        return false;
                 }
 
                 return true;
@@ -674,12 +668,7 @@ namespace SkyCoop
         {
             int T = MyMod.ServerConfig.m_PlayersSpawnType;
 
-            if(T == 0 || T == 3)
-            {
-                return true;
-            }else{
-                return false;
-            }
+            return T == 0 || T == 3;
         }
 
         public static bool CanStartServer()
@@ -1126,56 +1115,62 @@ namespace SkyCoop
                             }
                             else if (MenuMode == "LobbySettings")
                             {
-                                if (CustomId == 1)
+
+                                switch( CustomId )
                                 {
-                                    if (!MyMod.StartServerAfterSelectSave)
-                                    {
-                                        ChangeMenuItems("NewGameSelect");
-                                    }else{
-                                        MyMod.m_Panel_Sandbox.OnClickNew();
-                                    }
-                                }
-                                else if (CustomId == 2)
-                                {
-                                    CloseLobbyUI();
-                                    MyMod.m_Panel_Sandbox.OnClickLoad();
-                                }
-                                else if (CustomId == 3)
-                                {
-                                    CloseLobbyUI();
-                                    MyMod.m_Panel_Sandbox.OnClickFeats();
-                                }
+                                    case 1:
+                                        if (!MyMod.StartServerAfterSelectSave)
+                                            ChangeMenuItems("NewGameSelect");
+                                        else                        
+                                            MyMod.m_Panel_Sandbox.OnClickNew(); 
+
+                                        break;
+
+                                    case 2:
+                                        CloseLobbyUI();
+                                        MyMod.m_Panel_Sandbox.OnClickLoad();
+                                        break;
+                                    case 3:
+                                        CloseLobbyUI();
+                                        MyMod.m_Panel_Sandbox.OnClickFeats();
+                                        break;
+                                }    
                             }
                             else if (MenuMode == "NewGameSelect")
                             {
-                                if (CustomId == 2)
+
+                                switch (CustomId)
                                 {
-                                    MyMod.SelectedSaveName = "";
-                                    MyMod.SelectedSaveSeed = 0;
-                                    SteamConnect.Main.SetSaveSlotSeed(0);
-                                    SetLobbyState("Vote");
-                                    ChangeMenuItems("Lobby");
+                                    case 2:
+                                        MyMod.SelectedSaveName = "";
+                                        MyMod.SelectedSaveSeed = 0;
+                                        SteamConnect.Main.SetSaveSlotSeed(0);
+                                        SetLobbyState("Vote");
+                                        ChangeMenuItems("Lobby");
+                                        break;
+                                    case 3:
+                                        CloseLobbyUI();
+                                        MyMod.m_Panel_Sandbox.OnClickNew();
+                                        break;
                                 }
-                                else if (CustomId == 3)
-                                {
-                                    CloseLobbyUI();
-                                    MyMod.m_Panel_Sandbox.OnClickNew();
-                                }
+
                             }
                             else if (MenuMode == "Vote")
                             {
-                                if (CustomId == 2)
+
+                                switch (CustomId)
                                 {
-                                    CloseLobbyUI();
-                                    MyMod.m_Panel_Sandbox.Enable(false);
-                                    InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
-                                }
-                                else if (CustomId == 3)
-                                {
-                                    CloseLobbyUI();
-                                    MyMod.m_Panel_Sandbox.Enable(false);
-                                    InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(true);
-                                }
+                                    case 2:
+                                        CloseLobbyUI();
+                                        MyMod.m_Panel_Sandbox.Enable(false);
+                                        InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
+                                        break;
+                                    case 3:
+                                        CloseLobbyUI();
+                                        MyMod.m_Panel_Sandbox.Enable(false);
+                                        InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(true);
+                                        break;
+                                }                  
                             }
                         }else{
                             return true;

@@ -293,9 +293,7 @@ namespace SkyCoop
         public static void KillConsole()
         {
             if(ServerConfig.m_CheatsMode == 2 || (iAmHost == true && ServerConfig.m_CheatsMode == 1) || InOnline() == false)
-            {
                 return;
-            }
                         
             if(uConsole.m_CommandsDict.Count > 0)
             {
@@ -411,9 +409,7 @@ namespace SkyCoop
         public static void PatchBookReadTime(GearItem __instance)
         {
             if (__instance.m_ResearchItem == null)
-            {
                 return;
-            }
 
             if (__instance.m_ObjectGuid == null)
             {

@@ -149,13 +149,14 @@ namespace SkyCoop
             private static GameObject saveObj;
             internal static void Prefix(PlayerManager __instance)
             {
-                if (MyMod.CrazyPatchesLogger == true)
+                if (MyMod.CrazyPatchesLogger)
                 {
                     StackTrace st = new StackTrace(new StackFrame(true));
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (MyMod.InOnline() == true)
+
+                if (MyMod.InOnline())
                 {
                     MelonLogger.Msg("Going to cancle placement");
                     if (__instance.m_ObjectToPlace != null)

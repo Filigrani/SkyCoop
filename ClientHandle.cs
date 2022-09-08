@@ -322,11 +322,10 @@ namespace SkyCoop
         public static void PLAYERSSTATUS(Packet _packet)
         {
             int howmany = _packet.ReadInt();
-            if (howmany > MyMod.MaxPlayers)
-            {
-                return;
-            }
 
+            if (howmany > MyMod.MaxPlayers)
+                return;
+            
             for (int i = 0; i < MyMod.MaxPlayers; i++)
             {
                 if (MyMod.playersData[i] != null)
@@ -377,10 +376,10 @@ namespace SkyCoop
 
         public static void ANIMALSYNCTRIGG(Packet _packet)
         {
+
             if (MyMod.level_name == "Boot" || MyMod.level_name == "Empty")
-            {
                 return;
-            }
+            
 
             MyMod.AnimalTrigger obj = _packet.ReadAnimalTrigger();
             MyMod.SetAnimalTriggers(obj);
@@ -468,16 +467,19 @@ namespace SkyCoop
         {
             int SkillTypeId = _packet.ReadInt();
 
-            if (SkillTypeId == 1)
+
+            switch( SkillTypeId )
             {
-                GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Rifle, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                MelonLogger.Msg("Got remote skill upgrade Rifle");
+                case 1:
+                    GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Rifle, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+                    MelonLogger.Msg("Got remote skill upgrade Rifle");
+                    break;
+                case 2:
+                    GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Revolver, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+                    MelonLogger.Msg("Got remote skill upgrade Revolver");
+                    break;
             }
-            else if (SkillTypeId == 2)
-            {
-                GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Revolver, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                MelonLogger.Msg("Got remote skill upgrade Revolver");
-            }
+
         }
 
         public static void HARVESTINGANIMAL(Packet _packet)
@@ -497,10 +499,10 @@ namespace SkyCoop
             int from = _packet.ReadInt();
             bool Melee = _packet.ReadBool();
             string MeleeWeapon = "";
-            if (Melee)
-            {
+
+            if (Melee == true)
                 MeleeWeapon = _packet.ReadString();
-            }
+            
             MyMod.DamageByBullet(damage, from, BodyPart, Melee, MeleeWeapon);
         }
         public static void MULTISOUND(Packet _packet)
@@ -531,9 +533,8 @@ namespace SkyCoop
             MyMod.ApplyOtherCampfires = true;
 
             if (InterfaceManager.IsMainMenuEnabled() == false)
-            {
                 return;
-            }
+            
 
             MyMod.PendingSave = SaveData;
 
@@ -564,11 +565,9 @@ namespace SkyCoop
         public static void ASKSPAWNDATA(Packet _packet)
         {
             int lvl = _packet.ReadInt();
-            int from = _packet.ReadInt();
+
             if(lvl == MyMod.levelid)
-            {
                 MyMod.SendSpawnData(false);
-            }
         }
 
         public static void FURNBROKEN(Packet _packet)
@@ -802,12 +801,11 @@ namespace SkyCoop
 
             if (MyMod.playersData[from] != null)
             {
+
                 if (box.m_Guid == "NULL")
-                {
-                    MyMod.playersData[from].m_Container = null;
-                }else{
+                   MyMod.playersData[from].m_Container = null;
+                else
                     MyMod.playersData[from].m_Container = box;
-                }
             }
         }
         public static void LOOTEDCONTAINER(Packet _packet)
@@ -837,11 +835,9 @@ namespace SkyCoop
             if (MyMod.playersData[from] != null)
             {
                 if(harveData.m_State == "Start")
-                {
                     MyMod.playersData[from].m_Plant = harveData.m_Guid;
-                }else{
+                else
                     MyMod.playersData[from].m_Plant = "";
-                }
             }
         }
         public static void LOOTEDHARVESTABLE(Packet _packet)
@@ -872,14 +868,16 @@ namespace SkyCoop
             {
                 MyMod.playersData[from].m_Character = character;
 
-                if(character == 0)
+                switch (character)
                 {
-                    MyMod.playersData[from].m_Female = false;
+                    case 0:
+                        MyMod.playersData[from].m_Female = false;
+                        break;
+                    case 1:
+                        MyMod.playersData[from].m_Female = true;
+                        break;
                 }
-                if (character == 1)
-                {
-                    MyMod.playersData[from].m_Female = true;
-                }
+
             }
         }
         public static void ADDSHELTER(Packet _packet)
@@ -968,11 +966,10 @@ namespace SkyCoop
             if (MyMod.playersData[from] != null && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
             {
                 bool IsRadio = false;
+
                 if(from != Sender)
-                {
                     IsRadio = true;
-                }
-                
+               
                 MyMod.ProcessVoiceChatData(from, CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime, IsRadio);
             }
             if(MyMod.RadioFrequency == RadioF && MyMod.playersData[from].m_PlayerEquipmentData.m_HoldingItem == "GEAR_HandheldShortwave" && !MyMod.DoingRecord)

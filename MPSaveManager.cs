@@ -64,9 +64,8 @@ namespace SkyCoop
         public static string GetPathForName(string name, int Seed = 0)
         {
             if(Seed != 0)
-            {
                 return PersistentDataPath.m_Path + PersistentDataPath.m_PathSeparator + Seed + PersistentDataPath.m_PathSeparator + name;
-            }
+            
             
             return PersistentDataPath.m_Path + PersistentDataPath.m_PathSeparator + name;
         }
@@ -180,15 +179,13 @@ namespace SkyCoop
 
             Dictionary<string, bool> Dict;
             if (RecentOpenableThings.TryGetValue(scene, out Dict))
-            {
                 return Dict;
-            }
+            
 
             string LoadedContent = LoadData(Key, SaveSeed);
             if (LoadedContent != "")
-            {
                 return JSON.Load(LoadedContent).Make< Dictionary<string, bool>>();
-            }
+    
             return null;
         }
         public static void ChangeOpenableThingState(string scene, string GUID, bool state)
@@ -199,13 +196,13 @@ namespace SkyCoop
             if (RecentOpenableThings.TryGetValue(scene, out Dict))
             {
                 if (Dict.ContainsKey(GUID))
-                {
                     Dict.Remove(GUID);
-                }
+
                 Dict.Add(GUID, state);
                 RecentOpenableThings.Remove(scene);
                 RecentOpenableThings.Add(scene, Dict);
                 return;
+
             }else{
                 Dict = LoadOpenableThings(scene);
             }
@@ -229,15 +226,12 @@ namespace SkyCoop
 
             Dictionary<int, MyMod.DroppedGearItemDataPacket> Dict;
             if(RecentVisual.TryGetValue(scene, out Dict))
-            {
                 return Dict;
-            }
 
             string LoadedContent = LoadData(Key, SaveSeed);
             if (LoadedContent != "")
-            {
                 return JSON.Load(LoadedContent).Make<Dictionary<int, MyMod.DroppedGearItemDataPacket>>();
-            }
+
             return null;
         }
         public static Dictionary<int, MyMod.SlicedJsonDroppedGear> LoadDropData(string scene)
@@ -247,15 +241,12 @@ namespace SkyCoop
 
             Dictionary<int, MyMod.SlicedJsonDroppedGear> Dict;
             if(RecentData.TryGetValue(scene, out Dict))
-            {
                 return Dict;
-            }
 
             string LoadedContent = LoadData(Key, SaveSeed);
             if (LoadedContent != "")
-            {
                 return JSON.Load(LoadedContent).Make<Dictionary<int, MyMod.SlicedJsonDroppedGear>>();
-            }
+
             return null;
         }
         public static void AddGearVisual(string scene, MyMod.DroppedGearItemDataPacket gear)

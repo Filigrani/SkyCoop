@@ -147,16 +147,14 @@ namespace GameServer
                     SendUDPDataToAll(_packet);
                 }else{
 
-                    if(OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
+                    if (OnlyFor == -1)
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+                    else
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -180,16 +178,14 @@ namespace GameServer
                     SendUDPDataToAll(_packet);
                 }else{
 
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+                    else
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -219,16 +215,14 @@ namespace GameServer
                     _packet.Write(0);
                     SendUDPDataToAll(_packet);
                 }else{
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+                    else
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -244,18 +238,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -291,8 +281,6 @@ namespace GameServer
                 if (pSize > 1500)
                 {
                     MelonLoader.MelonLogger.Msg("Packet reached limiet! Size of packet is " + pSize + "bytes");
-                }else{
-                    //MelonLoader.MelonLogger.Msg("Packet sent "+ pSize + "bytes");
                 }
 
                 //MelonLoader.MelonLogger.Msg("Limit is 1500bytes, slice split size is 1000bytes, final packet size is " + _packet.Length()+"bytes");
@@ -361,16 +349,17 @@ namespace GameServer
                     _packet.Write(0);
                     SendUDPDataToAll(_packet);
                 }else{
+
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
                     if (OnlyFor == -1)
                     {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
                     }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
                     }
+
                 }
             }
         }
@@ -384,14 +373,14 @@ namespace GameServer
                     _packet.Write(0);
                     SendUDPDataToAll(_packet);
                 }else{
+
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
                     if (OnlyFor == -1)
                     {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
                     }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
@@ -540,18 +529,15 @@ namespace GameServer
                 }
                 else
                 {
-                    if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
+                    if( OnlyFor == -1 )
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -593,16 +579,16 @@ namespace GameServer
                     _packet.Write(0);
                     SendUDPDataToAll(_packet);
                 }else{
+
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+                    else
                         SendUDPData(OnlyFor, _packet);
-                    }
+
                 }
             }
         }
@@ -794,18 +780,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -821,18 +803,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -848,18 +826,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -875,18 +849,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -902,18 +872,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -949,18 +915,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -976,18 +938,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1004,18 +962,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1052,18 +1006,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1099,18 +1049,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1142,18 +1088,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1169,18 +1111,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1197,18 +1135,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1224,18 +1158,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1251,18 +1181,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1278,18 +1204,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1305,18 +1227,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1332,18 +1250,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1359,18 +1273,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1406,18 +1316,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1433,18 +1339,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1480,18 +1382,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1507,18 +1405,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1581,18 +1475,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1606,16 +1496,14 @@ namespace GameServer
                     _packet.Write(0);
                     SendUDPDataToAll(_packet);
                 }else{
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }else{
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
+                    else
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1631,18 +1519,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1659,18 +1543,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1687,18 +1567,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1715,18 +1591,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1777,18 +1649,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
@@ -1897,18 +1765,14 @@ namespace GameServer
                 }
                 else
                 {
+                    _packet.Write(_msg);
+                    _packet.Write(_From);
+
+                    // Check if global packet
                     if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPDataToAllButNotSender(_packet, _From);
-                    }
                     else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
-                    }
                 }
             }
         }
