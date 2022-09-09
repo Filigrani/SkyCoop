@@ -60,11 +60,11 @@ namespace SkyCoop
                 }
                 if (MenuMode == "Multiplayer")
                 {
-                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
                     {
                         __instance.m_DescriptionLabel.text = "Configure and host the server.";
                     }
-                    else if(__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
+                    else if(__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
                         if (SteamConnect.CanUseSteam)
                         {
@@ -72,6 +72,10 @@ namespace SkyCoop
                         }else{
                             __instance.m_DescriptionLabel.text = "Join by IP address.";
                         }
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
+                    {
+                        __instance.m_DescriptionLabel.text = "Change your nickname and other.";
                     }
                 }
                 else if(MenuMode == "Join")
@@ -87,6 +91,17 @@ namespace SkyCoop
                     else if(__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
                         __instance.m_DescriptionLabel.text = "Opens steam friends overlay.";
+                    }
+                }
+                else if(MenuMode == "MultiProfileSettings")
+                {
+                    if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
+                    {
+                        __instance.m_DescriptionLabel.text = "Change name that other players will see in the game.";
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
+                    {
+                        __instance.m_DescriptionLabel.text = "Toggle supporter bonuses that you have.";
                     }
                 }
                 else if(MenuMode == "Lobby")
@@ -336,7 +351,6 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_Sandbox __instance)
             {
-
                 switch( MenuMode )
                 {
                     case "Join":
@@ -761,14 +775,19 @@ namespace SkyCoop
             MenuMode = mode;
             if(mode == "Multiplayer")
             {
-                OverrideMenuButton(Grid, 2, "HOST SERVER");
-                OverrideMenuButton(Grid, 3, "JOIN SERVER");
+                OverrideMenuButton(Grid, 1, "HOST SERVER");
+                OverrideMenuButton(Grid, 2, "JOIN SERVER");
+                OverrideMenuButton(Grid, 3, "SETTINGS");
             }
             else if(mode == "Join")
             {
                 OverrideMenuButton(Grid, 1, "BROWSE SERVERS");
                 OverrideMenuButton(Grid, 2, "CONNECT BY IP");
                 OverrideMenuButton(Grid, 3, "CONNECT TO FRIEND");
+            }else if(mode == "MultiProfileSettings")
+            {
+                OverrideMenuButton(Grid, 1, "CHANGE NICKNAME");
+                OverrideMenuButton(Grid, 2, "SPONSOR BONUSES");
             }
             else if(mode == "Lobby")
             {
@@ -1026,7 +1045,7 @@ namespace SkyCoop
                             GameAudioManager.PlayGUIButtonClick();
                             if (MenuMode == "Multiplayer")
                             {
-                                if (CustomId == 2)
+                                if (CustomId == 1)
                                 {
                                     MyMod.HostMenu(true);
                                     Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
@@ -1036,7 +1055,7 @@ namespace SkyCoop
                                     Align.GetChild(5).gameObject.SetActive(false); //Linebreaker
                                     MenuMode = "Nothing";
                                 }
-                                else if (CustomId == 3)
+                                else if (CustomId == 2)
                                 {
                                     if (SteamConnect.CanUseSteam)
                                     {
@@ -1044,6 +1063,21 @@ namespace SkyCoop
                                     }else{
                                         ConnectByIp();
                                     }
+                                }
+                                else if (CustomId == 3)
+                                {
+                                    ChangeMenuItems("MultiProfileSettings");
+                                }
+                            }
+                            else if(MenuMode == "MultiProfileSettings")
+                            {
+                                if (CustomId == 1)
+                                {
+                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "How you want they call you?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                                }
+                                if (CustomId == 2)
+                                {
+                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "WOOPS", "\n" + "Work in-progress", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                                 }
                             }
                             else if(MenuMode == "Join")

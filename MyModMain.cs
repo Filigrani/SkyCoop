@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.9";
+            public const string Version = "0.9.9b";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -775,6 +775,8 @@ namespace SkyCoop
             public string m_RegionGUID = "";
             public int m_LastController = 0;
             public int m_LastAiMode = 0;
+            public int m_ArrowsCount = 0;
+            public List<AnimalArrow> m_Arrows = new List<AnimalArrow>();
         }
         public class PlayerEquipmentData //: MelonMod
         {
@@ -1189,46 +1191,18 @@ namespace SkyCoop
 
         public static void LoadChatName(string _name = "")
         {
-            bool UseSteamName = false;
-            bool HaveFile = false;
-            if (System.IO.File.Exists("Mods\\nickname.txt"))
+            string NameFromFile = MPSaveManager.LoadMyName();
+
+            if (ValidNickName(NameFromFile))
             {
-                string readText = System.IO.File.ReadAllText("Mods\\nickname.txt");
-                if (ValidNickName(readText) == false)
+                MyChatName = NameFromFile;
+                return;
+            }else{
+                if (ValidNickName(_name))
                 {
-                    UseSteamName = true;
-                    MyChatName = "Player";
+                    MyChatName = _name;
                 }else{
-                    MyChatName = readText;
-                }
-                HaveFile = true;
-            }else{
-                MyChatName = "Player";
-                UseSteamName = true;
-                HaveFile = false;
-            }
-
-            if(ValidNickName(_name) == false)
-            {
-                UseSteamName = false;
-            }
-
-            if(UseSteamName == true)
-            {
-                MyChatName = _name;
-            }else{
-                if (ValidNickName(MyChatName) == false)
-                {
-                    string _word = "";
-                    if (HaveFile == true)
-                    {
-                        _word = "edit";
-                    }
-                    else
-                    {
-                        _word = "create";
-                    }
-                    MelonLogger.Msg(ConsoleColor.Magenta, "You have default name, if you want to change your name, " + _word + " nickname.txt file in Mods folder!");
+                    MyChatName = "Player";
                 }
             }
             MelonLogger.Msg("Your chat name is "+ MyChatName);
@@ -5772,7 +5746,7 @@ namespace SkyCoop
             MelonLogger.Msg("Animal corpse spawned "+ GUID);
         }
 
-        public static AnimalCompactData GetCompactDataForAnimal(BaseAi AI)
+        public static AnimalCompactData GetCompactDataForAnimal(BaseAi AI, List<AnimalArrow> Arrows)
         {
             if(AI != null && AI.gameObject != null && AI.gameObject.GetComponent<ObjectGuid>() != null)
             {
@@ -5788,6 +5762,8 @@ namespace SkyCoop
                 Dat.m_Bleeding = AI.m_BleedingOut;
                 Dat.m_TimeOfBleeding = MinutesFromStartServer + (int)AI.m_ElapsedBleedingOutMinutes;
                 Dat.m_LastAiMode = (int)AI.GetAiMode();
+                Dat.m_ArrowsCount = Arrows.Count;
+                Dat.m_Arrows = Arrows;
 
                 if (animal.GetComponent<AnimalUpdates>() != null)
                 {
@@ -5954,7 +5930,7 @@ namespace SkyCoop
             return null;
         }
 
-        public static void RecreateAnimalToActor(GameObject animal)
+        public static void RecreateAnimalToActor(GameObject animal, List<AnimalArrow> Arrows)
         {
             string prefabName = GetAnimalPrefabName(animal.name);
             string RegionGUID = animal.GetComponent<AnimalUpdates>().m_RegionGUID;
@@ -5972,7 +5948,65 @@ namespace SkyCoop
 
             //MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to actor " + GUID);
 
-            SpawnAnimalActor(prefabName, v3, rot, GUID, RegionGUID);
+            SpawnAnimalActor(prefabName, v3, rot, GUID, RegionGUID, Arrows);
+        }
+
+        public class AnimalArrow
+        {
+            public float m_Condition = 100;
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Vector3 m_Angle = new Vector3(0, 0, 0);
+            public float m_Depth = 0;
+            public string m_LocaName = "";
+        }
+
+        public static void AddFakeArrowToAnimal(AnimalUpdates AU, int index)
+        {
+            if (AU != null && AU.m_Arrows[index] != null)
+            {
+                AnimalArrow Arrow = AU.m_Arrows[index];
+                GameObject reference = GetGearItemObject("GEAR_Arrow");
+
+                if (reference != null)
+                {
+                    GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, Vector3.zero, Quaternion.identity);
+
+                    ArrowItem ArrowIt = obj.GetComponent<ArrowItem>();
+                    if (ArrowIt != null)
+                    {
+                        ArrowIt.ParentToObject(AU.m_Animal.transform.Find(Arrow.m_LocaName));
+                        obj.transform.localPosition = Arrow.m_Position;
+                        obj.transform.localEulerAngles = Arrow.m_Angle;
+                        Utils.SetIsKinematic(ArrowIt.m_Rigidbody, true);
+                    }
+                    UnityEngine.Object.Destroy(obj.GetComponent<ArrowItem>());
+                    UnityEngine.Object.Destroy(obj.GetComponent<GearItem>());
+                }
+            }
+        }
+        public static void AddFakeArrowToAnimal(AnimalActor AU, int index)
+        {
+            if (AU != null && AU.m_Arrows[index] != null)
+            {
+                AnimalArrow Arrow = AU.m_Arrows[index];
+                GameObject reference = GetGearItemObject("GEAR_Arrow");
+
+                if (reference != null)
+                {
+                    GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, Vector3.zero, Quaternion.identity);
+
+                    ArrowItem ArrowIt = obj.GetComponent<ArrowItem>();
+                    if (ArrowIt != null)
+                    {
+                        ArrowIt.ParentToObject(AU.m_Animal.transform.Find(Arrow.m_LocaName));
+                        obj.transform.localPosition = Arrow.m_Position;
+                        obj.transform.localEulerAngles = Arrow.m_Angle;
+                        Utils.SetIsKinematic(ArrowIt.m_Rigidbody, true);
+                    }
+                    UnityEngine.Object.Destroy(obj.GetComponent<ArrowItem>());
+                    UnityEngine.Object.Destroy(obj.GetComponent<GearItem>());
+                }
+            }
         }
 
         public class AnimalUpdates : MonoBehaviour
@@ -6001,8 +6035,7 @@ namespace SkyCoop
             public string m_RegionGUID = "";
             public bool m_AddedToRegion = false;
             public bool m_MarkToDestroy = false;
-
-
+            public List<AnimalArrow> m_Arrows = new List<AnimalArrow>();
 
             void Start()
             {
@@ -6010,6 +6043,14 @@ namespace SkyCoop
                 nextActionSync = Time.time;
                 nextActionBloodDrop = Time.time;
                 nextActionDampingOn = Time.time + dampingOn_perioud;
+            }
+
+            public void ProcessArrows()
+            {
+                for (int i = 0; i < m_Arrows.Count; i++)
+                {
+                    AddFakeArrowToAnimal(this, i);
+                }
             }
 
             public void CallSync()
@@ -6020,7 +6061,7 @@ namespace SkyCoop
                     {
                         BaseAi _AI = m_Animal.GetComponent<BaseAi>();
 
-                        AnimalCompactData Dat = GetCompactDataForAnimal(_AI);
+                        AnimalCompactData Dat = GetCompactDataForAnimal(_AI, m_Arrows);
                         AnimalAnimsSync AnimDat = GetAnimationDataFromAnimal(_AI);
 
                         if(Dat.m_GUID == "")
@@ -6035,7 +6076,7 @@ namespace SkyCoop
                             SendAnimalForValidPlayers(Dat, AnimDat);
                             m_Banned = true;
                             m_MarkToDestroy = true;
-                            RecreateAnimalToActor(m_Animal);
+                            RecreateAnimalToActor(m_Animal, m_Arrows);
                         }else{
                             SendAnimalForValidPlayers(Dat, AnimDat);
                         }
@@ -6074,6 +6115,17 @@ namespace SkyCoop
                             RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(), m_Animal);
                         }
                     }
+                }
+            }
+
+            public void DropArrows()
+            {
+                for (int i = 0; i < m_Arrows.Count; i++)
+                {
+                    GameObject reference = GetGearItemObject("GEAR_Arrow");
+                    GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, Vector3.zero, Quaternion.identity);
+
+                    SendDropItem(obj.GetComponent<GearItem>(), 0, 0, false, 0, m_Animal);
                 }
             }
 
@@ -6119,6 +6171,7 @@ namespace SkyCoop
                         string RightName = GetAnimalPrefabName(m_Animal.name);
                         if (bai.m_CurrentHP <= 0 || bai.m_CurrentMode == AiMode.Dead || bai.m_CurrentMode == AiMode.Stunned)
                         {
+                            DropArrows();
                             AnimalKilled Corpse = new AnimalKilled();
                             Corpse.m_Position = m_Animal.transform.position;
                             Corpse.m_Rotation = m_Animal.transform.rotation;
@@ -6238,7 +6291,7 @@ namespace SkyCoop
             }
         }
 
-        public static void RecreateAnimalToSyncable(GameObject animal, string RegionGUID, float health)
+        public static void RecreateAnimalToSyncable(GameObject animal, string RegionGUID, float health, List<AnimalArrow> Arrows)
         {
             
             string GUID = "";
@@ -6297,6 +6350,8 @@ namespace SkyCoop
             au.m_Animal = newAnimal;
             au.m_MyControlled = true;
             au.m_RegionGUID = RegionGUID;
+            au.m_Arrows = Arrows;
+            au.ProcessArrows();
             newAnimal.transform.position = v3;
         }
 
@@ -6370,6 +6425,7 @@ namespace SkyCoop
             public Dictionary<string, int> m_AnimalAnimatorHashes = new Dictionary<string, int>();
             public bool m_AnimalAnimatorHashesReady = false;
             public Animator m_Animator;
+            public List<AnimalArrow> m_Arrows = new List<AnimalArrow>();
 
             void Start()
             {
@@ -6377,6 +6433,13 @@ namespace SkyCoop
                 nextActionSync = Time.time;
                 nextActionBloodDrop = Time.time;
                 nextActionDampingOn = Time.time + dampingOn_perioud;
+            }
+            public void ProcessArrows()
+            {
+                for (int i = 0; i < m_Arrows.Count; i++)
+                {
+                    AddFakeArrowToAnimal(this, i);
+                }
             }
 
             public void AnimInit()
@@ -6858,7 +6921,7 @@ namespace SkyCoop
                     {
                         m_Banned = true;
                         m_MarkToDestroy = true;
-                        RecreateAnimalToSyncable(m_Animal, m_RegionGUID, m_Hp);
+                        RecreateAnimalToSyncable(m_Animal, m_RegionGUID, m_Hp, m_Arrows);
                     }
                     if(!m_AudioReady)
                     {
@@ -8226,10 +8289,19 @@ namespace SkyCoop
 
                         Actor.m_NextMode = (AiMode)dat.m_LastAiMode;
                         Actor.SetAiMode();
+                        int OldAmount = Actor.m_Arrows.Count;
+                        if(OldAmount < dat.m_Arrows.Count)
+                        {
+                            Actor.m_Arrows = dat.m_Arrows;
+                            for (int i = OldAmount; i < Actor.m_Arrows.Count; i++)
+                            {
+                                AddFakeArrowToAnimal(Actor, i);
+                            }
+                        }
                     }
                 }
             }else{
-                animal = SpawnAnimalActor(dat.m_PrefabName, dat.m_Position, dat.m_Rotation, dat.m_GUID, dat.m_RegionGUID);
+                animal = SpawnAnimalActor(dat.m_PrefabName, dat.m_Position, dat.m_Rotation, dat.m_GUID, dat.m_RegionGUID, dat.m_Arrows);
                 if (animal && animal.GetComponent<AnimalActor>())
                 {
                     AnimalActor Actor = animal.GetComponent<AnimalActor>();
@@ -9971,7 +10043,7 @@ namespace SkyCoop
                 animal.GetComponent<BaseAi>().enabled = active;
             }
         }
-        public static GameObject SpawnAnimalActor(string prefabName, Vector3 v3, Quaternion rot, string GUID, string RegionGUID)
+        public static GameObject SpawnAnimalActor(string prefabName, Vector3 v3, Quaternion rot, string GUID, string RegionGUID, List<AnimalArrow> Arrows)
         {
             GameObject reference = GetGearItemObject(prefabName);
 
@@ -9987,6 +10059,8 @@ namespace SkyCoop
             act.m_Animator = RemoveAnimalComponents(obj);
             act.m_ToGo = v3;
             act.m_ToRotate = rot;
+            act.m_Arrows = Arrows;
+            act.ProcessArrows();
             Light[] componentsInChildren = (Light[])obj.GetComponentsInChildren<Light>(true);
             if (componentsInChildren != null)
             {
@@ -12563,7 +12637,7 @@ namespace SkyCoop
 
         }
 
-        public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0)
+        public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0, GameObject Around = null)
         {            
             if(gear != null && gear.gameObject != null)
             {
@@ -12571,7 +12645,15 @@ namespace SkyCoop
 
                 if (samepose == false)
                 {
-                    gear.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
+                    if(Around == null)
+                    {
+                        gear.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
+                    }else{
+                        Vector3 pos = Around.transform.position;
+                        float num = UnityEngine.Random.Range(0, 1.1f);
+                        Vector3 vector3 = Quaternion.Euler(0.0f, UnityEngine.Random.Range(0, 359), 0.0f) * Vector3.forward;
+                        gear.StickToGroundAndOrientOnSlope(pos + vector3 * num, NavMeshCheck.IgnoreNavMesh, 0.5f);
+                    }
                 }else{
                     if(obj.GetComponent<DropFakeOnLeave>() != null)
                     {
@@ -16302,6 +16384,8 @@ namespace SkyCoop
                 if (SavedSettings != null)
                 {
                     ServerConfig = SavedSettings.m_CFG;
+                }else{
+                    SavedSettings = new ServerSettingsData();
                 }
 
                 GameObject CloseButton = UIHostMenu.transform.GetChild(6).gameObject;
