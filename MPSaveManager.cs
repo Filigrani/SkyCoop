@@ -45,7 +45,7 @@ namespace SkyCoop
         }
 
         public static string LoadData(string name, int Seed = 0)
-        {
+        {            
             Log("Attempt to load " + name);
             string fullPath = GetPathForName(name, Seed);
             if (!File.Exists(fullPath))
@@ -63,6 +63,11 @@ namespace SkyCoop
 
         public static string GetPathForName(string name, int Seed = 0)
         {
+            if (string.IsNullOrEmpty(PersistentDataPath.m_Path))
+            {
+                PersistentDataPath.Init();
+            }
+            
             if(Seed != 0)
             {
                 return PersistentDataPath.m_Path + PersistentDataPath.m_PathSeparator + Seed + PersistentDataPath.m_PathSeparator + name;

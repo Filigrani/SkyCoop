@@ -53,7 +53,6 @@ namespace GameServer
             MyMod.OveridedTime = MyMod.OverridedHourse + ":" + MyMod.OverridedMinutes;
             MyMod.NeedSyncTime = true;
             MyMod.RealTimeCycleSpeed = true;
-            MyMod.HadEverPingedMaster = false;
             //MyMod.LoadAllDropsForScene();
             //MyMod.LoadAllOpenableThingsForScene();
             MyMod.DisableOriginalAnimalSpawns(true);

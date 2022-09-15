@@ -6623,25 +6623,6 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "ShowWeaponRadial")] // Once
-        private static class Panel_ActionsRadial_ShowWeaponRadial
-        {
-            private static void Prefix(Panel_ActionsRadial __instance)
-            {
-                if (!__instance.m_WeaponRadialOrder.Contains("GEAR_Hatchet"))
-                {
-                    MelonLogger.Msg("Old Length " + __instance.m_WeaponRadialOrder.Length);
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_Hatchet");
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_HatchetImprovised");
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_Hammer");
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_Knife");
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_KnifeImprovised");
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_KnifeScrapMetal");
-                    HarmonyLib.CollectionExtensions.AddItem(__instance.m_WeaponRadialOrder, "GEAR_Prybar");
-                    MelonLogger.Msg("Length " + __instance.m_WeaponRadialOrder.Length);
-                }
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(PlayerAnimation), "OnAnimationEvent_Generic_HiddenComplete")] // Once
         private static class PlayerAnimation_OnAnimationEvent_Generic_HiddenComplete
         {
@@ -6965,5 +6946,26 @@ namespace SkyCoop
                 MelonLogger.Msg("[EpicOnlineServicesManager] null");
             }
         }
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "GetDelegateForRadial")]
+        //private static class Panel_ActionsRadial_GetDelegateForRadial
+        //{
+        //    private static void Postfix(Panel_ActionsRadial __instance, Panel_ActionsRadial.RadialType radialType, ref Il2CppSystem.Action __result)
+        //    {
+        //        if(radialType == Panel_ActionsRadial.RadialType.Weapons)
+        //        {
+        //            bool HasWeapons = __instance.GetShouldGreyOut(Panel_ActionsRadial.RadialType.Weapons);
+        //            bool HasMelee = __instance.GetShouldGreyOut(Panel_ActionsRadial.RadialType.Tools);
+        //            if(HasWeapons)
+        //            {
+        //                __result = new System.Action(__instance.ShowWeaponRadial);
+        //            }else if (HasMelee)
+        //            {
+        //                __result = new System.Action(__instance.ShowToolsRadial);
+        //            }else{
+        //                __result = new System.Action(__instance.ShowNoWeaponMessage);
+        //            }
+        //        }
+        //    }
+        //}
     }
 }

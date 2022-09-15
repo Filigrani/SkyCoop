@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.9.9b";
+            public const string Version = "0.10.1";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -222,7 +222,6 @@ namespace SkyCoop
         public static string CustomServerName = "";
         public static string MyLobby = "";
         public static bool ApplyOtherCampfires = false;
-        public static bool HadEverPingedMaster = false;
         public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
         public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
         public static bool DebugTrafficCheck = false;
@@ -232,6 +231,7 @@ namespace SkyCoop
         public static int OverrideLampReduceFuel = -1;
         public static Dictionary<string, float> BooksResearched = new Dictionary<string, float>();
         public static GameObject GasMaskOverlay = null;
+        public static GameObject NpcDummy = null;
 
         //Voice chat
         public static bool DoingRecord = false;
@@ -1200,7 +1200,6 @@ namespace SkyCoop
             if (ValidNickName(NameFromFile))
             {
                 MyChatName = NameFromFile;
-                return;
             }else{
                 if (ValidNickName(_name))
                 {
@@ -1486,6 +1485,8 @@ namespace SkyCoop
                 HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
                 MelonLogger.Msg("[SteamWorks.NET] Patching SteamManager complete!");
             }
+
+            Supporters.GetSupportersList();
 
             Debug.Log($"[{InfoAttribute.Name}] Version {InfoAttribute.Version} loaded!");
             ClassInjector.RegisterTypeInIl2Cpp<AnimalUpdates>();
@@ -15375,6 +15376,10 @@ namespace SkyCoop
             {
                 //DebugCrap(); // Debug for debuging and debuging debug.
                 return;
+            }
+            if(NpcDummy && GameManager.m_PlayerObject)
+            {
+                NpcDummy.transform.position = GameManager.GetPlayerTransform().position;
             }
 
             if (LobbyUI != null)

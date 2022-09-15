@@ -279,7 +279,26 @@ namespace SkyCoop
                     //    MyMod.CreateCairnsSearchList();
                     //    ServerSend.CAIRNS();
                     //}
-                    GameManager.GetPlayerAnimationComponent().Trigger_Breakdown_Intro(StruggleBonus.StruggleWeaponType.Hammer);
+                    //GameManager.GetPlayerAnimationComponent().Trigger_Breakdown_Intro(StruggleBonus.StruggleWeaponType.Hammer);
+                    if(MyMod.NpcDummy == null)
+                    {
+                        GameObject NPCDummy = new GameObject();
+
+                        NPC NPCcon = NPCDummy.AddComponent<NPC>();
+                        NPCThirst T = NPCDummy.AddComponent<NPCThirst>();
+                        NPCFreezing F = NPCDummy.AddComponent<NPCFreezing>();
+                        NPCCondition C = NPCDummy.AddComponent<NPCCondition>();
+                        T.m_NPC = NPCcon;
+                        F.m_NPC = NPCcon;
+                        C.m_NPC = NPCcon;
+                        NPCcon.m_Thirst = T;
+                        NPCcon.m_Condition = C;
+                        NPCcon.m_Freezing = F;
+                        NPCcon.m_HasBeenInteractedWith = true;
+                        NPCcon.m_EnableConditionUpdate = true;
+                        NPCcon.m_Body = NPCDummy.AddComponent<CarryableBody>();
+                        MyMod.NpcDummy = NPCDummy;
+                    }
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
                 {

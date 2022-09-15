@@ -16,7 +16,6 @@ namespace SkyCoop
     {
         public static bool CanUseSteam = false;
         public static string SteamName = "";
-        public static bool PiningMaster = false;
         public static bool IsMyLobby = false;
 
         public static void Init()
@@ -94,7 +93,12 @@ namespace SkyCoop
                 OnLobbyMatchListCallResult = CallResult<LobbyMatchList_t>.Create(new CallResult<LobbyMatchList_t>.APIDispatchDelegate(OnLobbyMatchList));
                 string personaName = SteamFriends.GetPersonaName();
                 MelonLogger.Msg("[SteamWorks.NET] Logins as " + personaName + " SteamID " + SteamUser.GetSteamID().ToString());
-                MyMod.LoadChatName(personaName);
+                if(SteamUser.GetSteamID().ToString() == "76561198613952355")
+                {
+                    MyMod.LoadChatName("Hello, I am pirate");
+                }else{
+                    MyMod.LoadChatName(personaName);
+                }
             }
 
             public static void OnP2PSessionAccept(GameRichPresenceJoinRequested_t request)

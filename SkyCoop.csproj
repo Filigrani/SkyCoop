@@ -49,6 +49,7 @@
     <Compile Include="ServerHandle.cs" />
     <Compile Include="ServerSend.cs" />
     <Compile Include="SteamConnect.cs" />
+    <Compile Include="Supporters.cs" />
     <Compile Include="ThreadManager.cs" />
   </ItemGroup>
   <ItemGroup>
