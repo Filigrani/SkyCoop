@@ -54,6 +54,10 @@ namespace GameServer
                 return;
             }
 
+            string SupporterID = _packet.ReadString();
+            Supporters.SupporterBenefits ConfiguratedBenefits = _packet.ReadSupporterBenefits();
+            MyMod.playersData[_fromClient].m_SupporterBenefits = Supporters.VerifyBenefitsWithConfig(SupporterID, ConfiguratedBenefits);
+            Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
             CanSend = true;
             using (Packet __packet = new Packet((int)ServerPackets.GAMETIME))
             {
@@ -84,6 +88,7 @@ namespace GameServer
             ServerSend.LEVELGUID(0, MyMod.level_guid, false, _fromClient);
             ServerSend.LIGHTSOURCE(0, MyMod.MyLightSource, false, _fromClient);
             ServerSend.LIGHTSOURCENAME(0, MyMod.MyLightSourceName, false, _fromClient);
+            ServerSend.BENEFITINIT(0, Supporters.ConfiguratedBenefits, _fromClient);
 
             MyMod.PlayerEquipmentData Edata = new MyMod.PlayerEquipmentData();
             Edata.m_HasAxe = MyMod.MyHasAxe;
@@ -120,6 +125,7 @@ namespace GameServer
                         ServerSend.EQUIPMENT(_FromId, pD.m_PlayerEquipmentData, false, _ForId);
                         ServerSend.CLOTH(_FromId, pD.m_PlayerClothingData, false, _ForId);
                         ServerSend.SELECTEDCHARACTER(_FromId, pD.m_Character, false, _ForId);
+                        ServerSend.BENEFITINIT(_FromId, pD.m_SupporterBenefits, _fromClient);
                     }
                 }
             }

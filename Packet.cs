@@ -135,6 +135,7 @@ namespace GameServer
         DEATHCREATEEMPTYNOW,
         SPAWNREGIONBANCHECK,
         CAIRNS,
+        BENEFITINIT,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -265,6 +266,7 @@ namespace GameServer
         DEATHCREATEEMPTYNOW,
         SPAWNREGIONBANCHECK,
         CAIRNS,
+        BENEFITINIT,
     }
 
     public class Packet : IDisposable
@@ -1561,6 +1563,22 @@ namespace GameServer
         }
 
         #endregion
+
+        public void Write(Supporters.SupporterBenefits obj)
+        {
+            Write(obj.m_Knife);
+            Write(obj.m_BrightNick);
+            Write(obj.m_Flairs);
+            
+        }
+        public Supporters.SupporterBenefits ReadSupporterBenefits()
+        {
+            Supporters.SupporterBenefits obj = new Supporters.SupporterBenefits();
+            obj.m_Knife = ReadBool();
+            obj.m_BrightNick = ReadBool();
+            obj.m_Flairs = ReadIntList();
+            return obj;
+        }
 
         private bool disposed = false;
 

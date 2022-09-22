@@ -14,7 +14,15 @@ namespace SkyCoop
     {
         public static string MenuMode = "Original";
         public static int TempExperience = 0;
-        
+
+        public static void SetDefaultCamera()
+        {
+            GameManager.GetPlayerManagerComponent().TeleportPlayer(new Vector3(48.08f, 3.33f, 63.81f), GameManager.GetCurrentCamera().transform.rotation);
+        }
+        public static void SetFlairsCamera()
+        {
+            GameManager.GetPlayerManagerComponent().TeleportPlayer(new Vector3(-7.71f, 16.85f, 11.47f), GameManager.GetCurrentCamera().transform.rotation);
+        }
         public static void MoveUpMainMenuWordmark(int numOfMainMenuItems)
         {
             GameObject.Find("Panel_MainMenu/MainPanel/Main/TLD_wordmark").transform.localPosition += new Vector3(0, (numOfMainMenuItems - 6) * 30, 0);
@@ -101,7 +109,11 @@ namespace SkyCoop
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Toggle supporter bonuses that you have.";
+                        __instance.m_DescriptionLabel.text = "Toggle supporter bonuses and select flairs.";
+                    }
+                    else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
+                    {
+                        __instance.m_DescriptionLabel.text = "Copy to clipboard EGS or Steam Account ID.";
                     }
                 }
                 else if(MenuMode == "Lobby")
@@ -402,6 +414,23 @@ namespace SkyCoop
                     Align.GetChild(4).gameObject.SetActive(true); //Description
                     Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
                     MyMod.ServerBrowser.SetActive(false);
+                    return false;
+                }else if(MenuMode == "Customize")
+                {
+                    if(MyMod.TargetFlairSlot == -1)
+                    {
+                        MyMod.CustomizeUiPanel("Close");
+                        MenuMode = "MultiProfileSettings";
+                        Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
+                        Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
+                        Align.GetChild(2).gameObject.SetActive(true); //Grid
+                        Align.GetChild(4).gameObject.SetActive(true); //Description
+                        Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                        MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(3).gameObject.SetActive(true);
+                        SetDefaultCamera();
+                    }else{
+                        MyMod.CustomizeUiPanel("Main");
+                    }
                     return false;
                 }
 
@@ -774,6 +803,26 @@ namespace SkyCoop
             Texts.GetChild(1).gameObject.GetComponent<UITexture>().mainTexture = LoadedAssets;
         }
 
+        public static void OpenFlairsMenu()
+        {
+            Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
+            Align.GetChild(1).gameObject.SetActive(false); //SelectIcon
+            Align.GetChild(2).gameObject.SetActive(false); //Grid
+            Align.GetChild(4).gameObject.SetActive(false); //Description
+            Align.GetChild(5).gameObject.SetActive(false); //Linebreaker
+            MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(3).gameObject.SetActive(false);
+            MenuMode = "Customize";
+            MyMod.CustomizeUiPanel("Main");
+            SetFlairsCamera();
+            if (MyMod.MyPlayerDoll)
+            {
+                MyMod.MyPlayerDoll.transform.position = new Vector3(-9f , 17.2f, 10.8f);
+                MyMod.MyPlayerDoll.transform.rotation = new Quaternion(0, 0.866f, 0, -0.5f);
+            }else{
+                MelonLogger.Msg(ConsoleColor.Red, "MyPlayerDoll does not exist");
+            }
+        }
+
         public static void ChangeMenuItems(string mode)
         {
             Transform Grid = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5).GetChild(2);
@@ -804,7 +853,8 @@ namespace SkyCoop
             }else if(mode == "MultiProfileSettings")
             {
                 OverrideMenuButton(Grid, 1, "CHANGE NICKNAME");
-                OverrideMenuButton(Grid, 2, "SPONSOR BONUSES");
+                OverrideMenuButton(Grid, 2, "CUSTOMIZATION");
+                OverrideMenuButton(Grid, 3, "COPY ACCOUNT ID");
             }
             else if(mode == "Lobby")
             {
@@ -1092,9 +1142,19 @@ namespace SkyCoop
                                 {
                                     InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "How you want they call you?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                                 }
-                                if (CustomId == 2)
+                                else if (CustomId == 2)
                                 {
-                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "WOOPS", "\n" + "Work in-progress", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                                    OpenFlairsMenu();
+                                }
+                                else if(CustomId == 3)
+                                {
+                                    if (Supporters.IsLoaded())
+                                    {
+                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Your ID copied to clipboard", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                        GUIUtility.systemCopyBuffer = Supporters.MyID;
+                                    }else{
+                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't detect your account ID", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                    }
                                 }
                             }
                             else if(MenuMode == "Join")

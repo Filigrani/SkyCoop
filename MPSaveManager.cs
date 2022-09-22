@@ -141,6 +141,11 @@ namespace SkyCoop
                     return "_UNKNOWN";
             }
         }
+        public static bool IsFileExist(string name, int Seed = 0)
+        {
+            bool exists = File.Exists(GetPathForName(name, Seed));
+            return exists;
+        }
 
         public static void CreateFolderIfNotExist(string path)
         {

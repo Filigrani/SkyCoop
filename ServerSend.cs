@@ -2114,5 +2114,20 @@ namespace GameServer
                 }
             }
         }
+        public static void BENEFITINIT(int From, Supporters.SupporterBenefits benefits, int For = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.BENEFITINIT))
+            {
+                _packet.Write(From);
+                _packet.Write(benefits);
+
+                if (For == -1)
+                {
+                    SendUDPDataToAll(_packet);
+                }else{
+                    SendUDPData(For, _packet);
+                }
+            }
+        }
     }
 }

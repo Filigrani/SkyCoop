@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.10.1";
+            public const string Version = "0.10.2";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -218,6 +218,12 @@ namespace SkyCoop
         public static UtilsPanelChoose.DetailsObjets LobbyDeitailsStrct = null;
         public static GameObject LobbyNewGame = null;
         public static GameObject EmoteWheel = null;
+        public static GameObject NewFlairNotification = null;
+        public static GameObject CustomizeUi = null;
+        public static UnityEngine.UI.Text CustomizeUiTabLable = null;
+        public static Transform CustomizeUiScrollContentRoot = null;
+        public static int TargetFlairSlot = 1;
+        public static string NotificationString = "";
 
         public static string CustomServerName = "";
         public static string MyLobby = "";
@@ -279,6 +285,9 @@ namespace SkyCoop
         public static string SavedSceneForSpawn = "";
         public static Vector3 SavedPositionForSpawn = Vector3.zero;
         public static bool FixedPlaceLoaded = false;
+        public static float InteractTimer = 0.0f;
+        public static GameObject ObjectInteractWith = null;
+        public static string InteractionType = "";
 
         public static string AutoStartSlot = "";
         public static List<string> AutoCMDs = new List<string>();
@@ -493,7 +502,7 @@ namespace SkyCoop
 
 
                     GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, new Vector3(0,0,0), new Quaternion(0,0,0,0));
-
+                    DisableObjectForXPMode.RemoveDisabler(newGear.gameObject);
                     if(newGear == null)
                     {
                         MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
@@ -794,7 +803,7 @@ namespace SkyCoop
             public int m_Flares = 0;
             public int m_BlueFlares = 0;
         }
-        public class PlayerClothingData //: MelonMod
+        public class PlayerClothingData 
         {
             public string m_Hat = "";
             public string m_Top = "";
@@ -803,7 +812,7 @@ namespace SkyCoop
             public string m_Scarf = "";
             public string m_Balaclava = "";
         }
-        public class MultiPlayerClientData //: MelonMod
+        public class MultiPlayerClientData
         {
             public PlayerEquipmentData m_PlayerEquipmentData = new PlayerEquipmentData();
             public PlayerClothingData m_PlayerClothingData = new PlayerClothingData();
@@ -832,6 +841,7 @@ namespace SkyCoop
             public ShowShelterByOther m_Shelter = null;
             public bool m_Aiming = false;
             public float m_RadioFrequency = 0;
+            public Supporters.SupporterBenefits m_SupporterBenefits = new Supporters.SupporterBenefits();
         }
         public class MultiPlayerClientStatus //: MelonMod
         {
@@ -1139,6 +1149,17 @@ namespace SkyCoop
             public string m_ProcessText = "";
             public bool m_CancleOnMove = false;
             public float m_ActionDuration = 3;
+        }
+
+        public static PriorityActionForOtherPlayer GetKnifeUpgradeAction()
+        {
+            PriorityActionForOtherPlayer act = new PriorityActionForOtherPlayer();
+            act.m_Action = "Excision";
+            act.m_DisplayText = act.m_Action;
+            act.m_ProcessText = "Excision...";
+            act.m_CancleOnMove = false;
+            act.m_ActionDuration = 20;
+            return act;
         }
 
         public static PriorityActionForOtherPlayer GetActionForOtherPlayer(string ActName)
@@ -3866,6 +3887,26 @@ namespace SkyCoop
                 LongActionCanceled(mP);
             }
         }
+        public static void DoLongAction(GameObject Obj, string actionString, string actionType)
+        {
+            float Duration = GetActionForOtherPlayer(actionType).m_ActionDuration;
+            ObjectInteractWith = Obj;
+            InteractionType = actionType;
+            InteractTimer = Duration;
+            PreviousControlModeBeforeAction = GameManager.GetPlayerManagerComponent().GetControlMode();
+            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+            InterfaceManager.m_Panel_HUD.StartItemProgressBar(Duration, actionString, (GearItem)null, new System.Action(EmptyFn));
+
+            if(actionType == "Excision")
+            {
+                if (InterfaceManager.m_Panel_Inventory_Examine && Obj && Obj.GetComponent<GearItem>() && Obj.GetComponent<GearItem>().m_Sharpenable)
+                {
+                    InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound(Obj.GetComponent<GearItem>().m_Sharpenable.m_SharpenAudio, InterfaceManager.GetSoundEmitter());
+                }
+            }
+        }
+
+
         public static void DoLongAction(MultiplayerPlayer mP, string actionString, string actionType)
         {
             mP.m_ActionType = actionType;
@@ -3913,6 +3954,39 @@ namespace SkyCoop
             PlayerInteractionWith = null;
             InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
         }
+
+        public static void LongActionCanceled()
+        {
+            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.Locked)
+            {
+                GameManager.GetPlayerManagerComponent().SetControlMode(PreviousControlModeBeforeAction);
+            }
+            ObjectInteractWith = null;
+            InteractTimer = 0.0f;
+            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            if(InteractionType == "Excision")
+            {
+                if (InterfaceManager.m_Panel_Inventory_Examine)
+                {
+                    InterfaceManager.m_Panel_Inventory_Examine.StopProgressBarAudio();
+                }
+            }
+            InteractionType = "";
+        }
+        public static void LongActionFinished(GameObject obj, string ActionType)
+        {
+            if (ActionType == "Excision" && obj)
+            {
+                GearItem new_gear = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_JeremiahKnife");
+                DisableObjectForXPMode.RemoveDisabler(new_gear.gameObject);
+                new_gear.m_RolledSpawnChance = true;
+                new_gear.m_BeenInPlayerInventory = true;
+                new_gear.ManualStart();
+                GameManager.GetPlayerManagerComponent().EquipItem(new_gear, false);
+                GameManager.GetInventoryComponent().RemoveGear(obj);
+            }
+        }
+
         public static void LongActionFinished(MultiplayerPlayer mP, string ActionType)
         {
             if (sendMyPosition == true) // CLIENT
@@ -7686,6 +7760,7 @@ namespace SkyCoop
             { (int)ServerPackets.DEATHCREATEEMPTYNOW, ClientHandle.DEATHCREATEEMPTYNOW},
             { (int)ServerPackets.SPAWNREGIONBANCHECK, ClientHandle.SPAWNREGIONBANCHECK},
             { (int)ServerPackets.CAIRNS, ClientHandle.CAIRNS},
+            { (int)ServerPackets.BENEFITINIT, ClientHandle.BENEFITINIT},
         };
             MelonLogger.Msg("Initialized packets.");
         }
@@ -8158,6 +8233,7 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("Not stack for item "+ give_name + ", creating new item");
                     GearItem new_gear = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory(give_name);
+                    DisableObjectForXPMode.RemoveDisabler(new_gear.gameObject);
                     GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(gearData.m_DataProxy);
                     new_gear.m_LastUpdatedTODHours = 0;
                     new_gear.Deserialize(gearData.m_DataProxy);
@@ -11018,6 +11094,7 @@ namespace SkyCoop
                     m_Player.SetActive(false);
 
                     mP.m_TorchIgniter = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(8).GetChild(1).gameObject; //Tourch Fire
+                    Supporters.ApplyFlairsForModel(i, playersData[i].m_SupporterBenefits.m_Flairs);
                 }
             }
 
@@ -11032,6 +11109,7 @@ namespace SkyCoop
                 Anim.m_MyDoll = true;
                 Anim.m_Animer = m_Player.GetComponent<Animator>();
                 DollCameraDummy = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(0).GetChild(0).gameObject;
+                Supporters.ApplyFlairsForModel(m_Player, Supporters.ConfiguratedBenefits.m_Flairs, "I am");
             }
         }
 
@@ -11745,6 +11823,15 @@ namespace SkyCoop
                 }else{
                     gearName = GetGearNameByID(GearID);
                 }
+
+                if (gearName == "gear_knife")
+                {
+                    if (Supporters.ConfiguratedBenefits.m_Knife)
+                    {
+                        gearName = "GEAR_JeremiahKnife";
+                    }
+                }
+
                 GameObject reference = GetGearItemObject(gearName);
 
                 if (reference == null)
@@ -11754,6 +11841,7 @@ namespace SkyCoop
                 }
 
                 GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
+                DisableObjectForXPMode.RemoveDisabler(newGear.gameObject);
 
                 ExtraDataForDroppedGear Extra = obj.GetComponent<DroppedGearDummy>().m_Extra;
 
@@ -11882,6 +11970,14 @@ namespace SkyCoop
                     gearName = GetGearNameByID(GearID);
                 }
 
+                if(gearName == "gear_knife")
+                {
+                    if (Supporters.ConfiguratedBenefits.m_Knife)
+                    {
+                        gearName = "GEAR_JeremiahKnife";
+                    }
+                }
+
                 GameObject reference = GetGearItemObject(gearName);
 
                 if (reference == null)
@@ -11891,6 +11987,7 @@ namespace SkyCoop
                 }
 
                 GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
+                DisableObjectForXPMode.RemoveDisabler(newGear.gameObject);
 
                 if (newGear == null)
                 {
@@ -11906,10 +12003,8 @@ namespace SkyCoop
                     OverrideLampReduceFuel = minutesDroped;
                     MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                 }
-
                 newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
                 newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
-
                 DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
                 DFL.m_OldPossition = newGear.gameObject.transform.position;
                 DFL.m_OldRotation = newGear.gameObject.transform.rotation;
@@ -11973,6 +12068,20 @@ namespace SkyCoop
         {
             byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
             MelonLogger.Msg("Going to send gear "+ GearID + " to client "+ GiveItemTo +" bytes: "+ bytesToSlice.Length);
+            if (GearID == GetGearIDByName("gear_knife"))
+            {
+                if (playersData[GiveItemTo].m_SupporterBenefits.m_Knife)
+                {
+                    GearID = GetGearIDByName("gear_jeremiahknife");
+                }
+            }
+            else if (GearID == GetGearIDByName("gear_jeremiahknife"))
+            {
+                if (!playersData[GiveItemTo].m_SupporterBenefits.m_Knife)
+                {
+                    GearID = GetGearIDByName("gear_knife");
+                }
+            }
 
             if (bytesToSlice.Length > 500)
             {
@@ -12674,6 +12783,7 @@ namespace SkyCoop
                 string OriginalName = obj.name;
                 string GearName = CloneTrimer(OriginalName).ToLower();
                 int GearID = GetGearIDByName(GearName);
+
                 string GearGiveName = "";
                 if(GearID == -1)
                 {
@@ -13477,6 +13587,81 @@ namespace SkyCoop
             }
         }
 
+        public static void SelectFlairSlot(int SlotIndex)
+        {
+            TargetFlairSlot = SlotIndex;
+            CustomizeUiPanel("Flairs");
+        }
+        public static void EquipFlair(int FlairIndex)
+        {
+            Supporters.EquipFlair(TargetFlairSlot, FlairIndex);
+            CustomizeUiPanel("Main");
+        }
+
+        public static void AddFlairToList(int ID, Transform Content)
+        {
+            GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MP_FlairGrid");
+            GameObject Element = GameObject.Instantiate(LoadedAssets, Content);
+            Texture2D Txt = LoadedBundle.LoadAsset("FlairIcon" + ID).Cast<Texture2D>();
+            Sprite Sp = Sprite.Create(Txt, new Rect(0, 0, 128, 128), new Vector2(0, 0));
+            Element.transform.GetChild(1).gameObject.GetComponent<UnityEngine.UI.Image>().overrideSprite = Sp;
+            Action act = new Action(() => EquipFlair(ID));
+            Element.transform.GetChild(2).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
+            MelonLogger.Msg("Add flair to the list "+ ID);
+        }
+
+        public static void CreateFlairsList()
+        {
+            Transform Content = CustomizeUiScrollContentRoot;
+
+            if (Content.childCount == 0)
+            {
+                
+                AddFlairToList(-1, Content);
+
+                for (int i = 0; i < Supporters.FlairsIDs.Count; i++)
+                {
+                    if(Supporters.AvailableBenefits.m_Flairs.Contains(i) || Supporters.IsFlairForEveryone(i))
+                    {
+                        AddFlairToList(i, Content);
+                    }
+                }
+            }
+        }
+
+        public static void CustomizeUiPanel(string Panel)
+        {
+            if(Panel == "Main")
+            {
+                TargetFlairSlot = -1;
+                CustomizeUi.SetActive(true);
+                CustomizeUiTabLable.text = "Customization";
+                CustomizeUi.transform.GetChild(1).gameObject.SetActive(true); // Main
+                CustomizeUi.transform.GetChild(2).gameObject.SetActive(false); // Flairs Scroll
+
+                if (Supporters.IsLoaded())
+                {
+                    for (int i = 1; i <= Supporters.FlairSpots; i++)
+                    {
+                        Texture2D Txt = LoadedBundle.LoadAsset("FlairIcon" + Supporters.ConfiguratedBenefits.m_Flairs[i - 1]).Cast<Texture2D>();
+                        Sprite Sp = Sprite.Create(Txt, new Rect(0, 0, 128, 128), new Vector2(0, 0));
+                        CustomizeUi.transform.GetChild(1).GetChild(i).GetChild(1).gameObject.GetComponent<UnityEngine.UI.Image>().overrideSprite = Sp;
+                    }
+                }
+            }else if(Panel == "Flairs")
+            {
+                CustomizeUi.SetActive(true);
+                CustomizeUiTabLable.text = "Flair Slot #"+ TargetFlairSlot;
+                CustomizeUi.transform.GetChild(1).gameObject.SetActive(false); // Main
+                CustomizeUi.transform.GetChild(2).gameObject.SetActive(true); // Flairs Scroll
+                CreateFlairsList();
+            }
+            else if(Panel == "Close")
+            {
+                CustomizeUi.SetActive(false);
+            }
+        }
+
         public static void BuildCanvasUIs()
         {
             if (uConsole.m_Instance != null && uConsole.m_Instance.gameObject != null && uConsole.m_Instance.gameObject.transform.childCount > 0 && uConsole.m_Instance.gameObject.transform.GetChild(0) != null)
@@ -13573,6 +13758,30 @@ namespace SkyCoop
                         UnityEngine.UI.Button btn = btnObj.GetComponent<UnityEngine.UI.Button>();
                         Action act = new Action(() => PerformEmote(AnimID));
                         btn.onClick.AddListener(act);
+                    }
+                }
+                GameObject LoadedAssets11 = LoadedBundle.LoadAsset<GameObject>("MP_NewFlair");
+                NewFlairNotification = GameObject.Instantiate(LoadedAssets11, UiCanvas.transform);
+                if (NewFlairNotification != null)
+                {
+                    NewFlairNotification.SetActive(false);
+                    Action act = new Action(() => ShowNotiy());
+                    NewFlairNotification.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
+                }
+                GameObject LoadedAssets12 = LoadedBundle.LoadAsset<GameObject>("MP_Customization");
+                CustomizeUi = GameObject.Instantiate(LoadedAssets12, UiCanvas.transform);
+                if (CustomizeUi != null)
+                {
+                    CustomizeUi.SetActive(false);
+                    CustomizeUiTabLable = CustomizeUi.transform.GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>();
+                    CustomizeUiScrollContentRoot = CustomizeUi.transform.GetChild(2).GetChild(0).GetChild(0);
+
+                    Transform Main = CustomizeUi.transform.GetChild(1);
+                    for (int i = 1; i <= 4; i++)
+                    {
+                        int INdex = i;
+                        Action act = new Action(() => SelectFlairSlot(INdex));
+                        Main.GetChild(i).GetChild(2).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
                     }
                 }
             }
@@ -15009,9 +15218,25 @@ namespace SkyCoop
             return Info;
         }
 
+        public static bool MouseActionIsAllowed()
+        {
+            PlayerManager managerComponent = GameManager.GetPlayerManagerComponent();
+            if (InterfaceManager.IsOverlayActiveImmediate() 
+                || (InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI && InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI.IsManagingInput()) 
+                || (UICamera.currentScheme != UICamera.ControlScheme.Controller && managerComponent.m_InteractiveObjectUnderCrosshair && !managerComponent.PlayerIsZooming() && managerComponent.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>()) 
+                || managerComponent.IsInPlacementMode()
+                || InputManager.IsClickHoldActive()
+                || ObjectInteractWith != null)
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         public static void PerformMeleeAttack(string Weapon)
         {
-            if (GameManager.GetPlayerAnimationComponent().CanTransitionToState(PlayerAnimation.State.Throwing))
+            if (GameManager.GetPlayerAnimationComponent().CanTransitionToState(PlayerAnimation.State.Throwing) && MouseActionIsAllowed())
             {
                 ShouldPerformAttack = true;
                 PlayerAnimation PL = GameManager.GetPlayerAnimationComponent();
@@ -15361,11 +15586,18 @@ namespace SkyCoop
         {
             if (MyPlayerDoll)
             {
-                MyPlayerDoll.SetActive(FlyMode.m_Enabled);
-                if (FlyMode.m_Enabled)
+                if (CustomizeUi && CustomizeUi.activeSelf)
                 {
-                    MyPlayerDoll.transform.position = GameManager.GetPlayerTransform().position;
-                    MyPlayerDoll.transform.rotation = GameManager.GetPlayerTransform().rotation;
+                    MyPlayerDoll.SetActive(true);
+                }
+                else
+                {
+                    MyPlayerDoll.SetActive(FlyMode.m_Enabled);
+                    if (FlyMode.m_Enabled)
+                    {
+                        MyPlayerDoll.transform.position = GameManager.GetPlayerTransform().position;
+                        MyPlayerDoll.transform.rotation = GameManager.GetPlayerTransform().rotation;
+                    }
                 }
             }
         }
@@ -15585,6 +15817,31 @@ namespace SkyCoop
                 }
             }
 
+            if(level_name == "MainMenu")
+            {
+                if (NewFlairNotification)
+                {
+                    if (m_Panel_MainMenu.m_MainPanel.gameObject.activeSelf && !InterfaceManager.m_Panel_Confirmation.isActiveAndEnabled)
+                    {
+                        NewFlairNotification.SetActive(NotificationString != "");
+                        if (NotificationString != "")
+                        {
+                            NewFlairNotification.transform.GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>().text = NotificationString;
+                        }
+                    }else{
+                        NewFlairNotification.SetActive(false);
+                    }
+                }
+            }
+
+            if(CustomizeUi && CustomizeUi.activeSelf)
+            {
+                if(level_name == "MainMenu")
+                {
+                    UpdateDoll();
+                } 
+            }
+
             if (level_name != "Empty" && level_name != "Boot" && level_name != "MainMenu" && GameManager.m_PlayerObject != null)
             {
                 Transform transf = GameManager.GetPlayerTransform();
@@ -15629,10 +15886,19 @@ namespace SkyCoop
                 }
                 SendMyAnimation(); //Send current animation if changed.
                 SyncSleeping(); //Send sleeping hours and sleep position, if changed.
-                if(PlayerInteractionWith != null && InputManager.GetInteractReleased(InputManager.m_CurrentContext))
+
+                if (InputManager.GetInteractReleased(InputManager.m_CurrentContext))
                 {
-                    LongActionCanceled(PlayerInteractionWith);
+                    if (PlayerInteractionWith != null)
+                    {
+                        LongActionCanceled(PlayerInteractionWith);
+                    }
+                    if (ObjectInteractWith != null)
+                    {
+                        LongActionCanceled();
+                    }
                 }
+
                 if(MyEmote != null)
                 {
                     if (MyEmote.m_FollowDollCamera)
@@ -15696,6 +15962,16 @@ namespace SkyCoop
                             }
                         }
                     }
+                }
+            }
+            if (ObjectInteractWith)
+            {
+                InteractTimer -= Time.deltaTime;
+
+                if (InteractTimer <= 0.0)
+                {
+                    LongActionFinished(ObjectInteractWith, InteractionType);
+                    LongActionCanceled();
                 }
             }
         }
@@ -16331,6 +16607,20 @@ namespace SkyCoop
                 SaveData.m_Port = PortToHost;
 
                 MPSaveManager.SaveServerCFG(SaveData);
+            }
+        }
+
+        public static void ShowNotiy()
+        {
+            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            {
+                string Title = "YOU GOT NEW FLAIR!";
+                if (int.Parse(NotificationString) > 1)
+                {
+                    Title = "YOU GOT NEW FLAIRS!";
+                }
+                
+                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + "Open flairs customization menu?", Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
             }
         }
 
@@ -17113,6 +17403,41 @@ namespace SkyCoop
                 scenes[i] = System.IO.Path.GetFileNameWithoutExtension(UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i));
             }
             ContinuePoiskMujikov();
+        }
+
+        public static int GetPasswordFromGear(string name)
+        {
+            if(name.Contains("CanneryCodeNote"))
+            {
+                return 1540;
+            }else if (name.Contains("BlackrockCodeNote"))
+            {
+                return 3008;
+            }
+            return 0;
+        }
+        public static void RestoreCodeFromGears()
+        {
+            MelonLogger.Msg(ConsoleColor.Blue, "[Papers codes] Checking all papers to make sure if we have code");
+            foreach (GearItemObject item in GameManager.GetInventoryComponent().m_Items)
+            {
+                int Code = GetPasswordFromGear(item.m_GearItemName);
+                if(Code != 0)
+                {
+                    RememoberCode(Code);
+                }
+            }
+        }
+
+        public static void RememoberCode(int code)
+        {
+            if (GameManager.GetPlayerManagerComponent().m_KnownCodes.Contains(code))
+            {
+                MelonLogger.Msg(ConsoleColor.Yellow,"[Papers codes] Code "+code +" is already known");
+            }else{
+                MelonLogger.Msg(ConsoleColor.Green, "[Papers codes] Code " + code + " added to the player's memory");
+                GameManager.GetPlayerManagerComponent().m_KnownCodes.Add(code);
+            }
         }
     }
 }

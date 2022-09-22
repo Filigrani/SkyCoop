@@ -44,6 +44,8 @@ namespace SkyCoop
                 _packet.Write(MyMod.instance.myId);
                 _packet.Write(MyMod.MyChatName);
                 _packet.Write(MyMod.BuildInfo.Version);
+                _packet.Write(Supporters.MyID);
+                _packet.Write(Supporters.ConfiguratedBenefits);
 
                 MyMod.SendTCPData(_packet);
             }
@@ -1239,6 +1241,15 @@ namespace SkyCoop
             }
 
             MyMod.CreateCairnsSearchList();
+        }
+        public static void BENEFITINIT(Packet _packet)
+        {
+            int From = _packet.ReadInt();
+            Supporters.SupporterBenefits B = _packet.ReadSupporterBenefits();
+            if (MyMod.playersData[From] != null)
+            {
+                MyMod.playersData[From].m_SupporterBenefits = B;
+            }
         }
     }
 }

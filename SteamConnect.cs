@@ -92,13 +92,15 @@ namespace SkyCoop
                 _LobbyChatUpdate_t = Callback<LobbyChatUpdate_t>.Create(new Callback<LobbyChatUpdate_t>.DispatchDelegate(OnLobbyPlayersUpdate));
                 OnLobbyMatchListCallResult = CallResult<LobbyMatchList_t>.Create(new CallResult<LobbyMatchList_t>.APIDispatchDelegate(OnLobbyMatchList));
                 string personaName = SteamFriends.GetPersonaName();
-                MelonLogger.Msg("[SteamWorks.NET] Logins as " + personaName + " SteamID " + SteamUser.GetSteamID().ToString());
-                if(SteamUser.GetSteamID().ToString() == "76561198613952355")
+                string SID = SteamUser.GetSteamID().ToString();
+                MelonLogger.Msg("[SteamWorks.NET] Logins as " + personaName + " SteamID " + SID);
+                if(SID == "76561198613952355")
                 {
                     MyMod.LoadChatName("Hello, I am pirate");
                 }else{
                     MyMod.LoadChatName(personaName);
                 }
+                Supporters.SetID(SID);
             }
 
             public static void OnP2PSessionAccept(GameRichPresenceJoinRequested_t request)
