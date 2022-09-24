@@ -36,6 +36,10 @@ namespace SkyCoop
             FlairsIDs.Add("Crab"); // 8
             FlairsIDs.Add("Ghst"); // 9
             FlairsIDs.Add("Mlon"); // 10
+            FlairsIDs.Add("Lkot"); // 11
+            FlairsIDs.Add("WiRo"); // 12
+            FlairsIDs.Add("Bear"); // 13
+            FlairsIDs.Add("Kai"); // 14
 
             FlairsIDsReady = true;
         }
@@ -232,7 +236,10 @@ namespace SkyCoop
             List<string> Perks = new List<string>();
             if (IsLoaded())
             {
-                SupportersData.TryGetValue(ID, out Perks);
+                if (SupportersData.ContainsKey(ID))
+                {
+                    SupportersData.TryGetValue(ID, out Perks);
+                }
             }
             return Perks;
         }

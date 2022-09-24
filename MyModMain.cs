@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.10.2";
+            public const string Version = "0.10.4";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 3;
         }
@@ -1444,18 +1444,54 @@ namespace SkyCoop
             
             if (Directory.Exists("Plugins"))
             {
-                if (!File.Exists("Plugins\\AutoUpdatingPlugin.dll"))
+                bool AutoUpdatingPlugin = false;
+                bool AudioCore = false;
+                bool AudioCoreData = false;
+
+                string AutoUpdatingPluginPath = "Plugins\\AutoUpdatingPlugin.dll";
+                string AudioCorePath = "Plugins\\AudioCore.dll";
+                string AudioCoreDataPath = "Plugins\\AudioCoreData.tpk";
+
+                if (File.Exists(AutoUpdatingPluginPath))
                 {
+                    AutoUpdatingPlugin = true;
+                }else{
                     MelonLogger.Msg("[Plugins] There no AutoUpdatingPlugin.dll");
-                    return false;
                 }
 
-                if (!File.Exists("Plugins\\AudioCore.dll"))
+                if (File.Exists(AudioCorePath))
                 {
+                    AudioCore = true;
+                }else{
                     MelonLogger.Msg("[Plugins] There no AudioCore.dll");
+                }
+
+                if (File.Exists(AudioCoreDataPath))
+                {
+                    AudioCoreData = true;
+                }else{
+                    MelonLogger.Msg("[Plugins] There no AudioCoreData.tpk");
+                }
+
+                if(AutoUpdatingPlugin && AudioCore && AudioCoreData)
+                {
+                    return true;
+                }else{
+                    MelonLogger.Msg(ConsoleColor.Yellow, "[Plugins] Some plugins are missing, removing current installed ones for safe replace of them");
+                    if (AutoUpdatingPlugin)
+                    {
+                        File.Delete(AutoUpdatingPluginPath);
+                    }
+                    if (AudioCore)
+                    {
+                        File.Delete(AudioCorePath);
+                    }
+                    if (AudioCoreData)
+                    {
+                        File.Delete(AudioCoreDataPath);
+                    }
                     return false;
                 }
-                return true;
             }else{
                 MelonLogger.Msg("[Plugins] No plugins folder, creating one");
                 Directory.CreateDirectory("Plugins");
@@ -15821,7 +15857,7 @@ namespace SkyCoop
             {
                 if (NewFlairNotification)
                 {
-                    if (m_Panel_MainMenu.m_MainPanel.gameObject.activeSelf && !InterfaceManager.m_Panel_Confirmation.isActiveAndEnabled)
+                    if (m_Panel_MainMenu && m_Panel_MainMenu.m_MainPanel && m_Panel_MainMenu.m_MainPanel.gameObject.activeSelf && InterfaceManager.m_Panel_Confirmation && !InterfaceManager.m_Panel_Confirmation.isActiveAndEnabled)
                     {
                         NewFlairNotification.SetActive(NotificationString != "");
                         if (NotificationString != "")
