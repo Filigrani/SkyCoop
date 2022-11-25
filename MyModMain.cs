@@ -9232,7 +9232,7 @@ namespace SkyCoop
             string SleepersText = "Players sleep " + Sleepers + "/" + SleepersNeed;
             if (WaitForSleepLable != null)
             {
-                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING OTHER PLAYERS TO SLEEP\n" + SleepersText;
+                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP\n" + SleepersText;
             }
             if (Sleepers >= SleepersNeed && Deads < SleepersNeed)
             {
