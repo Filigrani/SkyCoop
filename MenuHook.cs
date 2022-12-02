@@ -57,33 +57,33 @@ namespace SkyCoop
                 {
                     if(MyMod.MyLobby == "")
                     {
-                        __instance.m_DescriptionLabel.text = "Host or join the server.";
+                        __instance.m_DescriptionLabel.text = "Host or join a multiplayer session.";
                     }else{
                         __instance.m_DescriptionLabel.text = "Show lobby you are currently in.";
                     }
                 }
                 if (__instance.m_ItemModelList[buttonIndex].m_DescriptionText == "GAMEPLAY_Description32")
                 {
-                    __instance.m_DescriptionLabel.text = "Invite your steam friend to this P2P server. Once you invite person, they firstly will join lobby, and then will be connected to this server.";
+                    __instance.m_DescriptionLabel.text = "Invite your steam friend to this P2P session. Once you invite someone, they will join the lobby first and then will be connected to your server.";
                 }
                 if (MenuMode == "Multiplayer")
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Configure and host the server.";
+                        __instance.m_DescriptionLabel.text = "Configure and host a session.";
                     }
                     else if(__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
                         if (SteamConnect.CanUseSteam)
                         {
-                            __instance.m_DescriptionLabel.text = "Find server or join by IP address.";
+                            __instance.m_DescriptionLabel.text = "Find a server or join by IP address.";
                         }else{
                             __instance.m_DescriptionLabel.text = "Join by IP address.";
                         }
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
-                        __instance.m_DescriptionLabel.text = "Change your nickname and other.";
+                        __instance.m_DescriptionLabel.text = "Change your nickname and customize your playing experience.";
                     }
                 }
                 else if(MenuMode == "Join")
@@ -94,7 +94,7 @@ namespace SkyCoop
                     }
                     else if(__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Connect to local or interent server by IP address.";
+                        __instance.m_DescriptionLabel.text = "Connect to a server by IP address.";
                     }
                     else if(__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
@@ -105,7 +105,7 @@ namespace SkyCoop
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Change name that other players will see in the game.";
+                        __instance.m_DescriptionLabel.text = "Change you character name. Other players will see it ingame.";
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
@@ -120,15 +120,15 @@ namespace SkyCoop
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "ResumeSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Start server if everyone is ready, or you not want wait for players.\n(Players will be able to join, even after server is already started).";
+                        __instance.m_DescriptionLabel.text = "Start your session if everyone is ready, or if you do not want to wait for other players.\n(Players will be able to join, even after the session is already started).";
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
                     {
                         if (MyMod.LobbyState != "Vote")
                         {
-                            __instance.m_DescriptionLabel.text = "Create or load sandbox save.";
+                            __instance.m_DescriptionLabel.text = "Create or load a sandbox savegame.";
                         }else{
-                            __instance.m_DescriptionLabel.text = "Vote for game settings.";
+                            __instance.m_DescriptionLabel.text = "Vote for sandbox settings.";
                         }
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
@@ -144,22 +144,22 @@ namespace SkyCoop
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Start vote for game settings.";
+                        __instance.m_DescriptionLabel.text = "Start voting for sandbox settings.";
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
-                        __instance.m_DescriptionLabel.text = "Create new sanbox game without vote.";
+                        __instance.m_DescriptionLabel.text = "Create new sandbox game without voting.";
                     }
                 }
                 else if(MenuMode == "Vote")
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Vote for starting region.";
+                        __instance.m_DescriptionLabel.text = "Vote for a starting region.";
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
-                        __instance.m_DescriptionLabel.text = "Vote for experience mode.";
+                        __instance.m_DescriptionLabel.text = "Vote for sandbox settings.";
                     }
                 }
             }
@@ -245,7 +245,7 @@ namespace SkyCoop
                             {
                                 if(SteamConnect.CanUseSteam == false)
                                 {
-                                    text = "INVITE (ONLY STEAM)";
+                                    text = "INVITE (STEAM ONLY)";
                                     if (__instance.m_BasicMenu.m_ItemModelList[0] != null)
                                     {
                                         __instance.m_BasicMenu.m_ItemModelList[0].m_Selectable = false;
@@ -1140,7 +1140,7 @@ namespace SkyCoop
                             {
                                 if (CustomId == 1)
                                 {
-                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "How you want they call you?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "How do you want to be called?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                                 }
                                 else if (CustomId == 2)
                                 {
@@ -1150,7 +1150,7 @@ namespace SkyCoop
                                 {
                                     if (Supporters.IsLoaded())
                                     {
-                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Your ID copied to clipboard", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Your ID was copied to clipboard", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                                         GUIUtility.systemCopyBuffer = Supporters.MyID;
                                     }else{
                                         InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't detect your account ID", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);

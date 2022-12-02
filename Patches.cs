@@ -439,7 +439,7 @@ namespace SkyCoop
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
                     MyMod.DoConnectToIp(text);
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text.StartsWith("YOU GOT NEW FLAIR"))
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text.StartsWith("YOU GOT A NEW FLAIR"))
                 {
                     // Open Flairs Menu
                     Supporters.SetFlairsUpdateData();
@@ -449,7 +449,7 @@ namespace SkyCoop
                     MenuChange.OpenFlairsMenu();
 
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "HOW YOU WANT THEY CALL YOU?")
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "HOW DO YOU WANT TO BE CALLED?")
                 {
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
                     if (!MyMod.ValidNickName(text))
@@ -487,7 +487,7 @@ namespace SkyCoop
                         HUDMessage.AddMessage("Animal with GUID " + text + " not exist!");
                     }
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT ID OF PLAYER TELEPORT TO")
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT ID OF PLAYER TO TELEPORT TO")
                 {
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
 
@@ -5159,7 +5159,7 @@ namespace SkyCoop
                     && __instance.m_Fire.IsBurning()
                     && __instance.m_Fire.m_StartedByPlayer == false)
                 {
-                    __result = __instance.m_LocalizedDisplayName.Text() + "\nADD YOUR FUEL\nTO ABLE COOK AND WARM";
+                    __result = __instance.m_LocalizedDisplayName.Text() + "\nADD YOUR OWN FUEL\nTO BE ABLE TO\nCOOK AND WARM YOURSELF";
                     //MelonLogger.Msg(__result);
                 }
             }
@@ -5180,7 +5180,7 @@ namespace SkyCoop
                     && __instance.m_Fire.IsBurning()
                     && __instance.m_Fire.m_StartedByPlayer == false)
                 {
-                    __result = __instance.m_DisplayName + "\nADD YOUR FUEL\nTO ABLE COOK AND WARM";
+                    __result = __instance.m_DisplayName + "\nADD YOUR OWN FUEL\nTO BE ABLE TO\nCOOK AND WARM YOURSELF";
                     //MelonLogger.Msg(__result);
                 }
             }
@@ -5594,7 +5594,7 @@ namespace SkyCoop
                         NGUITools.SetActive(__instance.m_RightPageObject, false);
                         if (AffType == AfflictionType.InfectionRisk || Affliction.IsBadAffliction(AffType))
                         {
-                            __instance.m_LabelCause.text = "AFFLICTION TREATED\nPATIENT NEED TIME TO HEAL";
+                            __instance.m_LabelCause.text = "AFFLICTION TREATED\nPATIENT NEEDS TIME TO HEAL";
                             __instance.m_LabelCause.color = new Color(0.25f, 1, 0);
                         }
                     }
