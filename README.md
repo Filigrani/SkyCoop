@@ -6,7 +6,7 @@ This is a free modification that loads using MelonLoader.
 
 # How to install mod & Play Online?
 
-Everything you need, you can find here: https://discord.gg/jVdgZ8xvdQ
+Everything you need, you can find here: https://discord.gg/ydmufU2HHj
 
 Support project: https://www.patreon.com/Filigrani
 
