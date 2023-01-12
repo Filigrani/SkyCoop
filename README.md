@@ -6,6 +6,11 @@ This is a free modification that loads using MelonLoader.
 
 # How to install mod & Play Online?
 
+<a href="https://github.com/RED1cat/SkyCoopInstaller/releases"><img src="https://raw.githubusercontent.com/RED1cat/SkyCoopInstaller/master/SkyCoopInstaller/Resources/InstallerBanner1.png"></a>
+
+[Download Sky Co-Op Installer](https://github.com/RED1cat/SkyCoopInstaller/releases) for quick and easy installation.
+
+Any question? Any Suggestation?
 Everything you need, you can find here: https://discord.gg/ydmufU2HHj
 
 Support project: https://www.patreon.com/Filigrani
