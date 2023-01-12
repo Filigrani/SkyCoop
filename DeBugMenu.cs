@@ -25,12 +25,59 @@ namespace SkyCoop
         public static uint DebugSound = 0U;
 
         public static DecalProjectorInstance Replica;
+        public static bool Inited = false;
+
+        public class DebugFunction 
+        {
+            public float X = 0;
+            public float Y = 0;
+            public Action Fn = null;
+            public DebugFunction(float _X, float _Y, Action _Fn) 
+            {
+                X = _X;
+                Y = _Y;
+                Fn = _Fn;
+            }
+        }
+        public static Dictionary<string, List<DebugFunction>> Categories = new Dictionary<string, List<DebugFunction>>();
+
+        public void AddOption(string Tab, Action Fn)
+        {
+            List<DebugFunction> Options;
+            if(!Categories.TryGetValue(Tab, out Options))
+            {
+                Categories.Add(Tab, new List<DebugFunction>());
+                Categories.TryGetValue(Tab, out Options);
+            }
+
+            float X = 20;
+
+            if(Tab == "Main")
+            {
+                X = 160;
+            }
+            int offset = 20;
+
+            float Y = 10 + offset * Options.Count;
+
+            Options.Add(new DebugFunction(X, Y, Fn));
+        }
+
+        public static void InitUI()
+        {
+            Inited = true;
+        }
 
         public static void Render()
         {
             if (MyMod.DebugGUI == false)
             {
                 return;
+            }
+
+            if (!Inited)
+            {
+                InitUI();
             }
 
             if (MyMod.AdvancedDebugMode != "")
@@ -60,7 +107,7 @@ namespace SkyCoop
 
                     if (stillExists == true && MyMod.DebugLastAnimal != null && MyMod.AdvancedDebugMode == "AnimalsAllStats")
                     {
-                        MyMod.AnimalUpdates _AU = MyMod.DebugLastAnimal.GetComponent<MyMod.AnimalUpdates>();
+                        Comps.AnimalUpdates _AU = MyMod.DebugLastAnimal.GetComponent<Comps.AnimalUpdates>();
                         BaseAi _AI = MyMod.DebugLastAnimal.GetComponent<BaseAi>();
 
                         string spawnRegionString = "";
@@ -138,7 +185,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.BLOCK))
                     {
                         _packet.Write(cube.transform.position);
-                        MyMod.SendTCPData(_packet);
+                        MyMod.SendUDPData(_packet);
                     }
                 }
                 if (MyMod.iAmHost == true)
@@ -151,7 +198,7 @@ namespace SkyCoop
             }
             if (GUI.Button(new Rect(20, 70, 80, 20), "Hour skip"))
             {
-                MyMod.SkipRTTime(1);
+                Shared.SkipRTTime(1);
             }
             if (GUI.Button(new Rect(20, 100, 80, 20), "More"))
             {
@@ -193,13 +240,65 @@ namespace SkyCoop
                 {
                     HarmonyLib.Harmony.UnpatchAll();
                 }
-                if (GUI.Button(new Rect(160, 160, 120, 20), "EverySecond="+MyMod.KillEverySecond))
+                if (GUI.Button(new Rect(160, 160, 120, 20), "SecondBan="+MyMod.KillEverySecond))
                 {
                     MyMod.KillEverySecond = !MyMod.KillEverySecond;
                 }
-                if (GUI.Button(new Rect(160, 190, 120, 20), "Close"))
+                if (GUI.Button(new Rect(160, 190, 120, 20), "MinuteBan=" + MyMod.KillEveryInGameMinute))
                 {
-                    MyMod.UIDebugType = "";
+                    MyMod.KillEveryInGameMinute = !MyMod.KillEveryInGameMinute;
+                }
+                if (GUI.Button(new Rect(160, 220, 120, 20), "Flag1=" + MyMod.Flag1))
+                {
+                    MyMod.Flag1 = !MyMod.Flag1;
+                }
+                if (GUI.Button(new Rect(160, 250, 120, 20), "Flag2=" + MyMod.Flag2))
+                {
+                    MyMod.Flag2 = !MyMod.Flag2;
+                }
+                if (GUI.Button(new Rect(160, 280, 120, 20), "Flag3=" + MyMod.Flag3))
+                {
+                    MyMod.Flag3 = !MyMod.Flag3;
+                }
+                if (GUI.Button(new Rect(160, 310, 120, 20), "Flag4=" + MyMod.Flag4))
+                {
+                    MyMod.Flag4 = !MyMod.Flag4;
+                }
+                if (GUI.Button(new Rect(160, 340, 120, 20), "Flag5=" + MyMod.Flag5))
+                {
+                    MyMod.Flag5 = !MyMod.Flag5;
+                }
+                if (GUI.Button(new Rect(160, 370, 120, 20), "Flag6=" + MyMod.Flag6))
+                {
+                    MyMod.Flag6 = !MyMod.Flag6;
+                }
+                if (GUI.Button(new Rect(160, 400, 120, 20), "Flag7=" + MyMod.Flag7))
+                {
+                    MyMod.Flag7 = !MyMod.Flag7;
+                }
+                if (GUI.Button(new Rect(160, 430, 120, 20), "Flag8=" + MyMod.Flag8))
+                {
+                    MyMod.Flag8 = !MyMod.Flag8;
+                }
+                if (GUI.Button(new Rect(160, 460, 120, 20), "Flag9=" + MyMod.Flag9))
+                {
+                    MyMod.Flag9 = !MyMod.Flag9;
+                }
+                if (GUI.Button(new Rect(160, 490, 120, 20), "Flag10=" + MyMod.Flag10))
+                {
+                    MyMod.Flag10 = !MyMod.Flag10;
+                }
+                if (GUI.Button(new Rect(160, 520, 120, 20), "Flag11=" + MyMod.Flag11))
+                {
+                    MyMod.Flag11 = !MyMod.Flag11;
+                }
+                if (GUI.Button(new Rect(160, 550, 120, 20), "Flag12=" + MyMod.Flag12))
+                {
+                    MyMod.Flag12 = !MyMod.Flag12;
+                }
+                if (GUI.Button(new Rect(160, 580, 120, 20), "Flag13=" + MyMod.Flag13))
+                {
+                    MyMod.Flag13 = !MyMod.Flag13;
                 }
             }
 
@@ -218,7 +317,7 @@ namespace SkyCoop
                 {
                     MyMod.UIDebugType = "AnimalsDebug";
                 }
-                if (GUI.Button(new Rect(160, 130, 80, 20), "Test"))
+                if (GUI.Button(new Rect(160, 130, 80, 20), "Scene"))
                 {
                     //string LoadSceneSTR = "BlackrockPrisonZone";
                     //GameManager.GetPlayerManagerComponent().m_SceneTransitionStarted = true;
@@ -280,29 +379,20 @@ namespace SkyCoop
                     //    ServerSend.CAIRNS();
                     //}
                     //GameManager.GetPlayerAnimationComponent().Trigger_Breakdown_Intro(StruggleBonus.StruggleWeaponType.Hammer);
-                    if(MyMod.NpcDummy == null)
-                    {
-                        GameObject NPCDummy = new GameObject();
-
-                        NPC NPCcon = NPCDummy.AddComponent<NPC>();
-                        NPCThirst T = NPCDummy.AddComponent<NPCThirst>();
-                        NPCFreezing F = NPCDummy.AddComponent<NPCFreezing>();
-                        NPCCondition C = NPCDummy.AddComponent<NPCCondition>();
-                        T.m_NPC = NPCcon;
-                        F.m_NPC = NPCcon;
-                        C.m_NPC = NPCcon;
-                        NPCcon.m_Thirst = T;
-                        NPCcon.m_Condition = C;
-                        NPCcon.m_Freezing = F;
-                        NPCcon.m_HasBeenInteractedWith = true;
-                        NPCcon.m_EnableConditionUpdate = true;
-                        NPCcon.m_Body = NPCDummy.AddComponent<CarryableBody>();
-                        MyMod.NpcDummy = NPCDummy;
-                    }
+                    string quote = "\"";
+                    string Copy = "AddSafeScene("+ quote + MyMod.level_guid + quote+ ");";
+                    GUIUtility.systemCopyBuffer = Copy;
                 }
-                if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
+                if (GUI.Button(new Rect(160, 160, 80, 20), "Zone"))
                 {
-                    MyMod.UIDebugType = "";
+                    string quote = "\"";
+                    Vector3 pos = GameManager.GetPlayerTransform().position;
+                    string Copy = "AddSafeZone(" + quote + MyMod.level_guid + quote + ", new Vector3(" + pos.x.ToString(CultureInfo.InvariantCulture) + "f, " + pos.y.ToString(CultureInfo.InvariantCulture) + "f, " + pos.z.ToString(CultureInfo.InvariantCulture) + "f), 50);";
+                    GUIUtility.systemCopyBuffer = Copy;
+                }
+                if (GUI.Button(new Rect(160, 190, 80, 20), "Show"))
+                {
+                    SafeZoneManager.DebugRenderZones();
                 }
             }
 
@@ -501,7 +591,7 @@ namespace SkyCoop
             if (MyMod.UIDebugType == "AnimalsDebug")
             {
                 GUI.Box(new Rect(150, 10, 100, 270), "Debug Animals");
-                if (GUI.Button(new Rect(160, 40, 80, 20), "UNUSED"))
+                if (GUI.Button(new Rect(160, 40, 80, 20), ThreadManager.executeOnMainThread.Count + "-" + ThreadManager.executeCopiedOnMainThread.Count))
                 {
 
                 }
@@ -535,35 +625,6 @@ namespace SkyCoop
                 {
                     InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT GUID TO TRACK", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
-                if (GUI.Button(new Rect(160, 190, 80, 20), "Glow"))
-                {
-                    if (MyMod.DebugLastAnimal != null)
-                    {
-                        MyMod.Outline OL = MyMod.DebugLastAnimal.GetComponent<MyMod.Outline>();
-
-                        if (OL == null)
-                        {
-                            MyMod.DebugLastAnimal.AddComponent<MyMod.Outline>();
-                            OL = MyMod.DebugLastAnimal.GetComponent<MyMod.Outline>();
-                            OL.m_OutlineColor = Color.green;
-                            OL.needsUpdate = true;
-                            MelonLogger.Msg("Added outlines");
-                        }
-                        else
-                        {
-                            if (OL.m_OutlineColor == Color.green)
-                            {
-                                OL.m_OutlineColor = Color.clear;
-                                OL.needsUpdate = true;
-                            }
-                            else
-                            {
-                                OL.m_OutlineColor = Color.green;
-                                OL.needsUpdate = true;
-                            }
-                        }
-                    }
-                }
                 if (GUI.Button(new Rect(160, 220, 80, 20), "Remove all"))
                 {
                     for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
@@ -587,7 +648,7 @@ namespace SkyCoop
                 if (GUI.Button(new Rect(160, 40, 80, 20), "Next Top"))
                 {
                     int topsCount = MyMod.players[0].transform.GetChild(0).GetChild(1).childCount;
-                    MyMod.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerClothingManager>();
+                    Comps.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<Comps.MultiplayerPlayerClothingManager>();
                     mPMC.m_Debug = true;
                     mPMC.m_DebugT = mPMC.m_DebugT + 1;
                     if (mPMC.m_DebugT >= topsCount)
@@ -599,7 +660,7 @@ namespace SkyCoop
                 if (GUI.Button(new Rect(160, 70, 80, 20), "Next Bottom"))
                 {
                     int pantsCount = MyMod.players[0].transform.GetChild(0).GetChild(2).childCount;
-                    MyMod.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerClothingManager>();
+                    Comps.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<Comps.MultiplayerPlayerClothingManager>();
                     mPMC.m_Debug = true;
                     mPMC.m_DebugB = mPMC.m_DebugB + 1;
                     if (mPMC.m_DebugB >= pantsCount)

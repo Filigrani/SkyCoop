@@ -31,23 +31,37 @@
     <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
   </PropertyGroup>
   <PropertyGroup />
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Dedicated|AnyCPU'">
+    <OutputPath>bin\Dedicated\</OutputPath>
+    <DefineConstants>DEDICATED</DefineConstants>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Dedicated Linux|AnyCPU'">
+    <OutputPath>bin\Dedicated Linux\</OutputPath>
+    <DefineConstants>DEDICATED;DEDICATED_LINUX</DefineConstants>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="API.cs" />
-    <Compile Include="Base64Files.cs" />
     <Compile Include="ClientHandle.cs" />
+    <Compile Include="ClientUser.cs" />
+    <Compile Include="Comps.cs" />
     <Compile Include="Constants.cs" />
+    <Compile Include="DataStr.cs" />
     <Compile Include="DeBugMenu.cs" />
     <Compile Include="GameLogic.cs" />
     <Compile Include="MenuHook.cs" />
+    <Compile Include="ModsValidation.cs" />
     <Compile Include="MPSaveManager.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="Patches.cs" />
+    <Compile Include="ResourceIndependent.cs" />
+    <Compile Include="SafeZoneManager.cs" />
     <Compile Include="Server.cs" />
     <Compile Include="Client.cs" />
     <Compile Include="MyModMain.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="ServerHandle.cs" />
     <Compile Include="ServerSend.cs" />
+    <Compile Include="Shared.cs" />
     <Compile Include="SteamConnect.cs" />
     <Compile Include="Supporters.cs" />
     <Compile Include="ThreadManager.cs" />
@@ -83,6 +97,7 @@
     <Reference Include="System" />
     <Reference Include="System.IO.Compression" />
     <Reference Include="System.IO.Compression.FileSystem" />
+    <Reference Include="System.Numerics" />
     <Reference Include="UnhollowerBaseLib">
       <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnhollowerBaseLib.dll</HintPath>
     </Reference>

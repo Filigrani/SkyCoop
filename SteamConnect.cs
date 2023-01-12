@@ -5,8 +5,6 @@ using UnhollowerBaseLib;
 using Steamworks;
 using System.IO;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Runtime;
 using GameServer;
 using System.Collections.Generic;
 
@@ -17,6 +15,7 @@ namespace SkyCoop
         public static bool CanUseSteam = false;
         public static string SteamName = "";
         public static bool IsMyLobby = false;
+        public static bool HasDLC = false;
 
         public static void Init()
         {
@@ -54,6 +53,9 @@ namespace SkyCoop
 
             MelonLogger.Msg("[SteamWorks.NET] Trying to Init SteamAPI");
             SteamAPI.Init();
+
+            HasDLC = SteamApps.BIsDlcInstalled(new AppId_t(2091330));
+
             StartSteam();
             MelonLogger.Msg("[SteamWorks.NET] SteamAPI is initialized");
         }
@@ -203,6 +205,10 @@ namespace SkyCoop
                         InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't join this lobby", "\n" + "Server is no more available to join", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                     }
                 }
+                if (MyMod.DedicatedServerAppMode && IsMyLobby)
+                {
+                    MyMod.FinishStartingDsServer();
+                }
             }
             public static void ShouldJoinLobby(GameLobbyJoinRequested_t request)
             {
@@ -253,7 +259,7 @@ namespace SkyCoop
                     MyMod.TryMakeLobbyAgain = 5;
                 }
 
-                if (MyMod.LobbyUI)
+                if (!MyMod.DedicatedServerAppMode && MyMod.LobbyUI)
                 {
                     ulong MySteamID = ulong.Parse(SteamUser.GetSteamID().ToString());
 
@@ -626,6 +632,11 @@ namespace SkyCoop
 
             public static void MayUpdatePlayerInLobby(ulong playerID)
             {
+                if (MyMod.DedicatedServerAppMode)
+                {
+                    return;
+                }
+                
                 if (!MyMod.LobbyContains(playerID))
                 {
                     int Descripter = SteamFriends.GetMediumFriendAvatar(new CSteamID(playerID));
@@ -641,6 +652,11 @@ namespace SkyCoop
 
             public static void OnRegularUpdate()
             {
+                if (MyMod.DedicatedServerAppMode)
+                {
+                    return;
+                }
+                
                 if (MyMod.MyLobby != "")
                 {
                     CSteamID lobbyID = new CSteamID(ulong.Parse(MyMod.MyLobby));
@@ -768,6 +784,7 @@ namespace SkyCoop
                 }
 
                 IsMyLobby = true;
+                MyMod.TryMakeLobbyAgain = 5;
                 MelonLogger.Msg("[SteamWorks.NET] Creating new lobby");
                 SteamAPICall_t handle = SteamMatchmaking.CreateLobby(LobbyType, limit);
                 OnLobbyCreatedCallResult.Set(handle);
@@ -792,9 +809,8 @@ namespace SkyCoop
                         LobbyType = ELobbyType.k_ELobbyTypeFriendsOnly;
                         break;
                 }
-
+                MyMod.TryMakeLobbyAgain = 5;
                 MelonLogger.Msg("[SteamWorks.NET] Creating new lobby");
-
                 SteamAPICall_t handle = SteamMatchmaking.CreateLobby(LobbyType, LastLobbyLimit);
                 OnLobbyCreatedCallResult.Set(handle);
             }
@@ -951,10 +967,10 @@ namespace SkyCoop
                 {
                     MyMod.LobbyUI.SetActive(false);
                 }
-                
-                MyMod.instance.myId = 0;
+
+                ClientUser.myId = 0;
                 CSteamID reciver = new CSteamID(ulong.Parse(hostid));
-                MyMod.InitializeClientData();
+                ClientUser.InitializeClientData();
 
                 SteamNetworking.AcceptP2PSessionWithUser(reciver);
                 MelonLogger.Msg("[SteamWorks.NET] Trying connecting to " + hostid);
@@ -971,9 +987,9 @@ namespace SkyCoop
             }
             public static void JoinToLobby(string hostid)
             {
-                MyMod.instance.myId = 0;
+                ClientUser.myId = 0;
                 CSteamID reciver = new CSteamID(ulong.Parse(hostid));
-                MyMod.InitializeClientData();
+                ClientUser.InitializeClientData();
 
                 SteamMatchmaking.JoinLobby(reciver);
             }

@@ -14,6 +14,9 @@ using Harmony;
 using UnhollowerRuntimeLib;
 using UnhollowerBaseLib;
 using GameServer;
+using Il2CppSystem.Reflection;
+using System.Diagnostics;
+using static SkyCoop.Shared;
 
 namespace SkyCoop
 {
@@ -21,17 +24,19 @@ namespace SkyCoop
     {
         public static void Welcome(Packet _packet)
         {
+            MyMod.RemovePleaseWait();
+            MyMod.DiscardRepeatPacket();
             int _myId = _packet.ReadInt();
             int _MaxPlayers = _packet.ReadInt();
 
             MyMod.MaxPlayers = _MaxPlayers;
-            MyMod.InitAllPlayers();
+            Shared.InitAllPlayers();
 
             MelonLogger.Msg("Welcome to server!");
-            MyMod.instance.myId = _myId;
+            ClientUser.myId = _myId;
             MelonLogger.Msg("Host registered me as client "+ _myId);
             MyMod.sendMyPosition = true;
-            MyMod.LastConnectedIp = MyMod.PendingConnectionIp;
+            ClientUser.LastConnectedIp = ClientUser.PendingConnectionIp;
             MyMod.NoHostResponceSeconds = 0;
             MyMod.NeedTryReconnect = false;
             MyMod.TryingReconnect = false;
@@ -39,15 +44,18 @@ namespace SkyCoop
         }
         public static void WelcomeReceived()
         {
+            MyMod.RemovePleaseWait();
+            MyMod.DiscardRepeatPacket();
             using (Packet _packet = new Packet((int)ClientPackets.welcomeReceived))
             {
-                _packet.Write(MyMod.instance.myId);
+                _packet.Write(ClientUser.myId);
                 _packet.Write(MyMod.MyChatName);
                 _packet.Write(MyMod.BuildInfo.Version);
                 _packet.Write(Supporters.MyID);
                 _packet.Write(Supporters.ConfiguratedBenefits);
+                _packet.Write(ModsValidation.GetModsHash(true).m_Hash);
 
-                MyMod.SendTCPData(_packet);
+                MyMod.SendUDPData(_packet);
             }
             if (MyMod.level_name != "Empty" && MyMod.level_name != "Boot" && MyMod.level_name != "MainMenu")
             {
@@ -63,23 +71,15 @@ namespace SkyCoop
             {
                 MyMod.playersData[from].m_Position = maboi;
 
-                if(MyMod.players[from] != null && MyMod.players[from].GetComponent<MyMod.MultiplayerPlayer>() != null)
+                if(MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayer>() != null)
                 {
-                    MyMod.LongActionCancleCauseMoved(MyMod.players[from].GetComponent<MyMod.MultiplayerPlayer>());
+                    MyMod.LongActionCancleCauseMoved(MyMod.players[from].GetComponent<Comps.MultiplayerPlayer>());
                 }
             }
         }
         public static void XYZDW(Packet _packet)
         {
-            MyMod.ShatalkerModeClient = true;
-            Vector3 maboi;
-            maboi = _packet.ReadVector3();
 
-            if (MyMod.ShatalkerObject != null)
-            {
-                MyMod.ShatalkerObject.m_WorldPosition = maboi;
-                MyMod.LastRecivedShatalkerVector = maboi;
-            }
         }
         public static void XYZW(Packet _packet)
         {
@@ -136,11 +136,11 @@ namespace SkyCoop
         }
         public static void GOTITEM(Packet _packet)
         {
-            MyMod.GearItemDataPacket got = _packet.ReadGearData();
+            DataStr.GearItemDataPacket got = _packet.ReadGearData();
             //MelonLogger.Msg(ConsoleColor.Blue, "Someone gave item to" + got.m_SendedTo);
             //MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name [" + got.m_GearName + "] DATA: " + got.m_DataProxy);
 
-            if(got.m_SendedTo == MyMod.instance.myId)
+            if(got.m_SendedTo == ClientUser.myId)
             {
                 //MelonLogger.Msg(ConsoleColor.Blue, "This is item for me");
             }
@@ -190,7 +190,7 @@ namespace SkyCoop
         }
         public static void EQUIPMENT(Packet _packet)
         {
-            MyMod.PlayerEquipmentData item = _packet.ReadEQ();
+            DataStr.PlayerEquipmentData item = _packet.ReadEQ();
             int from = _packet.ReadInt();
 
             if (MyMod.playersData.Count > 0 && MyMod.playersData[from] != null)
@@ -216,27 +216,14 @@ namespace SkyCoop
         }
         public static void SYNCWEATHER(Packet _packet)
         {
-            MyMod.WeatherProxies weather = _packet.ReadWeather();
+            DataStr.WeatherProxies weather = _packet.ReadWeather();
+            //string TOD = _packet.ReadString();
             if (MyMod.level_name != "Boot" && MyMod.level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null)
             {
-                //Weather wa = GameManager.GetWeatherComponent();
-                //WeatherSaveDataProxy weatherSaveDataProxy = Utils.DeserializeObject<WeatherSaveDataProxy>(weather.m_WeatherProxy);
-                //wa.m_PrevBodyTemp = weatherSaveDataProxy.m_PrevBodyTempProxy;
-                //wa.SetTempHigh(weatherSaveDataProxy.m_TempHighProxy);
-                //wa.SetTempLow(weatherSaveDataProxy.m_TempLowProxy);
-                //if (weatherSaveDataProxy.m_UseMinAirTemperature)
-                //    wa.m_MinAirTemperature = weatherSaveDataProxy.m_MinAirTemperature;
-                //wa.m_LastTimeOfDay = weatherSaveDataProxy.m_LastTimeOfDay;
-                //wa.m_BaseTemperatureAccumulatorForTimeOfDay = weatherSaveDataProxy.m_BaseTemperatureAccumulatorForTimeOfDay;
-                //wa.m_WindchillAccumulatorForTimeOfDay = weatherSaveDataProxy.m_WindchillAccumulatorForTimeOfDay;
-                //wa.m_TemperatureCountForTimeOfDay = weatherSaveDataProxy.m_TemperatureCountForTimeOfDay;
-                //GameManager.GetUniStorm().SetWeatherStage(weatherSaveDataProxy.m_WeatherStageProxy, 0.0f);
-                //GameManager.GetUniStorm().SetElapsedHours(weatherSaveDataProxy.m_UniStormElapsedHoursProxy);
-
                 GameManager.GetWeatherComponent().Deserialize(weather.m_WeatherProxy);
                 GameManager.GetWeatherTransitionComponent().Deserialize(weather.m_WeatherTransitionProxy);
                 GameManager.GetWindComponent().Deserialize(weather.m_WindProxy);
-                //MelonLogger.Msg("Amogus slomal jopu Tod'oo");
+                //GameManager.GetTimeOfDayComponent().Deserialize(TOD);
             }
         }
         public static void REVIVE(Packet _packet)
@@ -247,7 +234,7 @@ namespace SkyCoop
                 using (Packet __packet = new Packet((int)ClientPackets.REVIVEDONE))
                 {
                     __packet.Write(true);
-                    MyMod.SendTCPData(__packet);
+                    MyMod.SendUDPData(__packet);
                 }
             }
         }
@@ -269,34 +256,11 @@ namespace SkyCoop
         }
         public static void ALIGNANIMAL(Packet _packet)
         {
-            MyMod.AnimalAligner Alig = _packet.ReadAnimalAligner();
+
         }
         public static void ASKFORANIMALPROXY(Packet _packet)
         {
-            //string _guid = _packet.ReadString();
-            //string Proxy = "";
-            //for (int i = 0; i < BaseAiManager.m_BaseAis.Count; i++)
-            //{
-            //    if (BaseAiManager.m_BaseAis[i] != null && BaseAiManager.m_BaseAis[i].gameObject != null)
-            //    {
-            //        GameObject animal = BaseAiManager.m_BaseAis[i].gameObject;
-            //        if (animal.GetComponent<ObjectGuid>() != null && animal.GetComponent<ObjectGuid>().Get() == _guid)
-            //        {
-            //            Proxy = BaseAiManager.m_BaseAis[i].Serialize();
-            //            MelonLogger.Msg("ASKFORANIMALPROXY " + Proxy);
-            //            break;
-            //        }
-            //    }
-            //}
-            //using (Packet __packet = new Packet((int)ClientPackets.ALIGNANIMAL))
-            //{
-            //    MyMod.AnimalAligner Alig = new MyMod.AnimalAligner();
 
-            //    Alig.m_Guid = _guid;
-            //    Alig.m_Proxy = Proxy;
-            //    __packet.Write(Alig);
-            //    MyMod.SendTCPData(__packet);
-            //}
         }
         public static void ANIMALDELETE(Packet _packet)
         {
@@ -313,17 +277,18 @@ namespace SkyCoop
         public static void RQRECONNECT(Packet _packet)
         {
             MyMod.Disconnect();
-            MyMod.DoConnectToIp(MyMod.LastConnectedIp);
+            ClientUser.DoConnectToIp(ClientUser.LastConnectedIp);
         }
         public static void CHAT(Packet _packet)
         {
-            MyMod.MultiplayerChatMessage message = _packet.ReadChat();
+            DataStr.MultiplayerChatMessage message = _packet.ReadChat();
             int from = _packet.ReadInt();
-            MyMod.SendMessageToChat(message, false);
+            Shared.SendMessageToChat(message, false);
         }
         public static void PLAYERSSTATUS(Packet _packet)
         {
             int howmany = _packet.ReadInt();
+
             if (howmany > MyMod.MaxPlayers)
             {
                 return;
@@ -336,17 +301,18 @@ namespace SkyCoop
                     MyMod.playersData[i].m_Used = false;
                 }
             }
-            List<MyMod.MultiPlayerClientStatus> MPStatus = new List<MyMod.MultiPlayerClientStatus>();
+            List<DataStr.MultiPlayerClientStatus> MPStatus = new List<DataStr.MultiPlayerClientStatus>();
             int Sleepers = 0;
             int Deads = 0;
             for (int i = 1; i <= howmany; i++)
             {
-                MyMod.MultiPlayerClientStatus client = _packet.ReadClientStatus();
+                DataStr.MultiPlayerClientStatus client = _packet.ReadClientStatus();
                 MPStatus.Add(client);
                 if (MyMod.playersData[client.m_ID] != null)
                 {
                     MyMod.playersData[client.m_ID].m_Used = true;
                     MyMod.playersData[client.m_ID].m_Name = client.m_Name;
+                    MyMod.playersData[client.m_ID].m_IsLoading = client.m_IsLoading;
 
                     if (client.m_Dead || client.m_Sleep)
                     {
@@ -366,13 +332,13 @@ namespace SkyCoop
                     MyMod.playersData[client.m_ID].m_Dead = client.m_Dead;
                 }
             }
-            MyMod.ProcessSleep(Sleepers, howmany, Deads, 0);
+            Shared.ProcessSleep(Sleepers, howmany, Deads, 0);
             MyMod.UpdatePlayerStatusMenu(MPStatus);
         }
         public static void ANIMALTEST(Packet _packet)
         {
-            MyMod.AnimalCompactData dat = _packet.ReadAnimalCompactData();
-            MyMod.AnimalAnimsSync anim = _packet.ReadAnimalAnim();
+            DataStr.AnimalCompactData dat = _packet.ReadAnimalCompactData();
+            DataStr.AnimalAnimsSync anim = _packet.ReadAnimalAnim();
             int from = _packet.ReadInt();
             MyMod.DoAnimalSync(dat, anim);
         }
@@ -384,7 +350,7 @@ namespace SkyCoop
                 return;
             }
 
-            MyMod.AnimalTrigger obj = _packet.ReadAnimalTrigger();
+            DataStr.AnimalTrigger obj = _packet.ReadAnimalTrigger();
             MyMod.SetAnimalTriggers(obj);
         }
 
@@ -395,71 +361,24 @@ namespace SkyCoop
 
         public static void DARKWALKERREADY(Packet _packet)
         {
-            MyMod.DarkWalkerIsReady = _packet.ReadBool();
-            MelonLogger.Msg("Got new darkwalker ready state: " + MyMod.DarkWalkerIsReady);
 
-            if (MyMod.DarkWalkerIsReady == true)
-            {
-                ServerHandle.LastCountDown = 0;
-                MyMod.OverridenStartCountDown = 0;
-            }
         }
         public static void HOSTISDARKWALKER(Packet _packet)
         {
-            if (MyMod.InDarkWalkerMode == true)
-            {
-                MyMod.ShatalkerModeClient = _packet.ReadBool();
-                MelonLogger.Msg("Host is darkwalker: " + MyMod.ShatalkerModeClient);
 
-                MyMod.RealTimeCycleSpeed = false;
-
-                if (MyMod.ShatalkerModeClient == false)
-                {
-                    MyMod.IamShatalker = true;
-                    uConsole.RunCommandSilent("Ghost");
-                    uConsole.RunCommandSilent("God");
-
-                    if (MyMod.sendMyPosition == true)
-                    {
-                        using (Packet __packet = new Packet((int)ClientPackets.REQUESTDWREADYSTATE))
-                        {
-                            __packet.Write(true);
-                            MyMod.SendTCPData(__packet);
-                        }
-                    }
-                }
-                else
-                {
-                    if (MyMod.ShatalkerObject.GetStartMovementDelayTime() < 2)
-                    {
-                        using (Packet __packet = new Packet((int)ClientPackets.DARKWALKERREADY))
-                        {
-                            __packet.Write(MyMod.DarkWalkerIsReady);
-                            MyMod.SendTCPData(__packet);
-                        }
-                    }
-                }
-            }
         }
 
         public static void WARDISACTIVE(Packet _packet)
         {
-            MyMod.WardIsActive = _packet.ReadBool();
+
         }
         public static void DWCOUNTDOWN(Packet _packet)
         {
-            float got = _packet.ReadFloat();
 
-            if (MyMod.OverridenStartCountDown < 5 && got > MyMod.OverridenStartCountDown)
-            {
-                return;
-            }
-            MyMod.OverridenStartCountDown = got;
-            ///Console.WriteLine("LastCountDown " + OverridenStartCountDown);
         }
         public static void SHOOTSYNC(Packet _packet)
         {
-            MyMod.ShootSync shoot = _packet.ReadShoot();
+            DataStr.ShootSync shoot = _packet.ReadShoot();
             int from = _packet.ReadInt();
             //MelonLogger.Msg("Client " + from + " shoot!");
 
@@ -513,26 +432,25 @@ namespace SkyCoop
         }
         public static void CONTAINEROPEN(Packet _packet)
         {
-            MyMod.ContainerOpenSync sync = _packet.ReadContainer();
+            DataStr.ContainerOpenSync sync = _packet.ReadContainer();
             MyMod.DoSyncContainer(sync);
         }
 
         public static void LUREPLACEMENT(Packet _packet)
         {
-            MyMod.WalkTracker sync = _packet.ReadWalkTracker();
-            MyMod.LastLure = sync;
+
         }
         public static void LUREISACTIVE(Packet _packet)
         {
-            MyMod.LureIsActive = _packet.ReadBool();
+
         }
         public static void SAVEDATA(Packet _packet)
         {
-            MyMod.SaveSlotSync SaveData = _packet.ReadSaveSlot();
+            DataStr.SaveSlotSync SaveData = _packet.ReadSaveSlot();
             MyMod.RemoveWaitForConnect();
             MyMod.ApplyOtherCampfires = true;
 
-            if (InterfaceManager.IsMainMenuEnabled() == false)
+            if (MyMod.level_name != "MainMenu")
             {
                 return;
             }
@@ -540,6 +458,18 @@ namespace SkyCoop
             MyMod.PendingSave = SaveData;
 
             MyMod.CheckHaveSaveFileToJoin(SaveData);
+        }
+        public static void VERIFYSAVE(Packet _packet)
+        {
+            MyMod.RemoveWaitForConnect();
+            MyMod.RemovePleaseWait();
+            MyMod.MyUGUID = _packet.ReadString();
+            bool IsValid = _packet.ReadBool();
+            if (MyMod.level_name != "MainMenu")
+            {
+                return;
+            }
+            MyMod.VerifiedSave(IsValid);
         }
         public static void CARRYBODY(Packet _packet)
         {
@@ -555,7 +485,7 @@ namespace SkyCoop
         }
         public static void CLOTH(Packet _packet)
         {
-            MyMod.PlayerClothingData ClotchData = _packet.ReadClothingData();
+            DataStr.PlayerClothingData ClotchData = _packet.ReadClothingData();
             int from = _packet.ReadInt();
             MyMod.playersData[from].m_PlayerClothingData = ClotchData;
             //MelonLogger.Msg("[Clothing] Client "+ from + " Hat " + MyMod.playersData[from].m_PlayerClothingData.m_Hat);
@@ -575,7 +505,7 @@ namespace SkyCoop
 
         public static void FURNBROKEN(Packet _packet)
         {
-            MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+            DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
 
             MyMod.OnFurnitureDestroyed(furn.m_Guid, furn.m_ParentGuid, furn.m_LevelID, furn.m_LevelGUID, false);
         }
@@ -585,7 +515,7 @@ namespace SkyCoop
 
             for (int i = 1; i <= howmany; i++)
             {
-                MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+                DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
 
                 if(MyMod.BrokenFurniture.Contains(furn) == false)
                 {
@@ -595,7 +525,7 @@ namespace SkyCoop
         }
         public static void FURNBREAKINGGUID(Packet _packet)
         {
-            MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+            DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
             int from = _packet.ReadInt();
 
             if (MyMod.playersData[from] != null)
@@ -615,24 +545,24 @@ namespace SkyCoop
 
             if (MyMod.playersData[from] != null)
             {
-                MyMod.playersData[from].m_BrakingObject = new MyMod.BrokenFurnitureSync();
+                MyMod.playersData[from].m_BrakingObject = new DataStr.BrokenFurnitureSync();
                 MyMod.playersData[from].m_BrakingSounds = "";
             }
         }
         public static void GEARPICKUP(Packet _packet)
         {
-            MyMod.PickedGearSync gear = _packet.ReadPickedGear();
+            DataStr.PickedGearSync gear = _packet.ReadPickedGear();
             int from = _packet.ReadInt();
 
             if (MyMod.playersData[from] != null && MyMod.playersData[from].m_Levelid == MyMod.levelid && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
             {
-                if(MyMod.players[from] != null && MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                if(MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
                 {
-                    MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().Pickup();
+                    MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
                 }
             }
 
-            MyMod.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, from, gear.m_MyInstanceID, false);
+            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, from, gear.m_MyInstanceID, false);
         }
         public static void GEARPICKUPLIST(Packet _packet)
         {
@@ -640,19 +570,19 @@ namespace SkyCoop
 
             for (int i = 1; i <= howmany; i++)
             {
-                MyMod.PickedGearSync gear = _packet.ReadPickedGear();
+                DataStr.PickedGearSync gear = _packet.ReadPickedGear();
 
                 if (MyMod.PickedGears.Contains(gear) == false)
                 {
-                    MyMod.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, 0, gear.m_MyInstanceID, false);
+                    Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, 0, gear.m_MyInstanceID, false);
                 }
             }
         }
         public static void ROPE(Packet _packet)
         {
-            MyMod.ClimbingRopeSync rope = _packet.ReadRope();
+            DataStr.ClimbingRopeSync rope = _packet.ReadRope();
 
-            MyMod.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
+            Shared.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
         }
         public static void ROPELIST(Packet _packet)
         {
@@ -660,11 +590,11 @@ namespace SkyCoop
 
             for (int i = 1; i <= howmany; i++)
             {
-                MyMod.ClimbingRopeSync rope = _packet.ReadRope();
+                DataStr.ClimbingRopeSync rope = _packet.ReadRope();
 
                 if (MyMod.DeployedRopes.Contains(rope) == false)
                 {
-                    MyMod.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
+                    Shared.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
                 }
             }
         }
@@ -675,24 +605,18 @@ namespace SkyCoop
 
             if (MyMod.playersData[from] != null && MyMod.playersData[from].m_Levelid == MyMod.levelid && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
             {
-                if (MyMod.players[from] != null && MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                if (MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
                 {
-                    MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_IsDrink = IsDrink;
-                    MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().Consumption();
+                    MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().m_IsDrink = IsDrink;
+                    MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().Consumption();
                 }
             }
         }
         public static void SERVERCFG(Packet _packet)
         {
-            MyMod.ServerConfigData cfg = _packet.ReadServerCFG();
+            DataStr.ServerConfigData cfg = _packet.ReadServerCFG();
             MyMod.ServerConfig = cfg;
-            MelonLogger.Msg(ConsoleColor.Green, "[Server Config Data] Data updated");
-            MelonLogger.Msg(ConsoleColor.Blue, "m_FastConsumption: " + MyMod.ServerConfig.m_FastConsumption);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedSpawns: " + MyMod.ServerConfig.m_DuppedSpawns);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedContainers: " + MyMod.ServerConfig.m_DuppedContainers);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_PlayersSpawnType: " + MyMod.ServerConfig.m_PlayersSpawnType);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_FireSync: " + MyMod.ServerConfig.m_FireSync);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_CheatsMode: " + MyMod.ServerConfig.m_CheatsMode);
+            MyMod.ShowCFGData();
         }
         public static void STOPCONSUME(Packet _packet)
         {
@@ -703,9 +627,9 @@ namespace SkyCoop
             {
                 if(MyMod.playersData[from].m_Levelid == MyMod.levelid && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
                 {
-                    if (MyMod.players[from] != null && MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                    if (MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
                     {
-                        MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().StopConsumption();
+                        MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().StopConsumption();
                     }
                 }
                 MyMod.playersData[from].m_AnimState = LastAnim;
@@ -761,7 +685,7 @@ namespace SkyCoop
         }
         public static void CANCLEPICKUP(Packet _packet)
         {
-            MyMod.PickedGearSync gear = _packet.ReadPickedGear();
+            DataStr.PickedGearSync gear = _packet.ReadPickedGear();
             int from = _packet.ReadInt();
 
             MelonLogger.Msg(ConsoleColor.Blue, "Other shokal has pickup item before me! I need to delete my picked gear Item InstanceID "+ gear.m_MyInstanceID);
@@ -799,7 +723,7 @@ namespace SkyCoop
         }
         public static void CONTAINERINTERACT(Packet _packet)
         {
-            MyMod.ContainerOpenSync box = _packet.ReadContainer();
+            DataStr.ContainerOpenSync box = _packet.ReadContainer();
             int from = _packet.ReadInt();
 
             if (MyMod.playersData[from] != null)
@@ -814,9 +738,9 @@ namespace SkyCoop
         }
         public static void LOOTEDCONTAINER(Packet _packet)
         {
-            MyMod.ContainerOpenSync box = _packet.ReadContainer();
+            DataStr.ContainerOpenSync box = _packet.ReadContainer();
             int from = _packet.ReadInt();
-            MyMod.AddLootedContainer(box, false, from);
+            Shared.AddLootedContainer(box, false, from);
         }
         public static void LOOTEDCONTAINERLIST(Packet _packet)
         {
@@ -824,17 +748,17 @@ namespace SkyCoop
 
             for (int i = 1; i <= howmany; i++)
             {
-                MyMod.ContainerOpenSync box = _packet.ReadContainer();
+                DataStr.ContainerOpenSync box = _packet.ReadContainer();
 
                 if (MyMod.LootedContainers.Contains(box) == false)
                 {
-                    MyMod.AddLootedContainer(box, false);
+                    Shared.AddLootedContainer(box, false);
                 }
             }
         }
         public static void HARVESTPLANT(Packet _packet)
         {
-            MyMod.HarvestableSyncData harveData = _packet.ReadHarvestablePlant();
+            DataStr.HarvestableSyncData harveData = _packet.ReadHarvestablePlant();
             int from = _packet.ReadInt();
             if (MyMod.playersData[from] != null)
             {
@@ -887,16 +811,16 @@ namespace SkyCoop
         public static void ADDSHELTER(Packet _packet)
         {
             MelonLogger.Msg("Someone created shelter!");
-            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
             int from = _packet.ReadInt();
-            MyMod.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
+            Shared.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
         }
         public static void REMOVESHELTER(Packet _packet)
         {
             MelonLogger.Msg("Someone removed shelter!");
-            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
             int from = _packet.ReadInt();
-            MyMod.ShelterRemoved(shelter.m_Position, shelter.m_LevelID, shelter.m_LevelGUID, false);
+            Shared.ShelterRemoved(shelter.m_Position, shelter.m_LevelID, shelter.m_LevelGUID, false);
         }
         public static void ALLSHELTERS(Packet _packet)
         {
@@ -904,17 +828,17 @@ namespace SkyCoop
 
             for (int i = 1; i <= howmany; i++)
             {
-                MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+                DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
 
                 if (MyMod.ShowSheltersBuilded.Contains(shelter) == false)
                 {
-                    MyMod.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
+                    Shared.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
                 }
             }
         }
         public static void USESHELTER(Packet _packet)
         {
-            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
             int from = _packet.ReadInt();
             if (MyMod.playersData[from] != null)
             {
@@ -928,13 +852,13 @@ namespace SkyCoop
         }
         public static void FIRE(Packet _packet)
         {
-            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            DataStr.FireSourcesSync FireSource = _packet.ReadFire();
             int from = _packet.ReadInt();
             MyMod.MayAddFireSources(FireSource);
         }
         public static void FIREFUEL(Packet _packet)
         {
-            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            DataStr.FireSourcesSync FireSource = _packet.ReadFire();
             if(FireSource.m_LevelId != MyMod.levelid || FireSource.m_LevelGUID != MyMod.level_guid)
             {
                 return;
@@ -951,9 +875,20 @@ namespace SkyCoop
             string kickMessage = _packet.ReadString();
             MyMod.DoKickMessage(kickMessage);
         }
+
+        public static void PrintModsList(string RawString)
+        {
+            MelonLogger.Msg(ConsoleColor.Red,"SERVER MODS:\n"+RawString.Replace(@"M\", @"Mods\").Replace(@"A\", @"Mods\").Replace(@"P\", @"Plugins\"));
+        }
+        public static void MODSLIST(Packet _packet)
+        {
+            string CompressedString = _packet.ReadString();
+            string DecompressedString = Shared.DecompressString(CompressedString);
+            PrintModsList(DecompressedString);
+        }
         public static void GOTITEMSLICE(Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
             MyMod.AddSlicedJsonData(got);
         }
         public static void VOICECHAT(Packet _packet)
@@ -974,8 +909,11 @@ namespace SkyCoop
                 {
                     IsRadio = true;
                 }
-                
-                MyMod.ProcessVoiceChatData(from, CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime, IsRadio);
+
+                if (!MyMod.DedicatedServerAppMode)
+                {
+                    MyMod.ProcessVoiceChatData(from, CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime, IsRadio);
+                }
             }
             if(MyMod.RadioFrequency == RadioF && MyMod.playersData[from].m_PlayerEquipmentData.m_HoldingItem == "GEAR_HandheldShortwave" && !MyMod.DoingRecord)
             {
@@ -985,9 +923,7 @@ namespace SkyCoop
         }
         public static void SLICEDBYTES(Packet _packet)
         {
-            MyMod.SlicedBytesData got = _packet.ReadSlicedBytes();
-            int from = _packet.ReadInt();
-            MyMod.AddSlicedBytesData(got, from);
+
         }
         public static void ANIMALDAMAGE(Packet _packet)
         {
@@ -997,8 +933,8 @@ namespace SkyCoop
         }
         public static void DROPITEM(Packet _packet)
         {
-            MyMod.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
-            MyMod.FakeDropItem(GearData);
+            DataStr.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
+            Shared.FakeDropItem(GearData);
         }
         public static void PICKDROPPEDGEAR(Packet _packet)
         {
@@ -1008,18 +944,18 @@ namespace SkyCoop
         }
         public static void GETREQUESTEDITEMSLICE(Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
             MyMod.AddSlicedJsonDataForPicker(got, false);
         }
         public static void GETREQUESTEDFORPLACESLICE(Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
             MyMod.AddSlicedJsonDataForPicker(got, true);
         }
         public static void GOTCONTAINERSLICE(Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
-            MyMod.AddSlicedJsonDataForContainer(got);
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
+            Shared.AddSlicedJsonDataForContainer(got);
         }
         public static void OPENEMPTYCONTAINER(Packet _packet)
         {
@@ -1041,6 +977,10 @@ namespace SkyCoop
         public static void READYSENDNEXTSLICE(Packet _packet)
         {
             MyMod.SendNextCarefulSlice();
+        }
+        public static void READYSENDNEXTSLICEGEAR(Packet _packet)
+        {
+            MyMod.SendNextGearCarefulSlice();
         }
         public static void CHANGEAIM(Packet _packet)
         {
@@ -1064,11 +1004,22 @@ namespace SkyCoop
             MyMod.DiscardRepeatPacket();
             MyMod.RemovePleaseWait();
         }
+        public static void DOORLOCKEDMSG(Packet _packet)
+        {
+            MyMod.DiscardRepeatPacket();
+            MyMod.RemovePleaseWait();
+            string Message = _packet.ReadString();
+            HUDMessage.AddMessage(Message);
+            if(Message == "Incorrect key!")
+            {
+                GameAudioManager.PlaySound("Play_SndMechDoorWoodLocked01", GameManager.GetGameAudioManagerComponent().gameObject);
+            }
+        }
         public static void USEOPENABLE(Packet _packet)
         {
             string _GUID = _packet.ReadString();
             bool state = _packet.ReadBool();
-            MyMod.ChangeOpenableThingState(MyMod.level_guid, _GUID, state);
+            Shared.ChangeOpenableThingState(MyMod.level_guid, _GUID, state);
         }
         public static void TRYDIAGNISISPLAYER(Packet _packet)
         {
@@ -1082,23 +1033,23 @@ namespace SkyCoop
             int Who = _packet.ReadInt();
             int Count = _packet.ReadInt();
             float hp = _packet.ReadFloat();
-            List<MyMod.AffictionSync> Affs = new List<MyMod.AffictionSync>();
+            List<DataStr.AffictionSync> Affs = new List<DataStr.AffictionSync>();
 
             for (int index = 0; index < Count; ++index)
             {
-                MyMod.AffictionSync newElement = _packet.ReadAffiction();
+                DataStr.AffictionSync newElement = _packet.ReadAffiction();
                 Affs.Add(newElement);
             }
             MyMod.CheckOtherPlayer(Affs, Who, hp);
         }
         public static void CUREAFFLICTION(Packet _packet)
         {
-            MyMod.AffictionSync toCure = _packet.ReadAffiction();
+            DataStr.AffictionSync toCure = _packet.ReadAffiction();
             MyMod.OtherPlayerCuredMyAffiction(toCure);
         }
         public static void ANIMALCORPSE(Packet _packet)
         {
-            MyMod.AnimalKilled Data = _packet.ReadAnimalCorpse();
+            DataStr.AnimalKilled Data = _packet.ReadAnimalCorpse();
             MyMod.ProcessAnimalCorpseSync(Data);
         }
         public static void GOTRABBIT(Packet _packet)
@@ -1179,9 +1130,9 @@ namespace SkyCoop
         public static void MELEESTART(Packet _packet)
         {
             int from = _packet.ReadInt();
-            if (MyMod.players[from] != null && MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+            if (MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
             {
-                MyMod.players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().MeleeAttack();
+                MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().MeleeAttack();
             }
         }
 
@@ -1209,7 +1160,7 @@ namespace SkyCoop
         }
         public static void ADDDEATHCONTAINER(Packet _packet)
         {
-            MyMod.DeathContainerData Con = _packet.ReadDeathContainer();
+            DataStr.DeathContainerData Con = _packet.ReadDeathContainer();
             if(MyMod.level_guid == Con.m_LevelKey)
             {
                 MyMod.MakeDeathCreate(Con);
@@ -1226,9 +1177,9 @@ namespace SkyCoop
             string GUID = _packet.ReadString();
             bool Result = _packet.ReadBool();
             GameObject obj = ObjectGuidManager.Lookup(GUID);
-            if (obj != null && obj.GetComponent<MyMod.SpawnRegionSimple>())
+            if (obj != null && obj.GetComponent<Comps.SpawnRegionSimple>())
             {
-                obj.GetComponent<MyMod.SpawnRegionSimple>().SetBanned(Result);
+                obj.GetComponent<Comps.SpawnRegionSimple>().SetBanned(Result);
             }
         }
         public static void CAIRNS(Packet _packet)
@@ -1250,6 +1201,241 @@ namespace SkyCoop
             {
                 MyMod.playersData[From].m_SupporterBenefits = B;
             }
+        }
+        public static void ADDDOORLOCK(Packet _packet)
+        {
+            string DoorGUID = _packet.ReadString();
+            MyMod.AddLocksToDoorsByGUID(DoorGUID);
+        }
+        public static void ENTERDOOR(Packet _packet)
+        {
+            MyMod.DiscardRepeatPacket();
+            MyMod.RemovePleaseWait();
+            string DoorGUID = _packet.ReadString();
+            MyMod.EnterDoorsByGUID(DoorGUID);
+        }
+        public static void REMOVEDOORLOCK(Packet _packet)
+        {
+            MyMod.DiscardRepeatPacket();
+            MyMod.RemovePleaseWait();
+            string DoorGUID = _packet.ReadString();
+            MyMod.RemoveLocksFromDoorsByGUID(DoorGUID);
+        }
+        public static void LOCKPICK(Packet _packet)
+        {
+            bool Swear = _packet.ReadBool();
+            MyMod.SwearOnLockpickingDone = Swear;
+        }
+        public static void RPC(Packet _packet)
+        {
+            string RPCDATA = _packet.ReadString();
+            uConsole.RunCommand(RPCDATA);
+        }
+        public static void REQUESTLOCKSMITH(Packet _packet)
+        {
+            MyMod.RemovePleaseWait();
+            int State = _packet.ReadInt();
+            if (State != -1)
+            {
+                if (MyMod.PendingLocksmithObject)
+                {
+                    string Name = MyMod.PendingLocksmithObject.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_GearName;
+                    DataStr.PriorityActionForOtherPlayer act = MyMod.GetCustomAction("Locksmith" + MyMod.PendingLocksmithAction);
+                    MyMod.DoLongAction(MyMod.PendingLocksmithObject, act.m_ProcessText, act.m_Action);
+                }
+            }else{
+                HUDMessage.AddMessage("Someone already work on this!");
+                GameAudioManager.PlayGUIError();
+            }
+        }
+        public static void KNOCKKNOCK(Packet _packet)
+        {
+            HUDMessage.AddMessage("Somebody's knocking on the door");
+        }
+        public static void KNOCKENTER(Packet _packet)
+        {
+            string Scene = _packet.ReadString();
+            MyMod.EnterDoorsByScene(Scene);
+        }
+        public static void PEEPHOLE(Packet _packet)
+        {
+            MyMod.RemovePleaseWait();
+
+            if(MyMod.TempDoor != null)
+            {
+                MyMod.ShowKnockersPicker(MyMod.TempDoor, _packet.ReadIntList());
+            }
+        }
+        public static void RESTART(Packet _packet)
+        {
+            MyMod.RemovePleaseWait();
+            MyMod.SetRepeatPacket(MyMod.ResendPacketType.ServerRestart);
+            MyMod.RepeatLastRequest();
+        }
+        
+        public static void DoWeatherSync(float StartAtFrac, int WeatherSeed, float Duration, WeatherStage ST,int Indx, List<float> Durations, List<float> Transitions, int TOD, float High, float Low, int PreviousStage)
+        {
+            if (MyMod.level_name == "Boot" || MyMod.level_name == "Empty" || GameManager.m_Wind == null || GameManager.m_Wind.m_ActiveSettings == null || GameManager.m_Weather == null || GameManager.m_WeatherTransition == null)
+            {
+                return;
+            }
+            WeatherStage PreviousStageType = (WeatherStage)PreviousStage;
+            System.Random RNG = new System.Random(WeatherSeed);
+            Weather Weather = GameManager.GetWeatherComponent();
+            WeatherSet Set = GameManager.GetWeatherTransitionComponent().m_CurrentWeatherSet;
+            if(Set == null)
+            {
+                return;
+            }
+            int SetIndex = 0;
+            for (int i = 0; i < Weather.m_WeatherSetsForScene.Count; i++)
+            {
+                if (Weather.m_WeatherSetsForScene[i].gameObject.name == Set.gameObject.name)
+                {
+                    SetIndex = i;
+                    break;
+                }
+            }
+            if(SetIndex == Indx)
+            {
+                Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
+                Set.Activate(StartAtFrac, PreviousStageType);
+                Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
+                WeatherTransition.m_WeatherTransitionTimeScalar = 0;
+                Weather.m_TemperatureCountForTimeOfDay = TOD;
+                Weather.m_TempHigh = High;
+                Weather.m_TempLow = Low;
+                return;
+            }
+
+            if (Weather == null)
+            {
+                return;
+            }
+            WeatherSet ws;
+
+            if (Weather.m_WeatherSetsForScene.Count == 0)
+            {
+                for (int index = 0; index < Weather.m_DefaultWeatherSets.Length; ++index)
+                {
+                    if (Weather.m_DefaultWeatherSets[index] && Weather.m_DefaultWeatherSets[index].gameObject)
+                    {
+                        Weather.m_WeatherSetsForScene.Add(Weather.GetInstancedWeatherSet(Weather.m_DefaultWeatherSets[index].gameObject));
+                    }
+                }
+            }
+            WeatherSet weatherSet1 = null;
+
+
+            if(Weather.m_WeatherSetsForScene.Count-1 <= Indx)
+            {
+                weatherSet1 = Weather.m_WeatherSetsForScene[Indx];
+            } else
+            {
+                int num1 = 0;
+                for (int index = 0; index < Weather.m_WeatherSetsForScene.Count; ++index)
+                {
+                    WeatherSet weatherSet2 = Weather.m_WeatherSetsForScene[index];
+                    if (weatherSet2.m_CharacterizingType == ST)
+                        num1 += weatherSet2.m_SameTypeSelectionWeight;
+                }
+                int num2 = RNG.Next(0, num1);
+                for (int index = Weather.m_WeatherSetsForScene.Count - 1; index >= 0; --index)
+                {
+                    WeatherSet weatherSet3 = Weather.m_WeatherSetsForScene[index];
+                    if (weatherSet3.m_CharacterizingType == ST)
+                    {
+                        num1 -= weatherSet3.m_SameTypeSelectionWeight;
+                        if (num2 >= num1)
+                        {
+                            weatherSet1 = weatherSet3;
+                            break;
+                        }
+                    }
+                }
+            }
+
+            if (weatherSet1 != null && !weatherSet1.m_IsDefaultSet)
+            {
+                weatherSet1 = Weather.GetInstancedWeatherSet(weatherSet1.gameObject);
+            }
+
+            ws = weatherSet1;
+
+            if (ws == null)
+            {
+                return;
+            }
+
+
+            ws.m_CurrentSetDuration = Duration;
+            for (int index = 0; index < ws.m_WeatherStages.Length; ++index)
+            {
+                WeatherSetStage weatherStage = ws.m_WeatherStages[index];
+                if(Durations.Count-1 >= index)
+                {
+                    weatherStage.m_CurrentDuration = Durations[index];
+                    weatherStage.m_CurrentTransitionTime = Transitions[index];
+                }
+            }
+            WeatherTransition.m_WeatherTransitionTimeScalar = 0;
+            GameManager.GetWeatherTransitionComponent().ActivateWeatherSet(ws, StartAtFrac, PreviousStageType);
+            Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
+            Weather.m_TemperatureCountForTimeOfDay = TOD;
+            Weather.m_TempHigh = High;
+            Weather.m_TempLow = Low;
+            MelonLogger.Msg(ConsoleColor.Blue,"WeatherSet updated!");
+        }
+        public static void DEDICATEDWEATHER(Packet _packet)
+        {
+            WeatherStage WeatherType = (WeatherStage)_packet.ReadInt();
+            int Indx = _packet.ReadInt();
+            float StartAtFrac = _packet.ReadFloat();
+            int WeatherSeed = _packet.ReadInt();
+            float Duration = _packet.ReadFloat();
+            List<float> Durations = _packet.ReadFloatList();
+            List<float> Transitions = _packet.ReadFloatList();
+            int TOD = _packet.ReadInt();
+            float High = _packet.ReadFloat();
+            float Low = _packet.ReadFloat();
+            int PreviousStage = _packet.ReadInt();
+            DoWeatherSync(StartAtFrac, WeatherSeed, Duration, WeatherType, Indx, Durations, Transitions, TOD, High, Low, PreviousStage);
+        }
+        public static void WEATHERVOLUNTEER(Packet _packet)
+        {
+            int AskRegion = _packet.ReadInt();
+            if (MyMod.level_name != "Boot" && MyMod.level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.GetUniStorm() != null)
+            {
+                if((int)GameManager.GetUniStorm().m_CurrentRegion == AskRegion)
+                {
+                    using (Packet __packet = new Packet((int)ClientPackets.WEATHERVOLUNTEER))
+                    {
+                        __packet.Write(AskRegion);
+                        MyMod.SendUDPData(__packet);
+                    }
+                }
+            }
+        }
+        public static void REREGISTERWEATHER(Packet _packet)
+        {
+            int AskRegion = _packet.ReadInt();
+            if (MyMod.level_name != "Boot" && MyMod.level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.GetUniStorm() != null)
+            {
+                if ((int)GameManager.GetUniStorm().m_CurrentRegion == AskRegion)
+                {
+                    Pathes.SendWeatherVolunteerData();
+                }
+            }
+        }
+        public static void REMOVEKEYBYSEED(Packet _packet)
+        {
+            string Key = _packet.ReadString();
+            MyMod.RemoveKey(Key);
+        }
+        public static void ADDHUDMSG(Packet _packet)
+        {
+            string Message = _packet.ReadString();
+            HUDMessage.AddMessage(Message);
         }
     }
 }

@@ -3,8 +3,12 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+#if(!DEDICATED)
 using UnityEngine;
 using MelonLoader.TinyJSON;
+#else
+using TinyJSON;
+#endif
 using System.Net;
 
 namespace SkyCoop
@@ -22,6 +26,7 @@ namespace SkyCoop
         public static SupporterBenefits AvailableBenefits = new SupporterBenefits();
         public static SupporterBenefits ConfiguratedBenefits = new SupporterBenefits();
         public static int FlairSpots = 4;
+        public static WebClient web;
 
         public static void FlairsIDsInit()
         {
@@ -40,9 +45,11 @@ namespace SkyCoop
             FlairsIDs.Add("WiRo"); // 12
             FlairsIDs.Add("Bear"); // 13
             FlairsIDs.Add("Kai"); // 14
+            FlairsIDs.Add("Pie"); // 15
 
             FlairsIDsReady = true;
         }
+#if (!DEDICATED)
 
         public static void ApplyFlairsForModel(int PlayerIndex, List<int> FlairsConfig)
         {
@@ -53,6 +60,7 @@ namespace SkyCoop
                 DebugLog("Can't apply flairs, there no player object with index " + PlayerIndex);
             }
         }
+
 
         public static void ApplyFlairsForModel(GameObject obj, List<int> FlairsConfig, string DebugName = "unknown")
         {
@@ -87,7 +95,7 @@ namespace SkyCoop
                 }
             }
         }
-
+#endif
         public static int GetFlairIDByName(string name)
         {
             for (int i = 0; i < FlairsIDs.Count; i++)
@@ -176,18 +184,30 @@ namespace SkyCoop
         }
         public static void Log(string LOG)
         {
+#if (!DEDICATED)
             MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[Supporters] " + LOG);
+#else
+            Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Blue);
+#endif
         }
         public static void DebugLog(string LOG)
         {
             if (DeBug)
             {
+#if (!DEDICATED)
                 MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[Supporters] " + LOG);
+#else
+                Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Blue);
+#endif
             }
         }
         public static void Error(string LOG)
         {
+#if (!DEDICATED)
             MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[Supporters] " + LOG);
+#else
+            Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Red);
+#endif
         }
 
         public static bool IsLoaded()
@@ -337,6 +357,8 @@ namespace SkyCoop
                     PrintAll();
                 }
             }
+            web.Dispose();
+            web = null;
         }
 
         public static void GetSupportersList(bool Force = false)
@@ -348,7 +370,14 @@ namespace SkyCoop
             if (!Force && !IsLoaded())
             {
                 Log("Trying to get supporters list...");
-                WebClient web = new WebClient();
+
+                if(web != null)
+                {
+                    web.Dispose();
+                    web = null;
+                }
+
+                web = new WebClient();
                 string url = "https://raw.githubusercontent.com/Filigrani/SkyCoop/main/Supporters.json";
                 Uri uri = new Uri(url);
                 web.DownloadStringCompleted += new DownloadStringCompletedEventHandler(GotJsonCallback);
@@ -385,6 +414,7 @@ namespace SkyCoop
                 }
             }
         }
+#if (!DEDICATED)
         public static void EquipFlair(int Slot, int FlairID)
         {
             Log("Equip Flair " + FlairID + " To Slot " + Slot);
@@ -393,6 +423,7 @@ namespace SkyCoop
             MPSaveManager.SaveData("ConfiguratedBenefits", JSON.Dump(ConfiguratedBenefits));
             ApplyFlairsForModel(MyMod.MyPlayerDoll, ConfiguratedBenefits.m_Flairs, "I am");
         }
+#endif
         public static void CheckForNewFlairs()
         {
             int Amount = GetFlairsUpdateData();
@@ -420,10 +451,12 @@ namespace SkyCoop
             {
                 AvailableBenefits = GetPlayerBenefits(MyID);
                 LoadConfiguredBenfits();
+#if (!DEDICATED)
                 if (MyMod.MyPlayerDoll)
                 {
                     ApplyFlairsForModel(MyMod.MyPlayerDoll, ConfiguratedBenefits.m_Flairs, "I am");
                 }
+#endif
                 Log("My Supporter Bonuses loaded!");
                 CheckForNewFlairs();
             }else{

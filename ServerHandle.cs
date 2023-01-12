@@ -1,32 +1,31 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using UnityEngine;
 using SkyCoop;
+using static SkyCoop.Shared;
+using static SkyCoop.DataStr;
+#if (!DEDICATED)
 using MelonLoader;
+using UnityEngine;
+#else
+using System.Numerics;
+#endif
 
 namespace GameServer
 {
     class ServerHandle
     {
-        public static Vector3 boiVector3 = new Vector3(0,0,0);
-        public static Quaternion boiQuat = new Quaternion(0,0,0,0);
-        public static Vector3 LastBlockVector3 = new Vector3(0, 0, 0);
-        public static bool DarkShatalkerMode = false;
-        public static string gametime = "12:0";
-        public static bool LastLight = false;
-        public static Vector3 LastFire = new Vector3(0, 0, 0);
-        public static bool CanSend = false;
-        public static bool LastReadyState = false;
-        public static bool IamShatalker = false;
-        public static bool LastWardIsActive = false;
-        public static bool NeedReloadDWReadtState = false;
-        public static float LastCountDown = 900f;
-        public static int OverflowAnimalsOnConnectTimer = 0;
+        public static void Log(string TXT, Shared.LoggerColor Color = LoggerColor.White)
+        {
+#if (!DEDICATED)
+            MelonLogger.Msg(TXT, MyMod.ConvertLoggerColor(Color));
+#else
+            Logger.Log(TXT, Color);
+#endif
+        }
 
         public static void WelcomeReceived(int _fromClient, Packet _packet)
         {
-            OverflowAnimalsOnConnectTimer = 10;
             int _clientIdCheck = _packet.ReadInt();
             string _username = _packet.ReadString();
             string ModVersion = "";
@@ -37,39 +36,78 @@ namespace GameServer
 
             if (_fromClient != _clientIdCheck)
             {
-                Console.WriteLine($"Player \"{_username}\" (ID: {_fromClient}) has assumed the wrong client ID ({_clientIdCheck})!");
+                Log($"Player \"{_username}\" (ID: {_fromClient}) has assumed the wrong client ID ({_clientIdCheck})!");
                 return;
             }
 
-            if(ModVersion != MyMod.BuildInfo.Version)
+            if(ModVersion != "RCON")
             {
-                ServerSend.KICKMESSAGE(_fromClient, "Wrong mod version! Server using version "+ MyMod.BuildInfo.Version);
-                MyMod.MultiplayerChatMessage DisconnectMessage = new MyMod.MultiplayerChatMessage();
-                DisconnectMessage.m_Type = 0;
-                DisconnectMessage.m_By = _username;
-                DisconnectMessage.m_Message = _username + " can't join because has different mod version!";
-                MyMod.SendMessageToChat(DisconnectMessage, true);
-                MelonLogger.Msg("Client " + _fromClient + " has different version! Processing disconnect!");
-                Server.clients[_fromClient].udp.Disconnect();
+                if (ModVersion != MyMod.BuildInfo.Version)
+                {
+                    ServerSend.KICKMESSAGE(_fromClient, "Wrong mod version! Server using version " + MyMod.BuildInfo.Version);
+                    DataStr.MultiplayerChatMessage DisconnectMessage = new DataStr.MultiplayerChatMessage();
+                    DisconnectMessage.m_Type = 0;
+                    DisconnectMessage.m_By = _username;
+                    DisconnectMessage.m_Message = _username + " can't join because has different mod version!";
+                    Shared.SendMessageToChat(DisconnectMessage, true);
+                    Log("Client " + _fromClient + " has different version! Processing disconnect!");
+                    Server.clients[_fromClient].udp.Disconnect();
+                    return;
+                }
+            }else{
+                Log("RCON request from client " + _fromClient);
+
+                string RCONpass = _packet.ReadString();
+                if(RCONpass == MyMod.RCON)
+                {
+                    Log("Correct RCON password, client registered as operator.");
+                    Server.clients[_fromClient].RCON = true;
+                    ServerSend.RCONCONNECTED(_fromClient);
+                }else{
+                    Log("Incorrect RCON password, client kicked.");
+                    ServerSend.KICKMESSAGE(_fromClient, "Wrong RCON password!");
+                    Server.clients[_fromClient].udp.Disconnect();
+                }
+
                 return;
             }
 
             string SupporterID = _packet.ReadString();
             Supporters.SupporterBenefits ConfiguratedBenefits = _packet.ReadSupporterBenefits();
             MyMod.playersData[_fromClient].m_SupporterBenefits = Supporters.VerifyBenefitsWithConfig(SupporterID, ConfiguratedBenefits);
+#if (!DEDICATED)
             Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
-            CanSend = true;
-            using (Packet __packet = new Packet((int)ServerPackets.GAMETIME))
+#endif
+
+            long ClientModsHash = _packet.ReadLong();
+
+            if (MyMod.ServerConfig.m_CheckModsValidation)
             {
-                ServerSend.GAMETIME(gametime);
+                ModsValidation.ModValidationData ValiData = ModsValidation.GetModsHash();
+
+                if (ValiData.m_Hash != ClientModsHash)
+                {
+                    ServerSend.MODSLIST(_fromClient, ValiData.m_FullStringBase64);
+                    ServerSend.KICKMESSAGE(_fromClient, "Wrong mods installed! You have that different from server's mods, or you missing some mods that installed on the server, check logs!");
+                    DataStr.MultiplayerChatMessage DisconnectMessage = new DataStr.MultiplayerChatMessage();
+                    DisconnectMessage.m_Type = 0;
+                    DisconnectMessage.m_By = _username;
+                    DisconnectMessage.m_Message = _username + " can't join because has diferent mods installed!";
+                    Shared.SendMessageToChat(DisconnectMessage, true);
+                    Log("Client " + _fromClient + " can't join because has diferent mods installed!");
+                    Server.clients[_fromClient].udp.Disconnect();
+                    return;
+                }
             }
+
+            ServerSend.GAMETIME(MyMod.OveridedTime);
 
             MyMod.playersData[_fromClient].m_Name = _username;
 
-            MelonLogger.Msg("Client "+ _fromClient+" with user name "+ _username+" connected!");
-            MelonLogger.Msg("Sending init data to new client...");
+            Log("Client "+ _fromClient+" with user name "+ _username+" connected!");
+            Log("Sending init data to new client...");
 
-            MelonLogger.Msg("[Init data] Client 0 -> Client "+_fromClient+ " Data from host player object");
+            
             ServerSend.SERVERCFG(_fromClient);
             ServerSend.GEARPICKUPLIST(_fromClient);
             ServerSend.FURNBROKENLIST(_fromClient);
@@ -78,43 +116,48 @@ namespace GameServer
             ServerSend.LOOTEDHARVESTABLEALL(_fromClient);
             ServerSend.ALLSHELTERS(_fromClient);
 
-            int character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
+#if (!DEDICATED)
+            if (!MyMod.DedicatedServerAppMode)
+            {
+                Log("[Init data] Client 0 -> Client " + _fromClient + " Data from host player object");
+                int character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
 
-            ServerSend.SELECTEDCHARACTER(0, character, false, _fromClient);
+                ServerSend.SELECTEDCHARACTER(0, character, false, _fromClient);
 
-            ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, false, _fromClient);
-            ServerSend.XYZW(0, GameManager.GetPlayerTransform().rotation, false, _fromClient);
-            ServerSend.LEVELID(0, MyMod.levelid, false, _fromClient);
-            ServerSend.LEVELGUID(0, MyMod.level_guid, false, _fromClient);
-            ServerSend.LIGHTSOURCE(0, MyMod.MyLightSource, false, _fromClient);
-            ServerSend.LIGHTSOURCENAME(0, MyMod.MyLightSourceName, false, _fromClient);
-            ServerSend.BENEFITINIT(0, Supporters.ConfiguratedBenefits, _fromClient);
+                ServerSend.XYZ(0, GameManager.GetPlayerTransform().position, false, _fromClient);
+                ServerSend.XYZW(0, GameManager.GetPlayerTransform().rotation, false, _fromClient);
+                ServerSend.LEVELID(0, MyMod.levelid, false, _fromClient);
+                ServerSend.LEVELGUID(0, MyMod.level_guid, false, _fromClient);
+                ServerSend.LIGHTSOURCE(0, MyMod.MyLightSource, false, _fromClient);
+                ServerSend.LIGHTSOURCENAME(0, MyMod.MyLightSourceName, false, _fromClient);
+                ServerSend.BENEFITINIT(0, Supporters.ConfiguratedBenefits, _fromClient);
 
-            MyMod.PlayerEquipmentData Edata = new MyMod.PlayerEquipmentData();
-            Edata.m_HasAxe = MyMod.MyHasAxe;
-            Edata.m_HasMedkit = MyMod.MyHasMedkit;
-            Edata.m_HasRevolver = MyMod.MyHasRevolver;
-            Edata.m_HasRifle = MyMod.MyHasRifle;
-            Edata.m_Arrows = MyMod.MyArrows;
-            ServerSend.EQUIPMENT(0, Edata, false, _fromClient);
-            MyMod.PlayerClothingData Cdata = new MyMod.PlayerClothingData();
-            Cdata.m_Hat = MyMod.MyHat;
-            Cdata.m_Top = MyMod.MyTop;
-            Cdata.m_Bottom = MyMod.MyBottom;
-            ServerSend.CLOTH(0, Cdata, false, _fromClient);
+                DataStr.PlayerEquipmentData Edata = new DataStr.PlayerEquipmentData();
+                Edata.m_HasAxe = MyMod.MyHasAxe;
+                Edata.m_HasMedkit = MyMod.MyHasMedkit;
+                Edata.m_HasRevolver = MyMod.MyHasRevolver;
+                Edata.m_HasRifle = MyMod.MyHasRifle;
+                Edata.m_Arrows = MyMod.MyArrows;
+                ServerSend.EQUIPMENT(0, Edata, false, _fromClient);
+                DataStr.PlayerClothingData Cdata = new DataStr.PlayerClothingData();
+                Cdata.m_Hat = MyMod.MyHat;
+                Cdata.m_Top = MyMod.MyTop;
+                Cdata.m_Bottom = MyMod.MyBottom;
+                ServerSend.CLOTH(0, Cdata, false, _fromClient);
+            }
+#endif
 
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
                 if (Server.clients[i].IsBusy() == true)
                 {
-                    
                     if (MyMod.playersData[i] != null && i != _fromClient)
                     {
                         int PlayerIndex = i;
-                        MelonLogger.Msg("[Init data] Client " + i + " -> Client " + _fromClient + " Data from playersData[" + PlayerIndex + "]");
+                        Log("[Init data] Client " + i + " -> Client " + _fromClient + " Data from playersData[" + PlayerIndex + "]");
                         int _FromId = i;
                         int _ForId = _fromClient;
-                        MyMod.MultiPlayerClientData pD = MyMod.playersData[i];
+                        DataStr.MultiPlayerClientData pD = MyMod.playersData[i];
 
                         ServerSend.XYZ(_FromId, pD.m_Position, false, _ForId);
                         ServerSend.XYZW(_FromId, pD.m_Rotation, false, _ForId);
@@ -130,20 +173,24 @@ namespace GameServer
                 }
             }
 
-            MyMod.SendSlotData(_fromClient);
+            Shared.SendSlotData(_fromClient);
+#if (!DEDICATED)
             MyMod.NoHostResponceSeconds = 0;
-            MyMod.SendRQEvent = false;
             MyMod.NeedTryReconnect = false;
             MyMod.TryingReconnect = false;
+#endif
 
-            MyMod.MultiplayerChatMessage joinMessage = new MyMod.MultiplayerChatMessage();
+            DataStr.MultiplayerChatMessage joinMessage = new DataStr.MultiplayerChatMessage();
             joinMessage.m_Type = 0;
             joinMessage.m_By = _username;
             joinMessage.m_Message = _username + " join the server";
 
-            MyMod.SendMessageToChat(joinMessage, false);
+            if (!MyMod.DedicatedServerAppMode)
+            {
+                Shared.SendMessageToChat(joinMessage, false);
+            }
 
-            ServerSend.CHAT(_fromClient, joinMessage, false);
+            ServerSend.CHAT(_fromClient, joinMessage);
 
 
             if (MyMod.CurrentCustomChalleng.m_Started)
@@ -153,26 +200,38 @@ namespace GameServer
         }
         public static void XYZ(int _fromClient, Packet _packet)
         {
-            Vector3 maboi = _packet.ReadVector3();
-            boiVector3 = new Vector3(maboi.x, maboi.y + 0.03f, maboi.z);
+            Vector3 V3 = _packet.ReadVector3();
+
+#if (!DEDICATED)
+     Vector3 NewV3 = new Vector3(V3.x, V3.y + 0.03f, V3.z);
+#else
+     Vector3 NewV3 = new Vector3(V3.X, V3.Y + 0.03f, V3.Z);
+#endif
+
+
+
 
             if (MyMod.playersData[_fromClient] != null)
             {
-                MyMod.playersData[_fromClient].m_Position = boiVector3;
+                MyMod.playersData[_fromClient].m_Position = NewV3;
 
-                if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayer>() != null)
+
+#if (!DEDICATED)
+
+                if (!MyMod.DedicatedServerAppMode)
                 {
-                    MyMod.LongActionCancleCauseMoved(MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayer>());
+                    if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayer>() != null)
+                    {
+                        MyMod.LongActionCancleCauseMoved(MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayer>());
+                    }
                 }
+#endif
             }
-            ServerSend.XYZ(_fromClient, boiVector3, false);
+            ServerSend.XYZ(_fromClient, NewV3, false);
         }
         public static void XYZDW(int _fromClient, Packet _packet)
         {
-            DarkShatalkerMode = true;
-            Vector3 maboi;
-            maboi = _packet.ReadVector3();
-            boiVector3 = maboi;         
+      
         }
         public static void XYZW(int _fromClient, Packet _packet)
         {
@@ -193,8 +252,10 @@ namespace GameServer
             {
                 if (MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid)
                 {
+#if (!DEDICATED)
                     GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     cube.transform.position = V3;
+#endif
                 }
             }
             ServerSend.BLOCK(_fromClient, V3, false);
@@ -208,11 +269,11 @@ namespace GameServer
                 MyMod.playersData[_fromClient].m_Levelid = lel;
                 if(MyMod.playersData[_fromClient].m_Levelid != lel)
                 {
-                    MelonLogger.Msg("Player " + _fromClient + "  transition to level " + lel);
+                    Log("Player " + _fromClient + "  transition to level " + lel);
                 }
                 if(lel == 0)
                 {
-                    MyMod.AddLoadingClient(_fromClient);
+                    Shared.AddLoadingClient(_fromClient);
                 }
             }
             ServerSend.LEVELID(_fromClient, lel, false);
@@ -226,39 +287,49 @@ namespace GameServer
                 MyMod.playersData[_fromClient].m_LevelGuid = lel;
                 if (MyMod.playersData[_fromClient].m_LevelGuid != lel)
                 {
-                    MelonLogger.Msg("Player " + _fromClient + "  transition to level with GUID " + lel);
+                    Log("Player " + _fromClient + "  transition to level with GUID " + lel);
                 }
             }
             ServerSend.LEVELGUID(_fromClient, lel, false);
         }
         public static void GOTITEM(int _fromClient, Packet _packet)
-        {          
-            MyMod.GearItemDataPacket got = _packet.ReadGearData();
-            //MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "Client " + _fromClient + " gave item to" + got.m_SendedTo);
-            //MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name [" + got.m_GearName + "] DATA: " + got.m_DataProxy);
+        {
+            DataStr.GearItemDataPacket got = _packet.ReadGearData();
 
+#if (!DEDICATED)
             if (got.m_SendedTo == 0)
             {
                 MyMod.GiveRecivedItem(got);
             }else{
                 ServerSend.GOTITEM(got.m_SendedTo, got);
             }
+#else
+            ServerSend.GOTITEM(got.m_SendedTo, got);
+#endif
+
+
         }
         public static void GOTITEMSLICE(int _fromClient, Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
+
+#if (!DEDICATED)
             if (got.m_SendTo == 0)
             {
                 MyMod.AddSlicedJsonData(got);
             }else{
                 ServerSend.GOTITEMSLICE(got.m_SendTo, got);
             }
+#else
+            ServerSend.GOTITEMSLICE(got.m_SendTo, got);
+#endif
+
+
+
         }
         public static void GAMETIME(int _fromClient, Packet _packet)
         {
-            string got = _packet.ReadString();
 
-            uConsole.RunCommand("set_time " + got);
         }
         public static void LIGHTSOURCENAME(int _fromClient, Packet _packet)
         {
@@ -292,15 +363,11 @@ namespace GameServer
         }
         public static void REVIVE(int _fromClient, Packet _packet)
         {
-            MyMod.SimRevive();
-            using (Packet __packet = new Packet((int)ServerPackets.REVIVEDONE))
-            {
-                ServerSend.REVIVEDONE(1, true);
-            }
+
         }
         public static void REVIVEDONE(int _fromClient, Packet _packet)
         {
-            GameManager.GetInventoryComponent().RemoveGearFromInventory("GEAR_MedicalSupplies_hangar", 1);
+            
         }
         public static void SLEEPHOURS(int _fromClient, Packet _packet)
         {
@@ -311,45 +378,46 @@ namespace GameServer
         }
         public static void DARKWALKERREADY(int _fromClient, Packet _packet)
         {
-            LastReadyState = _packet.ReadBool();
-            Console.WriteLine("Got new darkwalker ready state: " + LastReadyState);
+
         }
         public static void WARDISACTIVE(int _fromClient, Packet _packet)
         {
-            LastWardIsActive = _packet.ReadBool();
+
         }
         public static void REQUESTDWREADYSTATE(int _fromClient, Packet _packet)
         {
-            NeedReloadDWReadtState = true;
+
         }
         public static void DWCOUNTDOWN(int _fromClient, Packet _packet)
         {
-            LastCountDown = _packet.ReadFloat();
-            //Console.WriteLine("LastCountDown " + LastCountDown);
+
         }
-        private static GearItem GetGearItemPrefab(string name) => Resources.Load(name).Cast<GameObject>().GetComponent<GearItem>();
-        private static GameObject GetGearItemObject(string name) => Resources.Load(name).Cast<GameObject>();
         public static void SHOOTSYNC(int _fromClient, Packet _packet)
         {
-            MyMod.ShootSync shoot = _packet.ReadShoot();
+            DataStr.ShootSync shoot = _packet.ReadShoot();
+#if (!DEDICATED)
             MyMod.DoShootSync(shoot, _fromClient);
+#endif
+
 
             ServerSend.SHOOTSYNC(_fromClient, shoot, false);
         }
         public static void PIMPSKILL(int _fromClient, Packet _packet)
         {
+#if (!DEDICATED)
             int SkillTypeId = _packet.ReadInt();
 
             if (SkillTypeId == 1)
             {
                 GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Rifle, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                MelonLoader.MelonLogger.Msg("Got remote skill upgrade Rifle");
+                Log("Got remote skill upgrade Rifle");
             }
             else if (SkillTypeId == 2)
             {
                 GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Revolver, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-                MelonLoader.MelonLogger.Msg("Got remote skill upgrade Revolver");
+                Log("Got remote skill upgrade Revolver");
             }
+#endif
         }
         public static void HARVESTINGANIMAL(int _fromClient, Packet _packet)
         {
@@ -362,30 +430,50 @@ namespace GameServer
         }
         public static void DONEHARVASTING(int _fromClient, Packet _packet)
         {
-            MyMod.HarvestStats Harvey = _packet.ReadHarvest();
-            MyMod.OnAnimalCorpseChanged(Harvey.m_Guid, Harvey.m_Meat, Harvey.m_Guts, Harvey.m_Hide);
+            DataStr.HarvestStats Harvey = _packet.ReadHarvest();
+            Shared.OnAnimalCorpseChanged(Harvey.m_Guid, Harvey.m_Meat, Harvey.m_Guts, Harvey.m_Hide);
         }
         public static void ANIMALTEST(int _fromClient, Packet _packet)
         {
-            MyMod.AnimalCompactData dat = _packet.ReadAnimalCompactData();
-            MyMod.AnimalAnimsSync anim = _packet.ReadAnimalAnim();
+            DataStr.AnimalCompactData dat = _packet.ReadAnimalCompactData();
+            DataStr.AnimalAnimsSync anim = _packet.ReadAnimalAnim();
             int _for = _packet.ReadInt();
 
+#if (!DEDICATED)
             if (_for == 0)
             {
                 MyMod.DoAnimalSync(dat, anim);
             }else{
                 ServerSend.ANIMALTEST(_fromClient, dat, anim, _for);
             }
+#else
+            ServerSend.ANIMALTEST(_fromClient, dat, anim, _for);
+#endif
         }
         public static void ANIMALSYNCTRIGG(int _fromClient, Packet _packet)
         {
-            MyMod.AnimalTrigger got = _packet.ReadAnimalTrigger();
+            DataStr.AnimalTrigger got = _packet.ReadAnimalTrigger();
+
+#if (!DEDICATED)
+
             MyMod.SetAnimalTriggers(got);
+#endif
             ServerSend.ANIMALSYNCTRIGG(_fromClient, got, true);
         }
         public static void BULLETDAMAGE(int _fromClient, Packet _packet)
         {
+            if (!MyMod.ServerConfig.m_PVP)
+            {
+                ServerSend.DOORLOCKEDMSG(_fromClient, "You cannot attack players on this server.");
+                return;
+            }
+            if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_IsSafe)
+            {
+                ServerSend.DOORLOCKEDMSG(_fromClient, "You cannot attack when you in the safe zone!");
+                return;
+            }
+
+            
             float damage = _packet.ReadFloat();
             int BodyPart = _packet.ReadInt();
             int _for = _packet.ReadInt();
@@ -395,64 +483,70 @@ namespace GameServer
             {
                 MeleeWeapon = _packet.ReadString();
             }
+
+#if (!DEDICATED)
             if (_for == 0)
             {
+                if(GameManager.m_PlayerObject && (SafeZoneManager.SceneIsSafe(MyMod.level_guid) || SafeZoneManager.InsideSafeZone(MyMod.level_guid, GameManager.GetPlayerTransform().position)))
+                {
+                    ServerSend.DOORLOCKEDMSG(_fromClient, "You cannot attack players in the safe zone!");
+                    return;
+                }
                 MyMod.DamageByBullet(damage, _fromClient, BodyPart, Melee, MeleeWeapon);
             }else{
+                if (MyMod.playersData[_for] != null && MyMod.playersData[_for].m_IsSafe)
+                {
+                    ServerSend.DOORLOCKEDMSG(_fromClient, "You cannot attack players in the safe zone!");
+                    return;
+                }
                 ServerSend.BULLETDAMAGE(_for, damage, BodyPart, _fromClient, Melee, MeleeWeapon);
             }
+#else
+            if (MyMod.playersData[_for] != null && MyMod.playersData[_for].m_IsSafe)
+            {
+                ServerSend.DOORLOCKEDMSG(_fromClient, "You cannot attack players in the safe zone!");
+                return;
+            }
+            ServerSend.BULLETDAMAGE(_for, damage, BodyPart, _fromClient, Melee, MeleeWeapon);
+#endif
         }
         public static void MULTISOUND(int _fromClient, Packet _packet)
         {
             string sound = _packet.ReadString();
+
+#if (!DEDICATED)
             MyMod.PlayMultiplayer3dAduio(sound, _fromClient);
+#endif
+
+
+
             ServerSend.MULTISOUND(_fromClient, sound, false);
         }
         public static void CONTAINEROPEN(int _fromClient, Packet _packet)
         {
-            MyMod.ContainerOpenSync box = _packet.ReadContainer();
+            DataStr.ContainerOpenSync box = _packet.ReadContainer();
+
+#if (!DEDICATED)
             MyMod.DoSyncContainer(box);
+#endif
 
             ServerSend.CONTAINEROPEN(_fromClient, box, false);
         }
         public static void LUREPLACEMENT(int _fromClient, Packet _packet)
         {
-            MyMod.WalkTracker sync = _packet.ReadWalkTracker();
-            MyMod.LastLure = sync;
+
         }
         public static void LUREISACTIVE(int _fromClient, Packet _packet)
         {
-            MyMod.LureIsActive = _packet.ReadBool();
+
         }
         public static void ALIGNANIMAL(int _fromClient, Packet _packet)
         {
-            MyMod.AnimalAligner Alig = _packet.ReadAnimalAligner();
+
         }
         public static void ASKFORANIMALPROXY(int _fromClient, Packet _packet)
         {
-            string _guid = _packet.ReadString();
-            string Proxy = "";
-            for (int i = 0; i < BaseAiManager.m_BaseAis.Count; i++)
-            {
-                if (BaseAiManager.m_BaseAis[i] != null && BaseAiManager.m_BaseAis[i].gameObject != null)
-                {
-                    GameObject animal = BaseAiManager.m_BaseAis[i].gameObject;
-                    if (animal.GetComponent<ObjectGuid>() != null && animal.GetComponent<ObjectGuid>().Get() == _guid)
-                    {
-                        Proxy = BaseAiManager.m_BaseAis[i].Serialize();
-                        break;
-                    }
-                }
-            }
-            using (Packet __packet = new Packet((int)ServerPackets.ALIGNANIMAL))
-            {
-                MyMod.AnimalAligner Alig = new MyMod.AnimalAligner();
 
-                Alig.m_Guid = _guid;
-                Alig.m_Proxy = Proxy;
-
-                ServerSend.ALIGNANIMAL(1, Alig);
-            }
         }
         public static void CARRYBODY(int _fromClient, Packet _packet)
         {
@@ -464,7 +558,9 @@ namespace GameServer
         public static void ANIMALDELETE(int _fromClient, Packet _packet)
         {
             string AnimalGuid = _packet.ReadString();
+#if (!DEDICATED)
             MyMod.DeleteAnimal(AnimalGuid);
+#endif
             ServerSend.ANIMALDELETE(_fromClient, AnimalGuid);
         }
         public static void KEEPITALIVE(int _fromClient, Packet _packet)
@@ -477,8 +573,8 @@ namespace GameServer
 
             if(Been > 10)
             {
-                MelonLogger.Msg(ConsoleColor.Yellow,"Last request from client "+_fromClient+ " took longer than expected");
-                MelonLogger.Msg(ConsoleColor.Yellow, "Client[" + _fromClient + "] KeepItAlive took "+ Been+"s");
+                Log("Last request from client "+_fromClient+ " took longer than expected");
+                Log("Client[" + _fromClient + "] KeepItAlive took "+ Been+"s");
             }
         }
         public static void SYNCWEATHER(int _fromClient, Packet _packet)
@@ -487,7 +583,7 @@ namespace GameServer
         }
         public static void EQUIPMENT(int _fromClient, Packet _packet)
         {
-            MyMod.PlayerEquipmentData item = _packet.ReadEQ();
+            DataStr.PlayerEquipmentData item = _packet.ReadEQ();
 
             if (MyMod.playersData[_fromClient] != null)
             {
@@ -504,33 +600,47 @@ namespace GameServer
         }
         public static void CHAT(int _fromClient, Packet _packet)
         {
-            MyMod.MultiplayerChatMessage message = _packet.ReadChat();
-            MyMod.SendMessageToChat(message, false);
-            ServerSend.CHAT(_fromClient, message, false);
+            DataStr.MultiplayerChatMessage message = _packet.ReadChat();
+
+#if (!DEDICATED)
+
+            if (message.m_Global)
+            {
+                SendMessageToChat(message, false);
+            } else
+            {
+                if (MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid && Vector3.Distance(GameManager.GetPlayerTransform().position, MyMod.playersData[_fromClient].m_Position) <= LocalChatMaxDistance)
+                {
+                    SendMessageToChat(message, false);
+                }
+            }
+#else
+            Shared.SendMessageToChat(message, false);
+#endif
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                ServerSend.CHAT(_fromClient, message, MyMod.playersData[_fromClient].m_Position, MyMod.playersData[_fromClient].m_LevelGuid);
+            }
         }
         public static void CHANGENAME(int _fromClient, Packet _packet)
         {
             string newName = _packet.ReadString();
-            
-            MyMod.MultiplayerChatMessage message = new MyMod.MultiplayerChatMessage();
+
+            DataStr.MultiplayerChatMessage message = new DataStr.MultiplayerChatMessage();
             message.m_Type = 0;
             message.m_By = MyMod.playersData[_fromClient].m_Name;
             message.m_Message = MyMod.playersData[_fromClient].m_Name + " changed name to "+ newName;
 
             MyMod.playersData[_fromClient].m_Name = newName;
 
-            MyMod.SendMessageToChat(message, true);
+            Shared.SendMessageToChat(message, true);
             ServerSend.CHANGENAME(_fromClient, newName, false);
         }
 
         public static void CLOTH(int _fromClient, Packet _packet)
         {
-            MyMod.PlayerClothingData ClotchData = _packet.ReadClothingData();
+            DataStr.PlayerClothingData ClotchData = _packet.ReadClothingData();
             MyMod.playersData[_fromClient].m_PlayerClothingData = ClotchData;
-            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Hat " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Hat);
-            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Torso " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Top);
-            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Legs " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Bottom);
-            //MelonLoader.MelonLogger.Msg("[Clothing] Client " + _fromClient + " Feets " + MyMod.playersData[_fromClient].m_PlayerClothingData.m_Boots);
             ServerSend.CLOTH(_fromClient, ClotchData, false);
         }
 
@@ -546,7 +656,7 @@ namespace GameServer
                 if (Server.clients[i].udp != null && Server.clients[i].udp.sid == sid)
                 {
                     ReConnection = true;
-                    MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Reconnecting " + sid + " as client " + i);
+                    Log("[SteamWorks.NET] Reconnecting " + sid + " as client " + i);
                     Server.clients[i].TimeOutTime = 0;
                     ServerSend.Welcome(freeSlot, Server.MaxPlayers);
                     freeSlot = i;
@@ -560,7 +670,7 @@ namespace GameServer
                 {
                     if (Server.clients[i].IsBusy() == false)
                     {
-                        MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Here an empty slot " + i + " for " + sid);
+                        Log("[SteamWorks.NET] Here an empty slot " + i + " for " + sid);
                         freeSlot = i;
                         Server.clients[i].udp.sid = sid;
                         ServerSend.Welcome(freeSlot, Server.MaxPlayers);
@@ -568,45 +678,47 @@ namespace GameServer
                     }
                 }
             }
-
-            //MyMod.MultiplayerChatMessage joinMessage = new MyMod.MultiplayerChatMessage();
-            //joinMessage.m_Type = 0;
-            //joinMessage.m_By = sid;
-            //joinMessage.m_Message = "STEAM USER "+sid + " trying to join server in slot "+freeSlot;
-
-            //MyMod.SendMessageToChat(joinMessage, false);
         }
         public static void ASKSPAWNDATA(int _fromClient, Packet _packet)
         {
             int lvl = _packet.ReadInt();
 
+#if (!DEDICATED)
+
             if(lvl == MyMod.levelid)
             {
                 MyMod.SendSpawnData(false);
             }
+#endif
 
             ServerSend.ASKSPAWNDATA(_fromClient, lvl, false);
         }
         public static void FURNBROKEN(int _fromClient, Packet _packet)
         {
-            MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+            DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
+
+#if (!DEDICATED)
 
             MyMod.OnFurnitureDestroyed(furn.m_Guid, furn.m_ParentGuid, furn.m_LevelID, furn.m_LevelGUID, false);
+#endif
 
             ServerSend.FURNBROKEN(_fromClient, furn, false);
         }
         public static void FURNBREAKINGGUID(int _fromClient, Packet _packet)
         {
-            MyMod.BrokenFurnitureSync furn = _packet.ReadFurn();
+            DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
 
             if(MyMod.playersData[_fromClient] != null)
             {
                 MyMod.playersData[_fromClient].m_BrakingObject = furn;
 
+#if (!DEDICATED)
+
                 if(MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
                 {
                     MyMod.playersData[_fromClient].m_BrakingSounds = MyMod.GetBreakDownSound(furn);
                 }
+#endif
             }
 
             ServerSend.FURNBREAKINGGUID(_fromClient, furn, false);
@@ -617,7 +729,7 @@ namespace GameServer
 
             if (MyMod.playersData[_fromClient] != null)
             {
-                MyMod.playersData[_fromClient].m_BrakingObject = new MyMod.BrokenFurnitureSync();
+                MyMod.playersData[_fromClient].m_BrakingObject = new DataStr.BrokenFurnitureSync();
                 MyMod.playersData[_fromClient].m_BrakingSounds = "";
             }
 
@@ -625,25 +737,32 @@ namespace GameServer
         }
         public static void GEARPICKUP(int _fromClient, Packet _packet)
         {
-            MyMod.PickedGearSync gear = _packet.ReadPickedGear();
+            DataStr.PickedGearSync gear = _packet.ReadPickedGear();
+
+#if (!DEDICATED)
+
 
             if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
             {
-                if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                if (!MyMod.DedicatedServerAppMode)
                 {
-                    MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().Pickup();
+                    if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+                    {
+                        MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
+                    }
                 }
             }
+#endif
 
-            MyMod.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, _fromClient, gear.m_MyInstanceID, false);
+            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, _fromClient, gear.m_MyInstanceID, false);
 
             ServerSend.GEARPICKUP(_fromClient, gear, false);
         }
         public static void ROPE(int _fromClient, Packet _packet)
         {
-            MyMod.ClimbingRopeSync rope = _packet.ReadRope();
+            DataStr.ClimbingRopeSync rope = _packet.ReadRope();
 
-            MyMod.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
+            Shared.AddDeployedRopes(rope.m_Position, rope.m_Deployed, rope.m_Snapped, rope.m_LevelID, rope.m_LevelGUID, false);
 
             ServerSend.ROPE(_fromClient, rope, false);
         }
@@ -651,14 +770,20 @@ namespace GameServer
         {
             bool IsDrink = _packet.ReadBool();
 
+#if (!DEDICATED)
+
             if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
             {
-                if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                if (!MyMod.DedicatedServerAppMode)
                 {
-                    MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_IsDrink = IsDrink;
-                    MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().Consumption();
+                    if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+                    {
+                        MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>().m_IsDrink = IsDrink;
+                        MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>().Consumption();
+                    }
                 }
             }
+#endif
 
             ServerSend.CONSUME(_fromClient, IsDrink, false);
         }
@@ -668,13 +793,19 @@ namespace GameServer
             
             if (MyMod.playersData[_fromClient] != null)
             {
-                if(MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+#if (!DEDICATED)
+
+                if (!MyMod.DedicatedServerAppMode)
                 {
-                    if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                    if (MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
                     {
-                        MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().StopConsumption();
+                        if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+                        {
+                            MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>().StopConsumption();
+                        }
                     }
                 }
+#endif
                 MyMod.playersData[_fromClient].m_AnimState = LastAnim;
             }
             ServerSend.STOPCONSUME(_fromClient, LastAnim, false);
@@ -704,17 +835,23 @@ namespace GameServer
             string ActionType = _packet.ReadString();
             int ForWho = _packet.ReadInt();
 
+#if (!DEDICATED)
             if(ForWho == 0)
             {
                 MyMod.OtherPlayerApplyActionOnMe(ActionType, _fromClient);
             }else{
                 ServerSend.APPLYACTIONONPLAYER(_fromClient, ActionType, false, ForWho);
             }
+#else
+            ServerSend.APPLYACTIONONPLAYER(_fromClient, ActionType, false, ForWho);
+#endif
         }
         public static void DONTMOVEWARNING(int _fromClient, Packet _packet)
         {
             bool ok = _packet.ReadBool();
             int ForWho = _packet.ReadInt();
+
+#if (!DEDICATED)
 
             if(ForWho == 0)
             {
@@ -726,6 +863,9 @@ namespace GameServer
             }else{
                 ServerSend.DONTMOVEWARNING(_fromClient, true, false, ForWho);
             }
+#else
+            ServerSend.DONTMOVEWARNING(_fromClient, true, false, ForWho);
+#endif
         }
         public static void INFECTIONSRISK(int _fromClient, Packet _packet)
         {
@@ -739,7 +879,7 @@ namespace GameServer
         }
         public static void CONTAINERINTERACT(int _fromClient, Packet _packet)
         {
-            MyMod.ContainerOpenSync box = _packet.ReadContainer();
+            DataStr.ContainerOpenSync box = _packet.ReadContainer();
 
             if (MyMod.playersData[_fromClient] != null)
             {
@@ -753,18 +893,20 @@ namespace GameServer
 
             if(box.m_Guid != "NULL")
             {
-                MyMod.AddLootedContainer(box, true, _fromClient);
+                AddLootedContainer(box, true, _fromClient);
+#if (!DEDICATED)
                 if (box.m_LevelID == MyMod.levelid && box.m_LevelGUID == MyMod.level_guid)
                 {
                     MyMod.ApplyLootedContainers();
                 }
+#endif
             }
 
             ServerSend.CONTAINERINTERACT(_fromClient, box, false);
         }
         public static void HARVESTPLANT(int _fromClient, Packet _packet)
         {
-            MyMod.HarvestableSyncData harveData = _packet.ReadHarvestablePlant();
+            DataStr.HarvestableSyncData harveData = _packet.ReadHarvestablePlant();
 
             if (MyMod.playersData[_fromClient] != null)
             {
@@ -775,10 +917,12 @@ namespace GameServer
                     MyMod.playersData[_fromClient].m_Plant = "";
                 }
             }
+#if (!DEDICATED)
             if(harveData.m_State == "Done")
             {
                 MyMod.AddHarvastedPlant(harveData.m_Guid, _fromClient);
             }
+#endif
             ServerSend.HARVESTPLANT(_fromClient, harveData, false);
         }
 
@@ -803,20 +947,20 @@ namespace GameServer
 
         public static void ADDSHELTER(int _fromClient, Packet _packet)
         {
-            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
-            MyMod.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
+            DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
+            Shared.ShelterCreated(shelter.m_Position, shelter.m_Rotation, shelter.m_LevelID, shelter.m_LevelGUID, false);
             ServerSend.ADDSHELTER(_fromClient, shelter,  false);
         }
 
         public static void REMOVESHELTER(int _fromClient, Packet _packet)
         {
-            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
-            MyMod.ShelterRemoved(shelter.m_Position, shelter.m_LevelID, shelter.m_LevelGUID, false);
+            DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
+            Shared.ShelterRemoved(shelter.m_Position, shelter.m_LevelID, shelter.m_LevelGUID, false);
             ServerSend.REMOVESHELTER(_fromClient, shelter, false);
         }
         public static void USESHELTER(int _fromClient, Packet _packet)
         {
-            MyMod.ShowShelterByOther shelter = _packet.ReadShelter();
+            DataStr.ShowShelterByOther shelter = _packet.ReadShelter();
             if (MyMod.playersData[_fromClient] != null)
             {
                 if (shelter.m_Position == new Vector3(0, 0, 0))
@@ -830,23 +974,28 @@ namespace GameServer
         }
         public static void FIRE(int _fromClient, Packet _packet)
         {
-            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            DataStr.FireSourcesSync FireSource = _packet.ReadFire();
+#if (!DEDICATED)
             MyMod.MayAddFireSources(FireSource);
+#endif
             ServerSend.FIRE(_fromClient, FireSource, false);
         }
         public static void FIREFUEL(int _fromClient, Packet _packet)
         {
-            MyMod.FireSourcesSync FireSource = _packet.ReadFire();
+            DataStr.FireSourcesSync FireSource = _packet.ReadFire();
+#if (!DEDICATED)
             if (FireSource.m_LevelId == MyMod.levelid && FireSource.m_LevelGUID == MyMod.level_guid)
             {
                 MyMod.AddOtherFuel(FireSource, FireSource.m_FuelName);
             }
-            
+#endif
             ServerSend.FIREFUEL(_fromClient, FireSource, false);
         }
         public static void CUSTOM(int _fromClient, Packet _packet)
         {
+#if (!DEDICATED)
             API.CustomEventCallback(_packet, _fromClient);
+#endif
         }
         public static void VOICECHAT(int _fromClient, Packet _packet)
         {
@@ -866,6 +1015,8 @@ namespace GameServer
                     Radio = MyMod.playersData[_fromClient].m_RadioFrequency;
                 }
 
+#if (!DEDICATED)
+
                 if (SourceLevel == MyMod.level_guid)
                 {
                     bool IsRadio = false;
@@ -881,51 +1032,47 @@ namespace GameServer
                     MyMod.ProcessRadioChatData(CompressedData, uint.Parse(BytesWritten.ToString()), RecordTime);
                     ServerSend.VOICECHAT(0, CompressedData, BytesWritten, RecordTime, MyMod.level_guid, -66, Sender);
                 }
-
+#endif
                 ServerSend.VOICECHAT(_fromClient, CompressedData, BytesWritten, RecordTime, SourceLevel, Radio, Sender);
             }
         }
         public static void SLICEDBYTES(int _fromClient, Packet _packet)
         {
-            MyMod.SlicedBytesData got = _packet.ReadSlicedBytes();
-            MyMod.AddSlicedBytesData(got, _fromClient);
-
-            if(got.m_SendTo != 0)
-            {
-                ServerSend.SLICEDBYTES(_fromClient, got, false, got.m_SendTo);
-            }
         }
         public static void ANIMALDAMAGE(int _fromClient, Packet _packet)
         {
             string guid = _packet.ReadString();
             float damage = _packet.ReadFloat();
+#if (!DEDICATED)
             MyMod.DoAnimalDamage(guid, damage);
+#endif
+
             ServerSend.ANIMALDAMAGE(_fromClient, guid, damage);
         }
         public static void DROPITEM(int _fromClient, Packet _packet)
         {
-            MyMod.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
-            MyMod.FakeDropItem(GearData);
+            DataStr.DroppedGearItemDataPacket GearData = _packet.ReadDroppedGearData();
+            Shared.FakeDropItem(GearData);
             ServerSend.DROPITEM(_fromClient, GearData, true);
         }
         public static void GOTDROPSLICE(int _fromClient, Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
-            MyMod.AddSlicedJsonDataForDrop(got);
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
+            Shared.AddSlicedJsonDataForDrop(got, _fromClient);
         }
         public static void REQUESTPICKUP(int _fromClient, Packet _packet)
         {
             int Hash = _packet.ReadInt();
             string Scene = _packet.ReadString();
-            MelonLogger.Msg("Client "+ _fromClient+" trying to pickup gear with hash "+ Hash);
-            MyMod.ClientTryPickupItem(Hash, _fromClient, Scene, false);
+            Log("Client "+ _fromClient+" trying to pickup gear with hash "+ Hash);
+            Shared.ClientTryPickupItem(Hash, _fromClient, Scene, false);
         }
         public static void REQUESTPLACE(int _fromClient, Packet _packet)
         {
             int Hash = _packet.ReadInt();
             string lvlKey = _packet.ReadString();
-            MelonLogger.Msg("Client " + _fromClient + " trying to place gear with hash " + Hash);
-            MyMod.ClientTryPickupItem(Hash, _fromClient, lvlKey, true);
+            Log("Client " + _fromClient + " trying to place gear with hash " + Hash);
+            Shared.ClientTryPickupItem(Hash, _fromClient, lvlKey, true);
         }
 
         public static void SendAllOpenables(int _fromClient, string scene)
@@ -944,7 +1091,7 @@ namespace GameServer
             }
         }
 
-        public static void SendAnimalCorpse(MyMod.AnimalKilled Animal, int forWho = -1)
+        public static void SendAnimalCorpse(DataStr.AnimalKilled Animal, int forWho = -1)
         {
             if(forWho != -1)
             {
@@ -958,7 +1105,7 @@ namespace GameServer
         {
             List<string> ToRemove = new List<string>();
 
-            foreach (var item in MyMod.AnimalsKilled)
+            foreach (var item in Shared.AnimalsKilled)
             {
                 int DespawnTime = item.Value.m_CreatedTime+14400;
                 if (DespawnTime < MyMod.MinutesFromStartServer)
@@ -973,7 +1120,7 @@ namespace GameServer
             }
             foreach (var item in ToRemove)
             {
-                MyMod.AnimalsKilled.Remove(item);
+                Shared.AnimalsKilled.Remove(item);
             }
         }
 
@@ -981,36 +1128,49 @@ namespace GameServer
         {
             int lvl = _packet.ReadInt();
             string Scene = _packet.ReadString();
-            MelonLogger.Msg("Client "+ _fromClient+" request all drops for scene "+ Scene);
+            WeatherVolunteerData Data = _packet.ReadWeatherVolunteerData();
+
+            Log("Client "+ _fromClient+" request all drops for scene "+ Scene);
+            RegisterWeatherSetForRegion(_fromClient, Data);
             if(MyMod.playersData[_fromClient] != null)
             {
                 MyMod.playersData[_fromClient].m_Levelid = lvl;
                 MyMod.playersData[_fromClient].m_LevelGuid = Scene;
+                MyMod.playersData[_fromClient].m_LastRegion = Data.CurrentRegion;
             }
             SendAllOpenables(_fromClient, Scene);
             RequestAnimalCorpses(_fromClient, Scene);
-            
+
+
+#if (!DEDICATED)
             if(MyMod.CurrentCustomChalleng.m_Started && MyMod.CurrentChallengeRules.m_Name == "Lost in action")
             {
                 ServerSend.CAIRNS(_fromClient);
             }
+#endif
 
-            foreach (MyMod.DeathContainerData create in MyMod.DeathCreates)
+            foreach (DataStr.DeathContainerData create in MyMod.DeathCreates)
             {
                 if(create.m_LevelKey == Scene)
                 {
                     ServerSend.ADDDEATHCONTAINER(create, _fromClient);
                 }
             }
+            Dictionary<string, string> Doors = MPSaveManager.GetDoorsOnScene(Scene);
+            foreach (var item in Doors)
+            {
+                string GUID = item.Key.Split('_')[1];
+                ServerSend.ADDDOORLOCK(_fromClient, GUID, Scene);
+            }
 
-            MyMod.ModifyDynamicGears(Scene);
-            Dictionary<int, MyMod.DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
-            Dictionary<int, MyMod.SlicedJsonDroppedGear> Drops = MPSaveManager.LoadDropData(Scene);
+            Shared.ModifyDynamicGears(Scene);
+            Dictionary<int, DataStr.DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
+            Dictionary<int, DataStr.SlicedJsonDroppedGear> Drops = MPSaveManager.LoadDropData(Scene);
 
 
             if(Drops == null || Visuals == null)
             {
-                MelonLogger.Msg("Requested scene has no drops " + Scene);
+                Log("Requested scene has no drops " + Scene);
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }else{
                 int index = 0;
@@ -1019,32 +1179,32 @@ namespace GameServer
                     index++;
                     ServerSend.DROPITEM(0, cur.Value, false, _fromClient);
                 }
-                MelonLogger.Msg("Sending done, "+ index+" packets has been sent");                
+                Log("Sending done, "+ index+" packets has been sent");                
                 
                 ServerSend.LOADINGSCENEDROPSDONE(_fromClient, true);
             }
 
-            MyMod.RemoveLoadingClient(_fromClient);
+            Shared.RemoveLoadingClient(_fromClient);
         }
         public static void GOTCONTAINERSLICE(int _fromClient, Packet _packet)
         {
-            MyMod.SlicedJsonData got = _packet.ReadSlicedGear();
-            MyMod.AddSlicedJsonDataForContainer(got, _fromClient);
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
+            Shared.AddSlicedJsonDataForContainer(got, _fromClient);
         }
         public static void REQUESTOPENCONTAINER(int _fromClient, Packet _packet)
         {
             string Scene = _packet.ReadString();
             string boxGUID = _packet.ReadString();
-            MelonLogger.Msg("Client " + _fromClient + " request container data for " + boxGUID);
+            Log("Client " + _fromClient + " request container data for " + boxGUID);
             string CompressedData = MPSaveManager.LoadContainer(Scene, boxGUID);
 
             if (CompressedData == "")
             {
-                MelonLogger.Msg("Send to client this is empty");
+                Log("Send to client this is empty");
                 ServerSend.OPENEMPTYCONTAINER(_fromClient, true);
             }else{
-                MelonLogger.Msg("Send to client data about container");
-                MyMod.SendContainerData(CompressedData, Scene, boxGUID, _fromClient);
+                Log("Send to client data about container");
+                Shared.SendContainerData(CompressedData, Scene, boxGUID, _fromClient);
             }
         }
         public static void CHANGEAIM(int _fromClient, Packet _packet)
@@ -1061,59 +1221,73 @@ namespace GameServer
             string Scene = _packet.ReadString();
             string _GUID = _packet.ReadString();
             bool state = _packet.ReadBool();
-            MyMod.ChangeOpenableThingState(Scene, _GUID, state);
+            Shared.ChangeOpenableThingState(Scene, _GUID, state);
         }
         public static void TRYDIAGNISISPLAYER(int _fromClient, Packet _packet)
         {
             int ForWho = _packet.ReadInt();
+#if (!DEDICATED)
             if (ForWho == 0)
             {
                 MyMod.SendMyAffictions(_fromClient, GameManager.GetConditionComponent().m_CurrentHP);
             }else{
                 ServerSend.TRYDIAGNISISPLAYER(ForWho, _fromClient);
             }
+#else
+            ServerSend.TRYDIAGNISISPLAYER(ForWho, _fromClient);
+#endif
         }
         public static void CUREAFFLICTION(int _fromClient, Packet _packet)
         {
-            MyMod.AffictionSync toCure = _packet.ReadAffiction();
+            DataStr.AffictionSync toCure = _packet.ReadAffiction();
             int ForWho = _packet.ReadInt();
 
-            if(ForWho == 0)
+#if (!DEDICATED)
+            if (ForWho == 0)
             {
                 MyMod.OtherPlayerCuredMyAffiction(toCure);
             }else{
                 ServerSend.CUREAFFLICTION(ForWho, toCure);
             }
+#else
+            ServerSend.CUREAFFLICTION(ForWho, toCure);
+#endif
         }
         public static void ANIMALKILLED(int _fromClient, Packet _packet)
         {
-            MyMod.AnimalKilled Data = _packet.ReadAnimalCorpse();
-            MyMod.OnAnimalKilled(Data.m_PrefabName, Data.m_Position, Data.m_Rotation, Data.m_GUID, Data.m_LevelGUID, Data.m_RegionGUID, Data.m_Knocked);
+            DataStr.AnimalKilled Data = _packet.ReadAnimalCorpse();
+            Shared.OnAnimalKilled(Data.m_PrefabName, Data.m_Position, Data.m_Rotation, Data.m_GUID, Data.m_LevelGUID, Data.m_RegionGUID, Data.m_Knocked);
 
             ServerSend.ANIMALCORPSE(0, Data, true);
         }
         public static void PICKUPRABBIT(int _fromClient, Packet _packet)
         {
             string GUID = _packet.ReadString();
-            int result = MyMod.PickUpRabbit(GUID);
+            int result = Shared.PickUpRabbit(GUID);
             ServerSend.GOTRABBIT(_fromClient, result);
         }
         public static void HITRABBIT(int _fromClient, Packet _packet)
         {
             string GUID = _packet.ReadString();
             int For = _packet.ReadInt();
-            if(For != 0)
+#if (!DEDICATED)
+            if (For != 0)
             {
                 ServerSend.HITRABBIT(For, GUID);
             }else{
                 MyMod.OnHitRabbit(GUID);
             }
-            
+#else
+            ServerSend.HITRABBIT(For, GUID);
+#endif
+
         }
         public static void RELEASERABBIT(int _fromClient, Packet _packet)
         {
             string levelGUID = _packet.ReadString();
+#if (!DEDICATED)
             MyMod.OnReleaseRabbit(_fromClient);
+#endif
             ServerSend.RELEASERABBIT(_fromClient, levelGUID);
         }
         public static void SENDMYAFFLCTIONS(int _fromClient, Packet _packet)
@@ -1121,34 +1295,40 @@ namespace GameServer
             int forWho = _packet.ReadInt();
             int Count = _packet.ReadInt();
             float hp = _packet.ReadFloat();
-            List<MyMod.AffictionSync> Affs = new List<MyMod.AffictionSync>();
+            List<DataStr.AffictionSync> Affs = new List<DataStr.AffictionSync>();
 
             for (int index = 0; index < Count; ++index)
             {
-                MyMod.AffictionSync newElement = _packet.ReadAffiction();
+                DataStr.AffictionSync newElement = _packet.ReadAffiction();
                 Affs.Add(newElement);
             }
 
-            MelonLogger.Msg(ConsoleColor.Green, "Client " + _fromClient + " sent " + Count + " afflictions, for "+ forWho);
+            Log("Client " + _fromClient + " sent " + Count + " afflictions, for "+ forWho);
 
+#if (!DEDICATED)
             if (forWho == 0)
             {
                 MyMod.CheckOtherPlayer(Affs, _fromClient, hp);
-            }else{
+            } else
+            {
                 ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, _fromClient);
             }
+#else
+            ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, _fromClient);
+#endif
+
         }
         public static void REQUESTANIMALCORPSE(int _fromClient, Packet _packet)
         {
             string GUID = _packet.ReadString();
-            MelonLogger.Msg("Client "+_fromClient+" requested animal corpse "+GUID);
-            MyMod.AnimalKilled Animal;
-            if (MyMod.AnimalsKilled.TryGetValue(GUID, out Animal))
+            Log("Client "+_fromClient+" requested animal corpse "+GUID);
+            DataStr.AnimalKilled Animal;
+            if (Shared.AnimalsKilled.TryGetValue(GUID, out Animal))
             {
                 float Meat = Animal.m_Meat;
                 int Guts = Animal.m_Guts;
                 int Hide = Animal.m_Hide;
-                MelonLogger.Msg("Sending responce");
+                Log("Sending responce");
                 ServerSend.REQUESTANIMALCORPSE(_fromClient, Meat, Guts, Hide);
             }else{
                 ServerSend.REQUESTANIMALCORPSE(_fromClient, -1, 0, 0);
@@ -1157,9 +1337,12 @@ namespace GameServer
         public static void QUARTERANIMAL(int _fromClient, Packet _packet)
         {
             string GUID = _packet.ReadString();
-            MelonLogger.Msg("QUARTERANIMAL " + GUID);
-            MyMod.OnAnimalQuarted(GUID);
+            Log("QUARTERANIMAL " + GUID);
+            Shared.OnAnimalQuarted(GUID);
+#if (!DEDICATED)
+
             MyMod.SpawnQuartedMess(GUID);
+#endif
             ServerSend.QUARTERANIMAL(_fromClient, GUID, false);
         }
         public static void ANIMALAUDIO(int _fromClient, Packet _packet)
@@ -1173,10 +1356,12 @@ namespace GameServer
                 if (MyMod.playersData[_fromClient] != null)
                 {
                     SenderLevelGUID = MyMod.playersData[_fromClient].m_LevelGuid;
+#if (!DEDICATED)
                     if (MyMod.level_guid == MyMod.playersData[_fromClient].m_LevelGuid)
                     {
                         Pathes.Play3dAudioOnAnimal(GUID, soundID);
                     }
+#endif
                 }
                 ServerSend.ANIMALAUDIO(_fromClient, soundID, GUID, SenderLevelGUID);
             }else{
@@ -1185,10 +1370,12 @@ namespace GameServer
                 if (MyMod.playersData[_fromClient] != null)
                 {
                     SenderLevelGUID = MyMod.playersData[_fromClient].m_LevelGuid;
+#if (!DEDICATED)
                     if (MyMod.level_guid == MyMod.playersData[_fromClient].m_LevelGuid)
                     {
                         Pathes.Play3dAudioOnAnimal(GUID, soundID);
                     }
+#endif
                 }
                 ServerSend.ANIMALAUDIO(_fromClient, soundID, GUID, SenderLevelGUID);
             }
@@ -1196,50 +1383,49 @@ namespace GameServer
         public static void CHANGEDFREQUENCY(int _fromClient, Packet _packet)
         {
             float FQ = _packet.ReadFloat();
-            float FixedFloat = Mathf.Round(FQ * 10.0f) * 0.1f;
+            double FixedFloat = System.Math.Round((double)FQ * 10.0f) * 0.1f;
 
-            if(MyMod.playersData[_fromClient] != null)
+
+            if (MyMod.playersData[_fromClient] != null)
             {
-                MyMod.playersData[_fromClient].m_RadioFrequency = FixedFloat;
+                MyMod.playersData[_fromClient].m_RadioFrequency = (float)FixedFloat;
             }
         }
         public static void MELEESTART(int _fromClient, Packet _packet)
         {
-            if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+#if (!DEDICATED)
+            if (MyMod.players[_fromClient] != null && MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
             {
-                MyMod.players[_fromClient].GetComponent<MyMod.MultiplayerPlayerAnimator>().MeleeAttack();
+                MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>().MeleeAttack();
             }
+#endif
             ServerSend.MELEESTART(_fromClient);
         }
         public static void TRYBORROWGEAR(int _fromClient, Packet _packet)
         {
-            int For = _packet.ReadInt();
-            string GearName = _packet.ReadString();
-            if(For == 0)
-            {
-                MyMod.GiveBorrowedItem(GearName, For);
-            }else{
-                ServerSend.TRYBORROWGEAR(For, _fromClient, GearName);
-            }
+
         }
         public static void CHALLENGETRIGGER(int _fromClient, Packet _packet)
         {
             string TRIGGER = _packet.ReadString();
+#if (!DEDICATED)
             MyMod.ProcessCustomChallengeTrigger(TRIGGER);
+#endif
             ServerSend.CHALLENGETRIGGER(TRIGGER);
         }
         public static void ADDDEATHCONTAINER(int _fromClient, Packet _packet)
         {
-            MyMod.DeathContainerData Con = _packet.ReadDeathContainer();
+            DataStr.DeathContainerData Con = _packet.ReadDeathContainer();
             if (!MyMod.DeathCreates.Contains(Con))
             {
                 MyMod.DeathCreates.Add(Con);
             }
-
+#if (!DEDICATED)
             if (Con.m_LevelKey == MyMod.level_guid)
             {
                 MyMod.MakeDeathCreate(Con);
             }
+#endif
 
             ServerSend.ADDDEATHCONTAINER(Con, Con.m_LevelKey, _fromClient);
         }
@@ -1247,16 +1433,184 @@ namespace GameServer
         {
             string GUID = _packet.ReadString();
             string Scene = _packet.ReadString();
+#if (!DEDICATED)
             MyMod.RemoveDeathContainer(GUID, Scene);
-
+#endif
             ServerSend.DEATHCREATEEMPTYNOW(GUID, Scene, _fromClient);
             MPSaveManager.RemoveContainer(Scene, GUID);
         }
         public static void SPAWNREGIONBANCHECK(int _fromClient, Packet _packet)
         {
             string GUID = _packet.ReadString();
-            bool Result = MyMod.CheckSpawnRegionBanned(GUID);
+            bool Result = Shared.CheckSpawnRegionBanned(GUID);
             ServerSend.SPAWNREGIONBANCHECK(GUID, Result, _fromClient);
+        }
+        public static void ADDDOORLOCK(int _fromClient, Packet _packet)
+        {
+            string DoorKey = _packet.ReadString();
+            string KeySeed = _packet.ReadString();
+            string Scene = _packet.ReadString();
+            Shared.ClientTryingLockDoor(DoorKey, KeySeed, Scene, _fromClient);
+        }
+        public static void LOCKPICK(int _fromClient, Packet _packet)
+        {
+            string DoorKey = _packet.ReadString();
+            string Scene = _packet.ReadString();
+            MPSaveManager.TryLockPick(Scene, DoorKey, _fromClient);
+        }
+        public static void TRYOPENDOOR(int _fromClient, Packet _packet)
+        {
+            string DoorKey = _packet.ReadString();
+            string KeySeed = _packet.ReadString();
+            string Scene = _packet.ReadString();
+            bool LeadKey = _packet.ReadBool();
+
+            if (LeadKey && !MPSaveManager.TryUseLeadKey())
+            {
+                ServerSend.DOORLOCKEDMSG(_fromClient, "The key broke!");
+                ServerSend.REMOVEKEYBYSEED(_fromClient, KeySeed);
+                return;
+            }
+
+            bool Correct = MPSaveManager.TryUseKey(Scene, DoorKey, KeySeed);
+
+            if (Correct)
+            {
+                ServerSend.ENTERDOOR(_fromClient, DoorKey.Split('_')[1]);
+            }else{
+                ServerSend.DOORLOCKEDMSG(_fromClient, "Incorrect key!");
+            }
+        }
+        public static void VERIFYSAVE(int _fromClient, Packet _packet)
+        {
+            string UGUID = _packet.ReadString();
+            long SaveHash = _packet.ReadLong();
+
+            Log("[VERIFYSAVE] Client "+ _fromClient+" UGUID "+ UGUID+" Hash "+ SaveHash);
+
+            if (MyMod.ServerConfig.m_SaveScamProtection)
+            {
+                if(UGUID == "" && SaveHash == 0)
+                {
+                    ServerSend.VERIFYSAVE(_fromClient, MPSaveManager.GetNewUGUID(), false);
+                }else{
+                    if (MPSaveManager.VerifySaveHash(UGUID, SaveHash))
+                    {
+                        ServerSend.VERIFYSAVE(_fromClient, UGUID, true);
+                    }else{
+                        ServerSend.VERIFYSAVE(_fromClient, MPSaveManager.GetNewUGUID(), false);
+                    }
+                }
+            }else{
+                ServerSend.VERIFYSAVE(_fromClient, UGUID, true);
+            }
+        }
+        public static void SAVEHASH(int _fromClient, Packet _packet)
+        {
+            string UGUID = _packet.ReadString();
+            long SaveHash = _packet.ReadLong();
+            bool DisconnectMe = _packet.ReadBool();
+
+            if (MyMod.ServerConfig.m_SaveScamProtection)
+            {
+                Log("[SAVEHASH] " + _fromClient + " UGUID " + UGUID + " Hash " + SaveHash);
+                if (UGUID != "" && SaveHash != 0)
+                {
+                    MPSaveManager.SetSaveHash(UGUID, SaveHash);
+                }
+            }
+            if (DisconnectMe)
+            {
+                if (Server.clients[_fromClient] != null)
+                {
+                    Server.clients[_fromClient].TimeOutTime = MyMod.TimeOutSecondsForLoaders + 1;
+                }
+            }
+        }
+
+        public static void RCONCOMMAND(int _fromClient, Packet _packet)
+        {
+            if(Server.clients[_fromClient] != null && Server.clients[_fromClient].RCON)
+            {
+                Server.clients[_fromClient].TimeOutTime = 0;
+                string CMD = _packet.ReadString();
+                ServerSend.RCONCALLBACK(_fromClient, Shared.ExecuteCommand(CMD, _fromClient));
+            }
+        }
+        public static void FORCELOADING(int _fromClient, Packet _packet)
+        {
+            Shared.AddLoadingClient(_fromClient);
+        }
+        public static void REQUESTLOCKSMITH(int _fromClient, Packet _packet)
+        {
+            int Hash = _packet.ReadInt();
+            if (MPSaveManager.CanWorkOnBlank(Hash))
+            {
+                ServerSend.REQUESTLOCKSMITH(_fromClient, 0);
+                MPSaveManager.ChangeBlankState(Hash, -1);
+            }else{
+                ServerSend.REQUESTLOCKSMITH(_fromClient, -1);
+            }
+        }
+        public static void APPLYTOOLONBLANK(int _fromClient, Packet _packet)
+        {
+            int Hash = _packet.ReadInt();
+            int Tool = _packet.ReadInt();
+            bool IsKey = _packet.ReadBool();
+
+            if (!IsKey)
+            {
+                MPSaveManager.ApplyToolOnBlank(Hash, Tool);
+            }else{
+                string Name = _packet.ReadString();
+                string Seed = _packet.ReadString();
+                MPSaveManager.ApplyToolOnBlank(Hash, Tool, Name, Seed);
+            }
+        }
+        public static void LETENTER(int _fromClient, Packet _packet)
+        {
+            int ClientID = _packet.ReadInt();
+            string ToScene = _packet.ReadString();
+            MPSaveManager.ApplyEnterFromKnock(ClientID, ToScene);
+        }
+        public static void KNOCKKNOCK(int _fromClient, Packet _packet)
+        {
+            string ToScene = _packet.ReadString();
+            MPSaveManager.AddKnockDoorRequest(_fromClient, ToScene);
+        }
+        public static void PEEPHOLE(int _fromClient, Packet _packet)
+        {
+            string Scene = _packet.ReadString();
+            List<int> Knockers = MPSaveManager.GetKnocksOnScene(Scene);
+            ServerSend.PEEPHOLE(_fromClient, Knockers);
+        }
+        public static void RESTART(int _fromClient, Packet _packet)
+        {
+            Log("Incomming reconnect");
+        }
+        public static void WEATHERVOLUNTEER(int _fromClient, Packet _packet)
+        {
+            int Region = _packet.ReadInt();
+
+            foreach (RegionWeatherControler RegionController in RegionWeathers)
+            {
+                if (RegionController.m_Region == Region)
+                {
+                    if (RegionController.m_WaitsForUpdate && RegionController.m_SearchingVolunteer)
+                    {
+                        RegionController.m_SearchingVolunteer = false;
+                        Log("Client " + _fromClient + " want to be weather voluneer for " + Region);
+                        ServerSend.REREGISTERWEATHER(_fromClient, Region);
+                    }
+                    return;
+                }
+            }
+        }
+        public static void REREGISTERWEATHER(int _fromClient, Packet _packet)
+        {
+            WeatherVolunteerData Data = _packet.ReadWeatherVolunteerData();
+            Log("Client " + _fromClient + " sent back weather volunteer data, going to reregister weather for Region " + Data.CurrentRegion);
+            RegisterWeatherSetForRegion(_fromClient, Data);
         }
     }
 }

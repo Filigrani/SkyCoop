@@ -1,9 +1,16 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
-using UnityEngine;
-using MelonLoader;
 using SkyCoop;
+using static SkyCoop.DataStr;
+#if (DEDICATED)
+using System.Numerics;
+#else
+using MelonLoader;
+using UnityEngine;
+#endif
+
+
 
 namespace GameServer
 {
@@ -136,6 +143,34 @@ namespace GameServer
         SPAWNREGIONBANCHECK,
         CAIRNS,
         BENEFITINIT,
+        MODSLIST,
+        RCONCONNECTED,
+        RCONCOMMAND,
+        RCONCALLBACK,
+        ADDDOORLOCK,
+        DOORLOCKEDMSG,
+        TRYOPENDOOR,
+        ENTERDOOR,
+        LOCKPICK,
+        REMOVEDOORLOCK,
+        VERIFYSAVE,
+        SAVEHASH,
+        FORCELOADING,
+        RPC,
+        REQUESTLOCKSMITH,
+        APPLYTOOLONBLANK,
+        KNOCKKNOCK,
+        KNOCKENTER,
+        LETENTER,
+        PEEPHOLE,
+        PINGSERVER,
+        RESTART,
+        READYSENDNEXTSLICEGEAR,
+        DEDICATEDWEATHER,
+        WEATHERVOLUNTEER,
+        REREGISTERWEATHER,
+        REMOVEKEYBYSEED,
+        ADDHUDMSG,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -267,6 +302,34 @@ namespace GameServer
         SPAWNREGIONBANCHECK,
         CAIRNS,
         BENEFITINIT,
+        MODSLIST,
+        RCONCONNECTED,
+        RCONCOMMAND,
+        RCONCALLBACK,
+        ADDDOORLOCK,
+        DOORLOCKEDMSG,
+        TRYOPENDOOR,
+        ENTERDOOR,
+        LOCKPICK,
+        REMOVEDOORLOCK,
+        VERIFYSAVE,
+        SAVEHASH,
+        FORCELOADING,
+        RPC,
+        REQUESTLOCKSMITH,
+        APPLYTOOLONBLANK,
+        KNOCKKNOCK,
+        KNOCKENTER,
+        LETENTER,
+        PEEPHOLE,
+        PINGSERVER,
+        RESTART,
+        READYSENDNEXTSLICEGEAR,
+        DEDICATEDWEATHER,
+        WEATHERVOLUNTEER,
+        REREGISTERWEATHER,
+        REMOVEKEYBYSEED,
+        ADDHUDMSG,
     }
 
     public class Packet : IDisposable
@@ -274,6 +337,15 @@ namespace GameServer
         private List<byte> buffer;
         private byte[] readableBuffer;
         private int readPos;
+
+        public static void Log(string TXT, Shared.LoggerColor Color = Shared.LoggerColor.White)
+        {
+#if (!DEDICATED)
+            MelonLogger.Msg(TXT);
+#else
+            Logger.Log(TXT);
+#endif
+        }
 
         /// <summary>Creates a new empty packet (without an ID).</summary>
         public Packet()
@@ -307,7 +379,7 @@ namespace GameServer
             SetBytes(_data);
         }
 
-        #region Functions
+#region Functions
         /// <summary>Sets the packet's content and prepares it to be read.</summary>
         /// <param name="_data">The bytes to add to the packet.</param>
         public void SetBytes(byte[] _data)
@@ -363,9 +435,9 @@ namespace GameServer
                 readPos -= 4; // "Unread" the last read int
             }
         }
-        #endregion
+#endregion
 
-        #region Write Data
+#region Write Data
         /// <summary>Adds a byte to the packet.</summary>
         /// <param name="_value">The byte to add.</param>
         public void Write(byte _value)
@@ -423,69 +495,47 @@ namespace GameServer
         
         public void Write(Vector3 _value)
         {
+#if (!DEDICATED)
             Write(_value.x);
             Write(_value.y);
             Write(_value.z);
+#else
+            Write(_value.X);
+            Write(_value.Y);
+            Write(_value.Z);
+#endif
         }
         /// <summary>Adds a Quaternion to the packet.</summary>
         /// <param name="_value">The Quaternion to add.</param>
         public void Write(Quaternion _value)
         {
+#if (!DEDICATED)
             Write(_value.x);
             Write(_value.y);
             Write(_value.z);
             Write(_value.w);
+#else
+            Write(_value.X);
+            Write(_value.Y);
+            Write(_value.Z);
+            Write(_value.W);
+#endif
         }
-        public void Write(MyMod.WeatherProxies weather)
+        public void Write(DataStr.WeatherProxies weather)
         {
             Write(weather.m_WeatherProxy);
             Write(weather.m_WeatherTransitionProxy);
             Write(weather.m_WindProxy);
         }
-        public void Write(StackableItem stackable)
-        {
-            Write(stackable.m_Units);
-        }
-        public void Write(FoodItem food)
-        {
-            Write(food.m_CaloriesTotal);
-            Write(food.m_CaloriesRemaining);
-            Write(food.m_HeatPercent);
-            Write(food.m_Packaged);
-            Write(food.m_Opened);
-        }
-        public void Write(WaterSupply water)
-        {
-            float save = water.m_VolumeInLiters;
 
-            if (save > 0.5f)
-            {
-                water.m_VolumeInLiters = 0.5f;
-                Write(water.m_VolumeInLiters);
-                water.m_VolumeInLiters = save;
-            }else
-            {
-                Write(water.m_VolumeInLiters);
-            }
-        }
-        public void Write(EvolveItem evo)
-        {
-            Write(evo.m_TimeSpentEvolvingGameHours);
-        }
-
-        public void Write(GearItem gear)
-        {
-            Write(gear.Serialize());
-        }
-
-        public void Write(MyMod.GearItemDataPacket gear)
+        public void Write(DataStr.GearItemDataPacket gear)
         {
             Write(gear.m_GearName);
             Write(gear.m_DataProxy);
             Write(gear.m_Water);
             Write(gear.m_SendedTo);
         }
-        public void Write(MyMod.DroppedGearItemDataPacket gear)
+        public void Write(DataStr.DroppedGearItemDataPacket gear)
         {
             Write(gear.m_GearID);
             Write(gear.m_Position);
@@ -495,61 +545,14 @@ namespace GameServer
             Write(gear.m_Hash);
             Write(gear.m_Extra);
         }
-        public void Write(MyMod.ShowShelterByOther shelter)
+        public void Write(DataStr.ShowShelterByOther shelter)
         {
             Write(shelter.m_Position);
             Write(shelter.m_Rotation);
             Write(shelter.m_LevelID);
             Write(shelter.m_LevelGUID);
         }
-
-        //public void Write(GearItem gear)
-        //{
-        //    Write(gear.m_GearName);
-        //    Write(gear.m_CurrentHP);
-        //    Write(gear.m_WeightKG);
-        //    if (gear.m_FoodItem != null)
-        //    {
-        //        Write(gear.m_FoodItem);
-        //    }else{
-        //        Write(new FoodItem());
-        //    }
-        //    if (gear.m_EvolveItem != null)
-        //    {
-        //        Write(gear.m_EvolveItem);
-        //    }else{
-        //        Write(new EvolveItem());
-        //    }
-        //    Write(gear.m_GearBreakConditionThreshold);
-        //    if (gear.m_WaterSupply != null)
-        //    {
-        //        Write(gear.m_WaterSupply);
-        //    }
-        //    else
-        //    {
-        //        Write(new WaterSupply());
-        //    }
-        //    //Write(gear.m_StackableItem);
-        //}
-        public void Write(ObjectGuid _guid, GameObject obj)
-        {
-            if(_guid == null)
-            {
-                string set_guid = ObjectGuidManager.GenerateNewGuidString();
-                Utils.SetGuidForGameObject(obj.gameObject, set_guid);
-                _guid = obj.gameObject.GetComponent<ObjectGuid>();
-            }
-            Write(_guid.m_Guid);
-        }
-
-        public void Write(GameObject obj)
-        {
-            Write(obj.transform.position);
-            Write(obj.transform.rotation);
-            Write(obj.gameObject.GetComponent<ObjectGuid>(), obj);
-            Write(obj.gameObject.name);
-        }
-        public void Write(MyMod.AnimalSync obj)
+        public void Write(DataStr.AnimalSync obj)
         {
             Write(obj.m_position);
             Write(obj.m_rotation);
@@ -564,7 +567,7 @@ namespace GameServer
             Write(obj.m_SpawnRegionGUID);
         }
 
-        public void Write(MyMod.AnimalAnimsSync obj)
+        public void Write(DataStr.AnimalAnimsSync obj)
         {
             Write(obj.AP_TurnAngle);
             Write(obj.AP_TurnSpeed);
@@ -584,13 +587,13 @@ namespace GameServer
             Write(obj.AP_Stunned);
         }
 
-        public void Write(MyMod.AnimalTrigger obj)
+        public void Write(DataStr.AnimalTrigger obj)
         {
             Write(obj.m_Guid);
             Write(obj.m_Trigger);
         }
 
-        public void Write(MyMod.ShootSync obj)
+        public void Write(DataStr.ShootSync obj)
         {
             Write(obj.m_position);
             Write(obj.m_rotation);
@@ -601,7 +604,7 @@ namespace GameServer
             Write(obj.m_camera_up);
         }
 
-        public void Write(MyMod.HarvestStats obj)
+        public void Write(DataStr.HarvestStats obj)
         {
             Write(obj.m_Meat);
             Write(obj.m_Guts);
@@ -609,7 +612,7 @@ namespace GameServer
             Write(obj.m_Guid);
         }
 
-        public void Write(MyMod.SaveSlotSync obj)
+        public void Write(DataStr.SaveSlotSync obj)
         {
             Write(obj.m_Episode);
             Write(obj.m_SaveSlotType);
@@ -621,7 +624,7 @@ namespace GameServer
             Write(obj.m_CustomExperienceStr);
         }
 
-        public void Write(MyMod.ContainerOpenSync obj)
+        public void Write(DataStr.ContainerOpenSync obj)
         {
             Write(obj.m_Guid);
             Write(obj.m_State);
@@ -629,18 +632,12 @@ namespace GameServer
             Write(obj.m_LevelGUID);
             Write(obj.m_Inspected);
         }
-
-        public void Write(MyMod.WalkTracker obj)
-        {
-            Write(obj.m_levelid);
-            Write(obj.m_V3);
-        }
-        public void Write(MyMod.AnimalAligner obj)
+        public void Write(DataStr.AnimalAligner obj)
         {
             Write(obj.m_Proxy);
             Write(obj.m_Guid);
         }
-        public void Write(MyMod.PlayerEquipmentData obj)
+        public void Write(DataStr.PlayerEquipmentData obj)
         {
             Write(obj.m_Arrows);
             Write(obj.m_HasAxe);
@@ -650,22 +647,22 @@ namespace GameServer
             Write(obj.m_Flares);
             Write(obj.m_BlueFlares);
         }
-        public void Write(MyMod.MultiplayerChatMessage obj)
+        public void Write(DataStr.MultiplayerChatMessage obj)
         {
-            //Write(obj.m_By);
-            //Write(obj.m_Message);
             WriteUnicodeString(obj.m_By);
             WriteUnicodeString(obj.m_Message);
             Write(obj.m_Type);
+            Write(obj.m_Global);
         }
-        public void Write(MyMod.MultiPlayerClientStatus obj)
+        public void Write(DataStr.MultiPlayerClientStatus obj)
         {
             Write(obj.m_ID);
             Write(obj.m_Name);
             Write(obj.m_Sleep);
             Write(obj.m_Dead);
+            Write(obj.m_IsLoading);
         }
-        public void Write(MyMod.PlayerClothingData obj)
+        public void Write(DataStr.PlayerClothingData obj)
         {
             Write(obj.m_Hat);
             Write(obj.m_Top);
@@ -674,21 +671,21 @@ namespace GameServer
             Write(obj.m_Scarf);
             Write(obj.m_Balaclava);
         }
-        public void Write(MyMod.BrokenFurnitureSync obj)
+        public void Write(DataStr.BrokenFurnitureSync obj)
         {
             Write(obj.m_Guid);
             Write(obj.m_ParentGuid);
             Write(obj.m_LevelID);
             Write(obj.m_LevelGUID);
         }
-        public void Write(MyMod.PickedGearSync obj)
+        public void Write(DataStr.PickedGearSync obj)
         {
             Write(obj.m_Spawn);
             Write(obj.m_LevelID);
             Write(obj.m_LevelGUID);
             Write(obj.m_MyInstanceID);
         }
-        public void Write(MyMod.ClimbingRopeSync obj)
+        public void Write(DataStr.ClimbingRopeSync obj)
         {
             Write(obj.m_Position);
             Write(obj.m_LevelID);
@@ -696,7 +693,7 @@ namespace GameServer
             Write(obj.m_Deployed);
             Write(obj.m_Snapped);
         }
-        public void Write(MyMod.ServerConfigData obj)
+        public void Write(DataStr.ServerConfigData obj)
         {
             Write(obj.m_FastConsumption);
             Write(obj.m_DuppedSpawns);
@@ -704,13 +701,16 @@ namespace GameServer
             Write(obj.m_PlayersSpawnType);
             Write(obj.m_FireSync);
             Write(obj.m_CheatsMode);
+            Write(obj.m_CheckModsValidation);
+            Write(obj.m_SaveScamProtection);
+            Write(obj.m_PVP);
         }
-        public void Write(MyMod.HarvestableSyncData obj)
+        public void Write(DataStr.HarvestableSyncData obj)
         {
             Write(obj.m_Guid);
             Write(obj.m_State);
         }
-        public void Write(MyMod.FireSourcesSync obj)
+        public void Write(DataStr.FireSourcesSync obj)
         {
             Write(obj.m_Guid);
             Write(obj.m_LevelGUID);
@@ -720,7 +720,7 @@ namespace GameServer
             Write(obj.m_IsCampfire);
             Write(obj.m_FuelName);
         }
-        public void Write(MyMod.SlicedJsonData obj)
+        public void Write(DataStr.SlicedJsonData obj)
         {
             Write(obj.m_GearName);
             Write(obj.m_Hash);
@@ -729,7 +729,7 @@ namespace GameServer
             Write(obj.m_Last);
             Write(obj.m_Extra);
         }
-        public void Write(MyMod.SlicedBytesData obj)
+        public void Write(DataStr.SlicedBytesData obj)
         {
             Write(obj.m_Hash);
             Write(obj.m_Action);
@@ -739,7 +739,7 @@ namespace GameServer
             Write(obj.m_ExtraInt);
             Write(obj.m_Data);
         }
-        public void Write(MyMod.ExtraDataForDroppedGear obj)
+        public void Write(DataStr.ExtraDataForDroppedGear obj)
         {
             Write(obj.m_DroppedTime);
             Write(obj.m_GoalTime);
@@ -747,7 +747,7 @@ namespace GameServer
             Write(obj.m_Variant);
             Write(obj.m_GearName);
         }
-        public void Write(MyMod.AffictionSync obj)
+        public void Write(DataStr.AffictionSync obj)
         {
             Write(obj.m_Type);
             Write(obj.m_Location);
@@ -755,7 +755,7 @@ namespace GameServer
             Write(obj.m_ShouldBeTreated);
         }
 
-        public void Write(MyMod.AnimalArrow Arrow)
+        public void Write(DataStr.AnimalArrow Arrow)
         {
             Write(Arrow.m_Condition);
             Write(Arrow.m_Position);
@@ -763,7 +763,7 @@ namespace GameServer
             Write(Arrow.m_Depth);
             Write(Arrow.m_LocaName);
         }
-        public void Write(List<MyMod.AnimalArrow> Arrows, int Count)
+        public void Write(List<DataStr.AnimalArrow> Arrows, int Count)
         {
             Write(Count);
             for (int i = 0; i < Arrows.Count; i++)
@@ -772,7 +772,7 @@ namespace GameServer
             }
         }
 
-        public void Write(MyMod.AnimalCompactData obj)
+        public void Write(DataStr.AnimalCompactData obj)
         {
             Write(obj.m_PrefabName);
             Write(obj.m_Position);
@@ -787,7 +787,7 @@ namespace GameServer
             Write(obj.m_LastAiMode);
             Write(obj.m_Arrows, obj.m_ArrowsCount);
         }
-        public void Write(MyMod.AnimalKilled obj)
+        public void Write(DataStr.AnimalKilled obj)
         {
             Write(obj.m_Position);
             Write(obj.m_Rotation);
@@ -805,23 +805,6 @@ namespace GameServer
             Write(obj.m_RegionGUID);
         }
 
-        public void Write(DecalProjectorInstance obj)
-        {
-            Write(obj.m_Guid);
-            Write(obj.m_DecalName);
-            Write((int)obj.m_ProjectileType);
-            Write(obj.m_Indoors);
-            Write(obj.m_Pos);
-            Write(obj.m_Normal);
-            Write(obj.m_Yaw);
-            Write(obj.m_Alpha);
-            Write(obj.m_ColorTint.r);
-            Write(obj.m_ColorTint.g);
-            Write(obj.m_ColorTint.b);
-            Write(obj.m_RevealAmount);
-            Write(obj.m_RevealedOnMap);
-        }
-
         public void Write(List<int> LIST)
         {
             Write(LIST.Count);
@@ -830,17 +813,25 @@ namespace GameServer
                 Write(LIST[i]);
             }
         }
+        public void Write(List<float> LIST)
+        {
+            Write(LIST.Count);
+            for (int i = 0; i < LIST.Count; i++)
+            {
+                Write(LIST[i]);
+            }
+        }
 
-        public void Write(MyMod.CustomChallengeData DAT)
+        public void Write(DataStr.CustomChallengeData DAT)
         {
             Write(DAT.m_CurrentTask);
             Write(DAT.m_Time);
             Write(DAT.m_Started);
             Write(DAT.m_Done);
         }
-        public MyMod.CustomChallengeData ReadChallengeData()
+        public DataStr.CustomChallengeData ReadChallengeData()
         {
-            MyMod.CustomChallengeData obj = new MyMod.CustomChallengeData();
+            DataStr.CustomChallengeData obj = new DataStr.CustomChallengeData();
             obj.m_CurrentTask = ReadInt();
             obj.m_Time = ReadInt();
             obj.m_Started = ReadBool();
@@ -858,26 +849,18 @@ namespace GameServer
             }
             return LIST;
         }
-
-        public DecalProjectorInstance ReadSprayDecal()
+        public List<float> ReadFloatList()
         {
-            DecalProjectorInstance obj = new DecalProjectorInstance();
-            obj.m_Guid = ReadString();
-            obj.m_DecalName = ReadString();
-            obj.m_ProjectileType = (ProjectileType)ReadInt();
-            obj.m_Indoors = ReadBool();
-            obj.m_Pos = ReadVector3();
-            obj.m_Normal = ReadVector3();
-            obj.m_Yaw = ReadFloat();
-            obj.m_Alpha = ReadFloat();
-            obj.m_ColorTint = new Color(ReadFloat(), ReadFloat(), ReadFloat());
-            obj.m_RevealAmount = ReadFloat();
-            obj.m_RevealedOnMap = ReadBool();
-
-            return obj;
+            List<float> LIST = new List<float>();
+            int Count = ReadInt();
+            for (int i = 0; i < Count; i++)
+            {
+                LIST.Add(ReadFloat());
+            }
+            return LIST;
         }
 
-        public void Write(MyMod.DeathContainerData obj)
+        public void Write(DataStr.DeathContainerData obj)
         {
             Write(obj.m_Guid);
             Write(obj.m_LevelKey);
@@ -886,9 +869,9 @@ namespace GameServer
             Write(obj.m_Owner);
             Write(obj.m_ContainerPrefab);
         }
-        public MyMod.DeathContainerData ReadDeathContainer()
+        public DataStr.DeathContainerData ReadDeathContainer()
         {
-            MyMod.DeathContainerData obj = new MyMod.DeathContainerData();
+            DataStr.DeathContainerData obj = new DataStr.DeathContainerData();
             obj.m_Guid = ReadString();
             obj.m_LevelKey = ReadString();
             obj.m_Position = ReadVector3();
@@ -899,9 +882,9 @@ namespace GameServer
         }
 
 
-        #endregion
+#endregion
 
-        #region Read Data
+#region Read Data
         /// <summary>Reads a byte from the packet.</summary>
         /// <param name="_moveReadPos">Whether or not to move the buffer's read position.</param>
         public byte ReadByte(bool _moveReadPos = true)
@@ -976,7 +959,7 @@ namespace GameServer
 
                 if(readableBuffer == null)
                 {
-                    Console.WriteLine("Could not read value of type 'int'! readableBuffer is null!!!");
+                    Log("Could not read value of type 'int'! readableBuffer is null!!!");
                     return 0;
                 }
 
@@ -991,7 +974,7 @@ namespace GameServer
             else
             {
                 //throw new Exception("Could not read value of type 'int'!");
-                Console.WriteLine("Could not read value of type 'int'!");
+                Log("Could not read value of type 'int'!");
                 return 0;
             }
         }
@@ -1105,9 +1088,9 @@ namespace GameServer
         {
             return new Quaternion(ReadFloat(_moveReadPos), ReadFloat(_moveReadPos), ReadFloat(_moveReadPos), ReadFloat(_moveReadPos));
         }
-        public MyMod.WeatherProxies ReadWeather(bool _moveReadPos = true)
+        public DataStr.WeatherProxies ReadWeather(bool _moveReadPos = true)
         {
-            MyMod.WeatherProxies weather = new MyMod.WeatherProxies();
+            DataStr.WeatherProxies weather = new DataStr.WeatherProxies();
 
             weather.m_WeatherProxy = ReadString(_moveReadPos);
             weather.m_WeatherTransitionProxy = ReadString(_moveReadPos);
@@ -1116,100 +1099,9 @@ namespace GameServer
             return weather;
         }
 
-        public StackableItem ReadStackable(bool _moveReadPos = true)
+        public DataStr.AnimalAnimsSync ReadAnimalAnim(bool _moveReadPos = true)
         {
-            StackableItem stack = new StackableItem();
-            stack.m_Units = ReadInt(_moveReadPos);
-
-            return stack;
-        }
-        public FoodItem ReadFoodItem(bool _moveReadPos = true)
-        {
-            FoodItem food = new FoodItem();
-            food.m_CaloriesTotal = ReadFloat();
-            food.m_CaloriesRemaining = ReadFloat();
-            food.m_HeatPercent = ReadFloat();
-            food.m_Packaged = ReadBool();
-            food.m_Opened = ReadBool();
-
-            return food;
-        }
-        public WaterSupply ReadWater(bool _moveReadPos = true)
-        {
-            WaterSupply water = new WaterSupply();
-            water.m_VolumeInLiters = ReadFloat();
-
-            return water;
-        }
-        public EvolveItem ReadEvoItem(bool _moveReadPos = true)
-        {
-            EvolveItem evo = new EvolveItem();
-            evo.m_TimeSpentEvolvingGameHours = ReadFloat();
-
-            return evo;
-        }
-
-        public GearItem ReadGearSimple (bool _moveReadPos = true)
-        {
-            GearItem gear = new GearItem();
-
-            gear.m_GearName = ReadString();
-            gear.m_CurrentHP = ReadFloat();
-            gear.m_WeightKG = ReadFloat();
-            gear.m_FoodItem = ReadFoodItem();
-            gear.m_EvolveItem = ReadEvoItem();
-            gear.m_GearBreakConditionThreshold = ReadFloat();
-            gear.m_WaterSupply = ReadWater();
-            //gear.m_StackableItem = ReadStackable(_moveReadPos);
-
-            return gear;
-        }
-
-        public ObjectGuid ReadObjectGuid(bool _moveReadPos = true)
-        {
-            ObjectGuid objguid = new ObjectGuid();
-
-            objguid.m_Guid = ReadString();
-
-            return objguid;
-        }
-
-        public GameObject ReadObject(bool _moveReadPos = true)
-        {
-            GameObject obj = new GameObject();
-
-            obj.transform.position = ReadVector3();
-            obj.transform.rotation = ReadQuaternion();
-            obj.AddComponent<ObjectGuid>();
-            ObjectGuid objguid = new ObjectGuid();
-            objguid = ReadObjectGuid();
-            obj.GetComponent<ObjectGuid>().m_Guid = objguid.m_Guid;
-            obj.gameObject.name = ReadString();
-
-            return obj;
-        }
-
-        public MyMod.AnimalSync ReadAnimal(bool _moveReadPos = true)
-        {
-            MyMod.AnimalSync obj = new MyMod.AnimalSync();
-            obj.m_position = ReadVector3();
-            obj.m_rotation = ReadQuaternion();
-            obj.m_guid = ReadString();
-            obj.m_name = ReadString();
-            obj.m_Hp = ReadFloat();
-            obj.m_Bleeding = ReadBool();
-
-            obj.m_Controller = ReadInt();
-            obj.m_ProxySave = ReadString();
-            obj.m_LevelD = ReadInt();
-            obj.m_SpawnRegionGUID = ReadString();
-
-            return obj;
-        }
-
-        public MyMod.AnimalAnimsSync ReadAnimalAnim(bool _moveReadPos = true)
-        {
-            MyMod.AnimalAnimsSync obj = new MyMod.AnimalAnimsSync();
+            DataStr.AnimalAnimsSync obj = new DataStr.AnimalAnimsSync();
 
             obj.AP_TurnAngle = ReadFloat();
             obj.AP_TurnSpeed = ReadFloat();
@@ -1231,17 +1123,17 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.AnimalTrigger ReadAnimalTrigger(bool _moveReadPos = true)
+        public DataStr.AnimalTrigger ReadAnimalTrigger(bool _moveReadPos = true)
         {
-            MyMod.AnimalTrigger obj = new MyMod.AnimalTrigger();
+            DataStr.AnimalTrigger obj = new DataStr.AnimalTrigger();
             obj.m_Guid = ReadString();
             obj.m_Trigger = ReadInt();
             return obj;
         }
 
-        public MyMod.ShootSync ReadShoot(bool _moveReadPos = true)
+        public DataStr.ShootSync ReadShoot(bool _moveReadPos = true)
         {
-            MyMod.ShootSync obj = new MyMod.ShootSync();
+            DataStr.ShootSync obj = new DataStr.ShootSync();
             obj.m_position = ReadVector3();
             obj.m_rotation = ReadQuaternion();
             obj.m_projectilename = ReadString();
@@ -1251,9 +1143,9 @@ namespace GameServer
             obj.m_camera_up = ReadVector3();
             return obj;
         }
-        public MyMod.HarvestStats ReadHarvest(bool _moveReadPos = true)
+        public DataStr.HarvestStats ReadHarvest(bool _moveReadPos = true)
         {
-            MyMod.HarvestStats obj = new MyMod.HarvestStats();
+            DataStr.HarvestStats obj = new DataStr.HarvestStats();
             obj.m_Meat = ReadFloat();
             obj.m_Guts = ReadInt();
             obj.m_Hide = ReadInt();
@@ -1261,9 +1153,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.SaveSlotSync ReadSaveSlot(bool _moveReadPos = true)
+        public DataStr.SaveSlotSync ReadSaveSlot(bool _moveReadPos = true)
         {
-            MyMod.SaveSlotSync obj = new MyMod.SaveSlotSync();
+            DataStr.SaveSlotSync obj = new DataStr.SaveSlotSync();
 
             obj.m_Episode = ReadInt();
             obj.m_SaveSlotType = ReadInt();
@@ -1276,9 +1168,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.ContainerOpenSync ReadContainer(bool _moveReadPos = true)
+        public DataStr.ContainerOpenSync ReadContainer(bool _moveReadPos = true)
         {
-            MyMod.ContainerOpenSync obj = new MyMod.ContainerOpenSync();
+            DataStr.ContainerOpenSync obj = new DataStr.ContainerOpenSync();
 
             obj.m_Guid = ReadString();
             obj.m_State = ReadBool();
@@ -1288,26 +1180,17 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.WalkTracker ReadWalkTracker(bool _moveReadPos = true)
+        public DataStr.AnimalAligner ReadAnimalAligner(bool _moveReadPos = true)
         {
-            MyMod.WalkTracker obj = new MyMod.WalkTracker();
-
-            obj.m_levelid = ReadInt();
-            obj.m_V3 = ReadVector3();
-            return obj;
-        }
-
-        public MyMod.AnimalAligner ReadAnimalAligner(bool _moveReadPos = true)
-        {
-            MyMod.AnimalAligner obj = new MyMod.AnimalAligner();
+            DataStr.AnimalAligner obj = new DataStr.AnimalAligner();
             obj.m_Proxy = ReadString();
             obj.m_Guid = ReadString();
             return obj;
         }
 
-        public MyMod.PlayerEquipmentData ReadEQ(bool _moveReadPos = true)
+        public DataStr.PlayerEquipmentData ReadEQ(bool _moveReadPos = true)
         {
-            MyMod.PlayerEquipmentData obj = new MyMod.PlayerEquipmentData();
+            DataStr.PlayerEquipmentData obj = new DataStr.PlayerEquipmentData();
             obj.m_Arrows = ReadInt();
             obj.m_HasAxe = ReadBool();
             obj.m_HasMedkit = ReadBool();
@@ -1318,29 +1201,31 @@ namespace GameServer
 
             return obj;
         }
-        public MyMod.MultiplayerChatMessage ReadChat()
+        public DataStr.MultiplayerChatMessage ReadChat()
         {
-            MyMod.MultiplayerChatMessage obj = new MyMod.MultiplayerChatMessage();
+            DataStr.MultiplayerChatMessage obj = new DataStr.MultiplayerChatMessage();
             obj.m_By = ReadUnicodeString();
             obj.m_Message = ReadUnicodeString();
             obj.m_Type = ReadInt();
+            obj.m_Global = ReadBool();
 
             return obj;
         }
 
-        public MyMod.MultiPlayerClientStatus ReadClientStatus()
+        public DataStr.MultiPlayerClientStatus ReadClientStatus()
         {
-            MyMod.MultiPlayerClientStatus obj = new MyMod.MultiPlayerClientStatus();
+            DataStr.MultiPlayerClientStatus obj = new DataStr.MultiPlayerClientStatus();
             obj.m_ID = ReadInt();
             obj.m_Name = ReadString();
             obj.m_Sleep = ReadBool();
             obj.m_Dead = ReadBool();
+            obj.m_IsLoading = ReadBool();
 
             return obj;
         }
-        public MyMod.PlayerClothingData ReadClothingData()
+        public DataStr.PlayerClothingData ReadClothingData()
         {
-            MyMod.PlayerClothingData obj = new MyMod.PlayerClothingData();
+            DataStr.PlayerClothingData obj = new DataStr.PlayerClothingData();
             obj.m_Hat = ReadString();
             obj.m_Top = ReadString();
             obj.m_Bottom = ReadString();
@@ -1351,9 +1236,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.BrokenFurnitureSync ReadFurn()
+        public DataStr.BrokenFurnitureSync ReadFurn()
         {
-            MyMod.BrokenFurnitureSync obj = new MyMod.BrokenFurnitureSync();
+            DataStr.BrokenFurnitureSync obj = new DataStr.BrokenFurnitureSync();
             obj.m_Guid = ReadString();
             obj.m_ParentGuid = ReadString();
             obj.m_LevelID = ReadInt();
@@ -1362,9 +1247,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.PickedGearSync ReadPickedGear()
+        public DataStr.PickedGearSync ReadPickedGear()
         {
-            MyMod.PickedGearSync obj = new MyMod.PickedGearSync();
+            DataStr.PickedGearSync obj = new DataStr.PickedGearSync();
             obj.m_Spawn = ReadVector3();
             obj.m_LevelID = ReadInt();
             obj.m_LevelGUID = ReadString();
@@ -1373,9 +1258,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.ClimbingRopeSync ReadRope()
+        public DataStr.ClimbingRopeSync ReadRope()
         {
-            MyMod.ClimbingRopeSync obj = new MyMod.ClimbingRopeSync();
+            DataStr.ClimbingRopeSync obj = new DataStr.ClimbingRopeSync();
             obj.m_Position = ReadVector3();
             obj.m_LevelID = ReadInt();
             obj.m_LevelGUID = ReadString();
@@ -1385,30 +1270,33 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.ServerConfigData ReadServerCFG()
+        public DataStr.ServerConfigData ReadServerCFG()
         {
-            MyMod.ServerConfigData obj = new MyMod.ServerConfigData();
+            DataStr.ServerConfigData obj = new DataStr.ServerConfigData();
             obj.m_FastConsumption = ReadBool();
             obj.m_DuppedSpawns = ReadBool();
             obj.m_DuppedContainers = ReadBool();
             obj.m_PlayersSpawnType = ReadInt();
             obj.m_FireSync = ReadInt();
             obj.m_CheatsMode = ReadInt();
+            obj.m_CheckModsValidation = ReadBool();
+            obj.m_SaveScamProtection = ReadBool();
+            obj.m_PVP = ReadBool();
 
             return obj;
         }
-        public MyMod.HarvestableSyncData ReadHarvestablePlant()
+        public DataStr.HarvestableSyncData ReadHarvestablePlant()
         {
-            MyMod.HarvestableSyncData obj = new MyMod.HarvestableSyncData();
+            DataStr.HarvestableSyncData obj = new DataStr.HarvestableSyncData();
             obj.m_Guid = ReadString();
             obj.m_State = ReadString();
 
             return obj;
         }
 
-        public MyMod.GearItemDataPacket ReadGearData()
+        public DataStr.GearItemDataPacket ReadGearData()
         {
-            MyMod.GearItemDataPacket obj = new MyMod.GearItemDataPacket();
+            DataStr.GearItemDataPacket obj = new DataStr.GearItemDataPacket();
             obj.m_GearName = ReadString();
             obj.m_DataProxy = ReadString();
             obj.m_Water = ReadFloat();
@@ -1416,9 +1304,9 @@ namespace GameServer
             
             return obj;
         }
-        public MyMod.DroppedGearItemDataPacket ReadDroppedGearData()
+        public DataStr.DroppedGearItemDataPacket ReadDroppedGearData()
         {
-            MyMod.DroppedGearItemDataPacket obj = new MyMod.DroppedGearItemDataPacket();
+            DataStr.DroppedGearItemDataPacket obj = new DataStr.DroppedGearItemDataPacket();
             obj.m_GearID = ReadInt();
             obj.m_Position = ReadVector3();
             obj.m_Rotation = ReadQuaternion();
@@ -1429,9 +1317,9 @@ namespace GameServer
 
             return obj;
         }
-        public MyMod.ShowShelterByOther ReadShelter()
+        public DataStr.ShowShelterByOther ReadShelter()
         {
-            MyMod.ShowShelterByOther obj = new MyMod.ShowShelterByOther();
+            DataStr.ShowShelterByOther obj = new DataStr.ShowShelterByOther();
             obj.m_Position = ReadVector3();
             obj.m_Rotation = ReadQuaternion();
             obj.m_LevelID = ReadInt();
@@ -1439,9 +1327,9 @@ namespace GameServer
 
             return obj;
         }
-        public MyMod.FireSourcesSync ReadFire()
+        public DataStr.FireSourcesSync ReadFire()
         {
-            MyMod.FireSourcesSync obj = new MyMod.FireSourcesSync();
+            DataStr.FireSourcesSync obj = new DataStr.FireSourcesSync();
             obj.m_Guid = ReadString();
             obj.m_LevelGUID = ReadString();
             obj.m_LevelId = ReadInt();
@@ -1453,9 +1341,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.SlicedJsonData ReadSlicedGear()
+        public DataStr.SlicedJsonData ReadSlicedGear()
         {
-            MyMod.SlicedJsonData obj = new MyMod.SlicedJsonData();
+            DataStr.SlicedJsonData obj = new DataStr.SlicedJsonData();
             obj.m_GearName = ReadString();
             obj.m_Hash = ReadInt();
             obj.m_Str = ReadString();
@@ -1464,9 +1352,9 @@ namespace GameServer
             obj.m_Extra = ReadExtraDataForDropperGear();
             return obj;
         }
-        public MyMod.SlicedBytesData ReadSlicedBytes()
+        public DataStr.SlicedBytesData ReadSlicedBytes()
         {
-            MyMod.SlicedBytesData obj = new MyMod.SlicedBytesData();
+            DataStr.SlicedBytesData obj = new DataStr.SlicedBytesData();
             obj.m_Hash = ReadInt();
             obj.m_Action = ReadString();
             obj.m_SendTo = ReadInt();
@@ -1477,19 +1365,20 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.ExtraDataForDroppedGear ReadExtraDataForDropperGear()
+        public DataStr.ExtraDataForDroppedGear ReadExtraDataForDropperGear()
         {
-            MyMod.ExtraDataForDroppedGear obj = new MyMod.ExtraDataForDroppedGear();
+            DataStr.ExtraDataForDroppedGear obj = new DataStr.ExtraDataForDroppedGear();
             obj.m_DroppedTime = ReadInt();
             obj.m_GoalTime = ReadInt();
             obj.m_Dropper = ReadString();
             obj.m_Variant = ReadInt();
             obj.m_GearName = ReadString();
+
             return obj;
         }
-        public MyMod.AffictionSync ReadAffiction()
+        public DataStr.AffictionSync ReadAffiction()
         {
-            MyMod.AffictionSync obj = new MyMod.AffictionSync();
+            DataStr.AffictionSync obj = new DataStr.AffictionSync();
             obj.m_Type = ReadInt();
             obj.m_Location = ReadInt();
             obj.m_Case = ReadUnicodeString();
@@ -1506,9 +1395,9 @@ namespace GameServer
             public float m_Depth = 0;
             public string m_LocaName = "";
         }
-        public MyMod.AnimalArrow ReadArrow()
+        public DataStr.AnimalArrow ReadArrow()
         {
-            MyMod.AnimalArrow Arrow = new MyMod.AnimalArrow();
+            DataStr.AnimalArrow Arrow = new DataStr.AnimalArrow();
 
             Arrow.m_Condition = ReadFloat();
             Arrow.m_Position = ReadVector3();
@@ -1518,9 +1407,9 @@ namespace GameServer
             return Arrow;
         }
 
-        public MyMod.AnimalCompactData ReadAnimalCompactData()
+        public DataStr.AnimalCompactData ReadAnimalCompactData()
         {
-            MyMod.AnimalCompactData obj = new MyMod.AnimalCompactData();
+            DataStr.AnimalCompactData obj = new DataStr.AnimalCompactData();
             obj.m_PrefabName = ReadString();
             obj.m_Position = ReadVector3();
             obj.m_Rotation = ReadQuaternion();
@@ -1542,9 +1431,9 @@ namespace GameServer
             return obj;
         }
 
-        public MyMod.AnimalKilled ReadAnimalCorpse()
+        public DataStr.AnimalKilled ReadAnimalCorpse()
         {
-            MyMod.AnimalKilled obj = new MyMod.AnimalKilled();
+            DataStr.AnimalKilled obj = new DataStr.AnimalKilled();
             obj.m_Position = ReadVector3();
             obj.m_Rotation = ReadQuaternion();
             obj.m_PrefabName = ReadString();
@@ -1562,7 +1451,7 @@ namespace GameServer
             return obj;
         }
 
-        #endregion
+#endregion
 
         public void Write(Supporters.SupporterBenefits obj)
         {
@@ -1577,6 +1466,44 @@ namespace GameServer
             obj.m_Knife = ReadBool();
             obj.m_BrightNick = ReadBool();
             obj.m_Flairs = ReadIntList();
+
+
+            return obj;
+        }
+
+        public void Write(WeatherVolunteerData obj)
+        {
+            Write(obj.WeatherType);
+            Write(obj.WeatherDuration);
+            Write(obj.CurrentRegion);
+            Write(obj.StageDuration);
+            Write(obj.StageTransition);
+            Write(obj.SetIndex);
+            Write(obj.HighMin);
+            Write(obj.HighMax);
+            Write(obj.LowMin);
+            Write(obj.LowMax);
+            Write(obj.CoolingHours);
+            Write(obj.WarmingHours);
+            Write(obj.PreviousStage);
+        }
+        public WeatherVolunteerData ReadWeatherVolunteerData()
+        {
+            WeatherVolunteerData obj = new WeatherVolunteerData();
+            obj.WeatherType = ReadInt();
+            obj.WeatherDuration = ReadFloat();
+            obj.CurrentRegion = ReadInt();
+            obj.StageDuration = ReadFloatList();
+            obj.StageTransition = ReadFloatList();
+            obj.SetIndex = ReadInt();
+            obj.HighMin = ReadFloat();
+            obj.HighMax = ReadFloat();
+            obj.LowMin = ReadFloat();
+            obj.LowMax = ReadFloat();
+            obj.CoolingHours = ReadInt();
+            obj.WarmingHours = ReadInt();
+            obj.PreviousStage = ReadInt();
+
             return obj;
         }
 

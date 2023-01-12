@@ -1,14 +1,24 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+using SkyCoop;
 
 namespace GameServer
 {
     class ThreadManager
     {
-        private static readonly List<Action> executeOnMainThread = new List<Action>();
-        private static readonly List<Action> executeCopiedOnMainThread = new List<Action>();
-        private static bool actionToExecuteOnMainThread = false;
+        public static readonly List<Action> executeOnMainThread = new List<Action>();
+        public static readonly List<Action> executeCopiedOnMainThread = new List<Action>();
+        public static bool actionToExecuteOnMainThread = false;
+
+        public static void Log(string TXT)
+        {
+#if (!DEDICATED)
+            Console.WriteLine(TXT);
+#else
+            Logger.Log(TXT);
+#endif
+        }
 
         /// <summary>Sets an action to be executed on the main thread.</summary>
         /// <param name="_action">The action to be executed on the main thread.</param>
@@ -16,7 +26,7 @@ namespace GameServer
         {
             if (_action == null)
             {
-                Console.WriteLine("No action to execute on main thread!");
+                Log("No action to execute on main thread!");
                 return;
             }
 

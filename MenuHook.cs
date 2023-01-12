@@ -83,7 +83,7 @@ namespace SkyCoop
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
-                        __instance.m_DescriptionLabel.text = "Change your nickname and customize your playing experience.";
+                        __instance.m_DescriptionLabel.text = "Change your nickname and customize your appeal.";
                     }
                 }
                 else if(MenuMode == "Join")
@@ -105,7 +105,7 @@ namespace SkyCoop
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "NewSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Change you character name. Other players will see it ingame.";
+                        __instance.m_DescriptionLabel.text = "Change your character name. Other players will see it ingame.";
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
@@ -126,9 +126,9 @@ namespace SkyCoop
                     {
                         if (MyMod.LobbyState != "Vote")
                         {
-                            __instance.m_DescriptionLabel.text = "Create or load a sandbox savegame.";
+                            __instance.m_DescriptionLabel.text = "Create or load a sandbox game.";
                         }else{
-                            __instance.m_DescriptionLabel.text = "Vote for sandbox settings.";
+                            __instance.m_DescriptionLabel.text = "Vote for session settings.";
                         }
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
@@ -144,7 +144,7 @@ namespace SkyCoop
                 {
                     if (__instance.m_ItemModelList[buttonIndex].m_Id == "LoadSurvival")
                     {
-                        __instance.m_DescriptionLabel.text = "Start voting for sandbox settings.";
+                        __instance.m_DescriptionLabel.text = "Start vote for session settings.";
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
@@ -159,7 +159,7 @@ namespace SkyCoop
                     }
                     else if (__instance.m_ItemModelList[buttonIndex].m_Id == "Feats")
                     {
-                        __instance.m_DescriptionLabel.text = "Vote for sandbox settings.";
+                        __instance.m_DescriptionLabel.text = "Vote for experience mode.";
                     }
                 }
             }
@@ -174,9 +174,9 @@ namespace SkyCoop
         {
             UILabel Label = Grid.GetChild(index).GetChild(0).GetComponent<UILabel>();
             UIButton Button = Grid.GetChild(index).GetComponent<UIButton>();
-            if (Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>() != null)
+            if (Grid.GetChild(index).gameObject.GetComponent<Comps.UiButtonKeyboardPressSkip>() != null)
             {
-                MyMod.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>();
+                Comps.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.GetComponent<Comps.UiButtonKeyboardPressSkip>();
                 Button.onClick = Skip.m_Click;
             }
         }
@@ -188,15 +188,15 @@ namespace SkyCoop
 
             if (onClickHack)
             {
-                if (Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>() == null)
+                if (Grid.GetChild(index).gameObject.GetComponent<Comps.UiButtonKeyboardPressSkip>() == null)
                 {
-                    MyMod.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.AddComponent<MyMod.UiButtonKeyboardPressSkip>();
+                    Comps.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.AddComponent<Comps.UiButtonKeyboardPressSkip>();
                     Skip.m_Click = Button.onClick;
                     Button.onClick = null;
                 }
-                else if (Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>() != null)
+                else if (Grid.GetChild(index).gameObject.GetComponent<Comps.UiButtonKeyboardPressSkip>() != null)
                 {
-                    MyMod.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.GetComponent<MyMod.UiButtonKeyboardPressSkip>();
+                    Comps.UiButtonKeyboardPressSkip Skip = Grid.GetChild(index).gameObject.GetComponent<Comps.UiButtonKeyboardPressSkip>();
                     Skip.m_Click = Button.onClick;
                     Button.onClick = null;
                 }
@@ -271,10 +271,10 @@ namespace SkyCoop
                                 }
                                 if (Button.GetComponent<UIButton>() != null)
                                 {
-                                    if (Button.GetComponent<MyMod.UiButtonPressHook>() == null)
+                                    if (Button.GetComponent<Comps.UiButtonPressHook>() == null)
                                     {
-                                        Button.AddComponent<MyMod.UiButtonPressHook>();
-                                        Button.GetComponent<MyMod.UiButtonPressHook>().m_CustomId = i;
+                                        Button.AddComponent<Comps.UiButtonPressHook>();
+                                        Button.GetComponent<Comps.UiButtonPressHook>().m_CustomId = i;
                                     }
                                 }
                             }
@@ -349,10 +349,10 @@ namespace SkyCoop
 
                     if (Button.GetComponent<UIButton>() != null)
                     {
-                        if (Button.GetComponent<MyMod.UiButtonPressHook>() == null)
+                        if (Button.GetComponent<Comps.UiButtonPressHook>() == null)
                         {
-                            Button.AddComponent<MyMod.UiButtonPressHook>();
-                            Button.GetComponent<MyMod.UiButtonPressHook>().m_CustomId = i;
+                            Button.AddComponent<Comps.UiButtonPressHook>();
+                            Button.GetComponent<Comps.UiButtonPressHook>().m_CustomId = i;
                         }
                     }
                 }
@@ -702,7 +702,7 @@ namespace SkyCoop
             }else{
                 if (DebugAlone == true)
                 {
-                    MyMod.SaveSlotSync SaveData = new MyMod.SaveSlotSync();
+                    DataStr.SaveSlotSync SaveData = new DataStr.SaveSlotSync();
                     SaveData.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
                     SaveData.m_Episode = (int)Episode.One;
                     SaveData.m_ExperienceMode = (int)ExperienceModeType.Custom;
@@ -1091,9 +1091,9 @@ namespace SkyCoop
         {
             private static bool Prefix(UIButton __instance)
             {
-                if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.UiButtonPressHook>() != null)
+                if (__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.UiButtonPressHook>() != null)
                 {
-                    int CustomId = __instance.gameObject.GetComponent<MyMod.UiButtonPressHook>().m_CustomId;
+                    int CustomId = __instance.gameObject.GetComponent<Comps.UiButtonPressHook>().m_CustomId;
                     //MelonLogger.Msg("Clicked m_CustomId " + CustomId);
                     if (CustomId != -1)
                     {
@@ -1140,7 +1140,7 @@ namespace SkyCoop
                             {
                                 if (CustomId == 1)
                                 {
-                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "How do you want to be called?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "HOW DO YOU WANT TO BE CALLED?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                                 }
                                 else if (CustomId == 2)
                                 {
