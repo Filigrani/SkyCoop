@@ -8,7 +8,7 @@ This is a free modification that loads using MelonLoader.
 
 <a href="https://github.com/RED1cat/SkyCoopInstaller/releases/latest"><img src="https://raw.githubusercontent.com/RED1cat/SkyCoopInstaller/master/SkyCoopInstaller/Resources/InstallerBanner1.png"></a>
 
-[Download Sky Co-Op Installer](https://github.com/RED1cat/SkyCoopInstaller/releases) for quick and easy installation.
+[Download Sky Co-Op Installer](https://github.com/RED1cat/SkyCoopInstaller/releases/latest) for quick and easy installation.
 
 Any question? Any Suggestation?
 Everything you need, you can find here: https://discord.gg/ydmufU2HHj
