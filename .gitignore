@@ -1,0 +1,17 @@
+﻿################################################################################
+# This .gitignore file was automatically created by Microsoft(R) Visual Studio.
+################################################################################
+
+/bin/Release
+/obj/Release
+/obj/Dedicated Linux
+/obj/Dedicated
+/obj/Debug/DesignTimeResolveAssemblyReferencesInput.cache
+/obj/Debug/SkyCoop.csproj.FileListAbsolute.txt
+/obj/Debug/SkyCoop.csproj.CoreCompileInputs.cache
+/obj/Debug/SkyCoop.csproj.AssemblyReference.cache
+/.vs/SkyCoop/FileContentIndex/fc05e273-ad90-48c4-95db-f31739f8e74e.vsidx
+/.vs/SkyCoop/FileContentIndex/dec4927e-aae6-42b2-b4c8-4211f4db55cb.vsidx
+/.vs/SkyCoop/FileContentIndex/36818bf1-942c-4f83-855e-74ebcb581950.vsidx
+/.vs/SkyCoop/FileContentIndex/21446d54-1b42-4ff8-9b99-e8e0dc7639ce.vsidx
+/.vs/SkyCoop/v17/.suo
