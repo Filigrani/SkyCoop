@@ -115,7 +115,7 @@ namespace SkyCoop
                 if(MyMod.playersData[from].m_Levelid != lel)
                 {
                     MyMod.playersData[from].m_Levelid = lel;
-                    MelonLogger.Msg("Player " + from + "  transition to level " + lel);
+                    MelonLogger.Msg("Player " + from + " transition to level " + lel);
                 }    
             }
             
@@ -150,6 +150,7 @@ namespace SkyCoop
         {
             MyMod.OveridedTime = _packet.ReadString();
             MyMod.MinutesFromStartServer = _packet.ReadInt();
+            MyMod.NeedSyncTime = true;
 
             //MelonLogger.Msg("Time: " + OveridedTime);
         }
@@ -216,15 +217,6 @@ namespace SkyCoop
         }
         public static void SYNCWEATHER(Packet _packet)
         {
-            DataStr.WeatherProxies weather = _packet.ReadWeather();
-            //string TOD = _packet.ReadString();
-            if (MyMod.level_name != "Boot" && MyMod.level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null)
-            {
-                GameManager.GetWeatherComponent().Deserialize(weather.m_WeatherProxy);
-                GameManager.GetWeatherTransitionComponent().Deserialize(weather.m_WeatherTransitionProxy);
-                GameManager.GetWindComponent().Deserialize(weather.m_WindProxy);
-                //GameManager.GetTimeOfDayComponent().Deserialize(TOD);
-            }
         }
         public static void REVIVE(Packet _packet)
         {
@@ -1275,116 +1267,118 @@ namespace SkyCoop
         
         public static void DoWeatherSync(float StartAtFrac, int WeatherSeed, float Duration, WeatherStage ST,int Indx, List<float> Durations, List<float> Transitions, int TOD, float High, float Low, int PreviousStage)
         {
-            if (MyMod.level_name == "Boot" || MyMod.level_name == "Empty" || GameManager.m_Wind == null || GameManager.m_Wind.m_ActiveSettings == null || GameManager.m_Weather == null || GameManager.m_WeatherTransition == null)
+            if (MyMod.level_name != "Boot" && MyMod.level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.GetUniStorm() != null && MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Loading != null && InterfaceManager.m_Panel_Loading.IsLoading() == false)
             {
-                return;
-            }
-            WeatherStage PreviousStageType = (WeatherStage)PreviousStage;
-            System.Random RNG = new System.Random(WeatherSeed);
-            Weather Weather = GameManager.GetWeatherComponent();
-            WeatherSet Set = GameManager.GetWeatherTransitionComponent().m_CurrentWeatherSet;
-            if(Set == null)
-            {
-                return;
-            }
-            int SetIndex = 0;
-            for (int i = 0; i < Weather.m_WeatherSetsForScene.Count; i++)
-            {
-                if (Weather.m_WeatherSetsForScene[i].gameObject.name == Set.gameObject.name)
+                WeatherStage PreviousStageType = (WeatherStage)PreviousStage;
+                System.Random RNG = new System.Random(WeatherSeed);
+                Weather Weather = GameManager.GetWeatherComponent();
+                WeatherSet Set = GameManager.GetWeatherTransitionComponent().m_CurrentWeatherSet;
+                if (Set == null)
                 {
-                    SetIndex = i;
-                    break;
+                    return;
                 }
-            }
-            if(SetIndex == Indx)
-            {
-                Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
-                Set.Activate(StartAtFrac, PreviousStageType);
-                Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
-                WeatherTransition.m_WeatherTransitionTimeScalar = 0;
-                Weather.m_TemperatureCountForTimeOfDay = TOD;
-                Weather.m_TempHigh = High;
-                Weather.m_TempLow = Low;
-                return;
-            }
-
-            if (Weather == null)
-            {
-                return;
-            }
-            WeatherSet ws;
-
-            if (Weather.m_WeatherSetsForScene.Count == 0)
-            {
-                for (int index = 0; index < Weather.m_DefaultWeatherSets.Length; ++index)
+                int SetIndex = 0;
+                for (int i = 0; i < Weather.m_WeatherSetsForScene.Count; i++)
                 {
-                    if (Weather.m_DefaultWeatherSets[index] && Weather.m_DefaultWeatherSets[index].gameObject)
+                    if (Weather.m_WeatherSetsForScene[i].gameObject.name == Set.gameObject.name)
                     {
-                        Weather.m_WeatherSetsForScene.Add(Weather.GetInstancedWeatherSet(Weather.m_DefaultWeatherSets[index].gameObject));
+                        SetIndex = i;
+                        break;
                     }
                 }
-            }
-            WeatherSet weatherSet1 = null;
-
-
-            if(Weather.m_WeatherSetsForScene.Count-1 <= Indx)
-            {
-                weatherSet1 = Weather.m_WeatherSetsForScene[Indx];
-            } else
-            {
-                int num1 = 0;
-                for (int index = 0; index < Weather.m_WeatherSetsForScene.Count; ++index)
+                if (SetIndex == Indx)
                 {
-                    WeatherSet weatherSet2 = Weather.m_WeatherSetsForScene[index];
-                    if (weatherSet2.m_CharacterizingType == ST)
-                        num1 += weatherSet2.m_SameTypeSelectionWeight;
+                    Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
+                    Set.Activate(StartAtFrac, PreviousStageType);
+                    Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
+                    WeatherTransition.m_WeatherTransitionTimeScalar = 0;
+                    Weather.m_TemperatureCountForTimeOfDay = TOD;
+                    Weather.m_TempHigh = High;
+                    Weather.m_TempLow = Low;
+                    return;
                 }
-                int num2 = RNG.Next(0, num1);
-                for (int index = Weather.m_WeatherSetsForScene.Count - 1; index >= 0; --index)
+
+                if (Weather == null)
                 {
-                    WeatherSet weatherSet3 = Weather.m_WeatherSetsForScene[index];
-                    if (weatherSet3.m_CharacterizingType == ST)
+                    return;
+                }
+                WeatherSet ws;
+
+                if (Weather.m_WeatherSetsForScene.Count == 0)
+                {
+                    for (int index = 0; index < Weather.m_DefaultWeatherSets.Length; ++index)
                     {
-                        num1 -= weatherSet3.m_SameTypeSelectionWeight;
-                        if (num2 >= num1)
+                        if (Weather.m_DefaultWeatherSets[index] && Weather.m_DefaultWeatherSets[index].gameObject)
                         {
-                            weatherSet1 = weatherSet3;
-                            break;
+                            Weather.m_WeatherSetsForScene.Add(Weather.GetInstancedWeatherSet(Weather.m_DefaultWeatherSets[index].gameObject));
                         }
                     }
                 }
-            }
-
-            if (weatherSet1 != null && !weatherSet1.m_IsDefaultSet)
-            {
-                weatherSet1 = Weather.GetInstancedWeatherSet(weatherSet1.gameObject);
-            }
-
-            ws = weatherSet1;
-
-            if (ws == null)
-            {
-                return;
-            }
+                WeatherSet weatherSet1 = null;
 
 
-            ws.m_CurrentSetDuration = Duration;
-            for (int index = 0; index < ws.m_WeatherStages.Length; ++index)
-            {
-                WeatherSetStage weatherStage = ws.m_WeatherStages[index];
-                if(Durations.Count-1 >= index)
+                if (Weather.m_WeatherSetsForScene.Count - 1 <= Indx)
                 {
-                    weatherStage.m_CurrentDuration = Durations[index];
-                    weatherStage.m_CurrentTransitionTime = Transitions[index];
+                    weatherSet1 = Weather.m_WeatherSetsForScene[Indx];
+                } else
+                {
+                    int num1 = 0;
+                    for (int index = 0; index < Weather.m_WeatherSetsForScene.Count; ++index)
+                    {
+                        WeatherSet weatherSet2 = Weather.m_WeatherSetsForScene[index];
+                        if (weatherSet2.m_CharacterizingType == ST)
+                            num1 += weatherSet2.m_SameTypeSelectionWeight;
+                    }
+                    int num2 = RNG.Next(0, num1);
+                    for (int index = Weather.m_WeatherSetsForScene.Count - 1; index >= 0; --index)
+                    {
+                        WeatherSet weatherSet3 = Weather.m_WeatherSetsForScene[index];
+                        if (weatherSet3.m_CharacterizingType == ST)
+                        {
+                            num1 -= weatherSet3.m_SameTypeSelectionWeight;
+                            if (num2 >= num1)
+                            {
+                                weatherSet1 = weatherSet3;
+                                break;
+                            }
+                        }
+                    }
                 }
+
+                if (weatherSet1 != null && !weatherSet1.m_IsDefaultSet)
+                {
+                    weatherSet1 = Weather.GetInstancedWeatherSet(weatherSet1.gameObject);
+                }
+
+                ws = weatherSet1;
+
+                if (ws == null)
+                {
+                    return;
+                }
+
+
+                ws.m_CurrentSetDuration = Duration;
+                for (int index = 0; index < ws.m_WeatherStages.Length; ++index)
+                {
+                    WeatherSetStage weatherStage = ws.m_WeatherStages[index];
+                    if (Durations.Count - 1 >= index)
+                    {
+                        weatherStage.m_CurrentDuration = Durations[index];
+                        weatherStage.m_CurrentTransitionTime = Transitions[index];
+                    }
+                }
+                WeatherTransition.m_WeatherTransitionTimeScalar = 0;
+                GameManager.GetWeatherTransitionComponent().ActivateWeatherSet(ws, StartAtFrac, PreviousStageType);
+                Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
+                Weather.m_TemperatureCountForTimeOfDay = TOD;
+                Weather.m_TempHigh = High;
+                Weather.m_TempLow = Low;
+                MelonLogger.Msg(ConsoleColor.Blue, "WeatherSet updated!");
+            } else
+            {
+                MelonLogger.Msg("Can't apply WeatherSync, because loading, skipping");
             }
-            WeatherTransition.m_WeatherTransitionTimeScalar = 0;
-            GameManager.GetWeatherTransitionComponent().ActivateWeatherSet(ws, StartAtFrac, PreviousStageType);
-            Set.m_WeatherStages[0].m_PreviousType = PreviousStageType;
-            Weather.m_TemperatureCountForTimeOfDay = TOD;
-            Weather.m_TempHigh = High;
-            Weather.m_TempLow = Low;
-            MelonLogger.Msg(ConsoleColor.Blue,"WeatherSet updated!");
         }
         public static void DEDICATEDWEATHER(Packet _packet)
         {

@@ -2371,6 +2371,8 @@ namespace SkyCoop
             return false;
         }
 
+        public static bool AutoSaveAllTheCost = false;
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string), typeof(string) })] // Once
         public class GameManager_LoadSceneOverLoad1
         {
@@ -2384,6 +2386,7 @@ namespace SkyCoop
                 }
                 MelonLogger.Msg(ConsoleColor.Yellow, "Loading other scene...");
                 MyMod.ApplyOtherCampfires = false;
+                AutoSaveAllTheCost = true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string) })] // Once
@@ -2772,13 +2775,6 @@ namespace SkyCoop
                 }
             }
         }
-        public static void SaveSeedInt(SaveSlotType gameMode, string name)
-        {
-            int[] saveProxy = { GameManager.m_SceneTransitionData.m_GameRandomSeed };
-            string data = JSON.Dump(saveProxy);
-
-            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_seed", data);
-        }
         public static void SaveSeedRadioFQ(SaveSlotType gameMode, string name)
         {
             float[] saveProxy = { MyMod.RadioFrequency };
@@ -2853,7 +2849,7 @@ namespace SkyCoop
                 SavePlants(gameMode, name);
                 SaveSnowShelters(gameMode, name);
                 SaveGenVersion(gameMode, name);
-                SaveSeedInt(gameMode, name);
+                //SaveSeedInt(gameMode, name);
                 SaveRealtimeTime(gameMode, name);
 
                 if (MyMod.ServerConfig.m_PlayersSpawnType != 3 && MyMod.iAmHost) // Fixed spawn only
@@ -3099,19 +3095,6 @@ namespace SkyCoop
                 MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
             }
         }
-        public static int LoadSeedInt(string name)
-        {
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_seed");
-            if (data != null)
-            {
-                int[] saveProxy = JSON.Load(data).Make<int[]>();
-                return saveProxy[0];
-            }
-            else
-            {
-                return 0;
-            }
-        }
         public static float LoadRadioFQ(string name)
         {
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_FQ");
@@ -3212,35 +3195,6 @@ namespace SkyCoop
             {
                 clearFolder(di.FullName);
                 di.Delete();
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "DeleteSaveFiles")] // Once
-        public static class SaveGameSystemPatch_DeleteSaveFiles
-        {
-            public static void Prefix(string name)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                //MelonLogger.Msg("[DroppedGearsUnloader] Wiping unloads data before delete file " + name + "...");
-                int seed = LoadSeedInt(name);
-                string dir = @"Mods\Unloads\" + seed;
-                bool exists = System.IO.Directory.Exists(dir);
-                if (exists)
-                {
-                    clearFolder(dir);
-
-                    System.IO.Directory.Delete(dir);
-                    //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " has been deleted");
-                }
-                else
-                {
-                    //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " not exist, so doing nothing");
-                }
             }
         }
 
@@ -7660,6 +7614,89 @@ namespace SkyCoop
 
 
                 return false;
+            }
+        }
+        //[HarmonyLib.HarmonyPatch(typeof(Weather), "Serialize")]
+        //internal static class Weather_Serialize
+        //{
+        //    private static void Postfix(Weather __instance, ref string __result)
+        //    {
+        //        MelonLogger.Msg("[Weather][Serialize] Overriden");
+        //        __result = null;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(WeatherTransition), "Serialize")]
+        //internal static class WeatherTransition_Serialize
+        //{
+        //    private static void Postfix(WeatherTransition __instance, ref string __result)
+        //    {
+        //        MelonLogger.Msg("[WeatherTransition][Serialize] Overriden");
+        //        __result = null;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Wind), "Serialize")]
+        //internal static class Wind_Serialize
+        //{
+        //    private static void Postfix(Wind __instance, ref string __result)
+        //    {
+        //        MelonLogger.Msg("[Wind][Serialize] Overriden");
+        //        __result = null;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Weather), "Deserialize")]
+        //internal static class Weather_Deserialize
+        //{
+        //    private static bool Prefix(Weather __instance)
+        //    {
+        //        MelonLogger.Msg("[Weather][Deserialize] Overriden");
+        //        return false;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(WeatherTransition), "Deserialize")]
+        //internal static class WeatherTransition_Deserialize
+        //{
+        //    private static bool Prefix(WeatherTransition __instance)
+        //    {
+        //        MelonLogger.Msg("[WeatherTransition][Deserialize] Overriden");
+        //        return false;
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Wind), "Deserialize")]
+        //internal static class Wind_Deserialize
+        //{
+        //    private static bool Prefix(Wind __instance)
+        //    {
+        //        MelonLogger.Msg("[Wind][Deserialize] Overriden");
+        //        return false;
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "AllowedToSave")]
+        internal static class GameManager_AllowedToSave
+        {
+            private static void Postfix(GameManager __instance, SaveState state, ref bool __result)
+            {
+                if(state == SaveState.InMemory)
+                {
+                    MelonLogger.Msg("[GameManager][AllowedToSave] state " + state);
+                    MelonLogger.Msg("s_SaveGameDelayTime " + GameManager.s_SaveGameDelayTime);
+                    bool g = (double)GameManager.s_SaveGameDelayTime <= (double)Time.time;
+                    MelonLogger.Msg("(double)GameManager.s_SaveGameDelayTime <= (double)Time.time = " + g);
+                    MelonLogger.Msg("AllowedToLoadActiveGame() " + GameManager.AllowedToLoadActiveGame());
+                    MelonLogger.Msg("m_AllowSaveWithoutGrounding " + GameManager.m_AllowSaveWithoutGrounding);
+                    MelonLogger.Msg("GameManager.m_PendingSave " + GameManager.m_PendingSave);
+
+                    if (__result == false)
+                    {
+                        if (AutoSaveAllTheCost)
+                        {
+                            MelonLogger.Msg(ConsoleColor.Red, "Can't autosave now, but we really need to, saving... ");
+                            AutoSaveAllTheCost = false;
+                            __result = true;
+                        }
+                    } else{
+                        AutoSaveAllTheCost = false;
+                    }
+                }
             }
         }
     }

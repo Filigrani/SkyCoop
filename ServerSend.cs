@@ -64,7 +64,7 @@ namespace GameServer
                 }
             }
         }
-        public static void SendUDPDataToAll(Packet _packet, int Region)
+        public static void SendUDPDataToAll(Packet _packet, int Region, bool IgnoreLoaders = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
@@ -73,7 +73,16 @@ namespace GameServer
                 {
                     if (MyMod.playersData[i].m_LastRegion == Region && !Server.clients[i].RCON)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        if (!IgnoreLoaders)
+                        {
+                            Server.clients[i].udp.SendData(_packet);
+                        } else
+                        {
+                            if(!MyMod.playersData[i].m_IsLoading)
+                            {
+                                Server.clients[i].udp.SendData(_packet);
+                            }
+                        }
                     }
                 }
             }
@@ -2319,7 +2328,7 @@ namespace GameServer
                 _packet.Write(High);
                 _packet.Write(Low);
                 _packet.Write(PreviousStage);
-                SendUDPDataToAll(_packet, Region);
+                SendUDPDataToAll(_packet, Region, true);
             }
         }
         public static void WEATHERVOLUNTEER(int Region)
@@ -2327,7 +2336,7 @@ namespace GameServer
             using (Packet _packet = new Packet((int)ServerPackets.WEATHERVOLUNTEER))
             {
                 _packet.Write(Region);
-                SendUDPDataToAll(_packet, Region);
+                SendUDPDataToAll(_packet, Region, true);
             }
         }
         public static void REREGISTERWEATHER(int For, int Region)

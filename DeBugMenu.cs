@@ -379,9 +379,12 @@ namespace SkyCoop
                     //    ServerSend.CAIRNS();
                     //}
                     //GameManager.GetPlayerAnimationComponent().Trigger_Breakdown_Intro(StruggleBonus.StruggleWeaponType.Hammer);
-                    string quote = "\"";
-                    string Copy = "AddSafeScene("+ quote + MyMod.level_guid + quote+ ");";
-                    GUIUtility.systemCopyBuffer = Copy;
+                    //string quote = "\"";
+                    //string Copy = "AddSafeScene("+ quote + MyMod.level_guid + quote+ ");";
+                    //GUIUtility.systemCopyBuffer = Copy;
+
+                    MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
+                    MelonLogger.Msg("Save slot userdefined name " + SaveGameSlots.GetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName()));
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Zone"))
                 {

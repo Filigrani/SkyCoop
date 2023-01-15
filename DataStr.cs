@@ -234,6 +234,7 @@ namespace SkyCoop
             public bool m_IsLoading = false;
             public int m_LastRegion = 0;
             public bool m_IsSafe = false;
+            public string m_SteamOrEGSID = "";
         }
         public class MultiPlayerClientStatus //: MelonMod
         {

@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.11.0";
+            public const string Version = "0.11.1";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 4;
         }
@@ -273,12 +273,6 @@ namespace SkyCoop
                 return;
             }
 
-            if (uConsole.m_CommandsDict.Count > 0)
-            {
-                uConsole.m_CommandsDict.Clear();
-                uConsole.m_CommandsList.Clear();
-                uConsole.m_CommandsHelp.Clear();
-            }
             if (uConsole.m_Instance != null)
             {
                 uConsole.m_Instance.m_Activate = KeyCode.None;
@@ -5249,7 +5243,7 @@ namespace SkyCoop
 
             if (HaveSaveFile == true)
             {
-                KillConsole(); // Unregistering cheats if server not allow cheating for you
+                KillConsole();
                 MelonLogger.Msg("Trying loading save slot...");
                 long Hash = Shared.GetDeterministicId(SaveGameSlots.LoadDataFromSlot(SaveToLoad.m_SaveSlotName, "global"));
                 MelonLogger.Msg("Save slot hash " + Hash);
@@ -5309,22 +5303,8 @@ namespace SkyCoop
             ExperienceModeType ExpType = (ExperienceModeType)Data.m_ExperienceMode;
             GameRegion Region = (GameRegion)Data.m_Location;
 
+            KillConsole();
             MelonLogger.Msg("Creating save slot " + Seed);
-            GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
-            //SaveGameSystem.SetCurrentSaveInfo(Ep, SST, SaveGameSlots.GetUnusedGameId(), null);
-
-            KillConsole(); // Unregistering cheats if server not allow cheating for you
-
-            SaveGameSystem.m_CurrentEpisode = Ep;
-            SaveGameSystem.m_CurrentGameId = SaveGameSlots.GetUnusedGameId();
-            SaveGameSystem.m_CurrentGameMode = SST;
-            SaveGameSystem.m_CurrentSaveName = SaveGameSlots.BuildSlotName(SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameMode, SaveGameSystem.m_CurrentGameId);
-            if (Seed != 0)
-            {
-                SaveGameSlots.SetSlotDisplayName(SaveGameSystem.m_CurrentSaveName, Seed + "");
-            } else {
-                SaveGameSlots.SetSlotDisplayName(SaveGameSystem.m_CurrentSaveName, Name);
-            }
 
             GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
             if (ExpType == ExperienceModeType.Custom)
@@ -5334,13 +5314,31 @@ namespace SkyCoop
                 if (ok)
                 {
                     MelonLogger.Msg("Custom Experience Mode recreated from string!");
-                } else {
+                } else
+                {
                     MelonLogger.Msg(ConsoleColor.Red, "Failed to recreate custom experience from string!");
                 }
             }
+            
+            string UserDefinedName;
+            if(Seed != 0)
+            {
+                UserDefinedName = Seed.ToString();
+            } else
+            {
+                UserDefinedName = Name;
+            }
+            SaveGameSystem.SetCurrentSaveInfo(Ep, SST, SaveGameSlots.GetUnusedGameId(), null);
+
+
+            SaveGameSlots.SetSlotDisplayName(SaveGameSystem.GetCurrentSaveName(), UserDefinedName);
+            //SaveGameSlots.SetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName(), UserDefinedName);
+
 
             MelonLogger.Msg("Save slot created!");
             MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
+            MelonLogger.Msg("Save slot userdefined name " + SaveGameSlots.GetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName()));
+
 
             GameManager.m_StartRegion = Region;
             InterloperHook = true;
@@ -9984,7 +9982,10 @@ namespace SkyCoop
                     if (NeedSyncTime == true)
                     {
                         EveryInGameMinute(); // Trigger actions that happends every in game minute (5 seconds) and recalculate realtime cycle and resend weather.
-                        Shared.EveryInGameMinute();
+                        if (iAmHost)
+                        {
+                            Shared.EveryInGameMinute();
+                        }
                     }
                 }
             }

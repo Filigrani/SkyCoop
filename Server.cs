@@ -63,7 +63,7 @@ namespace GameServer
             //MyMod.LoadAllOpenableThingsForScene();
             MyMod.DisableOriginalAnimalSpawns(true);
             MyMod.SetFixedSpawn();
-            MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
+            MyMod.KillConsole();
             SteamConnect.Main.SetLobbyServer();
             SteamConnect.Main.SetLobbyState("Playing");
 #endif

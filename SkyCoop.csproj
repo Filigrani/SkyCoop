@@ -173,6 +173,22 @@
     </Reference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <PropertyGroup>
+    <PostBuildEvent>@copy "D:\source\repos\SkyCoopBeforeTFTFT\Client.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Client.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\DataStr.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\DataStr.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\MPSaveManager.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\MPSaveManager.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\Packet.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Packet.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\ResourceIndependent.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\ResourceIndependent.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\SafeZoneManager.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\SafeZoneManager.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\Server.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Server.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\ServerHandle.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\ServerHandle.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\ServerSend.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\ServerSend.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\Shared.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Shared.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\Supporters.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Supporters.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\bin\Release\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll"
+"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d"
+"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\BuildInfo.json" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\gear-spawns" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\blueprints" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\auto-mapped"</PostBuildEvent>
+  </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
   <Target Name="BeforeBuild">

@@ -75,6 +75,7 @@ namespace GameServer
             string SupporterID = _packet.ReadString();
             Supporters.SupporterBenefits ConfiguratedBenefits = _packet.ReadSupporterBenefits();
             MyMod.playersData[_fromClient].m_SupporterBenefits = Supporters.VerifyBenefitsWithConfig(SupporterID, ConfiguratedBenefits);
+            MyMod.playersData[_fromClient].m_SteamOrEGSID = SupporterID;
 #if (!DEDICATED)
             Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
 #endif
@@ -106,7 +107,7 @@ namespace GameServer
 
             Log("Client "+ _fromClient+" with user name "+ _username+" connected!");
             Log("Sending init data to new client...");
-
+            AddLoadingClient(_fromClient);
             
             ServerSend.SERVERCFG(_fromClient);
             ServerSend.GEARPICKUPLIST(_fromClient);

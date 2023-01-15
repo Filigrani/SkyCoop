@@ -46,6 +46,8 @@ namespace SkyCoop
             FlairsIDs.Add("Bear"); // 13
             FlairsIDs.Add("Kai"); // 14
             FlairsIDs.Add("Pie"); // 15
+            FlairsIDs.Add("Snw"); // 16
+            FlairsIDs.Add("Lammy"); // 17
 
             FlairsIDsReady = true;
         }

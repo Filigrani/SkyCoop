@@ -970,10 +970,6 @@ namespace SkyCoop
                             other.m_Dead = false;
                         }
                         other.m_IsLoading = ClientIsLoading(i);
-                        if (MyMod.playersData[i] != null)
-                        {
-                            MyMod.playersData[i].m_IsLoading = ClientIsLoading(i);
-                        }
 
                         if (other.m_Sleep || other.m_Dead)
                         {
@@ -1317,10 +1313,34 @@ namespace SkyCoop
             }
         }
 
+        public static void PieTrigger(ExtraDataForDroppedGear Extra, int Picker)
+        {
+            if(Extra.m_GearName.ToLower() == "gear_pumpkinpie" && (Extra.m_Dropper.ToLower() == "filigrani" || Extra.m_Dropper.ToLower() == "redcat" || Extra.m_Dropper.ToLower() == "snwball"))
+            {
+                string PickerName = "unknown";
+
+                if(Picker != 0)
+                {
+                    if (MyMod.playersData[Picker] != null)
+                    {
+                        PickerName = MyMod.playersData[Picker].m_Name;
+                        
+                    }
+                }
+
+                if(PickerName.ToLower() != "filigrani" && PickerName.ToLower() != "redcat" && PickerName.ToLower() != "snwball")
+                {
+                    Log(PickerName+" found pie! Steam/EGSID "+ MyMod.playersData[Picker].m_SteamOrEGSID, LoggerColor.Green);
+                    ExecuteCommand("say "+ PickerName + " found pie!");
+                }
+            }
+        }
+
         public static void SendDroppedItemToPicker(string DataProxy, int GiveItemTo, int SearchKey, int GearID, bool place, DataStr.ExtraDataForDroppedGear Extra)
         {
             byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
             Log("Going to send gear to client " + GiveItemTo + " bytes: " + bytesToSlice.Length);
+            PieTrigger(Extra, GiveItemTo);
 
             if (bytesToSlice.Length > 500)
             {
@@ -1558,7 +1578,7 @@ namespace SkyCoop
         public static void SendMessageToChat(DataStr.MultiplayerChatMessage message, bool needSync = true)
         {
 #if (!DEDICATED)
-            if (message.m_By.Contains("Filigrani") || message.m_By.Contains("REDcat"))
+            if (Supporters.MyID == "76561198152259224" || Supporters.MyID == "76561198867520214")
             {
                 if (message.m_Message == "!debug")
                 {
@@ -1683,10 +1703,26 @@ namespace SkyCoop
             if (needSync)
             {
                 ServerSend.CHAT(0, message);
+                string LogText = "";
+                LoggerColor TextColor = LoggerColor.Yellow;
+                if (message.m_Type == 1)
+                {
+                    string GlobalOrArea = "[Chat][Global] ";
+                    if (!message.m_Global)
+                    {
+                        GlobalOrArea = "[Chat][Area] ";
+                        TextColor = LoggerColor.White;
+                    }
+
+                    LogText = GlobalOrArea + message.m_By + ": " + message.m_Message;
+                } else
+                {
+                    LogText = " " + message.m_Message;
+                    TextColor = LoggerColor.Green;
+                }
+                Log(LogText, TextColor);
             }
 #endif
-
-
         }
 
         public static void AddDeployedRopes(Vector3 position, bool deployed, bool snapped, int lvl, string lvlguid, bool needSync)
@@ -2344,7 +2380,7 @@ namespace SkyCoop
                 MyMod.NeedSyncTime = true;
                 MyMod.DisableOriginalAnimalSpawns(true);
                 MyMod.SetFixedSpawn();
-                MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
+                MyMod.KillConsole();
             }
 #else
             MPSaveManager.LoadNonUnloadables();
