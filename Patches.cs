@@ -20,6 +20,8 @@ using System.Diagnostics;
 using GameServer;
 using UnityEngine.SceneManagement;
 using static SkyCoop.DataStr;
+using static SkyCoop.Comps;
+using Il2CppSystem.Threading.Tasks;
 
 namespace SkyCoop
 {
@@ -476,6 +478,20 @@ namespace SkyCoop
                     GameManager.GetPlayerManagerComponent().UnequipItemInHands();
                     CharcoalItem.m_CharcoalItemInUseForSurvey = null;
                 }
+                if (Shared.CloseContainerOnCancle)
+                {
+                    Shared.CloseContainerOnCancle = false;
+                    DataStr.ContainerOpenSync pendingContainer = new DataStr.ContainerOpenSync();
+                    pendingContainer.m_Guid = "NULL";
+                    if (MyMod.sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.CONTAINERINTERACT))
+                        {
+                            _packet.Write(pendingContainer);
+                            SendTCPData(_packet);
+                        }
+                    }
+                }
             }
         }
 
@@ -495,7 +511,17 @@ namespace SkyCoop
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
                     ClientUser.DoConnectToIp(text);
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text.StartsWith("YOU GOT A NEW FLAIR"))
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INVALID CONTAINER DATA")
+                {
+                    Shared.CloseContainerOnCancle = false;
+                    if (MyMod.GoingToOpenContinaer != null)
+                    {
+                        MyMod.OpenFakeContainer(MyMod.GoingToOpenContinaer);
+                    }
+                }
+                if (__instance.m_CurrentGroup != null && 
+                    (__instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "YOU GOT A NEW FLAIR!" ||
+                     __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "YOU GOT NEW FLAIRS!"))
                 {
                     // Open Flairs Menu
                     Supporters.SetFlairsUpdateData();
@@ -1455,7 +1481,7 @@ namespace SkyCoop
                     {
                         return;
                     }
-                    Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, true);
+                    Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, GearName, true);
                 }
             }
         }
@@ -1503,7 +1529,7 @@ namespace SkyCoop
                     {
                         return;
                     }
-                    Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, true);
+                    Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, GearName, true);
                 }
             }
         }
@@ -1554,7 +1580,7 @@ namespace SkyCoop
                         {
                             return;
                         }
-                        Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, true);
+                        Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, GearName, true);
                     }
                 }
             }
@@ -2405,8 +2431,6 @@ namespace SkyCoop
             }
         }
 
-        public static bool OldPostLoadActionType = false;
-
         [HarmonyLib.HarmonyPatch(typeof(SceneManager), "OnSceneLoaded")] // Once
         public class SceneManager_Load
         {
@@ -2496,22 +2520,6 @@ namespace SkyCoop
 
 
                     MyMod.NotNeedToPauseUntilLoaded = false;
-
-                    if (OldPostLoadActionType == true)
-                    {
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateRopesAndFurnsAndCampfires in 2 seconds!");
-                        MyMod.UpdateRopesAndFurns = 2;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateLootedContainers in 3 seconds!");
-                        MyMod.UpdateLootedContainers = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedPlants in 3 seconds!");
-                        MyMod.UpdatePickedPlants = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateSnowshelters in 3 seconds!");
-                        MyMod.UpdateSnowshelters = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedGears in 3 seconds!");
-                        MyMod.UpdatePickedGears = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateCampfires in 4 seconds!");
-                        MyMod.UpdateCampfires = 4;
-                    }
                 }
             }
         }
@@ -2545,14 +2553,13 @@ namespace SkyCoop
                         }
                     }
                 }
-
+                MyMod.BakePreSpawnedGearsList();
                 if (breakGuid == "" && breakParentGuid == "")
                 {
                     MelonLogger.Msg("Deny listing that furn, cause have not any GUIDs, so it should be duppable");
                     return;
                 }
-
-                MyMod.OnFurnitureDestroyed(breakGuid, breakParentGuid, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
+                MyMod.SendBrokeFurniture(breakGuid, breakParentGuid, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Start")] // Once
@@ -2627,37 +2634,6 @@ namespace SkyCoop
                 return false;
             }
         }
-
-        public static void SaveBrokenFurtiture(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Saving...");
-            DataStr.BrokenFurnitureSync[] saveProxy = MyMod.BrokenFurniture.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_furns", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Fail!");
-            }
-        }
-        public static void SavePickedGears(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][PickedGearSync] Saving...");
-            DataStr.PickedGearSync[] saveProxy = MyMod.PickedGears.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_pickedgears", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][PickedGearSync] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][PickedGearSync] Fail!");
-            }
-        }
         public static void SaveDeathCreates(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][SaveDeathCreates] Saving...");
@@ -2693,22 +2669,6 @@ namespace SkyCoop
             }
         }
 
-        public static void SaveLootedBoxes(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][LootedContainers] Saving...");
-            DataStr.ContainerOpenSync[] saveProxy = MyMod.LootedContainers.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_containers", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][LootedContainers] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][LootedContainers] Fail!");
-            }
-        }
-
         public static void SaveServerConfig(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][ServerConfig] Saving...");
@@ -2726,22 +2686,6 @@ namespace SkyCoop
             else
             {
                 //MelonLogger.Msg("[Saving][ServerConfig] Fail!");
-            }
-        }
-
-        public static void SavePlants(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][HarvestableSyncData] Saving...");
-            string[] saveProxy = MyMod.HarvestedPlants.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_plants", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Fail!");
             }
         }
 
@@ -2804,18 +2748,6 @@ namespace SkyCoop
 
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_fixedP", data);
         }
-        public static void SaveKilledAnimals(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][AnimalsKilled] Saving...");
-            string data = JSON.Dump(Shared.AnimalsKilled);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_killedanimals", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Successfully!");
-            }else{
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Fail!");
-            }
-        }
         public static void SaveBookReaded(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][BooksResearched] Saving...");
@@ -2842,11 +2774,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                SaveBrokenFurtiture(gameMode, name);
-                SavePickedGears(gameMode, name);
                 SaveDeployedRopes(gameMode, name);
-                SaveLootedBoxes(gameMode, name);
-                SavePlants(gameMode, name);
                 SaveSnowShelters(gameMode, name);
                 SaveGenVersion(gameMode, name);
                 //SaveSeedInt(gameMode, name);
@@ -2857,63 +2785,10 @@ namespace SkyCoop
                     SaveFixedSpawn(gameMode, name);
                     SaveFixedSpawnPosition(gameMode, name);
                 }
-                SaveKilledAnimals(gameMode, name);
                 SaveBookReaded(gameMode, name);
                 SaveSeedRadioFQ(gameMode, name);
                 SaveDeathCreates(gameMode, name);
                 SaveUGUID(gameMode, name);
-            }
-        }
-
-        public static void LoadBrokenFurtiture(string name)
-        {
-            //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_furns");
-            if (data != null)
-            {
-                DataStr.BrokenFurnitureSync[] saveProxy = JSON.Load(data).Make<DataStr.BrokenFurnitureSync[]>();
-                List<DataStr.BrokenFurnitureSync> loadedData = saveProxy.ToList<DataStr.BrokenFurnitureSync>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    DataStr.BrokenFurnitureSync ToAdd = loadedData[i];
-                    if (MyMod.BrokenFurniture.Contains(ToAdd) == false)
-                    {
-                        MyMod.BrokenFurniture.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Total Entries: " + MyMod.BrokenFurniture.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] No saves found!");
-            }
-        }
-
-        public static void LoadPickedGears(string name)
-        {
-            //MelonLogger.Msg("[Saving][PickedGearSync] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_pickedgears");
-            if (data != null)
-            {
-                DataStr.PickedGearSync[] saveProxy = JSON.Load(data).Make<DataStr.PickedGearSync[]>();
-                List<DataStr.PickedGearSync> loadedData = saveProxy.ToList<DataStr.PickedGearSync>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    DataStr.PickedGearSync ToAdd = loadedData[i];
-                    if (MyMod.PickedGears.Contains(ToAdd) == false)
-                    {
-                        MyMod.PickedGears.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][PickedGearSync] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][PickedGearSync] Total Entries: " + MyMod.PickedGears.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][PickedGearSync] No saves found!");
             }
         }
 
@@ -2970,58 +2845,6 @@ namespace SkyCoop
             else
             {
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] No saves found!");
-            }
-        }
-
-        public static void LoadLootedBoxes(string name)
-        {
-            //MelonLogger.Msg("[Saving][LootedContainers] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_containers");
-            if (data != null)
-            {
-                DataStr.ContainerOpenSync[] saveProxy = JSON.Load(data).Make<DataStr.ContainerOpenSync[]>();
-                List<DataStr.ContainerOpenSync> loadedData = saveProxy.ToList<DataStr.ContainerOpenSync>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    DataStr.ContainerOpenSync ToAdd = loadedData[i];
-                    if (MyMod.LootedContainers.Contains(ToAdd) == false)
-                    {
-                        MyMod.LootedContainers.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][LootedContainers] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][LootedContainers] Total Entries: " + MyMod.LootedContainers.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][LootedContainers] No saves found!");
-            }
-        }
-
-        public static void LoadPlants(string name)
-        {
-            //MelonLogger.Msg("[Saving][HarvestableSyncData] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_plants");
-            if (data != null)
-            {
-                string[] saveProxy = JSON.Load(data).Make<string[]>();
-                List<string> loadedData = saveProxy.ToList<string>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    string ToAdd = loadedData[i];
-                    if (MyMod.HarvestedPlants.Contains(ToAdd) == false)
-                    {
-                        MyMod.HarvestedPlants.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Total Entries: " + MyMod.HarvestedPlants.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] No saves found!");
             }
         }
 
@@ -3137,27 +2960,6 @@ namespace SkyCoop
                 MyMod.FixedPlaceLoaded = true;
             }
         }
-        public static void LoadKilledAnimals(string name)
-        {
-            //MelonLogger.Msg("[Saving][HarvestableSyncData] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_killedanimals");
-            if (data != null)
-            {
-                Dictionary<string, DataStr.AnimalKilled> loadedData = JSON.Load(data).Make<Dictionary<string, DataStr.AnimalKilled>>();
-                int loadedCount = 0;
-                
-                foreach (var item in loadedData)
-                {
-                    if (!Shared.AnimalsKilled.ContainsKey(item.Key))
-                    {
-                        Shared.AnimalsKilled.Add(item.Key, item.Value);
-                        loadedCount++;
-                    }
-                }
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Loaded Entries: " + loadedCount);
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Total Entries: " + MyMod.AnimalsKilled.Count);
-            }
-        }
         public static void LoadReadedBooks(string name)
         {
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_books");
@@ -3211,17 +3013,12 @@ namespace SkyCoop
                 }
 
                 MelonLogger.Msg(ConsoleColor.Yellow, "[Saving] Loading " + name + "...");
-                LoadBrokenFurtiture(name);
-                LoadPickedGears(name);
                 LoadDeployedRopes(name);
-                LoadLootedBoxes(name);
-                LoadPlants(name);
                 LoadSnowShelters(name);
                 LoadGenVersion(name);
                 LoadRealtimeTime(name);
                 LoadFixedSpawn(name);
                 LoadFixedSpawnPosition(name);
-                LoadKilledAnimals(name);
                 LoadReadedBooks(name);
                 float FQ = LoadRadioFQ(name);
                 MyMod.RadioFrequency = Mathf.Round(FQ * 10.0f) * 0.1f;
@@ -3229,27 +3026,6 @@ namespace SkyCoop
                 LoadUGUID(name);
             }
         }
-
-
-        public static void FlushAllSavable()
-        {
-            MelonLogger.Msg("[Saving] Wipe all savables cause of quit");
-            MyMod.ServerConfig = new DataStr.ServerConfigData();
-            MyMod.BrokenFurniture = new List<DataStr.BrokenFurnitureSync>();
-            MyMod.PickedGears = new List<DataStr.PickedGearSync>();
-            MyMod.DeployedRopes = new List<DataStr.ClimbingRopeSync>();
-            MyMod.LootedContainers = new List<DataStr.ContainerOpenSync>();
-            MyMod.CantBeUsedForMP = false;
-            MyMod.LastLoadedGenVersion = 0;
-            MyMod.IsDead = false;
-            if (MyMod.sendMyPosition == true)
-            {
-                MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
-                MyMod.Disconnect();
-            }
-        }
-
-
 
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadMainMenu")] // Once
         public static class GameManager_BackToMenu
@@ -4580,7 +4356,39 @@ namespace SkyCoop
                             }
                         }
 
-                        Shared.AddLootedContainer(MyMod.MyContainer, true, ClientUser.myId);
+                        if (!__instance.m_Inspected)
+                        {
+                            Shared.AddLootedContainer(MyMod.MyContainer, true, ClientUser.myId, 0);
+                            if (__instance.GetComponent<ContainersSync>() != null)
+                            {
+                                __instance.GetComponent<ContainersSync>().m_Empty = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Container), "GetInteractiveDisplayText")] // Once
+        public static class Container_GetInteractiveDisplayText
+        {
+            public static void Postfix(Container __instance, ref string __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                
+                if(__instance.m_Inspected && __instance.gameObject && __instance.gameObject.GetComponent<ContainersSync>() != null)
+                {
+                    bool Empty = __instance.gameObject.GetComponent<ContainersSync>().m_Empty;
+
+                    if (!Empty)
+                    {
+                        __result = __instance.GetInteractiveActionText() + "\n" + Localization.Get("GAMEPLAY_SearchedPostfix");
+                    } else{
+                        __result = __instance.GetInteractiveActionText() + "\n" + Localization.Get("GAMEPLAY_EmptyPostfix");
                     }
                 }
             }
@@ -4615,7 +4423,8 @@ namespace SkyCoop
 
                 if (state == "Done")
                 {
-                    MyMod.AddHarvastedPlant(harvData.m_Guid, 0);
+                    MPSaveManager.AddHarvestedPlant(harvData.m_Guid, MyMod.level_guid);
+                    ServerSend.LOOTEDHARVESTABLE(0, harvData.m_Guid, MyMod.level_guid, false);
                 }
             }
         }
@@ -4646,6 +4455,37 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
                 SendHarvestPlantState("Cancel", __instance);
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "RollSpawnChance")] // Once
+        public static class Harvestable_RollSpawnChance
+        {
+            public static bool Prefix(Harvestable __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                int seed = 0;
+                if (__instance.gameObject.GetComponent<ObjectGuid>())
+                {
+                    seed = Shared.GetVectorHash(__instance.gameObject.transform.position);
+                }
+
+                System.Random RNG = new System.Random(seed);
+
+                if (!__instance.m_IgnoreCustomModeSpawnChance && GameManager.InCustomMode())
+                    __instance.m_SpawnChance *= GameManager.GetExperienceModeManagerComponent().GetCustomPlantSpawnModifier();
+                if (Utils.Approximately(__instance.m_SpawnChance, 100f, 0.0001f) || MyMod.RollChanceSeeded(__instance.m_SpawnChance, RNG))
+                {
+                    return false;
+                }
+                    
+                __instance.m_Harvested = true;
+                __instance.gameObject.SetActive(false);
+                return false;
             }
         }
 
@@ -5519,6 +5359,7 @@ namespace SkyCoop
 
         public static void RequestDropsForScene()
         {
+            MyMod.DelayedGearsPickup = true;
             using (Packet _packet = new Packet((int)ClientPackets.REQUESTDROPSFORSCENE))
             {
                 _packet.Write(MyMod.levelid);
@@ -5531,14 +5372,11 @@ namespace SkyCoop
 
         public static void LoadEverything()
         {
+            MyMod.BakePreSpawnedGearsList();
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading everything...");
             MyMod.SendSpawnData();
-            MyMod.DestoryBrokenFurniture();
             MyMod.UpdateDeployedRopes();
-            MyMod.ApplyLootedContainers();
-            MyMod.RemoveHarvastedPlants();
             MyMod.LoadAllSnowSheltersByOther();
-            MyMod.DestoryPickedGears();
             MyMod.ApplyOtherCampfires = true;
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading done!");
             MyMod.DroppedGearsObjs.Clear();
@@ -5548,6 +5386,64 @@ namespace SkyCoop
 
             if (!MyMod.DedicatedServerAppMode && (MyMod.iAmHost == true || MyMod.InOnline() == false))
             {
+                MyMod.PickedGearsBackup.Clear();
+                
+                Dictionary<long, PickedGearSync> PickedGears = MPSaveManager.LoadPickedGearsData(MyMod.level_guid);
+                if (PickedGears != null)
+                {
+                    foreach (var item in PickedGears)
+                    {
+                        MyMod.PickedGearsBackup.Add(item.Value);
+                        MyMod.RemovePickedGear(MPSaveManager.GetPickedGearKey(item.Value));
+                    }
+                }
+                Dictionary<string, BrokenFurnitureSync> Furns = MPSaveManager.LoadFurnsData(MyMod.level_guid);
+                MyMod.FoundSomethingToBreak = false;
+                if (Furns != null)
+                {
+                    foreach (var item in Furns)
+                    {
+                        MyMod.RemoveBrokenFurniture(item.Value.m_Guid, item.Value.m_ParentGuid, false);
+                    }
+                }
+                MyMod.BakePreSpawnedGearsList();
+                if (MyMod.FoundSomethingToBreak)
+                {
+                    MyMod.RemoveAttachedGears = 2;
+                } else
+                {
+                    MyMod.PickedGearsBackup.Clear();
+                }
+
+                Dictionary<string, int> LootedBoxes = MPSaveManager.LoadLootedContainersData(MyMod.level_guid);
+                if (LootedBoxes != null)
+                {
+                    foreach (var item in LootedBoxes)
+                    {
+                        int State = 0;
+
+                        if (MPSaveManager.ContainerNotEmpty(MyMod.level_guid, item.Key))
+                        {
+                            State = 1;
+                        }
+
+                        if(item.Value == 2)
+                        {
+                            State = 2;
+                        }
+
+                        MyMod.RemoveLootFromContainer(item.Key, State);
+                    }
+                }
+                Dictionary<string, int> Plants = MPSaveManager.LoadHarvestedPlants(MyMod.level_guid);
+                if (Plants != null)
+                {
+                    foreach (var item in Plants)
+                    {
+                        MyMod.RemoveHarvastedPlant(item.Key);
+                    }
+                }
+
                 MyMod.LoadAllDropsForScene();
                 MyMod.LoadAllOpenableThingsForScene();
                 MyMod.LoadAniamlCorpsesForScene();
@@ -5570,7 +5466,6 @@ namespace SkyCoop
                 {
                     Shared.RegisterWeatherSetForRegion(0, GetWeatherVolunteerData());
                 }
-
             }
             if (MyMod.sendMyPosition == true)
             {
@@ -7697,6 +7592,18 @@ namespace SkyCoop
                         AutoSaveAllTheCost = false;
                     }
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(WeatherSet), "Update")]
+        internal static class WeatherSet_Update
+        {
+            private static void Prefix(WeatherSet __instance)
+            {
+                WeatherTransition.m_WeatherTransitionTimeScalar = 0;
+            }
+            private static void Postfix(WeatherSet __instance)
+            {
+                WeatherTransition.m_WeatherTransitionTimeScalar = 1;
             }
         }
     }

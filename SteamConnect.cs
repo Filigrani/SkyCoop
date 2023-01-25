@@ -1022,9 +1022,11 @@ namespace SkyCoop
                 if(MyMod.iAmHost == true)
                 {
                     int _clientID = 0;
+                    string SubNetworkGUID = "";
                     using (Packet _packet = new Packet(_data))
                     {
                         _clientID = _packet.ReadInt();
+                        SubNetworkGUID = _packet.ReadString();
                         int _packetLength = _packet.ReadInt();
                         _data = _packet.ReadBytes(_packetLength);
                     }

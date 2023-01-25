@@ -495,25 +495,26 @@ namespace SkyCoop
             }
         }
 
+        
+
         public static void FURNBROKEN(Packet _packet)
         {
             DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
 
-            MyMod.OnFurnitureDestroyed(furn.m_Guid, furn.m_ParentGuid, furn.m_LevelID, furn.m_LevelGUID, false);
+            if(furn.m_LevelGUID == MyMod.level_guid)
+            {
+                if (MyMod.DelayedGearsPickup)
+                {
+                    MyMod.BrokenFurnsBackup.Add(furn);
+
+                } else{
+                    MyMod.RemoveBrokenFurniture(furn.m_Guid, furn.m_ParentGuid);
+                }
+            }
         }
         public static void FURNBROKENLIST(Packet _packet)
         {
-            int howmany = _packet.ReadInt();
 
-            for (int i = 1; i <= howmany; i++)
-            {
-                DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
-
-                if(MyMod.BrokenFurniture.Contains(furn) == false)
-                {
-                    MyMod.OnFurnitureDestroyed(furn.m_Guid, furn.m_ParentGuid, furn.m_LevelID, furn.m_LevelGUID, false);
-                }
-            }
         }
         public static void FURNBREAKINGGUID(Packet _packet)
         {
@@ -530,6 +531,7 @@ namespace SkyCoop
                 }
             }
         }
+
         public static void FURNBREAKINSTOP(Packet _packet)
         {
             bool broken = _packet.ReadBool();
@@ -541,34 +543,60 @@ namespace SkyCoop
                 MyMod.playersData[from].m_BrakingSounds = "";
             }
         }
+
+
+
+        public static void ProcessDeleyedGearsPickcup()
+        {
+            MyMod.DelayedGearsPickup = false;
+            foreach (DataStr.PickedGearSync gear in MyMod.PickedGearsBackup)
+            {
+                Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, -1, gear.m_MyInstanceID, gear.m_GearName, false);
+            }
+            MyMod.FoundSomethingToBreak = false;
+            foreach (DataStr.BrokenFurnitureSync furn in MyMod.BrokenFurnsBackup)
+            {
+                MyMod.RemoveBrokenFurniture(furn.m_Guid, furn.m_ParentGuid, false);
+            }
+            MyMod.BakePreSpawnedGearsList();
+            if (MyMod.FoundSomethingToBreak)
+            {
+                MyMod.RemoveAttachedGears = 2;
+            } else{
+                MyMod.PickedGearsBackup.Clear();
+            }
+            MyMod.BrokenFurnsBackup.Clear();
+        }
+
         public static void GEARPICKUP(Packet _packet)
         {
             DataStr.PickedGearSync gear = _packet.ReadPickedGear();
             int from = _packet.ReadInt();
 
-            if (MyMod.playersData[from] != null && MyMod.playersData[from].m_Levelid == MyMod.levelid && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
+            if(from != -1)
             {
-                if(MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+                if (MyMod.playersData[from] != null && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
                 {
-                    MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
+                    if (MyMod.players[from] != null && MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
+                    {
+                        MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
+                    }
                 }
             }
 
-            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, from, gear.m_MyInstanceID, false);
+            if (MyMod.DelayedGearsPickup)
+            {
+                MyMod.PickedGearsBackup.Add(gear);
+            } else
+            {
+                Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, from, gear.m_MyInstanceID, gear.m_GearName, false);
+            }
+
+            
         }
         public static void GEARPICKUPLIST(Packet _packet)
         {
-            int howmany = _packet.ReadInt();
 
-            for (int i = 1; i <= howmany; i++)
-            {
-                DataStr.PickedGearSync gear = _packet.ReadPickedGear();
-
-                if (MyMod.PickedGears.Contains(gear) == false)
-                {
-                    Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, 0, gear.m_MyInstanceID, false);
-                }
-            }
         }
         public static void ROPE(Packet _packet)
         {
@@ -732,21 +760,12 @@ namespace SkyCoop
         {
             DataStr.ContainerOpenSync box = _packet.ReadContainer();
             int from = _packet.ReadInt();
-            Shared.AddLootedContainer(box, false, from);
+            int State = _packet.ReadInt();
+            Shared.AddLootedContainer(box, false, from, State);
         }
         public static void LOOTEDCONTAINERLIST(Packet _packet)
         {
-            int howmany = _packet.ReadInt();
 
-            for (int i = 1; i <= howmany; i++)
-            {
-                DataStr.ContainerOpenSync box = _packet.ReadContainer();
-
-                if (MyMod.LootedContainers.Contains(box) == false)
-                {
-                    Shared.AddLootedContainer(box, false);
-                }
-            }
         }
         public static void HARVESTPLANT(Packet _packet)
         {
@@ -765,22 +784,15 @@ namespace SkyCoop
         public static void LOOTEDHARVESTABLE(Packet _packet)
         {
             string plantGUID = _packet.ReadString();
-            int from = _packet.ReadInt();
-            MyMod.AddHarvastedPlant(plantGUID, from);
+            string Scene = _packet.ReadString();
+            if(Scene == MyMod.level_guid)
+            {
+                MyMod.RemoveHarvastedPlant(plantGUID);
+            }
         }
         public static void LOOTEDHARVESTABLEALL(Packet _packet)
         {
-            int howmany = _packet.ReadInt();
 
-            for (int i = 1; i <= howmany; i++)
-            {
-                string plantGUID = _packet.ReadString();
-
-                if (MyMod.HarvestedPlants.Contains(plantGUID) == false)
-                {
-                    MyMod.AddHarvastedPlant(plantGUID, 0);
-                }
-            }
         }
         public static void SELECTEDCHARACTER(Packet _packet)
         {
@@ -989,6 +1001,10 @@ namespace SkyCoop
             MelonLogger.Msg("Host sent scene loading done!");
             MyMod.DiscardRepeatPacket();
             MyMod.RemovePleaseWait();
+            if (MyMod.DelayedGearsPickup)
+            {
+                ProcessDeleyedGearsPickcup();
+            }
         }
         public static void GEARNOTEXIST(Packet _packet)
         {
@@ -1192,6 +1208,10 @@ namespace SkyCoop
             if (MyMod.playersData[From] != null)
             {
                 MyMod.playersData[From].m_SupporterBenefits = B;
+                for (int i = 0; i < B.m_Flairs.Count; i++)
+                {
+                    Log("[BENEFITINIT] From Client "+From + " Slot" + i + " FlairID " + B.m_Flairs[i]);
+                }
             }
         }
         public static void ADDDOORLOCK(Packet _packet)
@@ -1430,6 +1450,69 @@ namespace SkyCoop
         {
             string Message = _packet.ReadString();
             HUDMessage.AddMessage(Message);
+        }
+        public static void CHANGECONTAINERSTATE(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            int State = _packet.ReadInt();
+
+            MyMod.RemoveLootFromContainer(GUID, State);
+        }
+        public static void FINISHEDSENDINGCONTAINER(Packet _packet)
+        {
+            bool Error = _packet.ReadBool();
+            MelonLogger.Msg("FINISHEDSENDINGCONTAINER Error " + Error);
+            if (!Error)
+            {
+                Container box = InterfaceManager.m_Panel_Container.m_Container;
+                if (box != null)
+                {
+                    if (!box.Close())
+                        return;
+                    if (box.m_CloseAudio.Length == 0)
+                        GameAudioManager.PlayGUIButtonBack();
+                }
+                MyMod.RemovePleaseWait();
+                GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
+                InterfaceManager.m_Panel_Container.Enable(false);
+                Shared.ContainerDecompressedDataBackup = "";
+            } else
+            {
+                Container box = InterfaceManager.m_Panel_Container.m_Container;
+                string GUID = "";
+                if (!string.IsNullOrEmpty(Shared.ContainerDecompressedDataBackup) && box != null)
+                {
+                    if (box.GetComponent<ObjectGuid>())
+                    {
+                        GUID = box.GetComponent<ObjectGuid>().Get();
+                    }
+                    MyMod.RemovePleaseWait();
+                    MyMod.DoPleaseWait("Host received invalid data", "Trying send data again...");
+                    Shared.SendContainerData(Shared.CompressString(Shared.ContainerDecompressedDataBackup), MyMod.level_guid, GUID, Shared.ContainerDecompressedDataBackup);
+                }
+            }
+        }
+        public static void TRIGGEREMOTE(Packet _packet)
+        {
+            int from = _packet.ReadInt();
+            int EmoteID = _packet.ReadInt();
+
+            if (MyMod.playersData[from] != null && MyMod.players[from] != null)
+            {
+                if(MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
+                {
+                    Comps.MultiplayerPlayerAnimator Anim = MyMod.players[from].GetComponent<Comps.MultiplayerPlayerAnimator>();
+                    if(Anim != null)
+                    {
+                        DataStr.MultiplayerEmote Emote = MyMod.GetEmoteByID(EmoteID);
+
+                        if (Emote.m_LeftHandEmote)
+                        {
+                            Anim.DoLeftHandEmote(Emote.m_Animation);
+                        }
+                    }
+                }
+            }
         }
     }
 }

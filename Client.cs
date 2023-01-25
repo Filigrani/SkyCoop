@@ -15,6 +15,7 @@ namespace GameServer
         public UDP udp;
         public int TimeOutTime = 0;
         public bool RCON = false;
+        public string SubNetworkGUID = "";
 
         public Client(int _clientId)
         {
@@ -84,7 +85,6 @@ namespace GameServer
             {
                 int _packetLength = _packetData.ReadInt();
                 byte[] _packetBytes = _packetData.ReadBytes(_packetLength);
-
                 ThreadManager.ExecuteOnMainThread(() =>
                 {
                     using (Packet _packet = new Packet(_packetBytes))
@@ -103,7 +103,6 @@ namespace GameServer
             /// <summary>Cleans up the UDP connection.</summary>
             public void Disconnect()
             {
-                Log("[UDP] Disconnect an client.");
                 endPoint = null;
                 sid = "";
             }

@@ -17,7 +17,9 @@ namespace GameServer
         public static string ip = "127.0.0.1";
         public static string LastConnectedIp = "";
         public static string PendingConnectionIp = "";
-        public static int port = 26950;
+        public static int ConnectPort = 26950;
+        public static int LocalPort = 26951;
+        public static string SubNetworkClientGUID = "";
         public static int myId = 0;
         public static UDP udp;
 
@@ -26,14 +28,15 @@ namespace GameServer
         public static void ConnectToServer()
         {
             myId = 0;
+            SubNetworkClientGUID = MPSaveManager.GetSubNetworkGUID();
 
             udp = new UDP();
 
             if (ip != "")
             {
-                MelonLogger.Msg("Trying connect to " + ip + ":" + port);
+                MelonLogger.Msg("My SubNetworkGUID " + SubNetworkClientGUID);
                 InitializeClientData();
-                udp.Connect(port, ip);
+                udp.Connect(LocalPort, ip);
             }
         }
         public static void DoConnectToIp(string _ip)
@@ -53,14 +56,14 @@ namespace GameServer
             {
                 PendingConnectionIp = _ip;
                 ip = _ip;
-                MelonLogger.Msg("Going to connect to " + ip + ":" + port);
+                MelonLogger.Msg("Going to connect to " + ip + ":" + ConnectPort);
             }
             else
             {
                 PendingConnectionIp = newIP;
                 ip = newIP;
-                port = Convert.ToInt32(newPort);
-                MelonLogger.Msg("Going to connect to " + ip + ":" + port);
+                ConnectPort = Convert.ToInt32(newPort);
+                MelonLogger.Msg("Going to connect to " + ip + ":" + ConnectPort);
             }
             ConnectToServer();
             MyMod.DoWaitForConnect(false);
@@ -72,23 +75,25 @@ namespace GameServer
 
             public UDP()
             {
-                endPoint = new IPEndPoint(IPAddress.Parse(ip), port);
+                endPoint = new IPEndPoint(IPAddress.Parse(ip), ConnectPort);
             }
 
             /// <summary>Attempts to connect to the server via UDP.</summary>
             /// <param name="_localPort">The port number to bind the UDP socket to.</param>
             public void Connect(int _localPort, string ip)
             {
-                endPoint = new IPEndPoint(IPAddress.Parse(ip),port);
+                endPoint = new IPEndPoint(IPAddress.Parse(ip), ConnectPort);
                 socket = new UdpClient(_localPort);
                 socket.Connect(endPoint);
-                MelonLogger.Msg("Open socket for " + endPoint.Address + ":" + endPoint.Port);
+                MelonLogger.Msg("Open socket for " + endPoint.Address + ":" + endPoint.Port +" local port is "+ _localPort);
                 //IAsyncResult result = socket.BeginReceive(ReceiveCallback, null);
                 socket.BeginReceive(ReceiveCallback, null);
                 //bool success = result.AsyncWaitHandle.WaitOne(5000, true);
                 using (Packet _packet = new Packet())
                 {
                     _packet.Write(myId);
+                    //_packet.Write(SubNetworkClientGUID);
+
                     SendData(_packet);
                 }
             }
@@ -104,7 +109,10 @@ namespace GameServer
 
                 try
                 {
-                    _packet.InsertInt(myId); // Insert the client's ID at the start of the packet
+                    _packet.WriteLength();
+                    _packet.InsertClientInfo(myId, SubNetworkClientGUID);
+                    
+
                     if (socket != null)
                     {
                         socket.BeginSend(_packet.ToArray(), _packet.Length(), null, null);
@@ -319,6 +327,9 @@ namespace GameServer
             { (int)ServerPackets.REREGISTERWEATHER, ClientHandle.REREGISTERWEATHER},
             { (int)ServerPackets.REMOVEKEYBYSEED, ClientHandle.REMOVEKEYBYSEED},
             { (int)ServerPackets.ADDHUDMSG, ClientHandle.ADDHUDMSG},
+            { (int)ServerPackets.CHANGECONTAINERSTATE, ClientHandle.CHANGECONTAINERSTATE},
+            { (int)ServerPackets.FINISHEDSENDINGCONTAINER, ClientHandle.FINISHEDSENDINGCONTAINER},
+            { (int)ServerPackets.TRIGGEREMOTE, ClientHandle.TRIGGEREMOTE},
         };
             MelonLogger.Msg("Initialized packets.");
         }

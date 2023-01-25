@@ -1315,6 +1315,18 @@ namespace SkyCoop
             }
         }
 
+        public static int GetRNGGen(string name)
+        {
+            int GenVersion = 0;
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_genversion");
+            if (data != null)
+            {
+                int[] saveProxy = JSON.Load(data).Make<int[]>();
+                GenVersion = saveProxy[0];
+            }
+            return GenVersion;
+        }
+
         public static bool CheckSaveRNG(string name)
         {
             int GenVersion = 0;

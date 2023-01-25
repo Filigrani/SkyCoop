@@ -930,26 +930,6 @@ namespace GameServer
                 }
             }
         }
-        public static void FURNBROKENLIST(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.FURNBROKENLIST))
-            {
-                int ReadCount = MyMod.BrokenFurniture.Count;
-
-                if(ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.BrokenFurniture[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
-            }
-        }
         public static void FURNBREAKINGGUID(int _From, DataStr.BrokenFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.FURNBREAKINGGUID))
@@ -1030,26 +1010,6 @@ namespace GameServer
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
-            }
-        }
-        public static void GEARPICKUPLIST(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.GEARPICKUPLIST))
-            {
-                int ReadCount = MyMod.PickedGears.Count;
-
-                if (ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.PickedGears[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
             }
         }
 
@@ -1360,7 +1320,7 @@ namespace GameServer
                 }
             }
         }
-        public static void LOOTEDCONTAINER(int _From, DataStr.ContainerOpenSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void LOOTEDCONTAINER(int _From, DataStr.ContainerOpenSync _msg, int State, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOOTEDCONTAINER))
             {
@@ -1368,6 +1328,7 @@ namespace GameServer
                 {
                     _packet.Write(_msg);
                     _packet.Write(0);
+                    _packet.Write(State);
                     SendUDPDataToAll(_packet);
                 }
                 else
@@ -1376,35 +1337,17 @@ namespace GameServer
                     {
                         _packet.Write(_msg);
                         _packet.Write(_From);
+                        _packet.Write(State);
                         SendUDPDataToAllButNotSender(_packet, _From);
                     }
                     else
                     {
                         _packet.Write(_msg);
                         _packet.Write(_From);
+                        _packet.Write(State);
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
-            }
-        }
-        public static void LOOTEDCONTAINERLIST(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.LOOTEDCONTAINERLIST))
-            {
-                int ReadCount = MyMod.LootedContainers.Count;
-
-                if (ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.LootedContainers[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
             }
         }
         public static void HARVESTPLANT(int _From, DataStr.HarvestableSyncData _msg, bool toEveryOne, int OnlyFor = -1)
@@ -1434,51 +1377,28 @@ namespace GameServer
                 }
             }
         }
-        public static void LOOTEDHARVESTABLE(int _From, string _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void LOOTEDHARVESTABLE(int _From, string GUID, string Scene, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOOTEDHARVESTABLE))
             {
+                _packet.Write(GUID);
+                _packet.Write(Scene);
                 if (toEveryOne == true)
                 {
-                    _packet.Write(_msg);
-                    _packet.Write(0);
-                    SendUDPDataToAll(_packet);
+
+                    SendUDPDataToAll(_packet, Scene);
                 }
                 else
                 {
                     if (OnlyFor == -1)
                     {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPDataToAllButNotSender(_packet, _From);
+                        SendUDPDataToAllButNotSender(_packet, _From, Scene);
                     }
                     else
                     {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
-            }
-        }
-        public static void LOOTEDHARVESTABLEALL(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.LOOTEDHARVESTABLEALL))
-            {
-                int ReadCount = MyMod.HarvestedPlants.Count;
-
-                if (ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.HarvestedPlants[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
             }
         }
         public static void SELECTEDCHARACTER(int _From, int _msg, bool toEveryOne, int OnlyFor = -1)
@@ -2361,6 +2281,44 @@ namespace GameServer
             {
                 _packet.Write(Message);
                 SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void CHANGECONTAINERSTATE(int _From, string GUID, int State, string Scene, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHANGECONTAINERSTATE))
+            {
+                _packet.Write(GUID);
+                _packet.Write(State);
+                if (toEveryOne == true)
+                {
+                    SendUDPDataToAll(_packet, Scene);
+                } else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        SendUDPDataToAllButNotSender(_packet, _From, Scene);
+                    } else
+                    {
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void FINISHEDSENDINGCONTAINER(int For, bool Result)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.FINISHEDSENDINGCONTAINER))
+            {
+                _packet.Write(Result);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void TRIGGEREMOTE(int From, int EmoteID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.TRIGGEREMOTE))
+            {
+                _packet.Write(From);
+                _packet.Write(EmoteID);
+                SendUDPDataToAllButNotSender(_packet, From);
             }
         }
     }

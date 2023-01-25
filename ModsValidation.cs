@@ -116,6 +116,9 @@ namespace SkyCoop
             }
             string MainHash = "";
             string FullString = "";
+            Valid.m_Files.Sort(delegate (ModHashPair x, ModHashPair y) {
+                return x.m_Name.CompareTo(y.m_Name);
+            });
             foreach (ModHashPair Mod in Valid.m_Files)
             {
                 if (string.IsNullOrEmpty(MainHash))

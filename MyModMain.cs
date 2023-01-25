@@ -22,6 +22,8 @@ using NodeCanvas.Tasks.Actions;
 using KeyboardUtilities;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
+using Semver;
 
 namespace SkyCoop
 {
@@ -34,9 +36,9 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.11.1";
+            public const string Version = "0.11.2";
             public const string DownloadLink = null;
-            public const int RandomGenVersion = 4;
+            public const int RandomGenVersion = 5;
         }
         public static int LastLoadedGenVersion = 0;
         public static bool CantBeUsedForMP = false;
@@ -127,13 +129,9 @@ namespace SkyCoop
         public static string MyBoots = "";
         public static string MyScarf = "";
         public static string MyBalaclava = "";
-        public static List<DataStr.BrokenFurnitureSync> BrokenFurniture = new List<DataStr.BrokenFurnitureSync>();
-        public static List<DataStr.PickedGearSync> PickedGears = new List<DataStr.PickedGearSync>();
         public static List<DataStr.PickedGearSync> RecentlyPickedGears = new List<DataStr.PickedGearSync>();
         public static List<DataStr.ClimbingRopeSync> DeployedRopes = new List<DataStr.ClimbingRopeSync>();
-        public static List<DataStr.ContainerOpenSync> LootedContainers = new List<DataStr.ContainerOpenSync>();
         public static List<DataStr.DeathContainerData> DeathCreates = new List<DataStr.DeathContainerData>();
-        public static List<string> HarvestedPlants = new List<string>();
         public static List<DataStr.ShowShelterByOther> ShowSheltersBuilded = new List<DataStr.ShowShelterByOther>();
         public static bool IsDrinking = false;
         public static bool PreviousIsDrinking = false;
@@ -150,8 +148,6 @@ namespace SkyCoop
         public static bool HasInfecitonRisk = false;
         public static bool PreviousHasInfectionRisk = false;
         public static DataStr.ContainerOpenSync MyContainer = null;
-        public static int UpdateLootedContainers = -1;
-        public static int UpdatePickedGears = -1;
         public static int UpdatePickedPlants = -1;
         public static int NeedConnectAfterLoad = -1;
         public static int NeedLoadSaveAfterLoad = -1;
@@ -159,6 +155,7 @@ namespace SkyCoop
         public static int UpdateRopesAndFurns = -1;
         public static int UpdateCampfires = -1;
         public static int UpdateEverything = -1;
+        public static int RemoveAttachedGears = -1;
         public static int StartDSAfterLoad = -1;
         public static int SendAfterLoadingFinished = -1;
         public static int TryMakeLobbyAgain = -1;
@@ -190,7 +187,7 @@ namespace SkyCoop
         public static string CustomServerName = "";
         public static string MyLobby = "";
         public static bool ApplyOtherCampfires = false;
-        public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
+        public static Dictionary<long, string> SlicedJsonDataBuffer = new Dictionary<long, string>();
         public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
         public static bool DebugTrafficCheck = false;
         public static Dictionary<string, bool> OpenableThings = new Dictionary<string, bool>();
@@ -199,6 +196,9 @@ namespace SkyCoop
         public static int OverrideLampReduceFuel = -1;
         public static Dictionary<string, float> BooksResearched = new Dictionary<string, float>();
         public static Dictionary<string, LoadScene> DoorsObjs = new Dictionary<string, LoadScene>();
+        public static bool DelayedGearsPickup = false;
+        public static List<DataStr.PickedGearSync> PickedGearsBackup = new List<DataStr.PickedGearSync>();
+        public static List<DataStr.BrokenFurnitureSync> BrokenFurnsBackup = new List<DataStr.BrokenFurnitureSync>();
 
         //Voice chat
         public static bool DoingRecord = false;
@@ -1112,7 +1112,7 @@ namespace SkyCoop
                 else if (sendMyPosition)
                 {
                     DoPleaseWait("Please wait...", "Sending container data...");
-                    Shared.SendContainerData(Shared.CompressString(Content), ObjSync.m_LevelKey, ObjSync.m_Guid);
+                    Shared.SendContainerData(Shared.CompressString(Content), ObjSync.m_LevelKey, ObjSync.m_Guid, Content);
                     using (Packet _packet = new Packet((int)ClientPackets.ADDDEATHCONTAINER))
                     {
                         _packet.Write(ObjSync);
@@ -1205,7 +1205,7 @@ namespace SkyCoop
             ClientUser.packetHandlers[_packetId](_packet);
         }
 
-        public static void NoSyncFurtitureDestory(BreakDown breakDown)
+        public static void NoSyncFurtitureDestory(BreakDown breakDown, string GUID, bool ReBake)
         {
             breakDown.gameObject.SetActive(false);
             if (breakDown.gameObject.transform.parent && breakDown.gameObject.transform.parent.GetComponent<RadialObjectSpawner>())
@@ -1215,7 +1215,12 @@ namespace SkyCoop
                 RadialSpawnManager.ReturnToObjectPool(breakDown.gameObject);
             }
             breakDown.StickSurfaceObjectsToGround();
+            if (ReBake)
+            {
+                BakePreSpawnedGearsList();
+            }
             MissionUtils.PostObjectEvent(breakDown.gameObject, MissionTypes.MissionObjectEvent.ObjectBrokenDown);
+            MelonLogger.Msg("Furn " + GUID+" removed");
         }
 
         public static string GetBreakDownSound(DataStr.BrokenFurnitureSync FindData)
@@ -1235,84 +1240,68 @@ namespace SkyCoop
             }
             return "";
         }
+        public static bool FoundSomethingToBreak = false;
 
-        public static bool RemoveAttachedObjectsAfterSecond = false;
-
-        public static void DestoryBrokenFurniture()
+        public static void RemoveBrokenFurniture(string GUID, string ParentGUID, bool ReBake = true)
         {
-            bool FoundSomethingToBreak = false;
-            for (int n = 0; n < BrokenFurniture.Count; n++)
+            MelonLogger.Msg("Going to remove furn "+ GUID+ ParentGUID);
+            GameObject furn = ObjectGuidManager.Lookup(GUID);
+            if (furn != null)
             {
-                DataStr.BrokenFurnitureSync FindData = BrokenFurniture[n];
-
-                if (FindData.m_LevelID == levelid && FindData.m_LevelGUID == level_guid)
+                if (ParentGUID != "")
                 {
-                    GameObject furn = ObjectGuidManager.Lookup(FindData.m_Guid);
-                    if (furn != null)
+                    if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == ParentGUID)
                     {
-                        if (FindData.m_ParentGuid != "")
-                        {
-                            if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == FindData.m_ParentGuid)
-                            {
-                                NoSyncFurtitureDestory(furn.GetComponent<BreakDown>());
-                                FoundSomethingToBreak = true;
-                            }
-                        } else {
-                            NoSyncFurtitureDestory(furn.GetComponent<BreakDown>());
-                            FoundSomethingToBreak = true;
-                        }
+                        NoSyncFurtitureDestory(furn.GetComponent<BreakDown>(), GUID+ParentGUID, ReBake);
+                        FoundSomethingToBreak = true;
                     }
+                } else
+                {
+                    NoSyncFurtitureDestory(furn.GetComponent<BreakDown>(), GUID + ParentGUID, ReBake);
+                    FoundSomethingToBreak = true;
                 }
-            }
-            if (FoundSomethingToBreak == true)
-            {
-                RemoveAttachedObjectsAfterSecond = true; //Because some of gears may be was on that broken prop.
             }
         }
 
-        public static void DestoryPickedGears()
+        public static Dictionary<long, GameObject> PreSpawnedGears = new Dictionary<long, GameObject>();
+        public static void BakePreSpawnedGearsList()
         {
-            MelonLogger.Msg("DestoryPickedGears called");
-            //float d = Time.time;
-            //MelonLogger.Msg("DestoryPickedGears Time before "+ d);
+            PreSpawnedGears.Clear();
+            for (int i = 0; i < GearManager.m_Gear.Count; i++)
+            {
+                GearItem currentGear = GearManager.m_Gear[i];
+                GameObject obj = currentGear.gameObject;
+                long Key = MPSaveManager.GetPickedGearKey(obj.transform.position);
 
+                if (currentGear.m_BeenInPlayerInventory == false && obj.activeSelf == true && currentGear.m_InsideContainer == false)
+                {
+                    //MelonLogger.Msg("[BakePreSpawnedGearsList] " + currentGear.m_GearName + " Key " + Key);
+                    if (!PreSpawnedGears.ContainsKey(Key))
+                    {
+                        PreSpawnedGears.Add(Key, obj);
+                    } else
+                    {
+                        //MelonLogger.Msg(ConsoleColor.Red,"[BakePreSpawnedGearsList] GEAR ALREADY IN THE LIST! " + currentGear.m_GearName + " Key " + Key);
+                    }
+                }
+            }
+        }
+
+        public static void RemovePickedGear(long Key)
+        {
+            MelonLogger.Msg("[RemovePickedGear] Key " + Key);
             if (ServerConfig.m_DuppedSpawns == true)
             {
                 return;
             }
-
-            if (GearManager.m_Gear.Count == 0 || PickedGears.Count == 0)
+            GameObject Gear;
+            if (PreSpawnedGears.TryGetValue(Key, out Gear))
             {
-                return;
-            }
-
-            for (int i = 0; i < GearManager.m_Gear.Count; i++)
-            {
-                GearItem currentGear = GearManager.m_Gear[i];
-                DataStr.PickedGearSync FindData = new DataStr.PickedGearSync();
-                FindData.m_LevelID = levelid;
-                FindData.m_LevelGUID = level_guid;
-                FindData.m_Spawn = currentGear.gameObject.transform.position;
-
-                if (currentGear.m_BeenInPlayerInventory == false && currentGear.gameObject.activeSelf == true)
+                if(Gear.GetComponent<GearItem>() && Gear.GetComponent<GearItem>().m_BeenInPlayerInventory == false && Gear.gameObject.activeSelf == true)
                 {
-                    SaveGearSpawn(currentGear.gameObject);
-                }
-
-                if (PickedGears.Contains(FindData) == true)
-                {
-                    if (currentGear.m_BeenInPlayerInventory == false && currentGear.gameObject.activeSelf == true)
-                    {
-                        if (currentGear.gameObject.transform.position == FindData.m_Spawn)
-                        {
-                            MelonLogger.Msg("Destroy Picked Gear X " + currentGear.transform.position.x + " Y " + currentGear.transform.position.y + " Z " + currentGear.transform.position.z);
-                            currentGear.gameObject.SetActive(false);
-                        }
-                    }
+                    Gear.gameObject.SetActive(false);
                 }
             }
-            //float r = Time.time - d;
-            //MelonLogger.Msg("[DestoryPickedGears] Time after: " + Time.time + " Result " + r + "ms");
         }
 
         public static void UpdateDeployedRopes()
@@ -1623,106 +1612,64 @@ namespace SkyCoop
             }
         }
 
-        public static void RemoveHarvastedPlants()
+        public static void RemoveHarvastedPlant(string harvGUID)
         {
-            //MelonLogger.Msg("RemoveHarvastedPlants called");
-            if (HarvestableManager.m_Harvestables.Count == 0 || HarvestedPlants.Count == 0)
-            {
-                return;
-            }
+            GameObject obj = ObjectGuidManager.Lookup(harvGUID);
 
-            for (int i = 0; i < HarvestableManager.m_Harvestables.Count; i++)
+            if (obj)
             {
-                Harvestable currentPlant = HarvestableManager.m_Harvestables[i];
-                string harvGUID = "";
-
-                if (currentPlant.gameObject != null && currentPlant.gameObject.GetComponent<ObjectGuid>() != null)
+                Harvestable Plant = obj.GetComponent<Harvestable>();
+                if(Plant == null)
                 {
-                    harvGUID = currentPlant.gameObject.GetComponent<ObjectGuid>().Get();
+                    return;
                 }
 
-                if (HarvestedPlants.Contains(harvGUID) == true)
+                if (Plant.m_DestroyObjectOnHarvest == true)
                 {
-                    if (currentPlant.m_DestroyObjectOnHarvest == true)
+                    UnityEngine.Object.Destroy(Plant.gameObject);
+                } else
+                {
+                    Plant.gameObject.SetActive(false);
+                    if (Plant.m_ActivateObjectPostHarvest != null)
                     {
-                        UnityEngine.Object.Destroy(currentPlant.gameObject);
-                    } else {
-                        currentPlant.gameObject.SetActive(false);
-                        if (currentPlant.m_ActivateObjectPostHarvest != null)
+                        Plant.m_ActivateObjectPostHarvest.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        public static void RemoveLootFromContainer(string GUID, int State = 0)
+        {
+            GameObject obj = ObjectGuidManager.Lookup(GUID);
+
+            if (obj)
+            {
+                Container box = obj.GetComponent<Container>();
+                if (box)
+                {
+                    box.DestroyAllGear();
+                    box.m_Inspected = true;
+
+                    if (obj.GetComponent<Comps.ContainersSync>() != null)
+                    {
+                        if(State == 0)
                         {
-                            currentPlant.m_ActivateObjectPostHarvest.SetActive(true);
+                            obj.GetComponent<Comps.ContainersSync>().m_Empty = true;
+                        } else if(State == 1)
+                        {
+                            obj.GetComponent<Comps.ContainersSync>().m_Empty = false;
+                        }else if(State == 2)
+                        {
+                            obj.GetComponent<Comps.ContainersSync>().m_Empty = true;
+                            box.m_Inspected = false;
+                            box.PopulateWithRandomGear();
                         }
                     }
                 }
             }
         }
 
-        public static void AddHarvastedPlant(string plantGUID, int from)
-        {
-            if (HarvestedPlants.Contains(plantGUID) == false)
-            {
-                HarvestedPlants.Add(plantGUID);
-
-                if (iAmHost == true)
-                {
-                    ServerSend.LOOTEDHARVESTABLE(from, plantGUID, true);
-                }
-            }
-
-            if (from == ClientUser.myId)
-            {
-                return;
-            }
-
-            if (playersData[from] != null)
-            {
-                if (playersData[from].m_Levelid == levelid && playersData[from].m_LevelGuid == level_guid)
-                {
-                    RemoveHarvastedPlants();
-                }
-            }
-        }
-
-        public static void ApplyLootedContainers()
-        {
-            //MelonLogger.Msg("ApplyLootedContainers called");
-            if (ServerConfig.m_DuppedContainers == true)
-            {
-                return;
-            }
-            if (ContainerManager.m_Containers.Count == 0 || LootedContainers.Count == 0)
-            {
-                return;
-            }
-            for (int i = 0; i < ContainerManager.m_Containers.Count; i++)
-            {
-                if (ContainerManager.m_Containers[i] != null)
-                {
-                    Container currentBox = ContainerManager.m_Containers[i];
-
-                    if (currentBox.m_Inspected == false && currentBox.m_SearchInProgress == false)
-                    {
-                        DataStr.ContainerOpenSync FindData = new DataStr.ContainerOpenSync();
-                        FindData.m_LevelID = levelid;
-                        FindData.m_LevelGUID = level_guid;
-                        FindData.m_Guid = "";
-
-                        if (currentBox.gameObject != null && currentBox.gameObject.GetComponent<ObjectGuid>() != null)
-                        {
-                            FindData.m_Guid = currentBox.gameObject.GetComponent<ObjectGuid>().Get();
-                        }
-
-                        if (LootedContainers.Contains(FindData) == true)
-                        {
-                            currentBox.DestroyAllGear();
-                            currentBox.m_Inspected = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void OnFurnitureDestroyed(string guid, string parentguid, int lvl, string lvlguid, bool needSync)
+        public static void SendBrokeFurniture(string guid, string parentguid, int lvl, string lvlguid)
         {
             DataStr.BrokenFurnitureSync furn = new DataStr.BrokenFurnitureSync();
             furn.m_Guid = guid;
@@ -1730,38 +1677,19 @@ namespace SkyCoop
             furn.m_LevelID = lvl;
             furn.m_LevelGUID = lvlguid;
 
-            if (BrokenFurniture.Contains(furn) == false)
+            if (sendMyPosition == true)
             {
-                MelonLogger.Msg("Added breakdown to list " + guid);
-                MelonLogger.Msg("BreakDown GUID " + guid + " Parent GUID " + parentguid + " Scene ID " + lvl + " Scene GUID " + lvlguid);
-                BrokenFurniture.Add(furn);
-            }
-
-            if (InOnline() == false)
-            {
-                return;
-            }
-
-            if (lvl == levelid && lvlguid == level_guid)
-            {
-                DestoryBrokenFurniture();
-            }
-
-            if (needSync == true)
-            {
-                if (sendMyPosition == true)
+                using (Packet _packet = new Packet((int)ClientPackets.FURNBROKEN))
                 {
-                    using (Packet _packet = new Packet((int)ClientPackets.FURNBROKEN))
-                    {
-                        _packet.Write(furn);
-                        SendUDPData(_packet);
-                    }
+                    _packet.Write(furn);
+                    SendUDPData(_packet);
                 }
+            }
 
-                if (iAmHost == true)
-                {
-                    ServerSend.FURNBROKEN(0, furn, true);
-                }
+            if (iAmHost == true)
+            {
+                ServerSend.FURNBROKEN(0, furn, true);
+                MPSaveManager.AddBrokenFurn(furn);
             }
         }
 
@@ -1897,18 +1825,6 @@ namespace SkyCoop
             }
             return null;
         }
-
-        public static void SaveGearSpawn(GameObject obj)
-        {
-            if (obj.GetComponent<Comps.GearSpawnPointSave>() == null)
-            {
-                Comps.GearSpawnPointSave sv = obj.AddComponent<Comps.GearSpawnPointSave>();
-                sv.m_Obj = obj;
-                sv.SaveMe();
-            }
-        }
-
-        
 
         public static void LongActionCancleCauseMoved(Comps.MultiplayerPlayer mP)
         {
@@ -3328,11 +3244,10 @@ namespace SkyCoop
 
         public static void SendUDPData(Packet _packet, bool IgnoreQuit = false)
         {
-            _packet.WriteLength();
-
             if (SteamConnect.CanUseSteam == true && ConnectedSteamWorks == true)
             {
-                _packet.InsertInt(ClientUser.myId);
+                _packet.WriteLength();
+                _packet.InsertClientInfo(ClientUser.myId, ClientUser.SubNetworkClientGUID);
                 SteamConnect.Main.SendUDPData(_packet, SteamServerWorks);
             } else {
                 ClientUser.udp.SendData(_packet, IgnoreQuit);
@@ -4569,38 +4484,6 @@ namespace SkyCoop
                     }
                 }
 
-                if (UpdateLootedContainers > 0)
-                {
-                    UpdateLootedContainers = UpdateLootedContainers - 1;
-                    if (UpdateLootedContainers == 0)
-                    {
-                        UpdateLootedContainers = -1;
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply looted containers");
-                        ApplyLootedContainers();
-                    }
-                }
-
-                if (UpdatePickedGears > 0)
-                {
-                    UpdatePickedGears = UpdatePickedGears - 1;
-                    if (UpdatePickedGears == 0)
-                    {
-                        UpdatePickedGears = -1;
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply picked gears");
-                        DestoryPickedGears();
-                    }
-                }
-
-                if (UpdatePickedPlants > 0)
-                {
-                    UpdatePickedPlants = UpdatePickedPlants - 1;
-                    if (UpdatePickedPlants == 0)
-                    {
-                        UpdatePickedPlants = -1;
-                        RemoveHarvastedPlants();
-                    }
-                }
-
                 if (UpdateSnowshelters > 0)
                 {
                     UpdateSnowshelters = UpdateSnowshelters - 1;
@@ -4621,7 +4504,6 @@ namespace SkyCoop
                     if (UpdateRopesAndFurns == 0)
                     {
                         //MelonLogger.Msg(ConsoleColor.Blue, "Apply ropes and furns");
-                        DestoryBrokenFurniture();
                         UpdateDeployedRopes();
                     }
                 }
@@ -4644,25 +4526,18 @@ namespace SkyCoop
                         Pathes.LoadEverything();
                     }
                 }
-                if (RemoveAttachedObjectsAfterSecond == true)
+                if (RemoveAttachedGears > 0)
                 {
-                    DestoryPickedGears();
-                    RemoveAttachedObjectsAfterSecond = false;
-                }
-                for (int n = 0; n < RecentlyPickedGears.Count; n++)
-                {
-                    DataStr.PickedGearSync currGear = RecentlyPickedGears[n];
-                    if (currGear != null)
+                    RemoveAttachedGears--;
+                    if (RemoveAttachedGears == 0)
                     {
-                        if (currGear.m_Recently > 0)
+                        BakePreSpawnedGearsList();
+                        foreach (DataStr.PickedGearSync gear in PickedGearsBackup)
                         {
-                            currGear.m_Recently = currGear.m_Recently - 1;
+                            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, -1, gear.m_MyInstanceID, gear.m_GearName, false);
                         }
-                        if (currGear.m_Recently <= 0)
-                        {
-                            RecentlyPickedGears.RemoveAt(n);
-                        }
-                    }
+                        PickedGearsBackup.Clear();
+                    }                    
                 }
 
                 if (GameManager.m_Thirst != null)
@@ -5233,11 +5108,19 @@ namespace SkyCoop
 
                 if (Slot.m_UserDefinedName == Seed + "")
                 {
-                    MelonLogger.Msg("Found slot to load");
-                    MelonLogger.Msg("Loading save file with seed: " + Seed);
-                    HaveSaveFile = true;
-                    SaveToLoad = Slot;
-                    break;
+                    int GenVersion = MenuChange.GetRNGGen(Slot.m_SaveSlotName);
+                    if (GenVersion == BuildInfo.RandomGenVersion)
+                    {
+                        MelonLogger.Msg("Found slot to load");
+                        MelonLogger.Msg("Loading save file with seed: " + Seed);
+                        HaveSaveFile = true;
+                        SaveToLoad = Slot;
+                        break;
+                    } else
+                    {
+                        MelonLogger.Msg(ConsoleColor.DarkRed, "Found slot to load but it saved on outdated version of the game");
+                        MelonLogger.Msg(ConsoleColor.DarkRed, "Generation version of this slot " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
+                    }
                 }
             }
 
@@ -7384,17 +7267,6 @@ namespace SkyCoop
             } else {
                 MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
                 CarefulSlicesSent = 0;
-                Container box = InterfaceManager.m_Panel_Container.m_Container;
-                if (box != null)
-                {
-                    if (!box.Close())
-                        return;
-                    if (box.m_CloseAudio.Length == 0)
-                        GameAudioManager.PlayGUIButtonBack();
-                }
-                RemovePleaseWait();
-                GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
-                InterfaceManager.m_Panel_Container.Enable(false);
             }
         }
         public static void SendNextGearCarefulSlice()
@@ -7507,7 +7379,15 @@ namespace SkyCoop
             box.m_StartInspected = true;
             string Data = box.Serialize();
             string CompressedData = Shared.CompressString(Data);
-            bool IsEmpty = false;
+
+            if (!string.IsNullOrEmpty(DeBugMenu.ContainerOverride))
+            {
+                CompressedData = DeBugMenu.ContainerOverride;
+            }
+            bool IsEmpty;
+            bool IsDeathCreate = false;
+            int State = 0;
+
             if (box.gameObject.GetComponent<Comps.DeathDropContainer>() != null)
             {
                 if (box.m_Items != null && box.m_Items.Count <= 2)
@@ -7521,10 +7401,14 @@ namespace SkyCoop
                         }
                     }
                 }
-
-                IsEmpty = box.IsEmpty();
+                IsDeathCreate = true;
             }
+            IsEmpty = box.IsEmpty();
             box.DestroyAllGear();
+            if (!IsEmpty)
+            {
+                State = 1;
+            }
             MelonLogger.Msg("[CloseFakeContainer] " + boxGUID + " Is Empty " + IsEmpty);
             int Bags = GameManager.GetInventoryComponent().GetNumGearWithName("GEAR_TechnicalBackpack");
             if (Bags > 1)
@@ -7540,28 +7424,48 @@ namespace SkyCoop
                 }
             }
 
+            DataStr.ContainerOpenSync BoxSync = new DataStr.ContainerOpenSync();
+            BoxSync.m_Guid = boxGUID;
+            BoxSync.m_LevelGUID = level_guid;
+            BoxSync.m_Inspected = true;
+
+            Shared.AddLootedContainer(BoxSync, true, ClientUser.myId, State);
+            if (box != null)
+            {
+                if (box.GetComponent<Comps.ContainersSync>() != null)
+                {
+                    box.GetComponent<Comps.ContainersSync>().m_Empty = IsEmpty;
+                }
+            }
+
             if (IsEmpty)
             {
                 MelonLogger.Msg("[CloseFakeContainer] Removing container");
-                RemoveDeathContainer(boxGUID, level_guid);
 
+                if (IsDeathCreate)
+                {
+                    RemoveDeathContainer(boxGUID, level_guid);
+                }
                 if (sendMyPosition)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.DEATHCREATEEMPTYNOW))
                     {
                         _packet.Write(boxGUID);
                         _packet.Write(level_guid);
+                        _packet.Write(IsDeathCreate);
                         SendUDPData(_packet);
                     }
-                } else {
+                } else
+                {
                     MPSaveManager.RemoveContainer(level_guid, boxGUID);
                 }
-            } else {
+            } else 
+            {
                 MelonLogger.Msg("[CloseFakeContainer] Saving container");
                 if (sendMyPosition == true)
                 {
                     DoPleaseWait("Please wait...", "Sending container data...");
-                    Shared.SendContainerData(CompressedData, level_guid, boxGUID);
+                    Shared.SendContainerData(CompressedData, level_guid, boxGUID, Data);
                     return;
                 }
                 MPSaveManager.SaveContainer(level_guid, boxGUID, CompressedData);
@@ -7572,6 +7476,10 @@ namespace SkyCoop
                 if (box.m_CloseAudio.Length == 0)
                 {
                     GameAudioManager.PlayGUIButtonBack();
+                }
+                if(box.GetComponent<Comps.ContainersSync>() != null)
+                {
+                    box.GetComponent<Comps.ContainersSync>().m_Empty = IsEmpty;
                 }
             }
             GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
@@ -9494,11 +9402,34 @@ namespace SkyCoop
                 Emote.m_Name = "Samba";
                 Emote.m_Animation = "Flex";
                 Emote.m_ForceStandup = true;
-            } else {
+            } 
+            else if(ID == 3)
+            {
+                Emote.m_Name = "Thumbs Up";
+                Emote.m_Animation = "DoThumbsUp";
+                Emote.m_LeftHandEmote = true;
+            } else if (ID == 4)
+            {
+                Emote.m_Name = "Middle Finger";
+                Emote.m_Animation = "DoMiddleFinger";
+                Emote.m_LeftHandEmote = true;
+            } else if(ID == 5)
+            {
+                Emote.m_Name = "Point";
+                Emote.m_Animation = "DoPoint";
+                Emote.m_LeftHandEmote = true;
+            } else if(ID == 6)
+            {
+                Emote.m_Name = "Wave";
+                Emote.m_Animation = "DoWave";
+                Emote.m_LeftHandEmote = true;
+            } else
+            {
                 Emote.m_Name = "Maraschino";
                 Emote.m_Animation = "Cringe1";
                 Emote.m_ForceStandup = true;
             }
+
             return Emote;
         }
 
@@ -9509,7 +9440,29 @@ namespace SkyCoop
                 MyPlayerDoll.transform.rotation = GameManager.GetPlayerTransform().rotation;
             }
             IgnoreEmoteKeyDownUntilReleased = true;
-            MyEmote = GetEmoteByID(EmoteID);
+            DataStr.MultiplayerEmote Emote = GetEmoteByID(EmoteID);
+            if (!Emote.m_LeftHandEmote)
+            {
+                MyEmote = GetEmoteByID(EmoteID);
+            } else
+            {
+                if (MyPlayerDoll)
+                {
+                    MyPlayerDoll.GetComponent<Comps.MultiplayerPlayerAnimator>().DoLeftHandEmote(Emote.m_Animation);
+                }
+                if (iAmHost)
+                {
+                    ServerSend.TRIGGEREMOTE(0, EmoteID);
+                }
+                if (sendMyPosition)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.TRIGGEREMOTE))
+                    {
+                        _packet.Write(EmoteID);
+                        SendUDPData(_packet);
+                    }
+                }
+            }
         }
 
         public static void UpdateEmoteWheel()

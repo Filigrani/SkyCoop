@@ -43,6 +43,11 @@ namespace GameServer
             udpListener.BeginReceive(UDPReceiveCallback, null);
 
             Log($"Server started on port {Port}.");
+
+            MPStats.Start();
+#if(!DEDICATED)
+            MPStats.AddPlayer(MPSaveManager.GetSubNetworkGUID(), MyMod.MyChatName);
+#endif
         }
         public static void StartSteam(int _maxPlayers, string[] whitelist = null)
         {
@@ -66,6 +71,9 @@ namespace GameServer
             MyMod.KillConsole();
             SteamConnect.Main.SetLobbyServer();
             SteamConnect.Main.SetLobbyState("Playing");
+            Log("Server has been runned with InGame time: " + GameManager.GetTimeOfDayComponent().GetHour() + ":" + GameManager.GetTimeOfDayComponent().GetMinutes() + " seed " + GameManager.m_SceneTransitionData.m_GameRandomSeed);
+            MPStats.Start();
+            MPStats.AddPlayer(MPSaveManager.GetSubNetworkGUID(), MyMod.MyChatName);
 #endif
         }
 
@@ -100,21 +108,50 @@ namespace GameServer
                 using (Packet _packet = new Packet(_data))
                 {
                     int _clientId = _packet.ReadInt();
+                    string SubNetworkGUID = "";
+                    if (_packet.UnreadLength() > 12)
+                    {
+                        SubNetworkGUID = _packet.ReadString();
+
+                        string Reason;
+                        if(MPSaveManager.BannedUsers.TryGetValue(SubNetworkGUID, out Reason))
+                        {
+                            if (string.IsNullOrEmpty(Reason))
+                            {
+                                ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server.");
+                                return;
+                            } else
+                            {
+                                ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server." + "\nReason: " + Reason);
+                                return;
+                            }
+                        }
+                    } else
+                    {
+                        Log("Client without SubNetworkGUID trying to connect, rejecting");
+                        ServerSend.KICKMESSAGE(_clientEndPoint, "Your version of the mod, isn't supported\nHost using version " + MyMod.BuildInfo.Version);
+                        return;
+                    }
+                    if (MyMod.DebugTrafficCheck)
+                    {
+                        Log("[DebugTrafficCheck] _clientId " + _clientId);
+                        Log("[DebugTrafficCheck] SubNetworkGUID " + SubNetworkGUID);
+                    }
 
                     if (_clientId == 0)
                     {
                         int freeSlot = 1;
                         bool ReConnection = false;
 
-                        Log("[UDP] Checking all slots for " + _clientEndPoint.Address.ToString());
+                        Log("[UDP] Checking all slots for " + _clientEndPoint.Address.ToString() +" subnetwork GUID "+ SubNetworkGUID);
 
                         for (int i = 1; i <= MaxPlayers; i++)
                         {
-                            if (clients[i].udp != null && clients[i].udp.endPoint != null && clients[i].udp.endPoint.Address.ToString() == _clientEndPoint.Address.ToString())
+                            if (clients[i].udp != null && clients[i].udp.endPoint != null && clients[i].udp.endPoint.Address.ToString() == _clientEndPoint.Address.ToString() && SubNetworkGUID == clients[i].SubNetworkGUID)
                             {
                                 ReConnection = true;
                                 clients[i].RCON = false;
-                                Log("[UDP] Reconnecting " + _clientEndPoint.Address + " as client " + i);
+                                Log("[UDP] Reconnecting " + _clientEndPoint.Address +" " + clients[i].SubNetworkGUID + " as client " + i);
                                 clients[i].TimeOutTime = 0;
                                 clients[i].udp.endPoint = null;
                                 freeSlot = i;
@@ -123,7 +160,7 @@ namespace GameServer
                         }
                         if (ReConnection == false)
                         {
-                            Log("[UDP] Got new connection " + _clientEndPoint.Address);
+                            Log("[UDP] Got new connection " + _clientEndPoint.Address + " subnetwork GUID " + SubNetworkGUID);
                             for (int i = 1; i <= MaxPlayers; i++)
                             {
                                 if (clients[i].udp.endPoint == null)
@@ -166,6 +203,7 @@ namespace GameServer
                     if (clients[_clientId].udp.endPoint == null)
                     {
                         // If this is a new connection
+                        clients[_clientId].SubNetworkGUID = SubNetworkGUID;
                         clients[_clientId].udp.Connect(_clientEndPoint);
                         return;
                     }
@@ -208,6 +246,21 @@ namespace GameServer
                 }
             }
 #endif
+        }
+
+        public static string GetMACByID(int ID)
+        {
+            if(ID == 0)
+            {
+                return MPSaveManager.GetSubNetworkGUID();
+            }
+            
+            Client c;
+            if(clients.TryGetValue(ID, out c))
+            {
+                return c.SubNetworkGUID;
+            }
+            return "";
         }
 
         private static void InitializeServerData()
@@ -332,6 +385,8 @@ namespace GameServer
                 { (int)ClientPackets.RESTART, ServerHandle.RESTART},
                 { (int)ClientPackets.WEATHERVOLUNTEER, ServerHandle.WEATHERVOLUNTEER},
                 { (int)ClientPackets.REREGISTERWEATHER, ServerHandle.REREGISTERWEATHER},
+                { (int)ClientPackets.CHANGECONTAINERSTATE, ServerHandle.CHANGECONTAINERSTATE},
+                { (int)ClientPackets.TRIGGEREMOTE, ServerHandle.TRIGGEREMOTE},
             };
             Log("Initialized packets.");
         }

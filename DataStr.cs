@@ -39,6 +39,7 @@ namespace SkyCoop
             public bool m_Last = false;
             public string m_Str = "";
             public int m_Hash = 0;
+            public long m_CheckHash = 0;
             public string m_GearName = "";
             public int m_SendTo = 0;
             public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
@@ -405,13 +406,14 @@ namespace SkyCoop
             public int m_PickerID = 0;
             public int m_Recently = 0;
             public int m_MyInstanceID = 0;
+            public string m_GearName = "";
 
             public bool Equals(PickedGearSync other)
             {
                 if (other == null)
                     return false;
 
-                if (this.m_LevelID == other.m_LevelID && this.m_LevelGUID == other.m_LevelGUID && this.m_Spawn == other.m_Spawn)
+                if (this.m_LevelGUID == other.m_LevelGUID && this.m_Spawn == other.m_Spawn)
                 {
                     return true;
                 }
@@ -546,6 +548,7 @@ namespace SkyCoop
             public bool m_ForceStandup = false;
             public bool m_FollowDollCamera = false;
             public bool m_NeedFreeHands = false;
+            public bool m_LeftHandEmote = false;
         }
         public class CustomChallengeTaskData
         {

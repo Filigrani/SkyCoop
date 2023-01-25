@@ -79,6 +79,7 @@ namespace GameServer
 #if (!DEDICATED)
             Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
 #endif
+            ServerSend.BENEFITINIT(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits);
 
             long ClientModsHash = _packet.ReadLong();
 
@@ -104,17 +105,14 @@ namespace GameServer
             ServerSend.GAMETIME(MyMod.OveridedTime);
 
             MyMod.playersData[_fromClient].m_Name = _username;
+            MPStats.AddPlayer(Server.clients[_fromClient].SubNetworkGUID, _username);
 
             Log("Client "+ _fromClient+" with user name "+ _username+" connected!");
             Log("Sending init data to new client...");
             AddLoadingClient(_fromClient);
             
             ServerSend.SERVERCFG(_fromClient);
-            ServerSend.GEARPICKUPLIST(_fromClient);
-            ServerSend.FURNBROKENLIST(_fromClient);
             ServerSend.ROPELIST(_fromClient);
-            ServerSend.LOOTEDCONTAINERLIST(_fromClient);
-            ServerSend.LOOTEDHARVESTABLEALL(_fromClient);
             ServerSend.ALLSHELTERS(_fromClient);
 
 #if (!DEDICATED)
@@ -699,9 +697,12 @@ namespace GameServer
             DataStr.BrokenFurnitureSync furn = _packet.ReadFurn();
 
 #if (!DEDICATED)
-
-            MyMod.OnFurnitureDestroyed(furn.m_Guid, furn.m_ParentGuid, furn.m_LevelID, furn.m_LevelGUID, false);
+            if(furn.m_LevelGUID == MyMod.level_guid)
+            {
+                MyMod.RemoveBrokenFurniture(furn.m_Guid, furn.m_ParentGuid);
+            }
 #endif
+            MPSaveManager.AddBrokenFurn(furn);
 
             ServerSend.FURNBROKEN(_fromClient, furn, false);
         }
@@ -743,7 +744,7 @@ namespace GameServer
 #if (!DEDICATED)
 
 
-            if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+            if (MyMod.playersData[_fromClient] != null && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
             {
                 if (!MyMod.DedicatedServerAppMode)
                 {
@@ -755,7 +756,7 @@ namespace GameServer
             }
 #endif
 
-            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, _fromClient, gear.m_MyInstanceID, false);
+            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, _fromClient, gear.m_MyInstanceID,gear.m_GearName, false);
 
             ServerSend.GEARPICKUP(_fromClient, gear, false);
         }
@@ -894,11 +895,11 @@ namespace GameServer
 
             if(box.m_Guid != "NULL")
             {
-                AddLootedContainer(box, true, _fromClient);
+                AddLootedContainer(box, true, _fromClient, -1);
 #if (!DEDICATED)
-                if (box.m_LevelID == MyMod.levelid && box.m_LevelGUID == MyMod.level_guid)
+                if (box.m_LevelGUID == MyMod.level_guid)
                 {
-                    MyMod.ApplyLootedContainers();
+                    MyMod.RemoveLootFromContainer(box.m_Guid, -1);
                 }
 #endif
             }
@@ -918,12 +919,20 @@ namespace GameServer
                     MyMod.playersData[_fromClient].m_Plant = "";
                 }
             }
-#if (!DEDICATED)
+
             if(harveData.m_State == "Done")
             {
-                MyMod.AddHarvastedPlant(harveData.m_Guid, _fromClient);
-            }
+#if (!DEDICATED)
+                if (MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+                {
+                    MyMod.RemoveHarvastedPlant(harveData.m_Guid);
+                }
 #endif
+                MPSaveManager.AddHarvestedPlant(harveData.m_Guid, MyMod.playersData[_fromClient].m_LevelGuid, _fromClient);
+
+                ServerSend.LOOTEDHARVESTABLE(_fromClient, harveData.m_Guid, MyMod.playersData[_fromClient].m_LevelGuid, false);
+            }
+
             ServerSend.HARVESTPLANT(_fromClient, harveData, false);
         }
 
@@ -1163,6 +1172,47 @@ namespace GameServer
                 string GUID = item.Key.Split('_')[1];
                 ServerSend.ADDDOORLOCK(_fromClient, GUID, Scene);
             }
+            Dictionary<string, BrokenFurnitureSync> Furns = MPSaveManager.LoadFurnsData(Scene);
+            if(Furns != null)
+            {
+                foreach (var item in Furns)
+                {
+                    ServerSend.FURNBROKEN(0, item.Value, false, _fromClient);
+                }
+            }
+
+            Dictionary<long, PickedGearSync> PickedGears = MPSaveManager.LoadPickedGearsData(Scene);
+            if (PickedGears != null)
+            {
+                foreach (var item in PickedGears)
+                {
+                    ServerSend.GEARPICKUP(-1, item.Value, false, _fromClient);
+                }
+            }
+            Dictionary<string, int> LootedBoxes = MPSaveManager.LoadLootedContainersData(Scene);
+            if (LootedBoxes != null)
+            {
+                foreach (var item in LootedBoxes)
+                {
+                    ContainerOpenSync BoxDummy = new ContainerOpenSync();
+                    BoxDummy.m_Guid = item.Key;
+                    BoxDummy.m_LevelGUID = Scene;
+                    int State = 0;
+                    if (MPSaveManager.ContainerNotEmpty(Scene, item.Key))
+                    {
+                        State = 1;
+                    }
+                    ServerSend.LOOTEDCONTAINER(0, BoxDummy, State, false, _fromClient);
+                }
+            }
+            Dictionary<string, int> Plants = MPSaveManager.LoadHarvestedPlants(Scene);
+            if (Plants != null)
+            {
+                foreach (var item in Plants)
+                {
+                    ServerSend.LOOTEDHARVESTABLE(0, item.Key, Scene, false, _fromClient);
+                }
+            }
 
             Shared.ModifyDynamicGears(Scene);
             Dictionary<int, DataStr.DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
@@ -1205,7 +1255,7 @@ namespace GameServer
                 ServerSend.OPENEMPTYCONTAINER(_fromClient, true);
             }else{
                 Log("Send to client data about container");
-                Shared.SendContainerData(CompressedData, Scene, boxGUID, _fromClient);
+                Shared.SendContainerData(CompressedData, Scene, boxGUID, "", _fromClient);
             }
         }
         public static void CHANGEAIM(int _fromClient, Packet _packet)
@@ -1427,6 +1477,7 @@ namespace GameServer
                 MyMod.MakeDeathCreate(Con);
             }
 #endif
+            MPStats.AddDeath(Server.GetMACByID(_fromClient));
 
             ServerSend.ADDDEATHCONTAINER(Con, Con.m_LevelKey, _fromClient);
         }
@@ -1434,10 +1485,18 @@ namespace GameServer
         {
             string GUID = _packet.ReadString();
             string Scene = _packet.ReadString();
+            bool DeathContainer = _packet.ReadBool();
 #if (!DEDICATED)
-            MyMod.RemoveDeathContainer(GUID, Scene);
+            if (DeathContainer)
+            {
+                MyMod.RemoveDeathContainer(GUID, Scene);
+            }
 #endif
-            ServerSend.DEATHCREATEEMPTYNOW(GUID, Scene, _fromClient);
+            if (DeathContainer)
+            {
+                ServerSend.DEATHCREATEEMPTYNOW(GUID, Scene, _fromClient);
+            }
+            
             MPSaveManager.RemoveContainer(Scene, GUID);
         }
         public static void SPAWNREGIONBANCHECK(int _fromClient, Packet _packet)
@@ -1612,6 +1671,44 @@ namespace GameServer
             WeatherVolunteerData Data = _packet.ReadWeatherVolunteerData();
             Log("Client " + _fromClient + " sent back weather volunteer data, going to reregister weather for Region " + Data.CurrentRegion);
             RegisterWeatherSetForRegion(_fromClient, Data);
+        }
+        public static void CHANGECONTAINERSTATE(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            string Scene = _packet.ReadString();
+            int State = _packet.ReadInt();
+
+#if (!DEDICATED)
+            if (Scene == MyMod.level_guid)
+            {
+                MyMod.RemoveLootFromContainer(GUID, State);
+            }
+#endif
+            ServerSend.CHANGECONTAINERSTATE(_fromClient, GUID, State, Scene, false);
+        }
+        public static void TRIGGEREMOTE(int _fromClient, Packet _packet)
+        {
+            int EmoteID = _packet.ReadInt();
+
+#if (!DEDICATED)
+            if (MyMod.playersData[_fromClient] != null && MyMod.players[_fromClient] != null)
+            {
+                if (MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+                {
+                    Comps.MultiplayerPlayerAnimator Anim = MyMod.players[_fromClient].GetComponent<Comps.MultiplayerPlayerAnimator>();
+                    if (Anim != null)
+                    {
+                        DataStr.MultiplayerEmote Emote = MyMod.GetEmoteByID(EmoteID);
+
+                        if (Emote.m_LeftHandEmote)
+                        {
+                            Anim.DoLeftHandEmote(Emote.m_Animation);
+                        }
+                    }
+                }
+            }
+#endif
+            ServerSend.TRIGGEREMOTE(_fromClient, EmoteID);
         }
     }
 }

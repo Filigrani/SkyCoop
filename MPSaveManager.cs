@@ -8,6 +8,7 @@ using System.Diagnostics;
 using GameServer;
 using static SkyCoop.DataStr;
 using System.Globalization;
+using System.Security.Policy;
 #if (DEDICATED)
 using System.Numerics;
 using TinyJSON;
@@ -56,15 +57,40 @@ namespace SkyCoop
         public static Dictionary<int, LocksmithBlank> Blanks = new Dictionary<int, LocksmithBlank>();
         public static bool SaveHashsChanged = false;
         public static bool LockedDoorsChanged = false;
+        public static bool AnimalsKilledChanged = false;
         public static int SaveRecentTimer = 5;
         public static bool Diagnostic = false;
+        public static bool SaveLogging = false;
         public static int Seed = 0;
         public static string OldIdsJson = "{\"0\":\"gear_accelerant\",\"1\":\"gear_accelerantgunpowder\",\"2\":\"gear_accelerantkerosene\",\"3\":\"gear_accelerantmedium\",\"4\":\"gear_airlinefoodchick\",\"5\":\"gear_airlinefoodveg\",\"6\":\"gear_arrow\",\"7\":\"gear_arrowhead\",\"8\":\"gear_arrowshaft\",\"9\":\"gear_astridbackpack_hangar\",\"10\":\"gear_astridboots\",\"11\":\"gear_astridgloves\",\"12\":\"gear_astridjacket\",\"13\":\"gear_astridjeans\",\"14\":\"gear_astridsweater\",\"15\":\"gear_astridtoque\",\"16\":\"gear_aurorahatchcode\",\"17\":\"gear_auroraobservationnote\",\"18\":\"gear_backernote1a\",\"19\":\"gear_backernote1b\",\"20\":\"gear_backernote1c\",\"21\":\"gear_backernote2a\",\"22\":\"gear_backernote2b\",\"23\":\"gear_backernote2c\",\"24\":\"gear_backernote3a\",\"25\":\"gear_backernote3b\",\"26\":\"gear_backernote3c\",\"27\":\"gear_backernote4a\",\"28\":\"gear_backernote4b\",\"29\":\"gear_backernote4c\",\"30\":\"gear_balaclava\",\"31\":\"gear_ballisticvest\",\"32\":\"gear_bankmanagerhousekey\",\"33\":\"gear_bankmanagerhousekey\",\"34\":\"gear_bankvaultcode\",\"35\":\"gear_barktinder\",\"36\":\"gear_baseballcap\",\"37\":\"gear_basicboots\",\"38\":\"gear_basicgloves\",\"39\":\"gear_basicshoes\",\"40\":\"gear_basicwintercoat\",\"41\":\"gear_basicwoolhat\",\"42\":\"gear_basicwoolscarf\",\"43\":\"gear_bear_spear_broken\",\"44\":\"gear_bear_spear_complete\",\"45\":\"gear_bear_spear_head\",\"46\":\"gear_bearear\",\"47\":\"gear_bearhide\",\"48\":\"gear_bearhidedried\",\"49\":\"gear_bearquarter\",\"50\":\"gear_bearskinbedroll\",\"51\":\"gear_bearskincoat\",\"52\":\"gear_bearspear\",\"53\":\"gear_bearspearbroken\",\"54\":\"gear_bearspearbrokenstory\",\"55\":\"gear_bearspearrelic\",\"56\":\"gear_bearspearstory\",\"57\":\"gear_bedroll\",\"58\":\"gear_beefjerky\",\"59\":\"gear_birchbarkprepared\",\"60\":\"gear_birchbarktea\",\"61\":\"gear_birchsapling\",\"62\":\"gear_birchsaplingdried\",\"63\":\"gear_blackrockadminnote\",\"64\":\"gear_blackrockammoroomnote\",\"65\":\"gear_blackrockcodenote\",\"66\":\"gear_blackrockconvictnote1\",\"67\":\"gear_blackrockconvictnote2\",\"68\":\"gear_blackrockconvictnote3\",\"69\":\"gear_blackrockmemo\",\"70\":\"gear_blackrocksecuritynote\",\"71\":\"gear_blackrocktowernote\",\"72\":\"gear_blueflare\",\"73\":\"gear_body_dummy\",\"74\":\"gear_boltcutters\",\"75\":\"gear_booka\",\"76\":\"gear_bookarchery\",\"77\":\"gear_bookb\",\"78\":\"gear_bookbopen\",\"79\":\"gear_bookc\",\"80\":\"gear_bookcarcassharvesting\",\"81\":\"gear_bookcooking\",\"82\":\"gear_bookd\",\"83\":\"gear_booke\",\"84\":\"gear_bookeopen\",\"85\":\"gear_bookf\",\"86\":\"gear_bookfirestarting\",\"87\":\"gear_bookfopen\",\"88\":\"gear_bookg\",\"89\":\"gear_bookgunsmithing\",\"90\":\"gear_bookh\",\"91\":\"gear_bookhopen\",\"92\":\"gear_booki\",\"93\":\"gear_bookicefishing\",\"94\":\"gear_booklabe_01\",\"95\":\"gear_booklabe_02\",\"96\":\"gear_booklabe_03\",\"97\":\"gear_booklabe_open_01\",\"98\":\"gear_bookmanual\",\"99\":\"gear_bookmending\",\"100\":\"gear_bookrevolverfirearm\",\"101\":\"gear_bookriflefirearm\",\"102\":\"gear_bookriflefirearmadvanced\",\"103\":\"gear_booktalltalesfishing\",\"104\":\"gear_booktalltalesglowcave\",\"105\":\"gear_booktalltalesstag\",\"106\":\"gear_booktalltalesyeti\",\"107\":\"gear_bottleantibiotics\",\"108\":\"gear_bottlehydrogenperoxide\",\"109\":\"gear_bottlepainkillers\",\"110\":\"gear_bow\",\"111\":\"gear_bowstring\",\"112\":\"gear_bowwood\",\"113\":\"gear_brand\",\"114\":\"gear_brokenarrow\",\"115\":\"gear_brokenrifle\",\"116\":\"gear_bullet\",\"117\":\"gear_cachenote_churchmarshdir\",\"118\":\"gear_campofficecollectible\",\"119\":\"gear_candybar\",\"120\":\"gear_cannedbeans\",\"121\":\"gear_cannedsardines\",\"122\":\"gear_cannerycodenote\",\"123\":\"gear_cannerymemo\",\"124\":\"gear_cannerysurvivalpath\",\"125\":\"gear_canopener\",\"126\":\"gear_canyonclimberscavenote\",\"127\":\"gear_canyondeadclimbernote\",\"128\":\"gear_canyonfishinghutjournal\",\"129\":\"gear_canyonminersnote\",\"130\":\"gear_carbattery\",\"131\":\"gear_cargopants\",\"132\":\"gear_cashbundle\",\"133\":\"gear_cattailplant\",\"134\":\"gear_cattailstalk\",\"135\":\"gear_cattailtinder\",\"136\":\"gear_cavecachenote\",\"137\":\"gear_charcoal\",\"138\":\"gear_churchhymn\",\"139\":\"gear_churchnoteep1\",\"140\":\"gear_climbersjournal\",\"141\":\"gear_climbingsocks\",\"142\":\"gear_cloth\",\"143\":\"gear_clothsheet\",\"144\":\"gear_coal\",\"145\":\"gear_coffeecup\",\"146\":\"gear_coffeetin\",\"147\":\"gear_combatboots\",\"148\":\"gear_combatpants\",\"149\":\"gear_compressionbandage\",\"150\":\"gear_condensedmilk\",\"151\":\"gear_condensedmilk_open\",\"152\":\"gear_convictcorpsenote\",\"153\":\"gear_cookedbigmouthbass_talltales\",\"154\":\"gear_cookedcohosalmon\",\"155\":\"gear_cookedlakewhitefish\",\"156\":\"gear_cookedmeatbear\",\"157\":\"gear_cookedmeatdeer\",\"158\":\"gear_cookedmeatmoose\",\"159\":\"gear_cookedmeatrabbit\",\"160\":\"gear_cookedmeatwolf\",\"161\":\"gear_cookedrainbowtrout\",\"162\":\"gear_cookedsmallmouthbass\",\"163\":\"gear_cookingpot\",\"164\":\"gear_cookingpotdummy\",\"165\":\"gear_cottonhoodie\",\"166\":\"gear_cottonscarf\",\"167\":\"gear_cottonshirt\",\"168\":\"gear_cottonsocks\",\"169\":\"gear_cottonsocksstart\",\"170\":\"gear_cowichansweater\",\"171\":\"gear_crackers\",\"172\":\"gear_crampons\",\"173\":\"gear_crowfeather\",\"174\":\"gear_damcollectible1\",\"175\":\"gear_damcontrolroomcodenote\",\"176\":\"gear_damelevatornotice\",\"177\":\"gear_damexitcodenote\",\"178\":\"gear_damfencekey\",\"179\":\"gear_damgarbageletter\",\"180\":\"gear_damlockerkey\",\"181\":\"gear_damofficekey\",\"182\":\"gear_damtrailerbcrewnote\",\"183\":\"gear_darkwalkerdiary1\",\"184\":\"gear_darkwalkerdiary10\",\"185\":\"gear_darkwalkerdiary11\",\"186\":\"gear_darkwalkerdiary2\",\"187\":\"gear_darkwalkerdiary3\",\"188\":\"gear_darkwalkerdiary4\",\"189\":\"gear_darkwalkerdiary5\",\"190\":\"gear_darkwalkerdiary6\",\"191\":\"gear_darkwalkerdiary7\",\"192\":\"gear_darkwalkerdiary8\",\"193\":\"gear_darkwalkerdiary9\",\"194\":\"gear_darkwalkerid\",\"195\":\"gear_deadmannote1\",\"196\":\"gear_deadmannote2\",\"197\":\"gear_deadmannote3\",\"198\":\"gear_deadmannote4\",\"199\":\"gear_deadmannote5\",\"200\":\"gear_deerskinboots\",\"201\":\"gear_deerskinpants\",\"202\":\"gear_depositboxkey_dk1\",\"203\":\"gear_depositboxkey_dk2\",\"204\":\"gear_depositboxkey_dk3\",\"205\":\"gear_depositboxkey_dk_farmer\",\"206\":\"gear_detonator\",\"207\":\"gear_dogfood\",\"208\":\"gear_dogfood_open\",\"209\":\"gear_downparka\",\"210\":\"gear_downskijacket\",\"211\":\"gear_downvest\",\"212\":\"gear_dustingsulfur\",\"213\":\"gear_earmuffs\",\"214\":\"gear_elevatorcrank\",\"215\":\"gear_elevatorparts\",\"216\":\"gear_elevatorpartsdead\",\"217\":\"gear_emergencykitnote\",\"218\":\"gear_emergencystim\",\"219\":\"gear_energybar\",\"220\":\"gear_ep3_churchartifact\",\"221\":\"gear_ep3_churchflyer\",\"222\":\"gear_ep3_churchmotelletter\",\"223\":\"gear_ep3_churchnewsclipping\",\"224\":\"gear_ep3_churchthankyouletter\",\"225\":\"gear_ep3_churchtheftreport\",\"226\":\"gear_ep3_joplinbunkernote\",\"227\":\"gear_ep3_joplinbunkernote2\",\"228\":\"gear_ep3_joplincachenote\",\"229\":\"gear_ep3_patienthistory01\",\"230\":\"gear_ep3_patienthistory02\",\"231\":\"gear_ep3_patienthistory03\",\"232\":\"gear_ep3_patienthistory04\",\"233\":\"gear_ep3_patienthistory05\",\"234\":\"gear_ep3_patienthistory06\",\"235\":\"gear_ep3foresttalkers_ftcollectible1\",\"236\":\"gear_ep3foresttalkers_ftcollectible2\",\"237\":\"gear_ep3foresttalkers_ftcollectible3\",\"238\":\"gear_ep3foresttalkers_pvcollectible1\",\"239\":\"gear_ep3foresttalkers_pvcollectible2\",\"240\":\"gear_ep3foresttalkers_pvcollectible3\",\"241\":\"gear_ep3hallflyer\",\"242\":\"gear_ep3rosary\",\"243\":\"gear_ep3tomsmap\",\"244\":\"gear_ep4_blackrockescapenote1\",\"245\":\"gear_ep4_blackrocknoisemakernote\",\"246\":\"gear_ep4_blackrockrationsnote\",\"247\":\"gear_ep4_foresttalkerplans\",\"248\":\"gear_ep4_infirmarymeds\",\"249\":\"gear_ep4_infirmarymedsnote\",\"250\":\"gear_ep4_jacecarcollectible\",\"251\":\"gear_ep4_letterforesttalker1\",\"252\":\"gear_ep4_letterforesttalker2\",\"253\":\"gear_ep4_letterforesttalker3\",\"254\":\"gear_ep4_letterforesttalkerfinal\",\"255\":\"gear_ep4_minedangernote\",\"256\":\"gear_ep4_rooftopkey\",\"257\":\"gear_ep4_substationmemo\",\"258\":\"gear_ep4convictcachenote1\",\"259\":\"gear_ep4goldnugget\",\"260\":\"gear_ep4lockerkey1\",\"261\":\"gear_ep4lockerkey2\",\"262\":\"gear_ep4lockerkey3\",\"263\":\"gear_ep4lockerkey8\",\"264\":\"gear_ep4lostworkernote\",\"265\":\"gear_ep4minegatekey\",\"266\":\"gear_ep4powerworkerid1\",\"267\":\"gear_ep4powerworkerid2\",\"268\":\"gear_ep4prisongatekey\",\"269\":\"gear_ep4prosepectornote\",\"270\":\"gear_ep4rumourlateemployee\",\"271\":\"gear_ep4rumourshatchlocation\",\"272\":\"gear_ep4rumourshermitreport\",\"273\":\"gear_ep4rumourslockboxkey\",\"274\":\"gear_ep4rumoursprisonrelease\",\"275\":\"gear_ep4rumoursramblings1\",\"276\":\"gear_ep4rumourswolfreport\",\"277\":\"gear_ep4rumourswolfstudy\",\"278\":\"gear_ep4sawfarmnote\",\"279\":\"gear_ep4steamtunnelcampnote\",\"280\":\"gear_farmerdepositboxkey\",\"281\":\"gear_fireaxe\",\"282\":\"gear_firelog\",\"283\":\"gear_firestriker\",\"284\":\"gear_fishermansweater\",\"285\":\"gear_fishingline\",\"286\":\"gear_fixedrifle\",\"287\":\"gear_flarea\",\"288\":\"gear_flaregun\",\"289\":\"gear_flaregunammosingle\",\"290\":\"gear_flaregunammosingle_survivormission\",\"291\":\"gear_flareguncase_hangar\",\"292\":\"gear_flashlight\",\"293\":\"gear_fleecemittens\",\"294\":\"gear_fleecesweater\",\"295\":\"gear_flintandsteel\",\"296\":\"gear_foodsupplies_hangar\",\"297\":\"gear_foresttalkerbloodyitem\",\"298\":\"gear_foresttalkerdamnote\",\"299\":\"gear_foresttalkerflyer\",\"300\":\"gear_foresttalkerhiddenitem\",\"301\":\"gear_foresttalkermap\",\"302\":\"gear_foresttalkerthankyou\",\"303\":\"gear_foresttalkerthankyou2\",\"304\":\"gear_forgeblueprints\",\"305\":\"gear_forgecachenote\",\"306\":\"gear_fuse_dead_prefab\",\"307\":\"gear_fuse_live_prefab\",\"308\":\"gear_gauntlets\",\"309\":\"gear_gmextrasuppliesnote\",\"310\":\"gear_granolabar\",\"311\":\"gear_greenteacup\",\"312\":\"gear_greenteapackage\",\"313\":\"gear_greymotherboots\",\"314\":\"gear_greymotherpearls\",\"315\":\"gear_greymothertrunkkey\",\"316\":\"gear_greymothertrunkkey\",\"317\":\"gear_gunpowdercan\",\"318\":\"gear_gut\",\"319\":\"gear_gutdried\",\"320\":\"gear_hacksaw\",\"321\":\"gear_hammer\",\"322\":\"gear_handheldshortwave\",\"323\":\"gear_hankhatchcode\",\"324\":\"gear_hankjournal1\",\"325\":\"gear_hankjournal2\",\"326\":\"gear_hanklockboxkey\",\"327\":\"gear_hankneiceletter\",\"328\":\"gear_hardcase\",\"329\":\"gear_hardcase_hangar\",\"330\":\"gear_hardwood\",\"331\":\"gear_hatchet\",\"332\":\"gear_hatchetimprovised\",\"333\":\"gear_hc_ep1_fm_treeroots_dir\",\"334\":\"gear_hc_ep1_ml_alanscave_dir\",\"335\":\"gear_hc_ep1_ml_clearcut_dir\",\"336\":\"gear_hc_ep1_ml_tracksent_dir\",\"337\":\"gear_hc_ep1_rw_hunterlodge_dir\",\"338\":\"gear_hc_ep1_rw_ravineend_dir\",\"339\":\"gear_heavybandage\",\"340\":\"gear_heavyparka\",\"341\":\"gear_heavywoolsweater\",\"342\":\"gear_highqualitytools\",\"343\":\"gear_homemadesoup\",\"344\":\"gear_hook\",\"345\":\"gear_hookandline\",\"346\":\"gear_improvisedhat\",\"347\":\"gear_improvisedmittens\",\"348\":\"gear_insulatedboots\",\"349\":\"gear_insulatedpants\",\"350\":\"gear_insulatedvest\",\"351\":\"gear_insulin\",\"352\":\"gear_jeans\",\"353\":\"gear_jeremiahknife\",\"354\":\"gear_jeremiahscoat\",\"355\":\"gear_jerrycanrusty\",\"356\":\"gear_kerosenelampb\",\"357\":\"gear_ketchupchips\",\"358\":\"gear_knife\",\"359\":\"gear_knifeimprovised\",\"360\":\"gear_knifescrapmetal\",\"361\":\"gear_knifescrapmetal\",\"362\":\"gear_knifescrapmetal_clean\",\"363\":\"gear_knowledgebrbook1\",\"364\":\"gear_knowledgebrbook2\",\"365\":\"gear_knowledgebrbook3\",\"366\":\"gear_knowledgecarterdam\",\"367\":\"gear_knowledgecollapse1\",\"368\":\"gear_knowledgecollapse2\",\"369\":\"gear_knowledgecollapse3\",\"370\":\"gear_knowledgecollapse4\",\"371\":\"gear_knowledgemilton\",\"372\":\"gear_knowledgemysterylake\",\"373\":\"gear_knowledgepvbook1\",\"374\":\"gear_knowledgepvbook2\",\"375\":\"gear_knowledgepvbook3\",\"376\":\"gear_lakecabinkey1\",\"377\":\"gear_lakecabinkey2\",\"378\":\"gear_lakecabinkey3\",\"379\":\"gear_lakecabinkey8\",\"380\":\"gear_lakedeerhuntnote\",\"381\":\"gear_lakeincidentnote\",\"382\":\"gear_lakeletter1\",\"383\":\"gear_lakesflarecachenote\",\"384\":\"gear_laketrailerkey1\",\"385\":\"gear_lakewolfcullnote\",\"386\":\"gear_lampfuel\",\"387\":\"gear_lampfuelfull\",\"388\":\"gear_leather\",\"389\":\"gear_leatherdried\",\"390\":\"gear_leatherhide\",\"391\":\"gear_leatherhidedried\",\"392\":\"gear_leathershoes\",\"393\":\"gear_leatherstrips\",\"394\":\"gear_letterbundle\",\"395\":\"gear_lightparka\",\"396\":\"gear_lilyclimbmap\",\"397\":\"gear_line\",\"398\":\"gear_longunderwear\",\"399\":\"gear_longunderwearstart\",\"400\":\"gear_longunderwearwool\",\"401\":\"gear_lorenotea\",\"402\":\"gear_lorenoteb\",\"403\":\"gear_lorenotec\",\"404\":\"gear_lorenoted\",\"405\":\"gear_mackinawjacket\",\"406\":\"gear_magnifyinglens\",\"407\":\"gear_maplesapling\",\"408\":\"gear_maplesaplingdried\",\"409\":\"gear_maplesyrup\",\"410\":\"gear_medicalsupplies\",\"411\":\"gear_medicalsupplies_hangar\",\"412\":\"gear_militaryparka\",\"413\":\"gear_miltoncaveletter\",\"414\":\"gear_miltondepositboxkey1\",\"415\":\"gear_miltondepositboxkey2\",\"416\":\"gear_miltondepositboxkey3\",\"417\":\"gear_miltonflaregunnote\",\"418\":\"gear_miltongardencache\",\"419\":\"gear_miltonletter1\",\"420\":\"gear_miltonletter2\",\"421\":\"gear_miltonparknotice\",\"422\":\"gear_miltonpostofficecollectible1\",\"423\":\"gear_miltonstorenotice\",\"424\":\"gear_minepipevalve\",\"425\":\"gear_mittens\",\"426\":\"gear_moosehide\",\"427\":\"gear_moosehidebag\",\"428\":\"gear_moosehidecloak\",\"429\":\"gear_moosehidedried\",\"430\":\"gear_moosequarter\",\"431\":\"gear_mountaintownfarmkey\",\"432\":\"gear_mountaintownfarmkey\",\"433\":\"gear_mountaintownfarmnote\",\"434\":\"gear_mountaintownlockboxkey\",\"435\":\"gear_mountaintownlockboxkey\",\"436\":\"gear_mre\",\"437\":\"gear_muklukboots\",\"438\":\"gear_newsprint\",\"439\":\"gear_newsprintbootstuffing\",\"440\":\"gear_newsprintinsulation\",\"441\":\"gear_newsprintroll\",\"442\":\"gear_noisemaker\",\"443\":\"gear_notemcu\",\"444\":\"gear_nylon\",\"445\":\"gear_oldladystolenitem\",\"446\":\"gear_oldmansbearddressing\",\"447\":\"gear_oldmansbeardharvested\",\"448\":\"gear_packmatches\",\"449\":\"gear_paperstack\",\"450\":\"gear_passengermanifest\",\"451\":\"gear_peanutbutter\",\"452\":\"gear_picturefamily_prefab\",\"453\":\"gear_pinnaclecanpeaches\",\"454\":\"gear_plaidshirt\",\"455\":\"gear_planecrashid1\",\"456\":\"gear_planecrashid10\",\"457\":\"gear_planecrashid2\",\"458\":\"gear_planecrashid3\",\"459\":\"gear_planecrashid4\",\"460\":\"gear_planecrashid5\",\"461\":\"gear_planecrashid6\",\"462\":\"gear_planecrashid7\",\"463\":\"gear_planecrashid8\",\"464\":\"gear_planecrashid9\",\"465\":\"gear_plantsurvivalnote\",\"466\":\"gear_postcard_ac_centralspire\",\"467\":\"gear_postcard_ac_topshelf\",\"468\":\"gear_postcard_bi_echoone-radiotower\",\"469\":\"gear_postcard_br_canyon\",\"470\":\"gear_postcard_br_prison\",\"471\":\"gear_postcard_cr_abandonedlookout\",\"472\":\"gear_postcard_fm_muskegoverlook\",\"473\":\"gear_postcard_fm_shortwavetower\",\"474\":\"gear_postcard_ml_forestrylookout\",\"475\":\"gear_postcard_ml_lakeoverlook\",\"476\":\"gear_postcard_mt_radiotower\",\"477\":\"gear_postcard_pv_signalhill\",\"478\":\"gear_postcard_rv_pensive\",\"479\":\"gear_postcard_tm_andrespeak\",\"480\":\"gear_postcard_tm_tailsection\",\"481\":\"gear_premiumwintercoat\",\"482\":\"gear_prisonbusnote\",\"483\":\"gear_prybar\",\"484\":\"gear_pumpkinpie\",\"485\":\"gear_pumpkinpiedarkwalker\",\"486\":\"gear_qualitywintercoat\",\"487\":\"gear_rabbitcarcass\",\"488\":\"gear_rabbitpelt\",\"489\":\"gear_rabbitpeltdried\",\"490\":\"gear_rabbitskinhat\",\"491\":\"gear_rabbitskinmittens\",\"492\":\"gear_radioparts\",\"493\":\"gear_rawbigbass\",\"494\":\"gear_rawbigmouthbass_talltales\",\"495\":\"gear_rawcohosalmon\",\"496\":\"gear_rawlakewhitefish\",\"497\":\"gear_rawmeatbear\",\"498\":\"gear_rawmeatdeer\",\"499\":\"gear_rawmeatmoose\",\"500\":\"gear_rawmeatrabbit\",\"501\":\"gear_rawmeatwolf\",\"502\":\"gear_rawrainbowtrout\",\"503\":\"gear_rawsmallmouthbass\",\"504\":\"gear_reclaimedwoodb\",\"505\":\"gear_recycledcan\",\"506\":\"gear_reishimushroom\",\"507\":\"gear_reishiprepared\",\"508\":\"gear_reishitea\",\"509\":\"gear_revolver\",\"510\":\"gear_revolverammobox\",\"511\":\"gear_revolverammocasing\",\"512\":\"gear_revolverammosingle\",\"513\":\"gear_rifle\",\"514\":\"gear_rifleammobox\",\"515\":\"gear_rifleammocasing\",\"516\":\"gear_rifleammosingle\",\"517\":\"gear_riflecleaningkit\",\"518\":\"gear_riflehuntinglodge\",\"519\":\"gear_rockcache_prefab\",\"520\":\"gear_rope\",\"521\":\"gear_rosehip\",\"522\":\"gear_rosehipsprepared\",\"523\":\"gear_rosehiptea\",\"524\":\"gear_ruralregionfarmkey\",\"525\":\"gear_scarftorn\",\"526\":\"gear_scraplead\",\"527\":\"gear_scrapmetal\",\"528\":\"gear_sewingkit\",\"529\":\"gear_sharpeningstone\",\"530\":\"gear_shedcodenote\",\"531\":\"gear_shovel\",\"532\":\"gear_simpletools\",\"533\":\"gear_skiboots\",\"534\":\"gear_skigloves\",\"535\":\"gear_skijacket\",\"536\":\"gear_snare\",\"537\":\"gear_soda\",\"538\":\"gear_sodaenergy\",\"539\":\"gear_sodagrape\",\"540\":\"gear_sodaorange\",\"541\":\"gear_softwood\",\"542\":\"gear_spearhead\",\"543\":\"gear_spraypaintcan\",\"544\":\"gear_spraypaintcanglypha\",\"545\":\"gear_stagquarter\",\"546\":\"gear_steampipevalve\",\"547\":\"gear_stick\",\"548\":\"gear_stone\",\"549\":\"gear_stumpremover\",\"550\":\"gear_survivalelevatorcrank\",\"551\":\"gear_survivalschoolclothing\",\"552\":\"gear_survivalschooldeerhunt\",\"553\":\"gear_survivalschoolfishing\",\"554\":\"gear_survivalschoolplants\",\"555\":\"gear_survivalschoolrabbits\",\"556\":\"gear_survivalschoolwolfhunt\",\"557\":\"gear_technicalbackpack\",\"558\":\"gear_teeshirt\",\"559\":\"gear_timberwolfquarter\",\"560\":\"gear_tinder\",\"561\":\"gear_tomatosoupcan\",\"562\":\"gear_toque\",\"563\":\"gear_torch\",\"564\":\"gear_tornscarf\",\"565\":\"gear_tornscarffp\",\"566\":\"gear_trailersupplies\",\"567\":\"gear_transponderparts\",\"568\":\"gear_utilitiesbill\",\"569\":\"gear_water1000ml\",\"570\":\"gear_water500ml\",\"571\":\"gear_waterpumpcrank\",\"572\":\"gear_waterpurificationtablets\",\"573\":\"gear_watersupplynotpotable\",\"574\":\"gear_watersupplypotable\",\"575\":\"gear_watertowernote\",\"576\":\"gear_whiskeybottle_a_prefab\",\"577\":\"gear_willboots\",\"578\":\"gear_willbootsstart\",\"579\":\"gear_willpants\",\"580\":\"gear_willpantsstart\",\"581\":\"gear_willparka\",\"582\":\"gear_willparka_table\",\"583\":\"gear_willparka_tossed\",\"584\":\"gear_willparkahangar\",\"585\":\"gear_willshirt\",\"586\":\"gear_willshirtstart\",\"587\":\"gear_willsweater\",\"588\":\"gear_willsweaterstart\",\"589\":\"gear_willtoque\",\"590\":\"gear_wolfcarcass\",\"591\":\"gear_wolfpelt\",\"592\":\"gear_wolfpeltdried\",\"593\":\"gear_wolfquarter\",\"594\":\"gear_wolfskincape\",\"595\":\"gear_wolfskincapetalltales\",\"596\":\"gear_woodmatches\",\"597\":\"gear_woolshirt\",\"598\":\"gear_woolsocks\",\"599\":\"gear_woolsweater\",\"600\":\"gear_woolwrap\",\"601\":\"gear_woolwrapcap\",\"602\":\"gear_workboots\",\"603\":\"gear_workgloves\",\"604\":\"gear_workpants\"}";
         public static Dictionary<int, string> OldIdDict = new Dictionary<int, string>();
         public static bool OldDictReady = false;
-        public static float LockpickChance = 1.3f;
-        public static float LeadKeyBrokeChance = 13;
+        public static float LockpickChance = 0.013f;
+        public static float LeadKeyBrokeChance = 0.13f;
 
+        public static Dictionary<string, Dictionary<string, BrokenFurnitureSync>> RecentBrokenFurns = new Dictionary<string, Dictionary<string, BrokenFurnitureSync>>();
+        public static Dictionary<string, Dictionary<long, PickedGearSync>> RecentPickedGears = new Dictionary<string, Dictionary<long, PickedGearSync>>();
+        public static Dictionary<string, Dictionary<string, int>> RecentlyLootedContainers = new Dictionary<string, Dictionary<string, int>>();
+        public static Dictionary<string, Dictionary<string, int>> RecentlyHarvastedPlants = new Dictionary<string, Dictionary<string, int>>();
+        public static List<DeathContainerData> DeathCreates = new List<DeathContainerData>();
+        public static Dictionary<string, string> BannedUsers = new Dictionary<string, string>();
+
+
+        public static void SaveGlobalData()
+        {
+            Log("Dedicated server saving...");
+            Dictionary<string, string> GlobalData = new Dictionary<string, string>();
+            GlobalData.Add("ropes", JSON.Dump(MyMod.DeployedRopes));
+            GlobalData.Add("shelters", JSON.Dump(MyMod.ShowSheltersBuilded));
+            int[] saveProxy = { MyMod.MinutesFromStartServer };
+            GlobalData.Add("rtt", JSON.Dump(saveProxy));
+            GlobalData.Add("deathcreates", JSON.Dump(MyMod.DeathCreates));
+            string[] saveProxy2 = { MyMod.OveridedTime };
+            GlobalData.Add("gametime", JSON.Dump(saveProxy2));
+            string Jonny = JSON.Dump(GlobalData);
+            SaveData("GlobalServerData", Jonny, GetSeed());
+            Log("Save is done! Next save " + MyMod.DsSavePerioud + " seconds later");
+        }
 
         public class KnockData
         {
@@ -434,6 +460,8 @@ namespace SkyCoop
             Log("LoadNonUnloadables Seed "+ SaveSeed);
             string LockedDoorsJSON = LoadData("LockedDoors", SaveSeed);
             string UsersSavesHashJSON = LoadData("UsersSaveHashes", SaveSeed);
+            string KilledAnimalsJSON = LoadData("KilledAnimals", SaveSeed);
+            string BannedUsersJSON = LoadData("BanList");
             if (!string.IsNullOrEmpty(LockedDoorsJSON))
             {
                 LockedDoors = JSON.Load(LockedDoorsJSON).Make<Dictionary<string, Dictionary<string, string>>>();
@@ -448,6 +476,14 @@ namespace SkyCoop
             if (!string.IsNullOrEmpty(UsersSavesHashJSON))
             {
                 UsersSaveHashs = JSON.Load(UsersSavesHashJSON).Make<Dictionary<string, long>>();
+            }
+            if (!string.IsNullOrEmpty(KilledAnimalsJSON))
+            {
+                Shared.AnimalsKilled = JSON.Load(KilledAnimalsJSON).Make<Dictionary<string, DataStr.AnimalKilled>>();
+            }
+            if (!string.IsNullOrEmpty(BannedUsersJSON))
+            {
+                BannedUsers = JSON.Load(BannedUsersJSON).Make<Dictionary<string, string>>();
             }
         }
 
@@ -543,7 +579,9 @@ namespace SkyCoop
 
         public static bool TryUseLeadKey()
         {
-            return Shared.NextFloat(0, 100) >= LeadKeyBrokeChance;
+            System.Random RNG = new System.Random();
+            
+            return RNG.NextDouble() > LeadKeyBrokeChance;
         }
 
         public static bool TryUseKey(string Scene, string DoorKey, string KeySeed)
@@ -610,7 +648,7 @@ namespace SkyCoop
         {
             System.Random RNG = new System.Random();
             bool Swear = true;
-            if (Shared.NextFloat(0, 100) <= LockpickChance)
+            if (RNG.NextDouble() < LockpickChance)
             {
                 Swear = false;
                 RemoveLockedDoor(Scene, DoorKey);
@@ -670,6 +708,11 @@ namespace SkyCoop
                 LockedDoorsChanged = false;
                 SaveData("LockedDoors", JSON.Dump(LockedDoors), SaveSeed);
             }
+            if (AnimalsKilledChanged)
+            {
+                AnimalsKilledChanged = false;
+                SaveData("KilledAnimals", JSON.Dump(Shared.AnimalsKilled), SaveSeed);
+            }
 
             foreach (var item in RecentVisual)
             {
@@ -683,9 +726,29 @@ namespace SkyCoop
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.Openables, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
+            foreach (var item in RecentBrokenFurns)
+            {
+                SaveData(GetKeyTemplate(SaveKeyTemplateType.Furns, item.Key), JSON.Dump(item.Value), SaveSeed);
+            }
+            foreach (var item in RecentPickedGears)
+            {
+                SaveData(GetKeyTemplate(SaveKeyTemplateType.PickedGears, item.Key), JSON.Dump(item.Value), SaveSeed);
+            }
+            foreach (var item in RecentlyLootedContainers)
+            {
+                SaveData(GetKeyTemplate(SaveKeyTemplateType.LootedContainers, item.Key), JSON.Dump(item.Value), SaveSeed);
+            }
+            foreach (var item in RecentlyHarvastedPlants)
+            {
+                SaveData(GetKeyTemplate(SaveKeyTemplateType.HarvestedPlants, item.Key), JSON.Dump(item.Value), SaveSeed);
+            }
             RecentVisual = new Dictionary<string, Dictionary<int, DataStr.DroppedGearItemDataPacket>>();
             RecentData = new Dictionary<string, Dictionary<int, DataStr.SlicedJsonDroppedGear>>();
             RecentOpenableThings = new Dictionary<string, Dictionary<string, bool>>();
+            RecentBrokenFurns = new Dictionary<string, Dictionary<string, BrokenFurnitureSync>>();
+            RecentPickedGears = new Dictionary<string, Dictionary<long, PickedGearSync>>();
+            RecentlyLootedContainers = new Dictionary<string, Dictionary<string, int>>();
+            RecentlyHarvastedPlants = new Dictionary<string, Dictionary<string, int>>();
 
             if (watch != null)
             {
@@ -700,7 +763,13 @@ namespace SkyCoop
             {
                 return "";
             }
-            Log("Attempt to load " + name);
+
+            if (SaveLogging)
+            {
+                Log("Attempt to load " + name);
+            }
+
+            
             Stopwatch watch = null;
             if (Diagnostic)
             {
@@ -715,7 +784,11 @@ namespace SkyCoop
                     watch.Stop();
                     Log("LoadData() Took " + watch.ElapsedMilliseconds + "ms");
                 }
-                Log("File " + fullPath+" not exist");
+
+                if (SaveLogging)
+                {
+                    Log("File " + fullPath + " not exist");
+                }
             }else{
                 byte[] FileData = File.ReadAllBytes(fullPath);
                 Result = UTF8Encoding.UTF8.GetString(FileData);
@@ -724,7 +797,11 @@ namespace SkyCoop
                     watch.Stop();
                     Log("LoadData() Took " + watch.ElapsedMilliseconds + "ms");
                 }
-                Log("Loaded with no problems");
+
+                if (SaveLogging)
+                {
+                    Log("Loaded with no problems");
+                }
             }
 
             if (!string.IsNullOrEmpty(Result))
@@ -762,6 +839,10 @@ namespace SkyCoop
 
             return AppPath + name;
         }
+        public static string GetSeparator()
+        {
+            return PathSeparator;
+        }
 #else
         public static string GetPathForName(string name, int Seed = 0)
         {
@@ -781,9 +862,14 @@ namespace SkyCoop
 
             return PersistentDataPath.m_Path + PersistentDataPath.m_PathSeparator + name;
         }
+
+        public static string GetSeparator()
+        {
+            return PersistentDataPath.m_PathSeparator;
+        }
 #endif
 
-        public static bool SaveData(string name, string content, int Seed = 0, string CustomPath = "")
+        public static bool SaveData(string name, string content, int Seed = 0, string CustomPath = "", string JustAdd = "")
         {
             if (NoSaveAndLoad)
             {
@@ -794,12 +880,23 @@ namespace SkyCoop
             {
                 watch = Stopwatch.StartNew();
             }
-            Log("Attempt to save " + name);
+
+            if (SaveLogging)
+            {
+                Log("Attempt to save " + name);
+            }
+
+            
             string pathAndFilename = GetPathForName(name, Seed);
+
 
             if (!string.IsNullOrEmpty(CustomPath))
             {
                 pathAndFilename = CustomPath;
+            }
+            if (!string.IsNullOrEmpty(JustAdd))
+            {
+                pathAndFilename = GetPathForName("", Seed)+GetSeparator()+JustAdd;
             }
             string tempFile = pathAndFilename + "_temp";
             if (File.Exists(tempFile))
@@ -823,8 +920,11 @@ namespace SkyCoop
                 watch.Stop();
                 Log("SaveData() Took " + watch.ElapsedMilliseconds + "ms");
             }
-            Log("Everything alright! File saved!");
 
+            if (SaveLogging)
+            {
+                Log("Everything alright! File saved!");
+            }
 
             return true;
         }
@@ -850,6 +950,10 @@ namespace SkyCoop
             DropsVisual = 1,
             DropsData = 2,
             Openables = 3,
+            Furns = 4,
+            PickedGears = 5,
+            LootedContainers = 6,
+            HarvestedPlants = 7
         }
 
         public static string GetKeyTemplate(SaveKeyTemplateType T, string Scene, string GUID = "")
@@ -864,6 +968,14 @@ namespace SkyCoop
                     return Scene + "_Open";
                 case SaveKeyTemplateType.DropsData:
                     return Scene + "_DropsData";
+                case SaveKeyTemplateType.Furns:
+                    return Scene + "_Furns";
+                case SaveKeyTemplateType.PickedGears:
+                    return Scene + "_PickedGears";
+                case SaveKeyTemplateType.LootedContainers:
+                    return Scene + "_LootedContainers";
+                case SaveKeyTemplateType.HarvestedPlants:
+                    return Scene + "_HarvestedPlants";
                 default:
                     return "_UNKNOWN";
             }
@@ -922,6 +1034,12 @@ namespace SkyCoop
             string Key = GetKeyTemplate(SaveKeyTemplateType.Container, scene, GUID);
             DeleteData(Key, SaveSeed);
         }
+        public static bool ContainerNotEmpty(string Scene, string GUID)
+        {
+            int SaveSeed = GetSeed();
+            string Key = GetKeyTemplate(SaveKeyTemplateType.Container, Scene, GUID);
+            return IsFileExist(Key, SaveSeed);
+        }
         public static Dictionary<string, bool> LoadOpenableThings(string scene)
         {
             int SaveSeed = GetSeed();
@@ -970,6 +1088,280 @@ namespace SkyCoop
             SaveData(Key, JSON.Dump(Dict), SaveSeed);
         }
 
+        public static void AddHarvestedPlant(string GUID, string Scene, int Client = 0)
+        {
+            MPStats.AddPlantHarvested(Server.GetMACByID(Client));
+            string Key = GUID;
+            int SaveSeed = GetSeed();
+            string SaveKey = GetKeyTemplate(SaveKeyTemplateType.HarvestedPlants, Scene);
+            Dictionary<string, int> Dict;
+
+            if (RecentlyHarvastedPlants.TryGetValue(Scene, out Dict))
+            {
+                Dict.Remove(Key);
+                Dict.Add(Key, MyMod.MinutesFromStartServer);
+                RecentlyHarvastedPlants.Remove(Scene);
+                RecentlyHarvastedPlants.Add(Scene, Dict);
+                return;
+            } else
+            {
+                Dict = LoadHarvestedPlants(Scene);
+            }
+
+            if (Dict == null)
+            {
+                Dict = new Dictionary<string, int>();
+            }
+            Dict.Remove(Key);
+            Dict.Add(Key, MyMod.MinutesFromStartServer);
+            ValidateRootExits();
+            SaveData(SaveKey, JSON.Dump(Dict), SaveSeed);
+            RecentlyHarvastedPlants.Add(Scene, Dict);
+        }
+
+        public static Dictionary<string, int> LoadHarvestedPlants(string scene)
+        {
+            int SaveSeed = GetSeed();
+            string Key = GetKeyTemplate(SaveKeyTemplateType.HarvestedPlants, scene);
+
+            Dictionary<string, int> Dict;
+            if (RecentlyHarvastedPlants.TryGetValue(scene, out Dict))
+            {
+                return Dict;
+            }
+
+            string LoadedContent = LoadData(Key, SaveSeed);
+            if (LoadedContent != "")
+            {
+                return JSON.Load(LoadedContent).Make<Dictionary<string, int>>();
+            }
+            return null;
+        }
+
+        public static void AddLootedContainer(ContainerOpenSync Box, int State = 0, int Looter = 0)
+        {
+            
+            string Scene = Box.m_LevelGUID;
+            string Key = Box.m_Guid;
+            int SaveSeed = GetSeed();
+            string SaveKey = GetKeyTemplate(SaveKeyTemplateType.LootedContainers, Scene);
+            Dictionary<string, int> Dict;
+
+            if (RecentlyLootedContainers.TryGetValue(Scene, out Dict))
+            {
+                if (Dict.ContainsKey(Key))
+                {
+                    Dict.Remove(Key);
+                } else{
+                    
+                    if(Looter != -1)
+                    {
+                        MPStats.AddLootedContainer(Server.GetMACByID(Looter));
+                    }
+                }
+                
+                Dict.Add(Key, State);
+                RecentlyLootedContainers.Remove(Scene);
+                RecentlyLootedContainers.Add(Scene, Dict);
+                return;
+            } else
+            {
+                Dict = LoadLootedContainersData(Scene);
+            }
+
+            if (Dict == null)
+            {
+                Dict = new Dictionary<string, int>();
+            }
+
+            if (Dict.ContainsKey(Key))
+            {
+                Dict.Remove(Key);
+            } else
+            {
+                if(Looter != -1)
+                {
+                    MPStats.AddLootedContainer(Server.GetMACByID(Looter));
+                }
+            }
+
+            
+            Dict.Add(Key, State);
+            ValidateRootExits();
+            SaveData(SaveKey, JSON.Dump(Dict), SaveSeed);
+            RecentlyLootedContainers.Add(Scene, Dict);
+        }
+
+        public static Dictionary<string, int> LoadLootedContainersData(string scene)
+        {
+            int SaveSeed = GetSeed();
+            string Key = GetKeyTemplate(SaveKeyTemplateType.LootedContainers, scene);
+
+            Dictionary<string, int> Dict;
+            if (RecentlyLootedContainers.TryGetValue(scene, out Dict))
+            {
+                return Dict;
+            }
+
+            string LoadedContent = LoadData(Key, SaveSeed);
+            if (LoadedContent != "")
+            {
+                return JSON.Load(LoadedContent).Make<Dictionary<string, int>>();
+            }
+            return null;
+        }
+
+        public static int AddLootToScene(string Scene)
+        {
+            Dictionary<string, int> Containers = LoadLootedContainersData(Scene);
+            int Updated = 0;
+            List<KeyValuePair<string, int>> Buffer = new List<KeyValuePair<string, int>>();
+            foreach (var item in Containers)
+            {
+                Buffer.Add(item);
+            }
+            for (int i = 0; i < Buffer.Count; i++)
+            {
+                ContainerOpenSync Box = new ContainerOpenSync();
+                Box.m_Guid = Buffer[i].Key;
+                Box.m_LevelGUID = Scene;
+
+                if (Buffer[i].Value != 2)
+                {
+                    AddLootedContainer(Box, 2, -1);
+                    ServerSend.CHANGECONTAINERSTATE(0, Buffer[i].Key, 2, Scene, true);
+                    Updated++;
+                }
+            }
+
+            return Updated;
+        }
+        public static bool AddLootToContainerOnScene(string GUID, string Scene)
+        {
+            Dictionary<string, int> Containers = LoadLootedContainersData(Scene);
+
+            if (Containers.ContainsKey(GUID))
+            {
+                ContainerOpenSync Box = new ContainerOpenSync();
+                Box.m_Guid = GUID;
+                Box.m_LevelGUID = Scene;
+                AddLootedContainer(Box, 2, -1);
+                ServerSend.CHANGECONTAINERSTATE(0, GUID, 2, Scene, true);
+                return true;
+            }
+            return false;
+        }
+
+        public static long GetPickedGearKey(PickedGearSync Gear)
+        {
+            return GetPickedGearKey(Gear.m_Spawn);
+        }
+        public static long GetPickedGearKey(Vector3 v3)
+        {
+            long Key = Shared.GetVectorHashV2(v3);
+            return Key;
+        }
+
+        public static void AddPickedGear(PickedGearSync Gear, int picker)
+        {
+            MPStats.AddPickedGear(Server.GetMACByID(picker));
+            string Scene = Gear.m_LevelGUID;
+            long Key = GetPickedGearKey(Gear);
+            int SaveSeed = GetSeed();
+            string SaveKey = GetKeyTemplate(SaveKeyTemplateType.PickedGears, Scene);
+            Dictionary<long, PickedGearSync> Dict;
+
+            if (RecentPickedGears.TryGetValue(Scene, out Dict))
+            {
+                Dict.Remove(Key);
+                Dict.Add(Key, Gear);
+                RecentPickedGears.Remove(Scene);
+                RecentPickedGears.Add(Scene, Dict);
+                return;
+            } else
+            {
+                Dict = LoadPickedGearsData(Scene);
+            }
+
+            if (Dict == null)
+            {
+                Dict = new Dictionary<long, PickedGearSync>();
+            }
+            Dict.Remove(Key);
+            Dict.Add(Key, Gear);
+            ValidateRootExits();
+            SaveData(SaveKey, JSON.Dump(Dict), SaveSeed);
+            RecentPickedGears.Add(Scene, Dict);
+        }
+
+        public static Dictionary<long, PickedGearSync> LoadPickedGearsData(string scene)
+        {
+            int SaveSeed = GetSeed();
+            string Key = GetKeyTemplate(SaveKeyTemplateType.PickedGears, scene);
+
+            Dictionary<long, PickedGearSync> Dict;
+            if (RecentPickedGears.TryGetValue(scene, out Dict))
+            {
+                return Dict;
+            }
+
+            string LoadedContent = LoadData(Key, SaveSeed);
+            if (LoadedContent != "")
+            {
+                return JSON.Load(LoadedContent).Make<Dictionary<long, PickedGearSync>>();
+            }
+            return null;
+        }
+
+        public static void AddBrokenFurn(BrokenFurnitureSync furn)
+        {
+            string Scene = furn.m_LevelGUID;
+            string Key = furn.m_LevelGUID + furn.m_ParentGuid;
+
+            int SaveSeed = GetSeed();
+            string SaveKey = GetKeyTemplate(SaveKeyTemplateType.Furns, Scene);
+            Dictionary<string, BrokenFurnitureSync> Dict;
+
+            if (RecentBrokenFurns.TryGetValue(Scene, out Dict))
+            {
+                Dict.Remove(Key);
+                Dict.Add(Key, furn);
+                RecentBrokenFurns.Remove(Scene);
+                RecentBrokenFurns.Add(Scene, Dict);
+                return;
+            } else
+            {
+                Dict = LoadFurnsData(Scene);
+            }
+
+            if (Dict == null)
+            {
+                Dict = new Dictionary<string, BrokenFurnitureSync>();
+            }
+            Dict.Remove(Key);
+            Dict.Add(Key, furn);
+            ValidateRootExits();
+            SaveData(SaveKey, JSON.Dump(Dict), SaveSeed);
+            RecentBrokenFurns.Add(Scene, Dict);
+        }
+        public static Dictionary<string, BrokenFurnitureSync> LoadFurnsData(string scene)
+        {
+            int SaveSeed = GetSeed();
+            string Key = GetKeyTemplate(SaveKeyTemplateType.Furns, scene);
+
+            Dictionary<string, BrokenFurnitureSync> Dict;
+            if (RecentBrokenFurns.TryGetValue(scene, out Dict))
+            {
+                return Dict;
+            }
+
+            string LoadedContent = LoadData(Key, SaveSeed);
+            if (LoadedContent != "")
+            {
+                return JSON.Load(LoadedContent).Make<Dictionary<string, BrokenFurnitureSync>>();
+            }
+            return null;
+        }
 
         public static Dictionary<int, DataStr.DroppedGearItemDataPacket> LoadDropVisual(string scene)
         {
@@ -1179,26 +1571,6 @@ namespace SkyCoop
             string Name = LoadData("MultiplayerNickName");
             return Name;
         }
-        public static void SaveGlobalData()
-        {
-            Log("Dedicated server saving...");
-            Dictionary<string, string> GlobalData = new Dictionary<string, string>();
-            GlobalData.Add("furns", JSON.Dump(MyMod.BrokenFurniture));
-            GlobalData.Add("pickedgears", JSON.Dump(MyMod.PickedGears));
-            GlobalData.Add("ropes", JSON.Dump(MyMod.DeployedRopes));
-            GlobalData.Add("containers", JSON.Dump(MyMod.LootedContainers));
-            GlobalData.Add("plants", JSON.Dump(MyMod.HarvestedPlants));
-            GlobalData.Add("shelters", JSON.Dump(MyMod.ShowSheltersBuilded));
-            int[] saveProxy = { MyMod.MinutesFromStartServer };
-            GlobalData.Add("rtt", JSON.Dump(saveProxy));
-            GlobalData.Add("killedanimals", JSON.Dump(Shared.AnimalsKilled));
-            GlobalData.Add("deathcreates", JSON.Dump(MyMod.DeathCreates));
-            string[] saveProxy2 = { MyMod.OveridedTime };
-            GlobalData.Add("gametime", JSON.Dump(saveProxy2));
-            string Jonny = JSON.Dump(GlobalData);
-            SaveData("GlobalServerData", Jonny, GetSeed());
-            Log("Save is done! Next save "+MyMod.DsSavePerioud+" seconds later");
-        }
         public static string GetDictionaryString(Dictionary<string, string> Dict, string Key)
         {
             string Val;
@@ -1219,15 +1591,10 @@ namespace SkyCoop
             {
                 return;
             }
-            MyMod.BrokenFurniture = JSON.Load(GetDictionaryString(GlobalData, "furns")).Make<List<BrokenFurnitureSync>>();
-            MyMod.PickedGears = JSON.Load(GetDictionaryString(GlobalData, "pickedgears")).Make<List<PickedGearSync>>();
             MyMod.DeployedRopes = JSON.Load(GetDictionaryString(GlobalData, "ropes")).Make<List<ClimbingRopeSync>>();
-            MyMod.LootedContainers = JSON.Load(GetDictionaryString(GlobalData, "containers")).Make<List<ContainerOpenSync>>();
-            MyMod.HarvestedPlants = JSON.Load(GetDictionaryString(GlobalData, "plants")).Make<List<string>>();
             MyMod.ShowSheltersBuilded = JSON.Load(GetDictionaryString(GlobalData, "shelters")).Make<List<ShowShelterByOther>>();
             int[] saveProxy = JSON.Load(GetDictionaryString(GlobalData, "rtt")).Make<int[]>();
             MyMod.MinutesFromStartServer = saveProxy[0];
-            Shared.AnimalsKilled = JSON.Load(GetDictionaryString(GlobalData, "killedanimals")).Make<Dictionary<string, AnimalKilled>>();
             MyMod.DeathCreates = JSON.Load(GetDictionaryString(GlobalData, "deathcreates")).Make<List<DeathContainerData>>();
             string[] saveProxy2 = JSON.Load(GetDictionaryString(GlobalData, "gametime")).Make<string[]>();
             MyMod.OveridedTime = saveProxy2[0];
@@ -1269,6 +1636,27 @@ namespace SkyCoop
 #endif
 
             return Json;
+        }
+
+        public static string GetSubNetworkGUID()
+        {
+            string GUID = "";
+            //GUID = LoadData("SubNetworkGUID");
+            //if(string.IsNullOrEmpty(GUID))
+            //{
+            //    GUID = GetNewUGUID();
+            //    SaveData("SubNetworkGUID", GUID);
+            //}
+
+            GUID = Shared.GetMacAddress();
+
+
+            return GUID;
+        }
+
+        public static void SaveBanned()
+        {
+            SaveData("BanList", JSON.Dump(BannedUsers));
         }
     }
 }

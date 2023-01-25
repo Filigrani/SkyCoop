@@ -26,7 +26,6 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<ContainersSync>();
             ClassInjector.RegisterTypeInIl2Cpp<UiButtonPressHook>();
             ClassInjector.RegisterTypeInIl2Cpp<DestoryStoneOnStop>();
-            ClassInjector.RegisterTypeInIl2Cpp<GearSpawnPointSave>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerAnimator>();
             ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerClothingManager>();
             ClassInjector.RegisterTypeInIl2Cpp<DoNotSerializeThis>();
@@ -126,20 +125,6 @@ namespace SkyCoop
         {
             public DoNotSerializeThis(IntPtr ptr) : base(ptr) { }
         }
-        public class GearSpawnPointSave : MonoBehaviour
-        {
-            public GearSpawnPointSave(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Obj = null;
-            public Vector3 m_SpawnPoint = new Vector3(0, 0, 0);
-
-            public void SaveMe()
-            {
-                if (m_Obj != null)
-                {
-                    m_SpawnPoint = m_Obj.transform.position;
-                }
-            }
-        }
         public class ContainersSync : MonoBehaviour
         {
             public ContainersSync(IntPtr ptr) : base(ptr) { }
@@ -147,6 +132,7 @@ namespace SkyCoop
             public Container m_Cont = null;
             public string m_Guid = "";
             public string m_LastAnim = "";
+            public bool m_Empty = true;
 
 
             void Update()
@@ -280,6 +266,7 @@ namespace SkyCoop
             public bool m_AddedToRegion = false;
             public bool m_MarkToDestroy = false;
             public List<DataStr.AnimalArrow> m_Arrows = new List<DataStr.AnimalArrow>();
+            public int LastDamager = 0;
 
             void Start()
             {
@@ -2814,6 +2801,30 @@ namespace SkyCoop
                         m_Animer.Play("DoSitPickup", 3);
                         //MelonLogger.Msg("Playing DoSitPickup");
                     }
+                }
+            }
+            public void DoLeftHandEmote(string Emote)
+            {
+                GameObject m_Player = m_Animer.gameObject;
+                int m_ID = ClientUser.myId;
+                //string m_AnimState = MyMod.MyAnimState;
+                int armTagHash = m_Animer.GetCurrentAnimatorStateInfo(3).tagHash;
+                int armNeededTagHash = Animator.StringToHash("Pickup");
+                int RequiredState = Animator.StringToHash("No");
+
+                //if (!m_MyDoll)
+                //{
+                //    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
+                //    if (MyMod.playersData[m_ID] == null || MyMod.playersData[m_ID].m_Levelid != MyMod.levelid || MyMod.playersData[m_ID].m_LevelGuid != MyMod.level_guid)
+                //    {
+                //        return;
+                //    }
+                //    m_AnimState = MyMod.playersData[m_ID].m_AnimState;
+                //}
+
+                if (armTagHash == RequiredState)
+                {
+                    m_Animer.Play(Emote, 3);
                 }
             }
             public void MeleeAttack()

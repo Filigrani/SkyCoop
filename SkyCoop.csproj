@@ -51,6 +51,7 @@
     <Compile Include="MenuHook.cs" />
     <Compile Include="ModsValidation.cs" />
     <Compile Include="MPSaveManager.cs" />
+    <Compile Include="MPStats.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="Patches.cs" />
     <Compile Include="ResourceIndependent.cs" />
@@ -185,6 +186,7 @@
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\ServerSend.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\ServerSend.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\Shared.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Shared.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\Supporters.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Supporters.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\MPStats.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\MPStats.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\bin\Release\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll"
 "C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d"
 "C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\BuildInfo.json" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\gear-spawns" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\blueprints" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\auto-mapped"</PostBuildEvent>

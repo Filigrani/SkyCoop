@@ -171,6 +171,9 @@ namespace GameServer
         REREGISTERWEATHER,
         REMOVEKEYBYSEED,
         ADDHUDMSG,
+        CHANGECONTAINERSTATE,
+        FINISHEDSENDINGCONTAINER,
+        TRIGGEREMOTE,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -330,6 +333,9 @@ namespace GameServer
         REREGISTERWEATHER,
         REMOVEKEYBYSEED,
         ADDHUDMSG,
+        CHANGECONTAINERSTATE,
+        FINISHEDSENDINGCONTAINER,
+        TRIGGEREMOTE,
     }
 
     public class Packet : IDisposable
@@ -368,6 +374,11 @@ namespace GameServer
         {
             return buffer.Count;
         }
+        public int ReturnUnusedBytesCount()
+        {
+            int Count = buffer.Count - readPos;
+            return Count;
+        }
 
         /// <summary>Creates a packet from which data can be read. Used for receiving.</summary>
         /// <param name="_data">The bytes to add to the packet.</param>
@@ -399,6 +410,20 @@ namespace GameServer
         public void InsertInt(int _value)
         {
             buffer.InsertRange(0, BitConverter.GetBytes(_value)); // Insert the int at the start of the buffer
+        }
+        public void InsertString(string _value)
+        {
+            buffer.InsertRange(0, Encoding.UTF8.GetBytes(_value));
+            buffer.InsertRange(0, BitConverter.GetBytes(_value.Length));
+        }
+        public void InsertClientInfo(int ID, string GUID)
+        {
+            List<byte> bytes = new List<byte>();
+            bytes.AddRange(BitConverter.GetBytes(ID)); // ID
+            bytes.AddRange(BitConverter.GetBytes(GUID.Length)); // GUID Length
+            bytes.AddRange(Encoding.UTF8.GetBytes(GUID)); // GUID
+
+            buffer.InsertRange(0, bytes);
         }
 
         /// <summary>Gets the packet's content in array form.</summary>
@@ -684,6 +709,7 @@ namespace GameServer
             Write(obj.m_LevelID);
             Write(obj.m_LevelGUID);
             Write(obj.m_MyInstanceID);
+            Write(obj.m_GearName);
         }
         public void Write(DataStr.ClimbingRopeSync obj)
         {
@@ -728,6 +754,7 @@ namespace GameServer
             Write(obj.m_SendTo);
             Write(obj.m_Last);
             Write(obj.m_Extra);
+            Write(obj.m_CheckHash);
         }
         public void Write(DataStr.SlicedBytesData obj)
         {
@@ -1254,6 +1281,7 @@ namespace GameServer
             obj.m_LevelID = ReadInt();
             obj.m_LevelGUID = ReadString();
             obj.m_MyInstanceID = ReadInt();
+            obj.m_GearName = ReadString();
 
             return obj;
         }
@@ -1350,6 +1378,7 @@ namespace GameServer
             obj.m_SendTo = ReadInt();
             obj.m_Last = ReadBool();
             obj.m_Extra = ReadExtraDataForDropperGear();
+            obj.m_CheckHash = ReadLong();
             return obj;
         }
         public DataStr.SlicedBytesData ReadSlicedBytes()

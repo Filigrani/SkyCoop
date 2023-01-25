@@ -48,6 +48,7 @@ namespace SkyCoop
             FlairsIDs.Add("Pie"); // 15
             FlairsIDs.Add("Snw"); // 16
             FlairsIDs.Add("Lammy"); // 17
+            FlairsIDs.Add("Dedi"); // 18
 
             FlairsIDsReady = true;
         }
@@ -90,7 +91,7 @@ namespace SkyCoop
                             Flair.SetActive(false);
                         }else {
                             Flair.SetActive(true);
-                            int DisplaySpot = FlairInx + 1;
+                            int DisplaySpot = Spot + 1;
                             DebugLog(DebugName + " equipped "+GetFlairNameByID(FlairInx)+" on spot "+ DisplaySpot);
                         }
                     }
@@ -131,6 +132,14 @@ namespace SkyCoop
         // if user has old or modified saves where listed benefits that can't be used anymore.
         public static SupporterBenefits VerifyBenefitsWithConfig(string Owner, SupporterBenefits Desired)
         {
+            if (DeBug)
+            {
+                Log("Player "+Owner+ " Desired following flairs:");
+                for (int i = 0; i < Desired.m_Flairs.Count; i++)
+                {
+                    Log("Slot" + i + " FlairID "+ Desired.m_Flairs[i]);
+                }
+            }
             SupporterBenefits Original = GetPlayerBenefits(Owner);
             SupporterBenefits Configurated = new SupporterBenefits();
             for (int i = 0; i < FlairSpots; i++)
@@ -146,6 +155,7 @@ namespace SkyCoop
             {
                 Configurated.m_BrightNick = true;
             }
+            DebugLog("Configurated flairs for this player:");
             for (int i = 0; i < Desired.m_Flairs.Count; i++)
             {
                 if(i >= FlairSpots)
@@ -160,7 +170,9 @@ namespace SkyCoop
                         Configurated.m_Flairs[i] = Flair;
                     }
                 }
+                DebugLog("Slot" + i + " FlairID " + Configurated.m_Flairs[i]);
             }
+
 
             return Configurated;
         }
