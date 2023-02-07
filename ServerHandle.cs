@@ -72,14 +72,12 @@ namespace GameServer
                 return;
             }
 
+            Server.clients[_fromClient].Ready = true;
+
             string SupporterID = _packet.ReadString();
             Supporters.SupporterBenefits ConfiguratedBenefits = _packet.ReadSupporterBenefits();
             MyMod.playersData[_fromClient].m_SupporterBenefits = Supporters.VerifyBenefitsWithConfig(SupporterID, ConfiguratedBenefits);
             MyMod.playersData[_fromClient].m_SteamOrEGSID = SupporterID;
-#if (!DEDICATED)
-            Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
-#endif
-            ServerSend.BENEFITINIT(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits);
 
             long ClientModsHash = _packet.ReadLong();
 
@@ -101,6 +99,11 @@ namespace GameServer
                     return;
                 }
             }
+
+#if (!DEDICATED)
+            Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
+#endif
+            ServerSend.BENEFITINIT(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits);
 
             ServerSend.GAMETIME(MyMod.OveridedTime);
 
@@ -322,9 +325,6 @@ namespace GameServer
 #else
             ServerSend.GOTITEMSLICE(got.m_SendTo, got);
 #endif
-
-
-
         }
         public static void GAMETIME(int _fromClient, Packet _packet)
         {
@@ -1070,6 +1070,11 @@ namespace GameServer
             DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
             Shared.AddSlicedJsonDataForDrop(got, _fromClient);
         }
+        public static void GOTPHOTOSLICE(int _fromClient, Packet _packet)
+        {
+            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
+            Shared.AddSlicedJsonDataForPhoto(got, _fromClient);
+        }
         public static void REQUESTPICKUP(int _fromClient, Packet _packet)
         {
             int Hash = _packet.ReadInt();
@@ -1709,6 +1714,22 @@ namespace GameServer
             }
 #endif
             ServerSend.TRIGGEREMOTE(_fromClient, EmoteID);
+        }
+        public static void PHOTOREQUEST(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            string Base64 = MPSaveManager.LoadPhoto(GUID);
+            if (!string.IsNullOrEmpty(Base64))
+            {
+                ServerSend.PHOTOREQUEST(_fromClient, Base64, GUID);
+            }
+        }
+        public static void STARTEXPEDITION(int _fromClient, Packet _packet)
+        {
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                ExpeditionManager.StartNewExpedition(Server.GetMACByID(_fromClient), MyMod.playersData[_fromClient].m_LastRegion);
+            }
         }
     }
 }

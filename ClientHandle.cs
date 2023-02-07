@@ -17,6 +17,7 @@ using GameServer;
 using Il2CppSystem.Reflection;
 using System.Diagnostics;
 using static SkyCoop.Shared;
+using static Utils;
 
 namespace SkyCoop
 {
@@ -986,6 +987,11 @@ namespace SkyCoop
         {
             MyMod.SendNextGearCarefulSlice();
         }
+        public static void READYSENDNEXTSLICEPHOTO(Packet _packet)
+        {
+            MyMod.SendNextPhotoCarefulSlice();
+        }
+        
         public static void CHANGEAIM(Packet _packet)
         {
             bool IsAiming = _packet.ReadBool();
@@ -1510,6 +1516,51 @@ namespace SkyCoop
                         {
                             Anim.DoLeftHandEmote(Emote.m_Animation);
                         }
+                    }
+                }
+            }
+        }
+        public static void EXPEDITIONSYNC(Packet _packet)
+        {
+            string ExpeditionName = _packet.ReadString();
+            string Text = _packet.ReadString();
+            int TimeLeft = _packet.ReadInt();
+
+            if(string.IsNullOrEmpty(ExpeditionName) && string.IsNullOrEmpty(Text) && TimeLeft == 0)
+            {
+                MyMod.OnExpedition = false;
+            } else
+            {
+                MyMod.OnExpedition = true;
+                MyMod.ExpeditionLastName = ExpeditionName;
+                MyMod.ExpeditionLastTaskText = Text;
+                MyMod.ExpeditionLastTime = TimeLeft;
+            }
+        }
+        public static void EXPEDITIONRESULT(Packet _packet)
+        {
+            int State = _packet.ReadInt();
+            MyMod.DoExpeditionState(State);
+        }
+        public static void PHOTOREQUEST(Packet _packet)
+        {
+            string Base64 = _packet.ReadString();
+            string GUID = _packet.ReadString();
+            MPSaveManager.AddPhoto(Base64, true, GUID);
+            MelonLogger.Msg("Got Requested Photo "+ GUID);
+
+            foreach (var item in MyMod.DroppedGearsObjs)
+            {
+                if(item.Value != null && item.Value.GetComponent<Comps.DroppedGearDummy>())
+                {
+                    if(item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_PhotoGUID == GUID)
+                    {
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(GUID);
+                        if (tex)
+                        {
+                            item.Value.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                        }
+                        MelonLogger.Msg("Found and applied on " + item.Key+" dropped gear");
                     }
                 }
             }

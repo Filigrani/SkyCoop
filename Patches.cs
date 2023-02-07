@@ -22,6 +22,7 @@ using UnityEngine.SceneManagement;
 using static SkyCoop.DataStr;
 using static SkyCoop.Comps;
 using Il2CppSystem.Threading.Tasks;
+using static Utils;
 
 namespace SkyCoop
 {
@@ -321,15 +322,19 @@ namespace SkyCoop
                         }
 
 
-                        if(Door.m_SceneCanBeInstanced && !string.IsNullOrEmpty(Door.m_GUID) && Door.m_Active)
+                        if (Door.m_SceneCanBeInstanced && !string.IsNullOrEmpty(Door.m_GUID) && Door.m_Active)
                         {
-                            if (Door.GetComponent<Comps.DoorLockedOnKey >() == null)
+                            if (Door.GetComponent<Comps.DoorLockedOnKey>() == null)
                             {
                                 MyMod.SelectKeys(__instance.m_InteractiveObjectUnderCrosshair, MyMod.KeysAction.LOCK);
                             }
-                        }else{
+                        } else
+                        {
                             HUDMessage.AddMessage("This door can't be locked!");
-                        }              
+                        }
+                    }else if(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<Container>() && MyMod.ExpeditionEditorUI != null && MyMod.ExpeditionEditorUI.activeSelf)
+                    {
+                        ExpeditionEditor.AddContainer(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
                     }else{
                         MyMod.PlaceDroppedGear(__instance.m_InteractiveObjectUnderCrosshair);
                         MelonLogger.Msg("Going to place object");
@@ -1238,9 +1243,27 @@ namespace SkyCoop
                 }
                 __instance.m_DailyHPDecay = 0;
 
-                if (MyMod.IsCustomHandItem(__instance.name))
+                if (MyMod.IsCustomHandItem(__instance.name) || __instance.name == "GEAR_SCPhoto")
                 {
-                    if(__instance.name != "GEAR_Hacksaw")
+                    if(__instance.name == "GEAR_SCPhoto")
+                    {
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                            FPI.m_FirstPersonObjectName = "Stone";
+                            FPI.m_FPSMeshID = (int)GameManager.GetVpFPSCamera().GetWeaponIDFromName(FPI.m_FirstPersonObjectName);
+                            FPI.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(FPI.m_FPSMeshID);
+                            FPI.m_UnWieldAudio = "Play_Photo";
+                            FPI.m_WieldAudio = "Play_Photo";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Stone");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
+                        }
+                    }
+                    else if(__instance.name != "GEAR_Hacksaw")
                     {
                         if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
                         {
@@ -1294,8 +1317,19 @@ namespace SkyCoop
                         __instance.m_LocalizedDisplayName.m_LocalizationID = "Note";
                         __instance.m_LocalizedDescription.m_LocalizationID = "Charcoal note";
                     }
+                }else if(__instance.name == "GEAR_SCPhoto")
+                {
+                    if (__instance.m_ObjectGuid != null)
+                    {
+                        MelonLogger.Msg("Going render photo " + __instance.m_ObjectGuid.m_Guid);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(__instance.m_ObjectGuid.m_Guid);
+                        if (tex)
+                        {
+                            __instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                        }
+                    }
                 }
-                if (__instance.name == "GEAR_CookingPot")
+                else if (__instance.name == "GEAR_CookingPot")
                 {
                     if (__instance.gameObject.GetComponent<ClothingItem>() == null)
                     {
@@ -6853,6 +6887,41 @@ namespace SkyCoop
                 return true;
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "EquipItem")] // Once
+        private static class PlayerManager_EquipItem
+        {
+            private static void Prefix(PlayerManager __instance, GearItem gi)
+            {
+                if (gi.m_GearName == "GEAR_SCPhoto")
+                {
+                    StoneItem SI = gi.gameObject.AddComponent<StoneItem>();
+                    SI.m_RigidBody = gi.gameObject.AddComponent<Rigidbody>();
+                    SI.m_RigidBody.isKinematic = true;
+                    SI.m_GearItem = gi;
+                    SI.m_CanThrow = false;
+                    gi.m_StoneItem = SI;
+
+
+                    if (gi.m_ObjectGuid && !string.IsNullOrEmpty(gi.m_ObjectGuid.m_Guid))
+                    {
+                        if (MyMod.ViewModelPhoto)
+                        {
+                            MyMod.ViewModelPhoto.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = gi.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture;
+                        }
+                    }
+                }
+            }
+            private static void Postfix(PlayerManager __instance, GearItem gi)
+            {
+                if (gi.m_GearName == "GEAR_SCPhoto")
+                {
+                    StoneItem SI = gi.gameObject.GetComponent<StoneItem>();
+                    UnityEngine.Object.Destroy(SI.m_RigidBody);
+                    UnityEngine.Object.Destroy(SI);
+                    gi.m_StoneItem = null;
+                }
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "GetEquipButtonLocalizationId")] // Once
         private static class ItemDescriptionPage_GetEquipButtonLocalizationId
         {
@@ -6867,7 +6936,7 @@ namespace SkyCoop
 
                 if (gi != null)
                 {
-                    if (MyMod.IsCustomHandItem(gi.m_GearName))
+                    if (MyMod.IsCustomHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCPhoto")
                     {
                         __result = "GAMEPLAY_Use";
                     } else if (gi.m_GearName == "GEAR_NoteMCU")
@@ -7060,6 +7129,15 @@ namespace SkyCoop
                     __instance.m_ChallengeTexture.mainTexture = Utils.GetLargeTexture("challenge_HopelessRescue");
                     Utils.SetActive(__instance.m_ObjectiveTransform.gameObject, false);
                 }
+                //else if (MyMod.OnExpedition)
+                //{
+                //    __instance.m_TimerObject.SetActive(MyMod.ExpeditionLastTime != 0);
+                //    __instance.m_MissionNameLabel.text = MyMod.ExpeditionLastName;
+                //    __instance.m_MissionNameHeaderLabel.text = MyMod.ExpeditionLastName;
+                //    __instance.m_TimerLabel.text = InterfaceManager.m_Panel_ActionsRadial.m_MissionTimerLabel.text;
+                //    __instance.m_ChallengeTexture.mainTexture = Utils.GetLargeTexture("challenge_HopelessRescue");
+                //    Utils.SetActive(__instance.m_ObjectiveTransform.gameObject, false);
+                //}
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(InterfaceManager), "IsUsingSurvivalTabs")]
@@ -7071,6 +7149,10 @@ namespace SkyCoop
                 {
                     __result = false;
                 }
+                //if (MyMod.CurrentCustomChalleng.m_Started || MyMod.OnExpedition)
+                //{
+                //    __result = false;
+                //}
             }
         }
 

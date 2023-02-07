@@ -74,6 +74,7 @@ namespace SkyCoop
         public static Dictionary<string, Dictionary<string, int>> RecentlyHarvastedPlants = new Dictionary<string, Dictionary<string, int>>();
         public static List<DeathContainerData> DeathCreates = new List<DeathContainerData>();
         public static Dictionary<string, string> BannedUsers = new Dictionary<string, string>();
+        public static string MyMAC = "";
 
 
         public static void SaveGlobalData()
@@ -456,6 +457,7 @@ namespace SkyCoop
 
         public static void LoadNonUnloadables()
         {
+            ExpeditionBuilder.Init();
             int SaveSeed = GetSeed();
             Log("LoadNonUnloadables Seed "+ SaveSeed);
             string LockedDoorsJSON = LoadData("LockedDoors", SaveSeed);
@@ -1230,6 +1232,12 @@ namespace SkyCoop
                 {
                     AddLootedContainer(Box, 2, -1);
                     ServerSend.CHANGECONTAINERSTATE(0, Buffer[i].Key, 2, Scene, true);
+#if (!DEDICATED)
+                    if (MyMod.level_guid == Scene)
+                    {
+                        MyMod.RemoveLootFromContainer(Buffer[i].Key, 2);
+                    }
+#endif
                     Updated++;
                 }
             }
@@ -1239,6 +1247,10 @@ namespace SkyCoop
         public static bool AddLootToContainerOnScene(string GUID, string Scene)
         {
             Dictionary<string, int> Containers = LoadLootedContainersData(Scene);
+            if (Containers == null)
+            {
+                return false;
+            }
 
             if (Containers.ContainsKey(GUID))
             {
@@ -1247,6 +1259,12 @@ namespace SkyCoop
                 Box.m_LevelGUID = Scene;
                 AddLootedContainer(Box, 2, -1);
                 ServerSend.CHANGECONTAINERSTATE(0, GUID, 2, Scene, true);
+#if (!DEDICATED)
+                if(MyMod.level_guid == Scene)
+                {
+                    MyMod.RemoveLootFromContainer(GUID, 2);
+                }
+#endif
                 return true;
             }
             return false;
@@ -1525,6 +1543,8 @@ namespace SkyCoop
             {
                 Blanks.Remove(Hash);
             }
+
+            ExpeditionManager.RemoveGearSpawnerGear(Hash);
         }
 
         public static DataStr.SlicedJsonDroppedGear RequestSpecificGear(int Hash, string Scene, bool Remove = true)
@@ -1608,17 +1628,9 @@ namespace SkyCoop
             string FileName = DT.Hour.ToString() + "_" + DT.Minute.ToString() + "_" + DT.Second.ToString() + "_" + DT.Millisecond.ToString();
             SaveData(FileName, JSON, 0, GetPathForName(@"Snapshots\" + Alias+@"\"+FileName));
         }
-        public static string UpgradeOldJsonFile(string Json, bool Decompress = false)
+
+        public static string VectorsFixUp(string Json)
         {
-            if (Decompress)
-            {
-                Json = Shared.DecompressString(Json);
-            }
-            Json = Json.Replace("SkyCoop.MyMod", "SkyCoop.DataStr");
-            if (Decompress)
-            {
-                Json = Shared.CompressString(Json);
-            }
 #if (DEDICATED)
             Json = Json.Replace("UnityEngine.Vector3", "System.Numerics.Vector3");
             Json = Json.Replace("UnityEngine.Quaternion", "System.Numerics.Quaternion");
@@ -1634,29 +1646,113 @@ namespace SkyCoop
             Json = Json.Replace("\"Z\"", "\"z\"");
             Json = Json.Replace("\"W\"", "\"w\"");
 #endif
+            return Json;
+        }
+
+
+        public static string UpgradeOldJsonFile(string Json, bool Decompress = false)
+        {
+            if (Decompress)
+            {
+                Json = Shared.DecompressString(Json);
+            }
+            Json = Json.Replace("SkyCoop.MyMod", "SkyCoop.DataStr");
+            if (Decompress)
+            {
+                Json = Shared.CompressString(Json);
+            }
+
+            Json = VectorsFixUp(Json);
 
             return Json;
         }
 
         public static string GetSubNetworkGUID()
         {
-            string GUID = "";
-            //GUID = LoadData("SubNetworkGUID");
-            //if(string.IsNullOrEmpty(GUID))
-            //{
-            //    GUID = GetNewUGUID();
-            //    SaveData("SubNetworkGUID", GUID);
-            //}
+#if(!DEDICATED)
 
-            GUID = Shared.GetMacAddress();
-
-
-            return GUID;
+            if (string.IsNullOrEmpty(MyMAC))
+            {
+                MyMAC = Shared.GetMacAddress();
+            }
+            return MyMAC;
+#else
+            return "";
+#endif
         }
 
         public static void SaveBanned()
         {
             SaveData("BanList", JSON.Dump(BannedUsers));
+        }
+
+#if(!DEDICATED)
+        public static Texture2D GetPhotoTexture(string GUID)
+        {
+            Texture2D tex = Utils.GetCachedTexture("Photo_"+ GUID);
+            if (tex != null)
+            {
+                Log("Found cached texture");
+                return tex;
+            }
+            string Base64 = LoadPhoto(GUID, true);
+            if (!string.IsNullOrEmpty(Base64))
+            {
+                Log("Loaded texture from local file");
+                tex = new Texture2D(MyMod.PhotoW, MyMod.PhotoH);
+                ImageConversion.LoadImage(tex, Convert.FromBase64String(Base64));
+                Utils.CacheTexture("Photo_" + GUID, tex);
+                return tex;
+            } else
+            {
+                return null;
+            }
+        }
+#endif
+
+        public static string AddPhoto(string Base64, bool Cached = false, string GUID = "")
+        {
+            if (string.IsNullOrEmpty(GUID))
+            {
+                GUID = GetNewUGUID();
+            }
+
+#if(!DEDICATED_LINUX)
+            string Separator = @"\";
+#else
+            string Separator = @"/";
+#endif
+            int SaveSeed = GetSeed();
+            string SaveFolder = "Photos";
+            if (Cached)
+            {
+                SaveSeed = 0;
+                SaveFolder = "CachedPhotos";
+            }
+
+            CreateFolderIfNotExist(GetPathForName(SaveFolder, SaveSeed));
+
+            SaveData(GUID, Base64, 0, GetPathForName(SaveFolder + Separator + GUID, SaveSeed));
+            return GUID;
+        }
+
+        public static string LoadPhoto(string GUID, bool Cached = false)
+        {
+#if (!DEDICATED_LINUX)
+            string Separator = @"\";
+#else
+            string Separator = @"/";
+#endif
+
+            int SaveSeed = GetSeed();
+            string SaveFolder = "Photos";
+            if (Cached)
+            {
+                SaveSeed = 0;
+                SaveFolder = "CachedPhotos";
+            }
+
+            return LoadData(SaveFolder + Separator + GUID, SaveSeed);
         }
     }
 }

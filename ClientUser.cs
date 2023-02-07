@@ -330,6 +330,10 @@ namespace GameServer
             { (int)ServerPackets.CHANGECONTAINERSTATE, ClientHandle.CHANGECONTAINERSTATE},
             { (int)ServerPackets.FINISHEDSENDINGCONTAINER, ClientHandle.FINISHEDSENDINGCONTAINER},
             { (int)ServerPackets.TRIGGEREMOTE, ClientHandle.TRIGGEREMOTE},
+            { (int)ServerPackets.EXPEDITIONSYNC, ClientHandle.EXPEDITIONSYNC},
+            { (int)ServerPackets.EXPEDITIONRESULT, ClientHandle.EXPEDITIONRESULT},
+            { (int)ServerPackets.PHOTOREQUEST, ClientHandle.PHOTOREQUEST},
+            { (int)ServerPackets.READYSENDNEXTSLICEPHOTO, ClientHandle.READYSENDNEXTSLICEPHOTO},
         };
             MelonLogger.Msg("Initialized packets.");
         }

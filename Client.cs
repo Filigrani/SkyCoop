@@ -16,11 +16,13 @@ namespace GameServer
         public int TimeOutTime = 0;
         public bool RCON = false;
         public string SubNetworkGUID = "";
+        public bool Ready = false;
 
         public Client(int _clientId)
         {
             id = _clientId;
             udp = new UDP(id);
+            udp.client = this;
         }
         public bool IsBusy()
         {
@@ -37,7 +39,7 @@ namespace GameServer
 #if (DEDICATED)
             Logger.Log(LOG, Shared.LoggerColor.Blue);
 #else
-            MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[MPSaveManager] " + LOG);
+            MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, LOG);
 #endif
         }
 
@@ -47,6 +49,7 @@ namespace GameServer
 
             private int id;
             public string sid = "";
+            public Client client;
 
             public UDP(int _id)
             {
@@ -69,8 +72,13 @@ namespace GameServer
 
             /// <summary>Sends data to the client via UDP.</summary>
             /// <param name="_packet">The packet to send.</param>
-            public void SendData(Packet _packet)
+            public void SendData(Packet _packet, bool IgnoreReady = true)
             {
+                if (!IgnoreReady && !client.Ready)
+                {
+                    return;
+                }
+                
                 if(Server.UsingSteamWorks == false)
                 {
                     Server.SendUDPData(endPoint, _packet);
@@ -105,6 +113,7 @@ namespace GameServer
             {
                 endPoint = null;
                 sid = "";
+                client.Ready = false;
             }
         }
     }

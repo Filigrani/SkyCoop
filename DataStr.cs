@@ -67,6 +67,7 @@ namespace SkyCoop
             public string m_Dropper = "";
             public int m_Variant = 0;
             public string m_GearName = "";
+            public string m_PhotoGUID = "";
         }
         public class AnimalArrow
         {
@@ -233,7 +234,7 @@ namespace SkyCoop
             public float m_RadioFrequency = 0;
             public Supporters.SupporterBenefits m_SupporterBenefits = new Supporters.SupporterBenefits();
             public bool m_IsLoading = false;
-            public int m_LastRegion = 0;
+            public int m_LastRegion = (int) Shared.GameRegion.RandomRegion;
             public bool m_IsSafe = false;
             public string m_SteamOrEGSID = "";
         }

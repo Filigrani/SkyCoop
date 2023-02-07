@@ -33,6 +33,24 @@ namespace SkyCoop
         public static bool DSQuit = false;
         public static float LocalChatMaxDistance = 70f;
 
+        public enum GameRegion
+        {
+            MysteryLake,
+            CoastalHighWay,
+            DesolationPoint,
+            PlesantValley,
+            TimberwolfMountain,
+            ForlornMuskeg,
+            RandomRegion,
+            FutureRegion,
+            MountainTown,
+            BrokenRailroad,
+            HushedRiverValley,
+            BleakInlet,
+            AshCanyon,
+            Blackrock,
+        }
+
 
         public enum LoggerColor
         {
@@ -401,6 +419,7 @@ namespace SkyCoop
             if (MyMod.iAmHost)
             {
                 MPStats.EverySecond();
+                ExpeditionManager.UpdateExpeditions();
                 SecondsBeforeUnload = SecondsBeforeUnload + 1;
                 if (SecondsBeforeUnload > MPSaveManager.SaveRecentTimer)
                 {
@@ -1639,7 +1658,56 @@ namespace SkyCoop
 #endif
         }
 
+        public static void AddSlicedJsonDataForPhoto(DataStr.SlicedJsonData jData, int ClientID)
+        {
+            //Log("Got Dropped Item Slice for hash:" + jData.m_Hash + " Is Last " + jData.m_Last);
+            if (MyMod.SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
+            {
+                string previousString = "";
+                if (MyMod.SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
+                {
+                    string wholeString = previousString + jData.m_Str;
+                    MyMod.SlicedJsonDataBuffer.Remove(jData.m_Hash);
+                    MyMod.SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
+                } else
+                {
+                    MyMod.SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+                }
+            } else
+            {
+                MyMod.SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
+            }
 
+            if (jData.m_Last)
+            {
+                string finalJsonData = "";
+                if (MyMod.SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
+                {
+                    MyMod.SlicedJsonDataBuffer.Remove(jData.m_Hash);
+
+                    MPSaveManager.AddPhoto(finalJsonData, false, jData.m_GearName);
+#if(!DEDICATED)
+                    MPSaveManager.AddPhoto(finalJsonData, true, jData.m_GearName);
+                    foreach (var item in MyMod.DroppedGearsObjs)
+                    {
+                        if (item.Value != null && item.Value.GetComponent<Comps.DroppedGearDummy>())
+                        {
+                            if (item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_PhotoGUID == jData.m_GearName)
+                            {
+                                Texture2D tex = MPSaveManager.GetPhotoTexture(jData.m_GearName);
+                                if (tex)
+                                {
+                                    item.Value.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                                }
+                            }
+                        }
+                    }
+#endif
+                    ServerSend.PHOTOREQUEST(ClientID, finalJsonData, jData.m_GearName, MyMod.playersData[ClientID].m_LevelGuid);
+                }
+            }
+            ServerSend.READYSENDNEXTSLICEPHOTO(ClientID, true);
+        }
 
         public static void AddLoadingClient(int clientID)
         {
@@ -1683,6 +1751,15 @@ namespace SkyCoop
                     }
                     return;
                 }
+            }
+            if (message.m_Message == "!expedition")
+            {
+                if(MyMod.ExpeditionEditorUI != null)
+                {
+                    MyMod.ExpeditionEditorSelectUI.SetActive(!MyMod.ExpeditionEditorSelectUI.activeSelf);
+                    MyMod.ExpeditionEditorUI.SetActive(false);
+                }
+                return;
             }
             if (message.m_Message.StartsWith("!cfg"))
             {

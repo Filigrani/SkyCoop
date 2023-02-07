@@ -221,7 +221,7 @@ namespace GameServer
             }
         }
 
-        public static void SendUDPData(IPEndPoint _clientEndPoint, Packet _packet)
+        public static void SendUDPData(IPEndPoint _clientEndPoint, Packet _packet, bool IgnoreReady = true)
         {
             try
             {
@@ -261,6 +261,22 @@ namespace GameServer
                 return c.SubNetworkGUID;
             }
             return "";
+        }
+
+        public static int GetIDByMAC(string MAC)
+        {
+            if (MAC == MPSaveManager.GetSubNetworkGUID())
+            {
+                return 0;
+            }
+            foreach (var item in clients)
+            {
+                if(item.Value.SubNetworkGUID == MAC)
+                {
+                    return item.Key;
+                }
+            }
+            return -1;
         }
 
         private static void InitializeServerData()
@@ -387,6 +403,9 @@ namespace GameServer
                 { (int)ClientPackets.REREGISTERWEATHER, ServerHandle.REREGISTERWEATHER},
                 { (int)ClientPackets.CHANGECONTAINERSTATE, ServerHandle.CHANGECONTAINERSTATE},
                 { (int)ClientPackets.TRIGGEREMOTE, ServerHandle.TRIGGEREMOTE},
+                { (int)ClientPackets.PHOTOREQUEST, ServerHandle.PHOTOREQUEST},
+                { (int)ClientPackets.GOTPHOTOSLICE, ServerHandle.GOTPHOTOSLICE},
+                { (int)ClientPackets.STARTEXPEDITION, ServerHandle.STARTEXPEDITION},
             };
             Log("Initialized packets.");
         }

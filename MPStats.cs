@@ -387,6 +387,11 @@ namespace SkyCoop
         }
         public static void AddRegionTime(string MAC, int Region)
         {
+            if(Region == (int) Shared.GameRegion.RandomRegion)
+            {
+                return;
+            }
+            
             PlayerStatistic Stat;
             if (TodayStats.Players.TryGetValue(MAC, out Stat))
             {

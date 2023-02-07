@@ -15,17 +15,17 @@ namespace GameServer
 {
     class ServerSend
     {
-        public static void SendTCPData(int _toClient, Packet _packet)
+        public static void SendTCPData(int _toClient, Packet _packet, bool IgnoreReady = false)
         {
-            SendUDPData(_toClient, _packet);
+            SendUDPData(_toClient, _packet, IgnoreReady);
         }
-        public static void SendUDPData(int _toClient, Packet _packet)
+        public static void SendUDPData(int _toClient, Packet _packet, bool IgnoreReady = false)
         {
             _packet.WriteLength();
 
             if (!Server.clients[_toClient].RCON)
             {
-                Server.clients[_toClient].udp.SendData(_packet);
+                Server.clients[_toClient].udp.SendData(_packet, IgnoreReady);
             }
         }
         public static void SendUDPDataRCON(int Operator, Packet _packet)
@@ -39,18 +39,18 @@ namespace GameServer
             Server.SendUDPData(_clientEndPoint, _packet);
         }
 
-        public static void SendUDPDataToAll(Packet _packet)
+        public static void SendUDPDataToAll(Packet _packet, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
                 if (Server.clients[i].IsBusy() == true && !Server.clients[i].RCON)
                 {
-                    Server.clients[i].udp.SendData(_packet);
+                    Server.clients[i].udp.SendData(_packet, IgnoreReady);
                 }
             }
         }
-        public static void SendUDPDataToAll(Packet _packet, string level_guid)
+        public static void SendUDPDataToAll(Packet _packet, string level_guid, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
@@ -59,12 +59,12 @@ namespace GameServer
                 {
                     if (MyMod.playersData[i].m_LevelGuid == level_guid && !Server.clients[i].RCON)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        Server.clients[i].udp.SendData(_packet, IgnoreReady);
                     }
                 }
             }
         }
-        public static void SendUDPDataToAll(Packet _packet, int Region, bool IgnoreLoaders = false)
+        public static void SendUDPDataToAll(Packet _packet, int Region, bool IgnoreLoaders = false, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
@@ -80,14 +80,14 @@ namespace GameServer
                         {
                             if(!MyMod.playersData[i].m_IsLoading)
                             {
-                                Server.clients[i].udp.SendData(_packet);
+                                Server.clients[i].udp.SendData(_packet, IgnoreReady);
                             }
                         }
                     }
                 }
             }
         }
-        public static void SendUDPDataToAllInArea(Packet _packet, int SenderId, Vector3 SpeakerPossition, string SpeakerScene)
+        public static void SendUDPDataToAllInArea(Packet _packet, int SenderId, Vector3 SpeakerPossition, string SpeakerScene, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
@@ -96,23 +96,23 @@ namespace GameServer
                 {
                     if (MyMod.playersData[i].m_LevelGuid == SpeakerScene && Vector3.Distance(MyMod.playersData[i].m_Position, SpeakerPossition) <= Shared.LocalChatMaxDistance)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        Server.clients[i].udp.SendData(_packet, IgnoreReady);
                     }
                 }
             }
         }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId)
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
                 if (i != SenderId && Server.clients[i].IsBusy() == true && !Server.clients[i].RCON)
                 {
-                    Server.clients[i].udp.SendData(_packet);
+                    Server.clients[i].udp.SendData(_packet, IgnoreReady);
                 }
             }
         }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, bool IsKey = false)
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, bool IsKey = false, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
@@ -123,19 +123,19 @@ namespace GameServer
                     {
                         if (MyMod.playersData[i].m_LevelGuid == level_guid)
                         {
-                            Server.clients[i].udp.SendData(_packet);
+                            Server.clients[i].udp.SendData(_packet, IgnoreReady);
                         }
                     }else{
                         string Key = MyMod.playersData[i].m_Levelid + MyMod.playersData[i].m_LevelGuid;
                         if(Key == level_guid)
                         {
-                            Server.clients[i].udp.SendData(_packet);
+                            Server.clients[i].udp.SendData(_packet, IgnoreReady);
                         }
                     }
                 }
             }
         }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, float RadioF)
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, float RadioF, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
@@ -144,7 +144,7 @@ namespace GameServer
                 {                    
                     if (MyMod.playersData[i].m_LevelGuid == level_guid || MyMod.playersData[i].m_RadioFrequency == RadioF)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        Server.clients[i].udp.SendData(_packet, IgnoreReady);
                     }
                 }
             }
@@ -152,14 +152,14 @@ namespace GameServer
         /// <summary>Sends a packet to all clients except one via UDP.</summary>
         /// <param name="_exceptClient">The client to NOT send the data to.</param>
         /// <param name="_packet">The packet to send.</param>
-        public static void SendUDPDataToAll(int _exceptClient, Packet _packet)
+        public static void SendUDPDataToAll(int _exceptClient, Packet _packet, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
                 if (i != _exceptClient)
                 {
-                    Server.clients[i].udp.SendData(_packet);
+                    Server.clients[i].udp.SendData(_packet, IgnoreReady);
                 }
             }
         }
@@ -171,7 +171,7 @@ namespace GameServer
                 _packet.Write(_toClient);
                 _packet.Write(maxPlayers);
 
-                SendTCPData(_toClient, _packet);
+                SendTCPData(_toClient, _packet, true);
             }
         }
         public static void XYZ(int _From, Vector3 _msg, bool toEveryOne, int OnlyFor = -1)
@@ -1754,7 +1754,17 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        
+        public static void READYSENDNEXTSLICEPHOTO(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.READYSENDNEXTSLICEPHOTO))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+
         public static void LOADINGSCENEDROPSDONE(int _toClient, bool _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOADINGSCENEDROPSDONE))
@@ -2277,6 +2287,18 @@ namespace GameServer
         }
         public static void ADDHUDMESSAGE(int SendTo, string Message)
         {
+            if(SendTo == -1)
+            {
+                return;
+            }
+
+#if (!DEDICATED)
+            if (SendTo == 0)
+            {
+                HUDMessage.AddMessage(Message);
+                return;
+            }
+#endif
             using (Packet _packet = new Packet((int)ServerPackets.ADDHUDMSG))
             {
                 _packet.Write(Message);
@@ -2319,6 +2341,42 @@ namespace GameServer
                 _packet.Write(From);
                 _packet.Write(EmoteID);
                 SendUDPDataToAllButNotSender(_packet, From);
+            }
+        }
+        public static void EXPEDITIONSYNC(int For, string Name, string Task, int Time)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONSYNC))
+            {
+                _packet.Write(Name);
+                _packet.Write(Task);
+                _packet.Write(Time);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void EXPEDITIONRESULT(int For, int State)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONRESULT))
+            {
+                _packet.Write(State);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void PHOTOREQUEST(int For, string Base64, string GUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.PHOTOREQUEST))
+            {
+                _packet.Write(Base64);
+                _packet.Write(GUID);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void PHOTOREQUEST(int From, string Base64, string GUID, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.PHOTOREQUEST))
+            {
+                _packet.Write(Base64);
+                _packet.Write(GUID);
+                SendUDPDataToAllButNotSender(_packet, From, LevelGUID);
             }
         }
     }

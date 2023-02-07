@@ -47,6 +47,9 @@
     <Compile Include="Constants.cs" />
     <Compile Include="DataStr.cs" />
     <Compile Include="DeBugMenu.cs" />
+    <Compile Include="ExpeditionBuilder.cs" />
+    <Compile Include="ExpeditionEditor.cs" />
+    <Compile Include="ExpeditionManager.cs" />
     <Compile Include="GameLogic.cs" />
     <Compile Include="MenuHook.cs" />
     <Compile Include="ModsValidation.cs" />
@@ -187,8 +190,10 @@
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\Shared.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Shared.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\Supporters.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\Supporters.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\MPStats.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\MPStats.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\ExpeditionManager.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\ExpeditionManager.cs"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\ExpeditionBuilder.cs" "D:\source\SkyCoopDedicatedServer\DedicatedServer\ExpeditionBuilder.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\bin\Release\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll"
-"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d"
+"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\ExpeditionTemplates"
 "C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\BuildInfo.json" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\gear-spawns" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\blueprints" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\auto-mapped"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

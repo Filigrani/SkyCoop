@@ -174,6 +174,12 @@ namespace GameServer
         CHANGECONTAINERSTATE,
         FINISHEDSENDINGCONTAINER,
         TRIGGEREMOTE,
+        EXPEDITIONSYNC,
+        EXPEDITIONRESULT,
+        PHOTOREQUEST,
+        GOTPHOTOSLICE,
+        READYSENDNEXTSLICEPHOTO,
+        STARTEXPEDITION,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -336,6 +342,12 @@ namespace GameServer
         CHANGECONTAINERSTATE,
         FINISHEDSENDINGCONTAINER,
         TRIGGEREMOTE,
+        EXPEDITIONSYNC,
+        EXPEDITIONRESULT,
+        PHOTOREQUEST,
+        GOTPHOTOSLICE,
+        READYSENDNEXTSLICEPHOTO,
+        STARTEXPEDITION,
     }
 
     public class Packet : IDisposable
@@ -773,6 +785,7 @@ namespace GameServer
             Write(obj.m_Dropper);
             Write(obj.m_Variant);
             Write(obj.m_GearName);
+            Write(obj.m_PhotoGUID);
         }
         public void Write(DataStr.AffictionSync obj)
         {
@@ -1402,6 +1415,7 @@ namespace GameServer
             obj.m_Dropper = ReadString();
             obj.m_Variant = ReadInt();
             obj.m_GearName = ReadString();
+            obj.m_PhotoGUID = ReadString();
 
             return obj;
         }
