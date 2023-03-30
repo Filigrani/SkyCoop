@@ -4,7 +4,6 @@ using System.IO.Compression;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using GameServer;
 using System.Text.RegularExpressions;
 using static SkyCoop.DataStr;
@@ -13,6 +12,7 @@ using System.Net.NetworkInformation;
 using UnityEngine;
 using MelonLoader;
 using MelonLoader.TinyJSON;
+using UnhollowerBaseLib;
 #else
 using System.Numerics;
 using TinyJSON;
@@ -28,14 +28,24 @@ namespace SkyCoop
         public static Dictionary<string, DataStr.AnimalKilled> AnimalsKilled = new Dictionary<string, DataStr.AnimalKilled>();
         public static Dictionary<string, int> StunnedRabbits = new Dictionary<string, int>();
         public static List<RegionWeatherControler> RegionWeathers = new List<RegionWeatherControler>();
+        public static Dictionary<string, string[]> Base64Slices = new Dictionary<string, string[]>();
         public static List<float> HoursOffsetTable = new List<float> { 5, 6, 7, 12, 16.5f, 18, 19.5f };
         public static TimeOfDayStatus CurrentTimeOfDayStatus = TimeOfDayStatus.NightEndToDawn;
         public static bool DSQuit = false;
         public static float LocalChatMaxDistance = 70f;
 
+
+
+        public static int GameRegionNegativeOffset = 5;
+        public static int GameRegionPositiveOffset = 13;
         public enum GameRegion
         {
-            MysteryLake,
+            KeepersPassSouth = -5,
+            KeepersPassNorth = -4,
+            WindingRiver = -3,
+            Ravine = -2,
+            CrumblingHighWay = -1,
+            MysteryLake = 0,
             CoastalHighWay,
             DesolationPoint,
             PlesantValley,
@@ -1044,12 +1054,10 @@ namespace SkyCoop
                         }
 
                         Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
-                        if (Server.clients[i].TimeOutTime > 15 && !Server.clients[i].RCON)
-                        {
-                            Log("Client " + i + " no responce time " + Server.clients[i].TimeOutTime);
-                        }
                         if (Server.clients[i].TimeOutTime > TimeOutForClient)
                         {
+                            bool SendLeave = false;
+                            string Leaver = MyMod.playersData[i].m_Name;
                             Server.clients[i].TimeOutTime = 0;
 
                             if (!Server.clients[i].RCON)
@@ -1058,8 +1066,9 @@ namespace SkyCoop
                                 DisconnectMessage.m_Type = 0;
                                 DisconnectMessage.m_By = MyMod.playersData[i].m_Name;
                                 DisconnectMessage.m_Message = MyMod.playersData[i].m_Name + " disconnected!";
-                                SendMessageToChat(DisconnectMessage, true);
                                 ServerSend.KICKMESSAGE(i, "The host has disconnected you from the server due to a long period without receiving data from you.");
+                                SendMessageToChat(DisconnectMessage, true);
+                                SendLeave = true;
                             } else
                             {
                                 ServerSend.KICKMESSAGE(i, "Your RCON session is over, please reconnect.");
@@ -1070,6 +1079,10 @@ namespace SkyCoop
                             ResetDataForSlot(i);
                             Log("Client " + i + " processing disconnect");
                             Server.clients[i].udp.Disconnect();
+                            if (SendLeave)
+                            {
+                                WebhookPlayerLeave(Leaver);
+                            }
                         }
                         if (MyMod.playersData[i] != null)
                         {
@@ -1686,7 +1699,7 @@ namespace SkyCoop
                     MyMod.SlicedJsonDataBuffer.Remove(jData.m_Hash);
 
                     MPSaveManager.AddPhoto(finalJsonData, false, jData.m_GearName);
-#if(!DEDICATED)
+#if (!DEDICATED)
                     MPSaveManager.AddPhoto(finalJsonData, true, jData.m_GearName);
                     foreach (var item in MyMod.DroppedGearsObjs)
                     {
@@ -1694,7 +1707,7 @@ namespace SkyCoop
                         {
                             if (item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_PhotoGUID == jData.m_GearName)
                             {
-                                Texture2D tex = MPSaveManager.GetPhotoTexture(jData.m_GearName);
+                                Texture2D tex = MPSaveManager.GetPhotoTexture(jData.m_GearName, item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_GearName);
                                 if (tex)
                                 {
                                     item.Value.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
@@ -1703,7 +1716,11 @@ namespace SkyCoop
                         }
                     }
 #endif
-                    ServerSend.PHOTOREQUEST(ClientID, finalJsonData, jData.m_GearName, MyMod.playersData[ClientID].m_LevelGuid);
+                    List<SlicedBase64Data> Slices = GetBase64Sliced(finalJsonData, jData.m_GearName, SlicedBase64Purpose.Photo);
+                    foreach (SlicedBase64Data Slice in Slices)
+                    {
+                        ServerSend.BASE64SLICE(Slice, MyMod.playersData[ClientID].m_LevelGuid);
+                    }
                 }
             }
             ServerSend.READYSENDNEXTSLICEPHOTO(ClientID, true);
@@ -1733,12 +1750,28 @@ namespace SkyCoop
             }
         }
 
-        public static void SendMessageToChat(DataStr.MultiplayerChatMessage message, bool needSync = true)
-        {
+
 #if (!DEDICATED)
-            if (Supporters.MyID == "76561198152259224" || Supporters.MyID == "76561198867520214")
+        public static void SendChatCommandToHost(string Command)
+        {
+            if (MyMod.iAmHost)
             {
-                if (message.m_Message == "!debug")
+                ChatCommand(Command, 0);
+            } else
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.CHATCOMMAND))
+                {
+                    _packet.Write(Command);
+                    MyMod.SendUDPData(_packet);
+                }
+            }
+        }
+        public static bool ClientOnlyChatCommand(string Command)
+        {
+            Command = Command.ToLower();
+            if (Command == "!debug")
+            {
+                if (Supporters.MyID == "76561198152259224" || Supporters.MyID == "76561198867520214")
                 {
                     if (MyMod.DebugGUI == false)
                     {
@@ -1749,71 +1782,144 @@ namespace SkyCoop
                         MyMod.DebugGUI = false;
                         MyMod.DebugBind = false;
                     }
-                    return;
                 }
-            }
-            if (message.m_Message == "!expedition")
+                return true;
+            } else if(Command == "!expedition")
             {
-                if(MyMod.ExpeditionEditorUI != null)
+                if (MyMod.ExpeditionEditorUI != null)
                 {
                     MyMod.ExpeditionEditorSelectUI.SetActive(!MyMod.ExpeditionEditorSelectUI.activeSelf);
                     MyMod.ExpeditionEditorUI.SetActive(false);
+                    ExpeditionEditor.DisableRadiousSpheres();
+
+                    if (MyMod.ExpeditionEditorSelectUI.activeSelf)
+                    {
+                        ExpeditionEditor.RefreshExpeditionsList();
+                    }
                 }
-                return;
-            }
-            if (message.m_Message.StartsWith("!cfg"))
+                return true;
+            } else if (Command == "!cfg")
             {
                 MyMod.ShowCFGData();
-                return;
+                SendFeedBackMessage("Server configuration printer to your log.");
+                return true;
+            } else if (Command == "!stats" || Command == "!today")
+            {
+                SendChatCommandToHost(Command);
+                return true;
+            } else if (Command.StartsWith("!spawn "))
+            {
+                if (Supporters.MyID == "76561198152259224" || Supporters.MyID == "76561198867520214")
+                {
+                    string Prefab = Command.Replace("!spawn ","");
+                    GameObject reference = MyMod.LoadedBundle.LoadAsset<GameObject>(Prefab);
+
+                    if (reference == null)
+                    {
+                        reference = Resources.Load<GameObject>(Prefab);
+                    }
+
+                    if (reference == null)
+                    {
+                        SendFeedBackMessage("Can't find, trying other way..");
+                        Il2CppReferenceArray<UnityEngine.Object> Stuff = Resources.LoadAll("", GameObject.Il2CppType);
+                        foreach (var item in Stuff)
+                        {
+                            if (item.name.ToLower() == Prefab)
+                            {
+                                SendFeedBackMessage("Found it!");
+                                reference = item.Cast<GameObject>();
+                                break;
+                            }
+                        }
+                    }
+
+                    if (reference == null)
+                    {
+                        SendFeedBackMessage("Prefab "+ Prefab + " not exist!");
+                    } else
+                    {
+                        GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, GameManager.GetPlayerTransform().transform.position, GameManager.GetPlayerTransform().transform.rotation);
+                        GameManager.GetPlayerManagerComponent().StartPlaceMesh(obj, PlaceMeshFlags.None);
+                        SendFeedBackMessage("Created " + Prefab);
+                    }
+                }
+                return true;
+            } else if (Command.StartsWith("!test"))
+            {
+                if (Supporters.MyID == "76561198152259224" || Supporters.MyID == "76561198867520214")
+                {
+                    SendFeedBackMessage("Searcing OutdoorSceneRoot...");
+                    foreach (var item in UnityEngine.Object.FindObjectsOfType<LoadScene>())
+                    {
+                        if (item.transform.root.GetComponent<OutdoorSceneRoot>() != null)
+                        {
+                            SendFeedBackMessage("Found instance");
+                            OutdoorSceneRoot Inst = item.transform.root.GetComponent<OutdoorSceneRoot>();
+                            SendFeedBackMessage("Inst contains "+ Inst.m_CachedPrefabs.Count+" cached prefabs");
+                            for (int i = 0; i < Inst.m_CachedPrefabs.Count; i++)
+                            {
+                                MelonLogger.Msg("[OutdoorSceneRoot] " + Inst.m_CachedPrefabs[i].m_Prefab.name);
+                            }
+                            SendFeedBackMessage("Inst master object " + Inst.m_MasterObject);
+                        }
+                    }
+
+                    SendFeedBackMessage("Contains " + OutdoorSceneRoot.m_MasterObjectDict.Count);
+                    foreach (var item in OutdoorSceneRoot.m_MasterObjectDict)
+                    {
+                        MelonLogger.Msg("[OutdoorSceneRoot] " + item.value.name);
+                    }
+                }
+                return true;
             }
 
-            if (message.m_Message == "!fasteat")
+            return false;
+        }
+#endif
+
+        public static void ChatCommand(string Command, int From = 0)
+        {
+            Command = Command.ToLower();
+            string FeedBack = "";
+            if(Command == "!stats")
             {
-                if (MyMod.iAmHost == true)
-                {
-                    if (MyMod.ServerConfig.m_FastConsumption == false)
-                    {
-                        MyMod.ServerConfig.m_FastConsumption = true;
-                    } else
-                    {
-                        MyMod.ServerConfig.m_FastConsumption = false;
-                    }
-                    message.m_Type = 0;
-                    message.m_By = MyMod.MyChatName;
-                    message.m_Message = "Server configuration parameter ServerConfig.m_FastConsumption now is " + MyMod.ServerConfig.m_FastConsumption;
-                    needSync = true;
-                    ServerSend.SERVERCFGUPDATED();
-                } else
-                {
-                    message.m_Type = 0;
-                    message.m_By = MyMod.MyChatName;
-                    message.m_Message = "You not a host to change this!";
-                    needSync = false;
-                }
+                string MAC = Server.GetMACByID(From);
+                FeedBack = MPStats.GetPlayerGlobalStats(MAC).GetString(true, false);
+            }else if(Command == "!today")
+            {
+                FeedBack = MPStats.TodayStats.GetString(false, true, true);
             }
-            if (message.m_Message == "!dupes")
+
+            if (!string.IsNullOrEmpty(FeedBack))
             {
-                if (MyMod.iAmHost == true)
-                {
-                    if (MyMod.ServerConfig.m_DuppedSpawns == false)
-                    {
-                        MyMod.ServerConfig.m_DuppedSpawns = true;
-                    } else
-                    {
-                        MyMod.ServerConfig.m_DuppedSpawns = false;
-                    }
-                    message.m_Type = 0;
-                    message.m_By = MyMod.MyChatName;
-                    message.m_Message = "Server configuration parameter ServerConfig.m_DuppedSpawns now is " + MyMod.ServerConfig.m_DuppedSpawns;
-                    needSync = true;
-                    ServerSend.SERVERCFGUPDATED();
-                } else
-                {
-                    message.m_Type = 0;
-                    message.m_By = MyMod.MyChatName;
-                    message.m_Message = "You not a host to change this!";
-                    needSync = false;
-                }
+                SendFeedBackMessage(FeedBack, From);
+            }
+        }
+
+        public static void SendFeedBackMessage(string Message, int For = 0)
+        {
+            MultiplayerChatMessage message = new MultiplayerChatMessage();
+            message.m_Message = Message;
+            message.m_Type = 0;
+
+            if(MyMod.iAmHost && For != 0)
+            {
+                ServerSend.CHATPM(For, message);
+
+            } else
+            {
+                SendMessageToChat(message, false);
+            }
+        }
+
+        public static void SendMessageToChat(MultiplayerChatMessage message, bool needSync = true)
+        {
+#if (!DEDICATED)
+
+            if (ClientOnlyChatCommand(message.m_Message))
+            {
+                return;
             }
 
             if (!MyMod.DedicatedServerAppMode)
@@ -1833,6 +1939,11 @@ namespace SkyCoop
                     if (!message.m_Global)
                     {
                         GlobalOrArea = "[Area] ";
+                    }
+
+                    if (message.m_Private)
+                    {
+                        GlobalOrArea = "[Private] ";
                     }
                     
                     Comp.text = GlobalOrArea + message.m_By + ": " + message.m_Message;
@@ -1880,6 +1991,10 @@ namespace SkyCoop
                 {
                     GlobalOrArea = "[Chat][Area] ";
                     TextColor = LoggerColor.Blue;
+                }
+                if (message.m_Private)
+                {
+                    GlobalOrArea = "[Private] ";
                 }
 
                 LogText = GlobalOrArea + message.m_By + ": " + message.m_Message;
@@ -2570,7 +2685,7 @@ namespace SkyCoop
             string Path = "Mods\\server.json";
 
 #if (DEDICATED)
-            Path = "server.json";
+            Path = MPSaveManager.GetBaseDirectory() + MPSaveManager.GetSeparator() + "server.json";
 #endif
             if (System.IO.File.Exists(Path))
             {
@@ -2653,6 +2768,14 @@ namespace SkyCoop
 
         public static string ExecuteCommand(string CMD, int _fromClient = -1)
         {
+#if (DEDICATED)
+            string Dedi = MyMod.ExecuteCommand(CMD, _fromClient);
+
+            if (!string.IsNullOrEmpty(Dedi))
+            {
+                return Dedi;
+            }
+#endif
             string Low = CMD.ToLower();
             if(_fromClient != -1)
             {
@@ -2984,6 +3107,196 @@ namespace SkyCoop
                     select nic.GetPhysicalAddress().ToString()
                 ).FirstOrDefault();
             return macAddr;
+        }
+
+#if (!DEDICATED)
+        public static void RequestPhoto(string PhotoGUID)
+        {
+            if (MyMod.sendMyPosition)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.PHOTOREQUEST))
+                {
+                    _packet.Write(PhotoGUID);
+                    MyMod.SendUDPData(_packet);
+                }
+            }
+        }
+#endif
+
+        public static List<SlicedBase64Data> GetBase64Sliced(string FullString, string GUID, SlicedBase64Purpose Purpose)
+        {
+            long CheckSum = GetDeterministicId(FullString);
+            byte[] bytesToSlice = Encoding.UTF8.GetBytes(FullString);
+            int CHUNK_SIZE = 700;
+            List<string> SlicedStrings = new List<string>();
+            List<SlicedBase64Data> Result = new List<SlicedBase64Data>();
+
+            if (bytesToSlice.Length > CHUNK_SIZE)
+            {
+                List<byte> BytesBuffer = new List<byte>();
+                BytesBuffer.AddRange(bytesToSlice);
+
+                while (BytesBuffer.Count >= CHUNK_SIZE)
+                {
+                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, CHUNK_SIZE - 1).ToArray();
+                    BytesBuffer.RemoveRange(0, CHUNK_SIZE - 1);
+                    string OneSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                    SlicedStrings.Add(OneSlice);
+                }
+
+                if (BytesBuffer.Count < CHUNK_SIZE && BytesBuffer.Count != 0)
+                {
+                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                    string OneSlice = Encoding.UTF8.GetString(LastSlice);
+                    SlicedStrings.Add(OneSlice);
+                }
+            } else
+            {
+                SlicedStrings.Add(FullString);
+            }
+
+            for (int i = 0; i < SlicedStrings.Count; i++)
+            {
+                string Slice = SlicedStrings[i];
+                SlicedBase64Data Data = new SlicedBase64Data();
+                Data.m_Slice = Slice;
+                Data.m_Slices = SlicedStrings.Count;
+                Data.m_SliceNum = i;
+                Data.m_CheckSum = CheckSum;
+                Data.m_GUID = GUID;
+                Data.m_Purpose = (int)Purpose;
+                Result.Add(Data);
+            }
+            return Result;
+        }
+
+        public static void AddBase64Slice(SlicedBase64Data Data)
+        {
+            if (!Base64Slices.ContainsKey(Data.m_GUID))
+            {
+                Base64Slices.Add(Data.m_GUID, new string[Data.m_Slices]);
+            }
+
+            if(Data.m_SliceNum <= Base64Slices[Data.m_GUID].Length-1)
+            {
+                Base64Slices[Data.m_GUID][Data.m_SliceNum] = Data.m_Slice;
+
+                if (Data.m_SliceNum == Base64Slices[Data.m_GUID].Length - 1)
+                {
+                    if(Data.m_Purpose == (int)SlicedBase64Purpose.Photo)
+                    {
+                        string PhotoGUID = Data.m_GUID;
+                        Log("Finishing photo slices for "+ Data.m_GUID);
+                        string Base64 = "";
+                        string[] StringArray = Base64Slices[Data.m_GUID];
+                        Base64Slices.Remove(Data.m_GUID);
+                        foreach (string oneSlice in StringArray)
+                        {
+                            if (!string.IsNullOrEmpty(oneSlice))
+                            {
+                                Base64 += oneSlice;
+                            } else
+                            {
+                                Log("Some slices are missing! Doing another request", LoggerColor.Red);
+#if (!DEDICATED)
+                                RequestPhoto(PhotoGUID);
+#endif
+                                return;
+                            }
+                        }
+                        bool IsBase64 = IsBase64String(Base64);
+                        long CheckSum = GetDeterministicId(Base64);
+                        Log("Final string is base64? "+IsBase64);
+                        Log("Final checksum " + CheckSum+" expected "+ Data.m_CheckSum);
+                        if (IsBase64 && CheckSum == Data.m_CheckSum)
+                        {
+                            Log("Everything correct, applying this photo");
+
+                            MPSaveManager.AddPhoto(Base64, true, PhotoGUID);
+#if (!DEDICATED)
+
+                            foreach (var item in MyMod.DroppedGearsObjs)
+                            {
+                                if (item.Value != null && item.Value.GetComponent<Comps.DroppedGearDummy>())
+                                {
+                                    if (item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_PhotoGUID == PhotoGUID)
+                                    {
+                                        Texture2D tex = MPSaveManager.GetPhotoTexture(PhotoGUID, item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_GearName);
+                                        if (tex)
+                                        {
+                                            item.Value.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                                        }
+                                        MelonLogger.Msg("Found and applied on " + item.Key + " dropped gear");
+                                    }
+                                }
+                            }
+#endif
+                        } else
+                        {
+                            if (!IsBase64)
+                            {
+                                Log("Base64 string corrupted, doing another request...", LoggerColor.Red);
+                            }else if(CheckSum == Data.m_CheckSum)
+                            {
+                                Log("Checksum is incorrect, doing another request...", LoggerColor.Red);
+                            }
+#if (!DEDICATED)
+                            RequestPhoto(PhotoGUID);
+#endif
+                        }
+                    }
+                }
+            }
+        }
+
+        public static int GetPlayersOnServer()
+        {
+            int Count = 0;
+            for (int i = 1; i <= Server.MaxPlayers; i++)
+            {
+                if (Server.clients[i] != null && Server.clients[i].IsBusy() == true && !Server.clients[i].RCON)
+                {
+                    Count++;
+                }
+            }
+            return Count;
+        }
+
+        public static void WebhookPlayerJoin(string PlayerName)
+        {
+#if (DEDICATED)            
+            int Players = GetPlayersOnServer();
+            DiscordManager.PlayerJoined(PlayerName, Players);
+#endif
+        }
+        public static void WebhookPlayerLeave(string PlayerName)
+        {
+#if (DEDICATED)            
+            int Players = GetPlayersOnServer();
+            DiscordManager.PlayerLeave(PlayerName, Players);
+#endif
+        }
+
+        public static void WebhookCrashSiteSpawn(string Text)
+        {
+#if (DEDICATED)            
+            DiscordManager.CrashSiteSpawn(Text);
+#endif
+        }
+        public static void WebhookCrashSiteFound()
+        {
+#if (DEDICATED)            
+            DiscordManager.CrashSiteFound();
+#endif
+        }
+
+        public static void WebhookCrashSiteTimeOver()
+        {
+#if (DEDICATED)            
+            DiscordManager.CrashSiteTimeOver();
+#endif
         }
     }
 }

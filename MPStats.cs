@@ -42,13 +42,20 @@ namespace SkyCoop
         }
         
         
-        public static void StartDay()
+        public static void StartDay(bool SendWebhook = false)
         {
             DateTime DT = System.DateTime.Now;
             DataDay = DT.Day;
             string FileName = DT.Day + "_" + DT.Month + "_" + DT.Year;
             TodayStats = LoadDayStats(FileName);
             Log("[MPStats] Starting statistic for "+ DT.Day + "." + DT.Month + "." + DT.Year, Shared.LoggerColor.Blue);
+
+            if (SendWebhook)
+            {
+#if (DEDICATED)
+                DiscordManager.TodayStats(TodayStats.GetString(false, true, true));
+#endif
+            }
         }
 
 
@@ -61,7 +68,10 @@ namespace SkyCoop
 
             foreach (var item in RecentPlayersGlobalStatistic)
             {
-                SaveData(item.Value.MAC, JSON.Dump(item.Value), SaveSeed, "", "Statistic" + GetSeparator() + "Global" + GetSeparator() + item.Value.MAC);
+                if (!string.IsNullOrEmpty(item.Value.MAC))
+                {
+                    SaveData(item.Value.MAC, JSON.Dump(item.Value), SaveSeed, "", "Statistic" + GetSeparator() + "Global" + GetSeparator() + item.Value.MAC);
+                }
             }
             RecentPlayersGlobalStatistic.Clear();
             SaveData("AllTime", JSON.Dump(AllTimeStats), SaveSeed, "", "Statistic" + GetSeparator() + "AllTime");
@@ -179,7 +189,7 @@ namespace SkyCoop
 
         public static string GetRegionName(int Region)
         {
-            return Region.ToString();
+            return ExpeditionBuilder.GetRegionString(Region);
         }
 
         public class PlayerStatistic
@@ -188,6 +198,8 @@ namespace SkyCoop
             public string MAC = "";
             public int Visits = 1;
             public int Deaths = 0;
+            public int ExpeditionsCompleted = 0;
+            public int CrashSitesFound = 0;
             public PlayTime TotalPlayTime = new PlayTime();
             public Dictionary<int, PlayTime> RegionsHistory = new Dictionary<int, PlayTime>();
             public ResourcesStatistic Looted = new ResourcesStatistic();
@@ -214,7 +226,9 @@ namespace SkyCoop
                     "\nPicked Gears " + Looted.GearsPicked + 
                     "\nLooted Containers " + Looted.ContainersLooted + 
                     "\nPlants Harvested " + Looted.PlantsHarvested + 
-                    "\nAnimals Killed " + Looted.AnimalsKilled;
+                    "\nAnimals Killed " + Looted.AnimalsKilled +
+                    "\nExpeditions Completed " + ExpeditionsCompleted +
+                    "\nCrash Sites Found "+ CrashSitesFound;
 
                 if (!HideRegionPlayTime && RegionsHistory.Count > 0)
                 {
@@ -232,6 +246,8 @@ namespace SkyCoop
         {
             public int Visits = 0;
             public int UniqueVisits = 0;
+            public int ExpeditionsCompleted = 0;
+            public int CrashSitesFound = 0;
             public Dictionary<string, int> VisitsHistory = new Dictionary<string, int>();
             public PlayTime OnlineTime = new PlayTime();
             public PlayTime EmptyTime = new PlayTime();
@@ -251,7 +267,9 @@ namespace SkyCoop
                     "\nPicked Gears " + Looted.GearsPicked+
                     "\nLooted Containers "+ Looted.ContainersLooted +
                     "\nPlants Harvested " +Looted.PlantsHarvested+
-                    "\nAnimals Killed "+Looted.AnimalsKilled;
+                    "\nAnimals Killed "+Looted.AnimalsKilled +
+                    "\nExpeditions Completed " + ExpeditionsCompleted +
+                    "\nCrash Sites Found "+ CrashSitesFound;
 
                 if (!HideRegionPlayTime && RegionsHistory.Count > 0)
                 {
@@ -385,6 +403,38 @@ namespace SkyCoop
             }
             AllTimeStats.Deaths++;
         }
+        public static void AddExpedition(string MAC)
+        {
+            PlayerStatistic Stat;
+            if (TodayStats.Players.TryGetValue(MAC, out Stat))
+            {
+                Stat.ExpeditionsCompleted++;
+                TodayStats.Players[MAC] = Stat;
+            }
+            TodayStats.ExpeditionsCompleted++;
+            GetPlayerGlobalStats(MAC);
+            if (RecentPlayersGlobalStatistic.ContainsKey(MAC))
+            {
+                RecentPlayersGlobalStatistic[MAC].ExpeditionsCompleted++;
+            }
+            AllTimeStats.ExpeditionsCompleted++;
+        }
+        public static void AddCrashSite(string MAC)
+        {
+            PlayerStatistic Stat;
+            if (TodayStats.Players.TryGetValue(MAC, out Stat))
+            {
+                Stat.ExpeditionsCompleted++;
+                TodayStats.Players[MAC] = Stat;
+            }
+            TodayStats.CrashSitesFound++;
+            GetPlayerGlobalStats(MAC);
+            if (RecentPlayersGlobalStatistic.ContainsKey(MAC))
+            {
+                RecentPlayersGlobalStatistic[MAC].CrashSitesFound++;
+            }
+            AllTimeStats.CrashSitesFound++;
+        }
         public static void AddRegionTime(string MAC, int Region)
         {
             if(Region == (int) Shared.GameRegion.RandomRegion)
@@ -442,7 +492,6 @@ namespace SkyCoop
             {
                 AllTimeStats.RegionsHistory.Add(Region, new PlayTime());
             }
-            
         }
         public static void SetName(string MAC, string Name)
         {
@@ -507,7 +556,7 @@ namespace SkyCoop
                 if (DataDay != DT.Day)
                 {
                     SaveRecentStuff();
-                    StartDay();
+                    StartDay(true);
                 } else
                 {
                     if(DT.Minute == 0 || DT.Minute == 30)
@@ -563,6 +612,9 @@ namespace SkyCoop
                     }
                 }
             }
+#if (!DEDICATED)
+            AddRegionTime(Server.GetMACByID(0), (int) MyMod.GetCurrentRegion());
+#endif
             if (MyMod.PlayersOnServer == 0)
             {
                 TodayStats.EmptyTime.AddSecond();

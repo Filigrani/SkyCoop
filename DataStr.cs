@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 #if (DEDICATED)
 using System.Numerics;
 #else
@@ -68,6 +65,7 @@ namespace SkyCoop
             public int m_Variant = 0;
             public string m_GearName = "";
             public string m_PhotoGUID = "";
+            public string m_ExpeditionNote = "";
         }
         public class AnimalArrow
         {
@@ -234,7 +232,9 @@ namespace SkyCoop
             public float m_RadioFrequency = 0;
             public Supporters.SupporterBenefits m_SupporterBenefits = new Supporters.SupporterBenefits();
             public bool m_IsLoading = false;
-            public int m_LastRegion = (int) Shared.GameRegion.RandomRegion;
+            public int m_LastWeatherRegion = (int) Shared.GameRegion.RandomRegion;
+            public int m_LastRegion = (int)Shared.GameRegion.RandomRegion;
+
             public bool m_IsSafe = false;
             public string m_SteamOrEGSID = "";
         }
@@ -322,6 +322,8 @@ namespace SkyCoop
             public Vector3 m_camera_forward = new Vector3(0, 0, 0);
             public Vector3 m_camera_right = new Vector3(0, 0, 0);
             public Vector3 m_camera_up = new Vector3(0, 0, 0);
+            public bool m_lookat = false;
+            public string m_sceneguid = "";
         }
         public class HarvestStats //: MelonMod
         {
@@ -353,6 +355,7 @@ namespace SkyCoop
             public string m_Message = "";
             public string m_By = "";
             public bool m_Global = true;
+            public bool m_Private = false;
 #if (!DEDICATED)
             public UnityEngine.UI.Text m_TextObj = null;
 #endif
@@ -380,6 +383,7 @@ namespace SkyCoop
             public string m_ParentGuid = "";
             public int m_LevelID = 0;
             public string m_LevelGUID = "";
+            public bool m_Broken = true;
 
             public bool Equals(BrokenFurnitureSync other)
             {
@@ -649,6 +653,80 @@ namespace SkyCoop
             public int CoolingHours = 0;
             public int WarmingHours = 0;
             public int PreviousStage = 10;
+        }
+
+        public enum SlicedBase64Purpose
+        {
+            Photo,
+        }
+
+
+        public class SlicedBase64Data
+        {
+            public string m_Slice = "";
+            public int m_Slices = 0;
+            public int m_SliceNum = 0;
+            public long m_CheckSum = 0;
+            public string m_GUID = "";
+            public int m_Purpose = 0;
+        }
+        public class FakeRockCacheVisualData
+        {
+            public string m_Owner = "";
+            public string m_LevelGUID = "";
+            public string m_GUID = "";
+            public Vector3 m_Position = new Vector3(0,0,0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
+        }
+
+        public class UniversalSyncableObject
+        {
+            public string m_Prefab = "";
+            public string m_Scene = "";
+            public string m_GUID = "";
+            public Vector3 m_Position = new Vector3(0,0,0);
+            public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+            public int m_CreationTime = 0;
+            public int m_RemoveTime = 0;
+            public string m_ExpeditionBelong = "";
+        }
+        public class UniversalSyncableObjectSpawner
+        {
+            public string m_Prefab = "";
+            public string m_GUID = "";
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
+            public string m_Content = "";
+        }
+
+        public class Vector2Int
+        {
+            public int X = 0;
+            public int Y = 0;
+            public Vector2Int(int x, int y)
+            {
+                X = x; 
+                Y = y;
+            }
+        }
+        public class WebhookSettings
+        {
+            public string Name = "";
+            public string URL = "";
+        }
+
+        public class ExpeditionInteractiveData
+        {
+            public Vector3 m_Position = new Vector3(0,0,0);
+            public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+            public Vector3 m_Scale = new Vector3(1,1,1);
+            public string m_ObjectText = "Object";
+            public string m_InteractText = "Interacting...";
+            public float m_InteractTime = 1f;
+            public string m_Tool = "";
+            public string m_Material = "";
+            public int m_MaterialCount = 1;
+            public string m_GUID = "";
         }
     }
 }

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using static SkyCoop.ExpeditionManager;
+using System.Security.Policy;
 #if (DEDICATED)
 using System.Numerics;
 using TinyJSON;
@@ -18,29 +19,9 @@ namespace SkyCoop
 {
     public class ExpeditionBuilder
     {
-        public static int NextZoneID = 1;
-        public static Dictionary<int, Dictionary<int, ExpeditionZone>> m_ExpeditionZones = new Dictionary<int, Dictionary<int, ExpeditionZone>>();
-        public static Dictionary<int, List<ExpeditionRewardScene>> m_ExpeditionRewardScenes = new Dictionary<int, List<ExpeditionRewardScene>>();
-        public static Dictionary<int, ExpeditionZone> m_ExpeditionZonesByID = new Dictionary<int, ExpeditionZone>();
-
-#if (DEDICATED_LINUX)
-        public static string Seperator = @"/";
-#else
-        public static string Seperator = @"\";
-#endif
+        public static Dictionary<int, List<ExpeditionTaskTemplate>> m_ExpeditionTasks = new Dictionary<int, List<ExpeditionTaskTemplate>>();
 
         public static bool Initilized = false;
-        public class ExpeditionZone
-        {
-            public Vector3 m_ZoneCenter = new Vector3(0, 0, 0);
-            public float m_ZoneRadius = 0;
-            public string m_ZoneScene = "";
-            public List<string> m_ZoneContainers = new List<string>();
-            public List<ExpeditionGearSpawner> m_ZoneGearSpawners = new List<ExpeditionGearSpawner>();
-            public string m_ZoneTaskText = "";
-            public int m_BelongRegion = 0;
-            
-        }
         public class ExpeditionGearSpawner
         {
             public string m_GUID = "";
@@ -48,19 +29,28 @@ namespace SkyCoop
             public float m_Chance = 0;
             public Vector3 m_Possition = new Vector3(0,0,0);
             public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+            public DataStr.ExtraDataForDroppedGear m_Extra = new DataStr.ExtraDataForDroppedGear();
 
-            public bool RollChance()
+            public bool RollChance(int PlayersInExpedition = 1)
             {
-                System.Random RNG = new System.Random();
+                System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
 
-                return RNG.NextDouble() < m_Chance;
+                float Chance = m_Chance;
+
+                if(PlayersInExpedition > 1)
+                {
+                    int Multiplyer = PlayersInExpedition - 1;
+                    Chance += (Multiplyer * 5);
+                }
+
+                return RNG.NextDouble() < Chance;
             }
 
             public string PickGear()
             {
                 if(m_GearsVariant.Count > 2)
                 {
-                    System.Random RNG = new System.Random();
+                    System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
                     int Idx = RNG.Next(0, m_GearsVariant.Count - 1);
                     return m_GearsVariant[Idx];
                 } else if (m_GearsVariant.Count == 1)
@@ -71,42 +61,46 @@ namespace SkyCoop
             }
         }
 
-        public static void AddZone(ExpeditionZone Zone)
+        public class ExpeditionTaskTemplate
         {
-            if (!m_ExpeditionZones.ContainsKey(Zone.m_BelongRegion))
-            {
-                m_ExpeditionZones.Add(Zone.m_BelongRegion, new Dictionary<int, ExpeditionZone>());
-            }
-            m_ExpeditionZones[Zone.m_BelongRegion].Add(NextZoneID, Zone);
-            m_ExpeditionZonesByID[NextZoneID] = Zone;
-            NextZoneID++;
-        }
-        public static void AddRewardScene(ExpeditionRewardScene RewardScene)
-        {
-            if (!m_ExpeditionRewardScenes.ContainsKey(RewardScene.m_BelongRegion))
-            {
-                m_ExpeditionRewardScenes.Add(RewardScene.m_BelongRegion, new List<ExpeditionRewardScene>());
-            }
-            m_ExpeditionRewardScenes[RewardScene.m_BelongRegion].Add(RewardScene);
+            public ExpeditionTaskType m_TaskType = ExpeditionTaskType.ENTERSCENE;
+            public string m_Alias = "";
+            public string m_TaskText = "";
+            public int m_RegionBelong = 0;
+            public string m_SceneName = "";
+            public List<ExpeditionGearSpawner> m_GearSpawners = new List<ExpeditionGearSpawner>();
+            public List<string> m_Containers = new List<string>();
+            public List<string> m_Plants = new List<string>();
+            public List<string> m_Breakdowns = new List<string>();
+            public bool m_RestockSceneContainers = false;
+            public Vector3 m_ZoneCenter = new Vector3(0, 0, 0);
+            public float m_ZoneRadius = 1f;
+            public string m_NextTaskAlias = "";
+            public bool m_CanBeTaken = true;
+            public string m_ObjectiveGearGUID = "";
+            public ExpeditionCompleteOrder m_CompleatOrder = ExpeditionCompleteOrder.LINEAL;
+            public int m_RandomTasksAmout = 0;
+            public int m_Time = 3600;
+            public bool m_TimeAdd = true;
+            public int m_StaySeconds = 300;
+            public List<DataStr.UniversalSyncableObjectSpawner> m_Objects = new List<DataStr.UniversalSyncableObjectSpawner>();
         }
 
-        public static void Init()
+        public static void Init(bool Force = false)
         {
-            if (Initilized)
+            if (Initilized && !Force)
             {
                 return;
             }
-#if (DEDICATED_LINUX)
-            string Seperator = @"/";
-#else
-            string Seperator = @"\";
-#endif
-            MPSaveManager.CreateFolderIfNotExist("Mods");
-            MPSaveManager.CreateFolderIfNotExist("Mods" + Seperator + "ExpeditionTemplates");
+            m_ExpeditionTasks.Clear();
+            int OneHour = 3600;
+            System.Random RNG = new System.Random();
+            NextCrashSiteIn = RNG.Next(OneHour * 3, OneHour * 6);
+            MPSaveManager.CreateFolderIfNotExist(MPSaveManager.GetBaseDirectory() + "Mods");
+            MPSaveManager.CreateFolderIfNotExist(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates");
 
-            DirectoryInfo d = new DirectoryInfo("Mods" + Seperator + "ExpeditionTemplates");
+            DirectoryInfo d = new DirectoryInfo(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates");
             FileInfo[] Files = d.GetFiles("*.json");
-            List<string> Names = new List<string>();
             foreach (FileInfo file in Files)
             {
                 byte[] FileData = File.ReadAllBytes(file.FullName);
@@ -117,33 +111,81 @@ namespace SkyCoop
                     continue;
                 }
                 JSONString = MPSaveManager.VectorsFixUp(JSONString);
-                string Alias = file.Name.Replace(".json", "");
-                bool ThisIsZone = JSONString.Contains("+ExpeditionZone");
 
-                if (ThisIsZone)
+                ExpeditionTaskTemplate Task = JSON.Load(JSONString).Make<ExpeditionTaskTemplate>();
+                if (!m_ExpeditionTasks.ContainsKey(Task.m_RegionBelong))
                 {
-                    ExpeditionZone Zone = JSON.Load(JSONString).Make<ExpeditionZone>();
-                    AddZone(Zone);
-
-                } else
-                {
-                    ExpeditionRewardScene RewardScene = JSON.Load(JSONString).Make<ExpeditionRewardScene>();
-                    AddRewardScene(RewardScene);
+                    m_ExpeditionTasks.Add(Task.m_RegionBelong, new List<ExpeditionTaskTemplate>());
                 }
+                m_ExpeditionTasks[Task.m_RegionBelong].Add(Task);
+
             }
             Initilized = true;
         }
-        
-        
-        public static ExpeditionTemplate BuildBasicExpedition(int Region, string Alias = "", bool DebugFlag = false)
+
+        public static string GetRandomCrashSiteName(int Index = -1)
+        {
+            List<string> CrashSites = new List<string>();
+            if (Directory.Exists(MPSaveManager.GetBaseDirectory() + "Mods"))
+            {
+                string ExpeditionFolder = MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates";
+
+                if (Directory.Exists(ExpeditionFolder))
+                {
+                    DirectoryInfo d = new DirectoryInfo(ExpeditionFolder);
+                    FileInfo[] Files = d.GetFiles("*.json");
+                    foreach (FileInfo file in Files)
+                    {
+                        if (!file.Name.StartsWith("Crashsite"))
+                        {
+                            continue;
+                        }
+                        byte[] FileData = File.ReadAllBytes(file.FullName);
+                        string JSONString = UTF8Encoding.UTF8.GetString(FileData);
+                        if (string.IsNullOrEmpty(JSONString))
+                        {
+                            continue;
+                        }
+                        CrashSites.Add(file.Name.Replace(".json", ""));
+                    }
+                }
+
+                if (CrashSites.Count > 0)
+                {
+                    if (Index == -1)
+                    {
+                        if (CrashSites.Count > 1)
+                        {
+                            return CrashSites[new System.Random().Next(0, CrashSites.Count - 1)];
+                        } else
+                        {
+                            return CrashSites[0];
+                        }
+                    } else
+                    {
+                        if (CrashSites.Count - 1 >= Index)
+                        {
+                            return CrashSites[Index];
+                        } else
+                        {
+                            return "";
+                        }
+                    }
+                } else
+                {
+                    return "";
+                }
+            }
+            return "";
+        }
+
+
+        public static Expedition BuildBasicExpedition(int Region, string Alias = "", bool DebugFlag = false)
         {
             bool FoundValid = false;
             int TargetRegion = 0;
-            bool NoIndoors = false;
-            bool NoZoneSpawns = false;
             System.Random RNG = new System.Random();
-            List<ExpeditionRewardScene> RewardScenes = new List<ExpeditionRewardScene>();
-            List<int> RewardZones = new List<int>();
+            List<ExpeditionTaskTemplate> Tasks = new List<ExpeditionTaskTemplate>();
             if (string.IsNullOrEmpty(Alias))
             {
                 DebugLog("Searching neighbors for Region " + Region);
@@ -164,27 +206,14 @@ namespace SkyCoop
                     DebugLog("Selecting Region " + TargetRegion);
                 }
 
-                RewardScenes = GetRewardScenesForRegion(TargetRegion);
-                DebugLog("Region " + TargetRegion + " has " + RewardScenes.Count + " Reward Scenes");
-                RewardZones = GetRewardZonesForRegion(TargetRegion);
-                DebugLog("Region " + TargetRegion + " has " + RewardZones.Count + " Reward Zones");
-                if (RewardScenes.Count == 0)
-                {
-                    NoIndoors = true;
-                } else
+                Tasks = GetTasksForRegion(TargetRegion);
+                DebugLog("Region " + TargetRegion + " has " + Tasks.Count + " Avaliable Tasks");
+                if (Tasks.Count > 0)
                 {
                     FoundValid = true;
                 }
 
-                if (RewardZones.Count == 0)
-                {
-                    NoZoneSpawns = true;
-                } else
-                {
-                    FoundValid = true;
-                }
-
-                if (NoIndoors && NoZoneSpawns && CanTryNextRegion && string.IsNullOrEmpty(Alias))
+                if (!FoundValid && CanTryNextRegion)
                 {
                     int EndIf = RegionIndex;
                     DebugLog("This region invalid for expedition, trying next one, but stop if we once again meet index " + EndIf);
@@ -192,34 +221,17 @@ namespace SkyCoop
 
                     while (true)
                     {
-                        if (NextTryRegion > PossibleRegions.Count - 1)
-                        {
-                            NextTryRegion = 0;
-                        }
                         TargetRegion = PossibleRegions[NextTryRegion];
                         DebugLog("Next region is Region " + TargetRegion + " with index " + NextTryRegion);
-                        RewardScenes = GetRewardScenesForRegion(TargetRegion);
-                        DebugLog("Region " + TargetRegion + " has " + RewardScenes.Count + " Reward Scenes");
-                        RewardZones = GetRewardZonesForRegion(TargetRegion);
-                        DebugLog("Region " + TargetRegion + " has " + RewardZones.Count + " Reward Zones");
-                        if (RewardScenes.Count == 0)
-                        {
-                            NoIndoors = true;
-                        } else
-                        {
-                            NoIndoors = false;
-                        }
-
-                        if (RewardZones.Count == 0)
-                        {
-                            NoZoneSpawns = true;
-                        } else
-                        {
-                            NoZoneSpawns = false;
-                        }
-                        if (NoIndoors && NoZoneSpawns)
+                        Tasks = GetTasksForRegion(TargetRegion);
+                        DebugLog("Region " + TargetRegion + " has " + Tasks.Count + " Avaliable Tasks");
+                        if (Tasks.Count == 0)
                         {
                             NextTryRegion++;
+                            if (NextTryRegion > PossibleRegions.Count - 1)
+                            {
+                                NextTryRegion = 0;
+                            }
                             if (NextTryRegion == EndIf)
                             {
                                 break;
@@ -237,191 +249,186 @@ namespace SkyCoop
                 }
             }
 
-            ExpeditionRewardScene RewardScene = null;
-            ExpeditionZone Zone = null;
-            bool PreDefined = false;
-            bool ShouldUseIndoor = false;
+            ExpeditionTaskTemplate SelectedTask = null;
 
             if (!string.IsNullOrEmpty(Alias))
             {
                 string ExpeditonJSON = GetExpeditionJsonByAlias(Alias);
-                if(!ThisIsJsonOfZone(ExpeditonJSON))
-                {
-                    RewardScene = JSON.Load(ExpeditonJSON).Make<ExpeditionRewardScene>();
-                    TargetRegion = RewardScene.m_BelongRegion;
-                    ShouldUseIndoor = true;
-                } else
-                {
-                    Zone = JSON.Load(ExpeditonJSON).Make<ExpeditionZone>();
-                    TargetRegion = Zone.m_BelongRegion;
-                }
-                PreDefined = true;
+                SelectedTask = JSON.Load(ExpeditonJSON).Make<ExpeditionTaskTemplate>();
                 FoundValid = true;
             }
 
-
             if (FoundValid)
             {
-                int RewardZone = -1;
-
-                if (!PreDefined)
+                if (SelectedTask == null)
                 {
-                    if (!NoIndoors && !NoZoneSpawns)
+                    if (Tasks.Count > 1)
                     {
-                        DebugLog("This region has indoors and zone spawns, rolling 50/50");
-                        if (RNG.NextDouble() > 0.5)
-                        {
-                            ShouldUseIndoor = true;
-                            DebugLog("Going to use indoors");
-                        } else
-                        {
-                            DebugLog("Going to use spawn zones");
-                        }
-                    } else if (!NoIndoors && NoZoneSpawns)
-                    {
-                        ShouldUseIndoor = true;
-                        DebugLog("This region has only indoors");
+                        SelectedTask = Tasks[RNG.Next(0, Tasks.Count - 1)];
                     } else
                     {
-                        DebugLog("This region has only spawn zones");
+                        SelectedTask = Tasks[0];
                     }
                 }
 
-                if (ShouldUseIndoor)
+                Expedition Exp = new Expedition();
+                Exp.m_Alias = SelectedTask.m_Alias;
+                Exp.m_RegionBelong = SelectedTask.m_RegionBelong;
+                Exp.m_Name = GetRegionString(SelectedTask.m_RegionBelong) + " Expedition";
+
+                List<ExpeditionTaskTemplate> Templates = new List<ExpeditionTaskTemplate>() { SelectedTask };
+                while (true)
                 {
-                    if(RewardScene == null)
+                    if(SelectedTask.m_NextTaskAlias == "")
                     {
-                        if (RewardScenes.Count > 1)
+                        break;
+                    } else
+                    {
+                        string NextTaskAlias;
+                        if (SelectedTask.m_NextTaskAlias.Contains("#")) // Example_TaskVar#1-5
                         {
-                            RewardScene = RewardScenes[RNG.Next(0, RewardScenes.Count - 1)];
+                            string BaseName = SelectedTask.m_NextTaskAlias.Split('#')[0];// Example_TaskVar
+                            string Options = SelectedTask.m_NextTaskAlias.Split('#')[1]; // 1-5
+
+                            if (Options.Contains("-")) // 1-5
+                            {
+                                List<string> Variants = new List<string>();
+                                int Min = int.Parse(Options.Split('-')[0]); // 1
+                                int Max = int.Parse(Options.Split('-')[1]); // 5
+                                int RandomVariantsAmout = SelectedTask.m_RandomTasksAmout; // 3
+
+                                for (int i = Min; i <= Max; i++) // i = 1; i <= 5
+                                {
+                                    string MayAddAlias = BaseName + i;
+                                    bool AlreadyBusy = false;
+                                    foreach (Expedition item in m_ActiveExpeditions)
+                                    {
+                                        foreach (ExpeditionTask item2 in item.m_Tasks)
+                                        {
+                                            if (item2.m_Alias == MayAddAlias) // Example_TaskVar1
+                                            {
+                                                AlreadyBusy = true;
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    if (!AlreadyBusy)
+                                    {
+                                        Variants.Add(MayAddAlias);
+                                    }
+                                }
+
+                                for (int i = 1; i <= RandomVariantsAmout; i++)
+                                {
+                                    int VariantIndex = RNG.Next(0, Variants.Count);
+                                    string VariantAlias = Variants[VariantIndex];
+                                    Variants.RemoveAt(VariantIndex);
+                                    string VariantExpeditionJSON = GetExpeditionJsonByAlias(VariantAlias);
+                                    if (string.IsNullOrEmpty(VariantExpeditionJSON))
+                                    {
+                                        DebugLog("CAN'T FIND EXPEDITION VARIANT TASK " + VariantAlias + "!!!!!!!!!!!");
+                                        break;
+                                    } else
+                                    {
+                                        SelectedTask = JSON.Load(VariantExpeditionJSON).Make<ExpeditionTaskTemplate>();
+                                        Templates.Add(SelectedTask);
+                                    }
+                                }
+                                continue;
+                            } else
+                            {
+                                NextTaskAlias = SelectedTask.m_NextTaskAlias;
+                            }
                         } else
                         {
-                            RewardScene = RewardScenes[0];
+                            NextTaskAlias = SelectedTask.m_NextTaskAlias;
                         }
-                    }
-
-                    ExpeditionTemplate Exp = new ExpeditionTemplate();
-                    Exp.m_Debug = DebugFlag;
-                    Exp.m_CompleteOrder = ExpeditionCompleteOrder.LINEAL;
-                    Exp.m_Tasks.Add(GetEnterSceneTask(RewardScene.m_SceneName, RewardScene.m_Task));
-                    Exp.m_RewardScene = RewardScene.m_SceneName;
-                    Exp.m_RegionBelong = TargetRegion;
-                    Exp.m_Name = GetRegionString(TargetRegion) + " Expedition";
-                    Exp.m_GearSpawners = RewardScene.m_GearSpawners;
-                    DebugLog("Done, RewardScene is "+ RewardScene.m_SceneName);
-                    return Exp;
-                } else
-                {
-                    if(Zone == null)
-                    {
-                        if (RewardZones.Count > 1)
+                        
+                        string ExpeditonJSON = GetExpeditionJsonByAlias(NextTaskAlias);
+                        if (string.IsNullOrEmpty(ExpeditonJSON))
                         {
-                            RewardZone = RewardZones[RNG.Next(0, RewardZones.Count - 1)];
+                            DebugLog("CAN'T FIND EXPEDITION TASK " + NextTaskAlias + "!!!!!!!!!!!");
+                            break;
                         } else
                         {
-                            RewardZone = RewardZones[0];
+                            SelectedTask = JSON.Load(ExpeditonJSON).Make<ExpeditionTaskTemplate>();
+                            Templates.Add(SelectedTask);
                         }
-                        Zone = m_ExpeditionZonesByID[RewardZone];
                     }
-                    
-                    if(Zone != null)
-                    {
-                        ExpeditionTemplate Exp = new ExpeditionTemplate();
-                        Exp.m_Debug = DebugFlag;
-                        Exp.m_CompleteOrder = ExpeditionCompleteOrder.LINEAL;
-                        Exp.m_Tasks.Add(GetEnterZoneTask(Zone.m_ZoneScene, Zone.m_ZoneTaskText, Zone.m_ZoneCenter, Zone.m_ZoneRadius));
-                        Exp.m_SpecificContrainers = Zone.m_ZoneContainers;
-                        Exp.m_SceneForSpecificContrainersZone = Zone.m_ZoneScene;
-                        Exp.m_RewardZoneID = RewardZone;
-                        Exp.m_RegionBelong = TargetRegion;
-                        Exp.m_Name = GetRegionString(TargetRegion) + " Expedition";
-                        Exp.m_GearSpawners = Zone.m_ZoneGearSpawners;
-
-                        DebugLog("Done, RewardZone is  " + RewardZone);
-                        return Exp;
-                    }
-
-                    return null;
                 }
+
+                if(Templates.Count > 0)
+                {
+                    Exp.m_TimeLeft = Templates[0].m_Time;
+                }
+
+                foreach (ExpeditionTaskTemplate Template in Templates)
+                {
+                    ExpeditionTask Task = new ExpeditionTask();
+                    Task.m_Debug = DebugFlag;
+                    Task.m_Alias = Template.m_Alias;
+                    Task.m_Type = Template.m_TaskType;
+                    Task.m_Scene = Template.m_SceneName;
+                    Task.m_ZoneCenter = Template.m_ZoneCenter;
+                    Task.m_ZoneRadius = Template.m_ZoneRadius;
+                    Task.m_Text = Template.m_TaskText;
+                    Task.m_SpecificContrainers = Template.m_Containers;
+                    Task.m_GearSpawners = Template.m_GearSpawners;
+                    Task.m_RestockSceneContainers = Template.m_RestockSceneContainers;
+                    Task.m_ObjectiveGearSpawnerGUID = Template.m_ObjectiveGearGUID;
+                    Task.m_CompleteOrder = Template.m_CompleatOrder;
+                    Task.m_Time = Template.m_Time;
+                    Task.m_TimeAdd = Template.m_TimeAdd;
+                    Task.m_SpecificPlants = Template.m_Plants;
+                    Task.m_SpecificBreakdowns = Template.m_Breakdowns;
+                    Task.m_StayInZoneSeconds = Template.m_StaySeconds;
+                    Task.m_ObjectSpawners = Template.m_Objects;
+
+                    Task.m_Expedition = Exp;
+
+                    Exp.m_Tasks.Add(Task);
+                }
+
+                return Exp;
             } else
             {
                 return null;
             }
         }
-
-        public static void MaybeAdvanceExpedition(ExpeditionTemplate Exp)
-        {
-            //if (Exp.m_Tasks[0].m_Type == ExpeditionTaskType.ENTERSCENE)
-            //{
-            //    Exp.m_Tasks.Insert(0, GetFindGearTask("", new Vector3(0,0,0), 0));
-            //    Exp.m_CompleteOrder = ExpeditionCompleteOrder.LINEALHIDDEN;
-            //}
-        }
-
-        public class ExpeditionRewardScene
-        {
-            public string m_SceneName = "";
-            public string m_Task = "";
-            public string m_TaskAlt = "";
-            public List<ExpeditionGearSpawner> m_GearSpawners = new List<ExpeditionGearSpawner>();
-            public int m_BelongRegion = 0;
-        }
         
-        public static void MayAddSceneToList(List<ExpeditionRewardScene> List, ExpeditionRewardScene RewardScene)
+        public static void MayAddTaskToList(List<ExpeditionTaskTemplate> List, ExpeditionTaskTemplate Task)
         {
+            if (!Task.m_CanBeTaken)
+            {
+                return;
+            }
+            
+            
             foreach (Expedition Exp in m_ActiveExpeditions)
             {
-                if (Exp.m_Template.m_RewardScene == RewardScene.m_SceneName)
+                if (Exp.m_Alias == Task.m_Alias)
                 {
                     return;
                 }
             }
 
-            List.Add(RewardScene);
+            List.Add(Task);
         }
 
-        public static void MayAddZoneToList(int ZoneID, List<int> List)
+        public static List<ExpeditionTaskTemplate> GetTasksForRegion(int Region)
         {
-            foreach (Expedition Exp in m_ActiveExpeditions)
+            List<ExpeditionTaskTemplate> Tasks = new List<ExpeditionTaskTemplate>();
+            List<ExpeditionTaskTemplate> RawList;
+            if (m_ExpeditionTasks.TryGetValue(Region, out RawList))
             {
-                if (Exp.m_Template.m_RewardZoneID == ZoneID)
+                foreach (ExpeditionTaskTemplate Task in RawList)
                 {
-                    return;
-                }
-            }
-            List.Add(ZoneID);
-        }
-
-        public static List<int> GetRewardZonesForRegion(int Region)
-        {
-            List<int> Zones = new List<int>();
-            Dictionary<int, ExpeditionZone> Dict;
-            if(m_ExpeditionZones.TryGetValue(Region, out Dict))
-            {
-                foreach (var item in Dict)
-                {
-                    MayAddZoneToList(item.Key, Zones);
+                    MayAddTaskToList(Tasks, Task);
                 }
 
-                return Zones;
+                return Tasks;
             }
-            return Zones;
-        }
-
-        public static List<ExpeditionRewardScene> GetRewardScenesForRegion(int Region)
-        {
-            List<ExpeditionRewardScene> Scenes = new List<ExpeditionRewardScene>();
-            List<ExpeditionRewardScene> RawList;
-            if (m_ExpeditionRewardScenes.TryGetValue(Region, out RawList))
-            {
-                foreach (ExpeditionRewardScene RewardScene in RawList)
-                {
-                    MayAddSceneToList(Scenes, RewardScene);
-                }
-
-                return Scenes;
-            }
-            return Scenes;
+            return Tasks;
         }
         public static List<int> GetNeighborRegions(int Region)
         {
@@ -434,21 +441,31 @@ namespace SkyCoop
                     Neighbors.Add((int)Shared.GameRegion.MountainTown);
                     Neighbors.Add((int)Shared.GameRegion.PlesantValley);
                     Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
+                    Neighbors.Add((int)Shared.GameRegion.WindingRiver);
+                    Neighbors.Add((int)Shared.GameRegion.BleakInlet);
                     break;
                 case Shared.GameRegion.CoastalHighWay:
                     Neighbors.Add((int)Shared.GameRegion.MysteryLake);
                     Neighbors.Add((int)Shared.GameRegion.PlesantValley);
                     Neighbors.Add((int)Shared.GameRegion.DesolationPoint);
                     Neighbors.Add((int)Shared.GameRegion.BleakInlet);
+                    Neighbors.Add((int)Shared.GameRegion.CrumblingHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
                     break;
                 case Shared.GameRegion.DesolationPoint:
                     Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.CrumblingHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
                     break;
                 case Shared.GameRegion.PlesantValley:
                     Neighbors.Add((int)Shared.GameRegion.MysteryLake);
                     Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
                     Neighbors.Add((int)Shared.GameRegion.TimberwolfMountain);
                     Neighbors.Add((int)Shared.GameRegion.Blackrock);
+                    Neighbors.Add((int)Shared.GameRegion.KeepersPassNorth);
+                    Neighbors.Add((int)Shared.GameRegion.KeepersPassSouth);
+                    Neighbors.Add((int)Shared.GameRegion.WindingRiver);
                     break;
                 case Shared.GameRegion.TimberwolfMountain:
                     Neighbors.Add((int)Shared.GameRegion.PlesantValley);
@@ -465,24 +482,66 @@ namespace SkyCoop
                     Neighbors.Add((int)Shared.GameRegion.ForlornMuskeg);
                     Neighbors.Add((int)Shared.GameRegion.MysteryLake);
                     Neighbors.Add((int)Shared.GameRegion.HushedRiverValley);
+                    Neighbors.Add((int)Shared.GameRegion.BrokenRailroad);
                     break;
                 case Shared.GameRegion.BrokenRailroad:
                     Neighbors.Add((int)Shared.GameRegion.ForlornMuskeg);
+                    Neighbors.Add((int)Shared.GameRegion.MysteryLake);
+                    Neighbors.Add((int)Shared.GameRegion.MountainTown);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
                     break;
                 case Shared.GameRegion.HushedRiverValley:
                     Neighbors.Add((int)Shared.GameRegion.MountainTown);
+                    Neighbors.Add((int)Shared.GameRegion.MysteryLake);
+                    Neighbors.Add((int)Shared.GameRegion.ForlornMuskeg);
                     break;
                 case Shared.GameRegion.BleakInlet:
                     Neighbors.Add((int)Shared.GameRegion.ForlornMuskeg);
                     Neighbors.Add((int)Shared.GameRegion.MysteryLake);
+                    Neighbors.Add((int)Shared.GameRegion.WindingRiver);
                     Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
                     break;
                 case Shared.GameRegion.AshCanyon:
                     Neighbors.Add((int)Shared.GameRegion.TimberwolfMountain);
+                    Neighbors.Add((int)Shared.GameRegion.Blackrock);
+                    Neighbors.Add((int)Shared.GameRegion.PlesantValley);
                     break;
                 case Shared.GameRegion.Blackrock:
                     Neighbors.Add((int)Shared.GameRegion.TimberwolfMountain);
                     Neighbors.Add((int)Shared.GameRegion.PlesantValley);
+                    Neighbors.Add((int)Shared.GameRegion.KeepersPassSouth);
+                    Neighbors.Add((int)Shared.GameRegion.KeepersPassNorth);
+                    break;
+                case Shared.GameRegion.CrumblingHighWay:
+                    Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.DesolationPoint);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
+                    break;
+                case Shared.GameRegion.WindingRiver:
+                    Neighbors.Add((int)Shared.GameRegion.MysteryLake);
+                    Neighbors.Add((int)Shared.GameRegion.PlesantValley);
+                    Neighbors.Add((int)Shared.GameRegion.Ravine);
+                    Neighbors.Add((int)Shared.GameRegion.ForlornMuskeg);
+                    break;
+                case Shared.GameRegion.KeepersPassNorth:
+                    Neighbors.Add((int)Shared.GameRegion.Blackrock);
+                    Neighbors.Add((int)Shared.GameRegion.PlesantValley);
+                    Neighbors.Add((int)Shared.GameRegion.WindingRiver);
+                    Neighbors.Add((int)Shared.GameRegion.TimberwolfMountain);
+                    break;
+                case Shared.GameRegion.KeepersPassSouth:
+                    Neighbors.Add((int)Shared.GameRegion.Blackrock);
+                    Neighbors.Add((int)Shared.GameRegion.PlesantValley);
+                    Neighbors.Add((int)Shared.GameRegion.WindingRiver);
+                    Neighbors.Add((int)Shared.GameRegion.TimberwolfMountain);
+                    break;
+                case Shared.GameRegion.Ravine:
+                    Neighbors.Add((int)Shared.GameRegion.BleakInlet);
+                    Neighbors.Add((int)Shared.GameRegion.MysteryLake);
+                    Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.CrumblingHighWay);
+                    Neighbors.Add((int)Shared.GameRegion.WindingRiver);
                     break;
                 default:
                     break;
@@ -518,55 +577,45 @@ namespace SkyCoop
                     return "Ash Canyon";
                 case Shared.GameRegion.Blackrock:
                     return "Blackrock";
+                case Shared.GameRegion.CrumblingHighWay:
+                    return "Crumbling Highway";
+                case Shared.GameRegion.Ravine:
+                    return "Ravine";
+                case Shared.GameRegion.WindingRiver:
+                    return "Winding River";
+                case Shared.GameRegion.KeepersPassSouth:
+                    return "Keepers Pass South";
+                case Shared.GameRegion.KeepersPassNorth:
+                    return "Keepers Pass North";
                 default:
                     return "Unknown " + Region;
             }
         }
 
-        public static ExpeditionTask GetFindGearTask(string Scene, string TaskText, Vector3 ZoneCenter, float ZoneRadius)
-        {
-            ExpeditionTask Task = new ExpeditionTask();
-            Task.m_Type = ExpeditionTaskType.COLLECT;
-            Task.m_Scene = Scene;
-            Task.m_ZoneCenter = ZoneCenter;
-            Task.m_ZoneRadius = ZoneRadius;
-            Task.m_TaskText = TaskText;
-            return Task;
-        }
-        public static ExpeditionTask GetEnterSceneTask(string Scene, string TaskTex)
-        {
-            ExpeditionTask Task = new ExpeditionTask();
-            Task.m_Type = ExpeditionTaskType.ENTERSCENE;
-            Task.m_Scene = Scene;
-            Task.m_TaskText = TaskTex;
-            return Task;
-        }
-        public static ExpeditionTask GetEnterZoneTask(string Scene, string TaskTex, Vector3 ZoneCenter, float ZoneRadius)
-        {
-            ExpeditionTask Task = new ExpeditionTask();
-            Task.m_Type = ExpeditionTaskType.ENTERZONE;
-            Task.m_Scene = Scene;
-            Task.m_ZoneCenter = ZoneCenter;
-            Task.m_ZoneRadius = ZoneRadius;
-            Task.m_TaskText = TaskTex;
-            return Task;
-        }
-
         public static string GetExpeditionJsonByAlias(string Alias)
         {
-            byte[] FileData = File.ReadAllBytes("Mods" + Seperator + "ExpeditionTemplates" + Seperator + Alias+".json");
-            string JSONString = UTF8Encoding.UTF8.GetString(FileData);
-            if (string.IsNullOrEmpty(JSONString))
+            if(Directory.Exists(MPSaveManager.GetBaseDirectory() + "Mods"))
             {
-                return "";
+                if(Directory.Exists(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates"))
+                {
+                    byte[] FileData = File.ReadAllBytes(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates" + MPSaveManager.GetSeparator() + Alias + ".json");
+                    string JSONString = UTF8Encoding.UTF8.GetString(FileData);
+                    if (string.IsNullOrEmpty(JSONString))
+                    {
+                        return "";
+                    }
+                    JSONString = MPSaveManager.VectorsFixUp(JSONString);
+                    return JSONString;
+                } else
+                {
+                    Directory.CreateDirectory(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates");
+                }
+            } else
+            {
+                Directory.CreateDirectory(MPSaveManager.GetBaseDirectory() + "Mods");
+                Directory.CreateDirectory(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates");
             }
-            JSONString = MPSaveManager.VectorsFixUp(JSONString);
-            return JSONString;
-        }
-
-        public static bool ThisIsJsonOfZone(string JSONString)
-        {
-            return JSONString.Contains("+ExpeditionZone");
+            return "";
         }
     }
 }

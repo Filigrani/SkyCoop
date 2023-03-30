@@ -103,6 +103,10 @@ namespace GameServer
 #if (!DEDICATED)
             Supporters.ApplyFlairsForModel(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits.m_Flairs);
 #endif
+
+            WebhookPlayerJoin(_username);
+
+
             ServerSend.BENEFITINIT(_fromClient, MyMod.playersData[_fromClient].m_SupporterBenefits);
 
             ServerSend.GAMETIME(MyMod.OveridedTime);
@@ -394,6 +398,17 @@ namespace GameServer
         public static void SHOOTSYNC(int _fromClient, Packet _packet)
         {
             DataStr.ShootSync shoot = _packet.ReadShoot();
+            Vector3 pos = new Vector3(0, 0, 0);
+            if (MyMod.playersData[_fromClient] != null)
+            {
+                pos = MyMod.playersData[_fromClient].m_Position;
+            }
+
+            if(shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
+            {
+                ExpeditionManager.RegisterFlaregunShot(shoot.m_sceneguid, pos);
+            }
+
 #if (!DEDICATED)
             MyMod.DoShootSync(shoot, _fromClient);
 #endif
@@ -716,7 +731,7 @@ namespace GameServer
 
 #if (!DEDICATED)
 
-                if(MyMod.playersData[_fromClient].m_Levelid == MyMod.levelid && MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
+                if(MyMod.playersData[_fromClient].m_LevelGuid == MyMod.level_guid)
                 {
                     MyMod.playersData[_fromClient].m_BrakingSounds = MyMod.GetBreakDownSound(furn);
                 }
@@ -930,7 +945,7 @@ namespace GameServer
 #endif
                 MPSaveManager.AddHarvestedPlant(harveData.m_Guid, MyMod.playersData[_fromClient].m_LevelGuid, _fromClient);
 
-                ServerSend.LOOTEDHARVESTABLE(_fromClient, harveData.m_Guid, MyMod.playersData[_fromClient].m_LevelGuid, false);
+                ServerSend.LOOTEDHARVESTABLE(_fromClient, harveData.m_Guid, MyMod.playersData[_fromClient].m_LevelGuid, MyMod.MinutesFromStartServer, false);
             }
 
             ServerSend.HARVESTPLANT(_fromClient, harveData, false);
@@ -1144,14 +1159,15 @@ namespace GameServer
             int lvl = _packet.ReadInt();
             string Scene = _packet.ReadString();
             WeatherVolunteerData Data = _packet.ReadWeatherVolunteerData();
-
+            int GameplayRegion = _packet.ReadInt();
             Log("Client "+ _fromClient+" request all drops for scene "+ Scene);
             RegisterWeatherSetForRegion(_fromClient, Data);
             if(MyMod.playersData[_fromClient] != null)
             {
                 MyMod.playersData[_fromClient].m_Levelid = lvl;
                 MyMod.playersData[_fromClient].m_LevelGuid = Scene;
-                MyMod.playersData[_fromClient].m_LastRegion = Data.CurrentRegion;
+                MyMod.playersData[_fromClient].m_LastWeatherRegion = Data.CurrentRegion;
+                MyMod.playersData[_fromClient].m_LastRegion = GameplayRegion;
             }
             SendAllOpenables(_fromClient, Scene);
             RequestAnimalCorpses(_fromClient, Scene);
@@ -1202,7 +1218,7 @@ namespace GameServer
                     ContainerOpenSync BoxDummy = new ContainerOpenSync();
                     BoxDummy.m_Guid = item.Key;
                     BoxDummy.m_LevelGUID = Scene;
-                    int State = 0;
+                    int State = item.Value;
                     if (MPSaveManager.ContainerNotEmpty(Scene, item.Key))
                     {
                         State = 1;
@@ -1215,8 +1231,19 @@ namespace GameServer
             {
                 foreach (var item in Plants)
                 {
-                    ServerSend.LOOTEDHARVESTABLE(0, item.Key, Scene, false, _fromClient);
+                    int HarvestTime = item.Value;
+                    ServerSend.LOOTEDHARVESTABLE(0, item.Key, Scene, HarvestTime, false, _fromClient);
                 }
+            }
+            Dictionary<string, FakeRockCacheVisualData> RockCaches = MPSaveManager.GetRockCaches(Scene);
+            foreach (var item in RockCaches)
+            {
+                ServerSend.ADDROCKCACH(0, item.Value, item.Value.m_LevelGUID);
+            }
+            Dictionary<string, UniversalSyncableObject> UniversalObjects = MPSaveManager.GetUniversalSyncablesForScene(Scene);
+            foreach (var item in UniversalObjects)
+            {
+                ServerSend.ADDUNIVERSALSYNCABLE(item.Value, _fromClient);
             }
 
             Shared.ModifyDynamicGears(Scene);
@@ -1241,6 +1268,7 @@ namespace GameServer
             }
 
             Shared.RemoveLoadingClient(_fromClient);
+            ExpeditionManager.MayInviteToCrashSite(_fromClient);
         }
         public static void GOTCONTAINERSLICE(int _fromClient, Packet _packet)
         {
@@ -1719,17 +1747,116 @@ namespace GameServer
         {
             string GUID = _packet.ReadString();
             string Base64 = MPSaveManager.LoadPhoto(GUID);
+            Log("Client requested photo "+ GUID);
             if (!string.IsNullOrEmpty(Base64))
             {
-                ServerSend.PHOTOREQUEST(_fromClient, Base64, GUID);
+                List<SlicedBase64Data> Slices = GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo);
+
+                foreach (SlicedBase64Data Slice in Slices)
+                {
+                    ServerSend.BASE64SLICE(_fromClient, Slice);
+                }
+                Log("Sent photo "+ GUID + " to client "+ _fromClient + " this was worth "+ Slices.Count+" 700 bytes each");
+            } else
+            {
+                Log("Don't have that photo");
             }
         }
         public static void STARTEXPEDITION(int _fromClient, Packet _packet)
         {
+            int Region = _packet.ReadInt();
+
             if (MyMod.playersData[_fromClient] != null)
             {
-                ExpeditionManager.StartNewExpedition(Server.GetMACByID(_fromClient), MyMod.playersData[_fromClient].m_LastRegion);
+                ExpeditionManager.StartNewExpedition(Server.GetMACByID(_fromClient), Region);
             }
+        }
+        public static void ACCEPTEXPEDITIONINVITE(int _fromClient, Packet _packet)
+        {
+            ExpeditionManager.ExpeditionInvite Invite = _packet.ReadExpeditionInvite();
+            ExpeditionManager.AcceptInvite(Invite.m_PersonToInviteMAC, Invite.m_InviterMAC);
+        }
+        public static void REQUESTEXPEDITIONINVITES(int _fromClient, Packet _packet)
+        {
+            ServerSend.REQUESTEXPEDITIONINVITES(_fromClient, ExpeditionManager.GetInviteForClient(Server.GetMACByID(_fromClient)));
+        }
+        public static void CREATEEXPEDITIONINVITE(int _fromClient, Packet _packet)
+        {
+            int InviteID = _packet.ReadInt();
+            if(InviteID != -1)
+            {
+                ExpeditionManager.CreateInviteToExpedition(Server.GetMACByID(_fromClient), Server.GetMACByID(InviteID));
+            }
+        }
+        public static void ADDROCKCACH(int _fromClient, Packet _packet)
+        {
+            DataStr.FakeRockCacheVisualData Data = _packet.ReadFakeRockCache();
+#if (!DEDICATED)
+            MyMod.AddRockCache(Data);
+#endif
+            MPSaveManager.AddRockCach(Data, _fromClient);
+        }
+
+        public static void REMOVEROCKCACH(int _fromClient, Packet _packet)
+        {
+            DataStr.FakeRockCacheVisualData Data = _packet.ReadFakeRockCache();
+            bool NotEmpty = MPSaveManager.ContainerNotEmpty(Data.m_LevelGUID, Data.m_GUID);
+            if(NotEmpty)
+            {
+                ServerSend.ADDHUDMESSAGE(_fromClient, "Rock cache should be empty!");
+                ServerSend.REMOVEROCKCACH(_fromClient, Data, -1);
+            } else
+            {
+#if (!DEDICATED)
+                if((MyMod.MyContainer != null && MyMod.MyContainer.m_Guid == Data.m_GUID) || (Pathes.FakeRockCacheCallback != null && Pathes.FakeRockCacheCallback.m_GUID == Data.m_GUID))
+                {
+                    ServerSend.ADDHUDMESSAGE(_fromClient, MyMod.MyChatName + " INTERACTING WITH THIS!");
+                    ServerSend.REMOVEROCKCACH(_fromClient, Data, -1);
+                }
+#endif
+                for (int i = 0; i < MyMod.playersData.Count; i++)
+                {
+                    if (MyMod.playersData[i] != null && i != _fromClient)
+                    {
+                        if ((MyMod.playersData[i].m_BrakingObject != null && MyMod.playersData[i].m_BrakingObject.m_Guid == Data.m_GUID) || (MyMod.playersData[i].m_Container != null && MyMod.playersData[i].m_Container.m_Guid == Data.m_GUID))
+                        {
+                            ServerSend.ADDHUDMESSAGE(_fromClient, MyMod.playersData[i].m_Name + " INTERACTING WITH THIS!");
+                            ServerSend.REMOVEROCKCACH(_fromClient, Data, -1);
+                            return;
+                        }
+                    }
+                }
+                ServerSend.REMOVEROCKCACH(_fromClient, Data, 0);
+            }
+        }
+        public static void REMOVEROCKCACHFINISHED(int _fromClient, Packet _packet)
+        {
+            DataStr.FakeRockCacheVisualData Data = _packet.ReadFakeRockCache();
+            ServerSend.REMOVEROCKCACH(_fromClient, Data, 1, Data.m_LevelGUID);
+#if (!DEDICATED)
+            MyMod.RemoveRockCache(Data);
+#endif
+            MPSaveManager.RemoveRockCach(Data, _fromClient);
+        }
+        public static void CHARCOALDRAW(int _fromClient, Packet _packet)
+        {
+            string Scene = _packet.ReadString();
+            Vector3 Position = _packet.ReadVector3();
+            ExpeditionManager.RegisterCharcoalDrawing(Scene, Position);
+        }
+        public static void CHATCOMMAND(int _fromClient, Packet _packet)
+        {
+            string Command = _packet.ReadString();
+            ChatCommand(Command, _fromClient);
+        }
+        public static void REQUESTCONTAINERSTATE(int _fromClient, Packet _packet)
+        {
+            string Scene = _packet.ReadString();
+            string GUID = _packet.ReadString();
+            Log("Client " + _fromClient + " Requested Container State for " +GUID);
+            int State = MPSaveManager.GetContainerState(Scene, GUID);
+            Log("State is "+State+" sending it back to client "+_fromClient);
+            ServerSend.CHANGECONTAINERSTATE(0, GUID, State, Scene, false, _fromClient);
         }
     }
 }

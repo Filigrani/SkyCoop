@@ -15,6 +15,7 @@ namespace SkyCoop
     {
         public static ModValidationData LastRequested = null;
         public static List<string> ServerSideOnlyFiles = new List<string>();
+        public static List<string> WhitelistFiles = new List<string>();
 
         public static string SHA256CheckSum(string filePath)
         {
@@ -53,16 +54,21 @@ namespace SkyCoop
             public List<ModHashPair> m_Files = new List<ModHashPair>();
             public string m_FullString = "";
             public string m_FullStringBase64 = "";
+            public List<string> m_WhiteList = new List<string>();
         }
 
         public static bool ServerSideOnly(string Name)
         {
-            return ServerSideOnlyFiles.Contains(Name);
+            return ServerSideOnlyFiles.Contains(Name) || WhitelistFiles.Contains(Name);
         }
 
-        public static ModValidationData GetModsHash(bool Force = false)
+        public static ModValidationData GetModsHash(bool Force = false, List<string> WhitelistedHashes = default)
         {
             ModValidationData Valid = new ModValidationData();
+            if(WhitelistedHashes == null)
+            {
+                WhitelistedHashes = new List<string>();
+            }
             if (!Force && LastRequested != null)
             {
                 return LastRequested;
@@ -76,17 +82,28 @@ namespace SkyCoop
                     string FilterJson = System.IO.File.ReadAllText("Mods\\serversideonly.json");
                     ServerSideOnlyFiles = JSON.Load(FilterJson).Make<List<string>>();
                 }
+                if (File.Exists("modswhitelist.json"))
+                {
+                    MelonLogger.Msg(ConsoleColor.Yellow, "[ModsValidation][Info] Found Mods White List!");
+                    string FilterJson = System.IO.File.ReadAllText("modswhitelist.json");
+                    WhitelistFiles = JSON.Load(FilterJson).Make<List<string>>();
+                }
             }
 
             foreach (MelonMod Mod in MelonHandler.Mods)
             {
                 string Hash = MelonHandler.GetMelonHash(Mod);
                 string FileName = Mod.Assembly.GetName().Name + ".dll";
-                if (!ServerSideOnly(FileName))
+                if (!ServerSideOnly(FileName) || WhitelistedHashes.Contains(Hash))
                 {
                     Valid.m_Files.Add(new ModHashPair(@"Mods\" + FileName, Hash));
                 }else{
                     MelonLogger.Msg(ConsoleColor.Yellow, "[ModsValidation][Info] Ignore " + FileName);
+                }
+
+                if (WhitelistFiles.Contains(FileName))
+                {
+                    Valid.m_WhiteList.Add(Hash);
                 }
             }
             DirectoryInfo d = new DirectoryInfo("Mods");
@@ -96,22 +113,32 @@ namespace SkyCoop
             {
                 string Hash = SHA256CheckSum("Mods\\" + file.Name);
                 string FileName = file.Name;
-                if (!ServerSideOnly(FileName))
+                if (!ServerSideOnly(FileName) && !WhitelistedHashes.Contains(Hash))
                 {
                     Valid.m_Files.Add(new ModHashPair(@"Mods\" + FileName, Hash));
                 }else{
                     MelonLogger.Msg(ConsoleColor.Yellow, "[ModsValidation][Info] Ignore " + FileName);
+                }
+
+                if (WhitelistFiles.Contains(FileName))
+                {
+                    Valid.m_WhiteList.Add(Hash);
                 }
             }
             foreach (MelonPlugin Plugin in MelonHandler.Plugins)
             {
                 string Hash = MelonHandler.GetMelonHash(Plugin);
                 string FileName = Plugin.Assembly.GetName().Name + ".dll";
-                if (!ServerSideOnly(FileName))
+                if (!ServerSideOnly(FileName) && !WhitelistedHashes.Contains(Hash))
                 {
                     Valid.m_Files.Add(new ModHashPair(@"Plugins\" + FileName, Hash));
                 }else{
                     MelonLogger.Msg(ConsoleColor.Yellow, "[ModsValidation][Info] Ignore " + FileName);
+                }
+
+                if (WhitelistFiles.Contains(FileName))
+                {
+                    Valid.m_WhiteList.Add(Hash);
                 }
             }
             string MainHash = "";

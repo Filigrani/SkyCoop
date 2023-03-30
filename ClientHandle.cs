@@ -29,6 +29,7 @@ namespace SkyCoop
             MyMod.DiscardRepeatPacket();
             int _myId = _packet.ReadInt();
             int _MaxPlayers = _packet.ReadInt();
+            List<string> ModsWhiteList = _packet.ReadStringList();
 
             MyMod.MaxPlayers = _MaxPlayers;
             Shared.InitAllPlayers();
@@ -41,9 +42,9 @@ namespace SkyCoop
             MyMod.NoHostResponceSeconds = 0;
             MyMod.NeedTryReconnect = false;
             MyMod.TryingReconnect = false;
-            WelcomeReceived();
+            WelcomeReceived(ModsWhiteList);
         }
-        public static void WelcomeReceived()
+        public static void WelcomeReceived(List<string> ModsWhiteList)
         {
             MyMod.RemovePleaseWait();
             MyMod.DiscardRepeatPacket();
@@ -54,7 +55,7 @@ namespace SkyCoop
                 _packet.Write(MyMod.BuildInfo.Version);
                 _packet.Write(Supporters.MyID);
                 _packet.Write(Supporters.ConfiguratedBenefits);
-                _packet.Write(ModsValidation.GetModsHash(true).m_Hash);
+                _packet.Write(ModsValidation.GetModsHash(true, ModsWhiteList).m_Hash);
 
                 MyMod.SendUDPData(_packet);
             }
@@ -504,12 +505,19 @@ namespace SkyCoop
 
             if(furn.m_LevelGUID == MyMod.level_guid)
             {
-                if (MyMod.DelayedGearsPickup)
+                if (furn.m_Broken)
                 {
-                    MyMod.BrokenFurnsBackup.Add(furn);
+                    if (MyMod.DelayedGearsPickup)
+                    {
+                        MyMod.BrokenFurnsBackup.Add(furn);
 
-                } else{
-                    MyMod.RemoveBrokenFurniture(furn.m_Guid, furn.m_ParentGuid);
+                    } else
+                    {
+                        MyMod.RemoveBrokenFurniture(furn.m_Guid, furn.m_ParentGuid);
+                    }
+                } else
+                {
+                    MyMod.RepairBrokenFurniture(furn.m_Guid, furn.m_ParentGuid);
                 }
             }
         }
@@ -526,7 +534,7 @@ namespace SkyCoop
             {
                 MyMod.playersData[from].m_BrakingObject = furn;
 
-                if (MyMod.playersData[from].m_Levelid == MyMod.levelid && MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
+                if (MyMod.playersData[from].m_LevelGuid == MyMod.level_guid)
                 {
                     MyMod.playersData[from].m_BrakingSounds = MyMod.GetBreakDownSound(furn);
                 }
@@ -786,9 +794,16 @@ namespace SkyCoop
         {
             string plantGUID = _packet.ReadString();
             string Scene = _packet.ReadString();
+            int HarvestTime = _packet.ReadInt();
             if(Scene == MyMod.level_guid)
             {
-                MyMod.RemoveHarvastedPlant(plantGUID);
+                if(HarvestTime == -1)
+                {
+                    MyMod.AddHarvastedPlant(plantGUID);
+                } else
+                {
+                    MyMod.RemoveHarvastedPlant(plantGUID);
+                }
             }
         }
         public static void LOOTEDHARVESTABLEALL(Packet _packet)
@@ -1400,7 +1415,7 @@ namespace SkyCoop
                 Weather.m_TemperatureCountForTimeOfDay = TOD;
                 Weather.m_TempHigh = High;
                 Weather.m_TempLow = Low;
-                MelonLogger.Msg(ConsoleColor.Blue, "WeatherSet updated!");
+                //MelonLogger.Msg(ConsoleColor.Blue, "WeatherSet updated!");
             } else
             {
                 MelonLogger.Msg("Can't apply WeatherSync, because loading, skipping");
@@ -1461,7 +1476,7 @@ namespace SkyCoop
         {
             string GUID = _packet.ReadString();
             int State = _packet.ReadInt();
-
+            MelonLogger.Msg("Signal to container " + GUID + " state changed to " + State);
             MyMod.RemoveLootFromContainer(GUID, State);
         }
         public static void FINISHEDSENDINGCONTAINER(Packet _packet)
@@ -1542,28 +1557,63 @@ namespace SkyCoop
             int State = _packet.ReadInt();
             MyMod.DoExpeditionState(State);
         }
-        public static void PHOTOREQUEST(Packet _packet)
+        public static void REQUESTEXPEDITIONINVITES(Packet _packet)
         {
-            string Base64 = _packet.ReadString();
-            string GUID = _packet.ReadString();
-            MPSaveManager.AddPhoto(Base64, true, GUID);
-            MelonLogger.Msg("Got Requested Photo "+ GUID);
-
-            foreach (var item in MyMod.DroppedGearsObjs)
+            MyMod.RemovePleaseWait();
+            MyMod.DiscardRepeatPacket();
+            MyMod.ShowInvitesPicker(null, _packet.ReadInvitesList());
+        }
+        public static void NEWPLAYEREXPEDITION(Packet _packet)
+        {
+            string PlayerName = _packet.ReadString();
+            MyMod.NewPlayerInExpedition(PlayerName);
+        }
+        public static void NEWEXPEDITIONINVITE(Packet _packet)
+        {
+            string PlayerName = _packet.ReadString();
+            MyMod.NewExpeditionInvite(PlayerName);
+        }
+        public static void BASE64SLICE(Packet _packet)
+        {
+            DataStr.SlicedBase64Data Slice = _packet.ReadSlicedBase64Data();
+            AddBase64Slice(Slice);
+        }
+        public static void ADDROCKCACH(Packet _packet)
+        {
+            DataStr.FakeRockCacheVisualData Data = _packet.ReadFakeRockCache();
+            MyMod.AddRockCache(Data);
+        }
+        public static void REMOVEROCKCACH(Packet _packet)
+        {
+            DataStr.FakeRockCacheVisualData Data = _packet.ReadFakeRockCache();
+            int State = _packet.ReadInt();
+            if(State == -1)
             {
-                if(item.Value != null && item.Value.GetComponent<Comps.DroppedGearDummy>())
+                MyMod.RemovePleaseWait();
+                MyMod.PendingRockCahceRemove = null;
+                using (Packet __packet = new Packet((int)ClientPackets.FURNBREAKINSTOP))
                 {
-                    if(item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_PhotoGUID == GUID)
-                    {
-                        Texture2D tex = MPSaveManager.GetPhotoTexture(GUID);
-                        if (tex)
-                        {
-                            item.Value.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
-                        }
-                        MelonLogger.Msg("Found and applied on " + item.Key+" dropped gear");
-                    }
+                    __packet.Write(true);
+                    MyMod.SendUDPData(__packet);
                 }
+            } else if(State == 0)
+            {
+                MyMod.RemovePleaseWait();
+                MyMod.ContinueRemovingRockCache();
+            }else if(State == 1)
+            {
+                MyMod.RemoveRockCache(Data);
             }
+        }
+        public static void ADDUNIVERSALSYNCABLE(Packet _packet)
+        {
+            DataStr.UniversalSyncableObject Obj = _packet.ReadUniversalSyncable();
+            MyMod.SpawnUniversalSyncableObject(Obj);
+        }
+        public static void REMOVEUNIVERSALSYNCABLE(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            MyMod.RemoveObjectByGUID(GUID);
         }
     }
 }

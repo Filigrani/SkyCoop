@@ -2,13 +2,9 @@
 using MelonLoader;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Net.NetworkInformation;
-using System.Text;
-using System.Threading.Tasks;
-using UnhollowerBaseLib;
 using UnhollowerRuntimeLib;
 using UnityEngine;
+using static SkyCoop.DataStr;
 using static SkyCoop.MyMod;
 using IL2CPP = Il2CppSystem.Collections.Generic;
 
@@ -43,6 +39,10 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<UiButtonKeyboardPressSkip>();
             ClassInjector.RegisterTypeInIl2Cpp<DeathDropContainer>();
             ClassInjector.RegisterTypeInIl2Cpp<DoorLockedOnKey>();
+            ClassInjector.RegisterTypeInIl2Cpp<FakeRockCache>();
+            ClassInjector.RegisterTypeInIl2Cpp<LocalVariablesKit>();
+            ClassInjector.RegisterTypeInIl2Cpp<ParticleSystemParasite>();
+            ClassInjector.RegisterTypeInIl2Cpp<ExpeditionInteractive>();
         }
         
         
@@ -83,14 +83,27 @@ namespace SkyCoop
             public DestoryStoneOnStop(IntPtr ptr) : base(ptr) { }
             public GameObject m_Obj = null;
             public Rigidbody m_RB = null;
+            public GearItem m_Gear = null;
+            public bool m_ShouldSendDrop = false;
+            private bool m_SendDrop = false;
 
             void Update()
             {
-                if (m_Obj != null && m_RB != null)
+                if (m_Obj != null && m_RB != null && m_Gear != null)
                 {
                     if (m_RB.isKinematic == true)
                     {
-                        UnityEngine.Object.Destroy(m_Obj);
+                        if (m_ShouldSendDrop)
+                        {
+                            if (!m_SendDrop)
+                            {
+                                m_SendDrop = true;
+                                SendDropItem(m_Gear, 0, 0, true);
+                            }
+                        } else
+                        {
+                            UnityEngine.Object.Destroy(m_Obj);
+                        }
                     }
                 }
             }
@@ -152,7 +165,7 @@ namespace SkyCoop
                     {
                         if (m_Cont.m_IsCorpse == true)
                         {
-                            UnityEngine.Object.Destroy(m_Obj.GetComponent<ContainersSync>());
+                            //UnityEngine.Object.Destroy(m_Obj.GetComponent<ContainersSync>());
                         }
                     }
                 }
@@ -3003,6 +3016,223 @@ namespace SkyCoop
                 pl.m_DamageColiders.Add(m_Obj);
                 m_ClientId = pl.m_ID;
                 //MelonLogger.Msg(m_Obj.name + " = "+ m_Damage);
+            }
+        }
+        public class FakeRockCache : MonoBehaviour
+        {
+            public FakeRockCache(IntPtr ptr) : base(ptr) { }
+            public string m_GUID = "";
+            public string m_Owner = "Unknown";
+            public int m_Rocks = 0;
+            public int m_Sticks = 0;
+            public DataStr.FakeRockCacheVisualData m_VisualData = new DataStr.FakeRockCacheVisualData();
+
+            public void Created(bool Sync = true)
+            {
+                m_VisualData.m_GUID = m_GUID;
+                m_VisualData.m_LevelGUID = level_guid;
+                m_VisualData.m_Owner = m_Owner;
+                m_VisualData.m_Position = gameObject.transform.position;
+                m_VisualData.m_Rotation = gameObject.transform.rotation;
+
+                if (sendMyPosition)
+                {
+                    if (Sync)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.ADDROCKCACH))
+                        {
+                            _packet.Write(m_VisualData);
+                            SendUDPData(_packet);
+                        }
+                    }
+                    return;
+                }
+                MPSaveManager.AddRockCach(m_VisualData, 0);
+            }
+
+            public void Open()
+            {
+                if(gameObject != null && gameObject.GetComponent<Container>())
+                {
+                    GameManager.GetPlayerManagerComponent().ProcessContainerInteraction(gameObject.GetComponent<Container>());
+                }
+            }
+
+            public void DismantleFinished()
+            {
+                if (m_Rocks > 0)
+                {
+                    GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_Stone", m_Rocks);
+                    string message = Localization.Get("GAMEPLAY_Stone") + " (" + m_Rocks + ")";
+                    GearMessage.AddMessage("GEAR_Stone", Localization.Get("GAMEPLAY_Harvested"), message);
+                }
+                if (m_Sticks > 0)
+                {
+                    GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_Stick", m_Sticks);
+                    string message = Localization.Get("GAMEPLAY_Stick") + " (" + m_Sticks + ")";
+                    GearMessage.AddMessage("GEAR_Stick", Localization.Get("GAMEPLAY_Harvested"), message);
+                }
+                UnityEngine.Object.Destroy(gameObject);
+                if (sendMyPosition)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.REMOVEROCKCACHFINISHED))
+                    {
+                        _packet.Write(m_VisualData);
+                        SendUDPData(_packet);
+                    }
+                    return;
+                }
+                MPSaveManager.RemoveRockCach(m_VisualData, 0);
+                ServerSend.REMOVEROCKCACH(0, m_VisualData, 1, m_VisualData.m_LevelGUID);
+            }
+            public void Remove()
+            {
+                DataStr.BrokenFurnitureSync furn = new DataStr.BrokenFurnitureSync();
+                furn.m_Guid = m_GUID;
+                furn.m_ParentGuid = "";
+                furn.m_LevelID = levelid;
+                furn.m_LevelGUID = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
+                if (sendMyPosition)
+                {
+                    DoPleaseWait("Please wait...", "Preparing to dismantle...");
+                    PendingRockCahceRemove = this;
+                    using (Packet _packet = new Packet((int)ClientPackets.REMOVEROCKCACH))
+                    {
+                        _packet.Write(m_VisualData);
+                        SendUDPData(_packet);
+                    }
+                    using (Packet _packet = new Packet((int)ClientPackets.FURNBREAKINGGUID))
+                    {
+                        _packet.Write(furn);
+                        SendUDPData(_packet);
+                    }
+                    return;
+                } else
+                {
+                    for (int i = 0; i < playersData.Count; i++)
+                    {
+                        if (playersData[i] != null)
+                        {
+                            if ((playersData[i].m_BrakingObject != null && playersData[i].m_BrakingObject.m_Guid == m_GUID) || (playersData[i].m_Container != null && playersData[i].m_Container.m_Guid == m_GUID))
+                            {
+                                HUDMessage.AddMessage(playersData[i].m_Name + " INTERACTING WITH THIS!");
+                                return;
+                            }
+                        }
+                    }
+                }
+
+                bool NotEmpty = MPSaveManager.ContainerNotEmpty(level_guid, m_GUID);
+                if (NotEmpty)
+                {
+                    HUDMessage.AddMessage("Rock cache should be empty!");
+                    return;
+                }
+                ServerSend.FURNBREAKINGGUID(0, furn, true);
+                GameManager.s_IsAISuspended = true;
+                Pathes.FakeRockCacheCallback = this;
+                InterfaceManager.m_Panel_GenericProgressBar.Launch(Localization.Get("GAMEPLAY_BreakingDownProgress"), 2f, 10, 0.0f, "Play_RockCache", (string)null, false, false, null);
+            }
+        }
+        public class LocalVariablesKit : MonoBehaviour
+        {
+            public LocalVariablesKit(IntPtr ptr) : base(ptr) { }
+            public string m_String = "";
+            public int m_Int = 0;
+            public float m_Float = 0;
+            public double m_Double = 0;
+        }
+
+        public class ParticleSystemParasite : MonoBehaviour
+        {
+            public ParticleSystemParasite(IntPtr ptr) : base(ptr) { }
+            public ParticleSystem m_ParticleSystem = null;
+            void Update()
+            {
+                if(gameObject != null)
+                {
+                    if(m_ParticleSystem != null)
+                    {
+                        if (!m_ParticleSystem.isPlaying)
+                        {
+                            m_ParticleSystem.Play();
+                        }
+                    }
+                }
+            }
+        }
+
+        public class ExpeditionInteractive : MonoBehaviour
+        {
+            public ExpeditionInteractive(IntPtr ptr) : base(ptr) { }
+            public string m_ObjectText = "Object";
+            public string m_InteractText = "Interacting...";
+            public float m_InteractTime = 1f;
+            public string m_Tool = "";
+            public string m_Material = "";
+            public int m_MaterialCount = 1;
+
+            public void Load(ExpeditionInteractiveData Data)
+            {
+                m_ObjectText = Data.m_ObjectText;
+                m_InteractText = Data.m_InteractText;
+                m_InteractTime = Data.m_InteractTime;
+                m_Tool = Data.m_Tool;
+                m_Material = Data.m_Material;
+                m_MaterialCount = Data.m_MaterialCount;
+                gameObject.transform.position = Data.m_Position;
+                gameObject.transform.rotation = Data.m_Rotation;
+                gameObject.transform.localScale = Data.m_Scale;
+            }
+
+            public void TryInteract()
+            {
+                if (CanInteract())
+                {
+
+                }
+            }
+
+            public bool CanInteract()
+            {
+                bool HaveTool = false;
+                if (string.IsNullOrEmpty(m_Tool))
+                {
+                    HaveTool = true;
+                } else
+                {
+                    HaveTool = GameManager.GetInventoryComponent().HasNonRuinedItem(m_Tool);
+                }
+                bool HaveMaterials = false;
+                if (string.IsNullOrEmpty(m_Material) || m_MaterialCount == 0)
+                {
+                    HaveMaterials = true;
+                }else 
+                {
+                    int Num = GameManager.GetInventoryComponent().NumGearInInventory(m_Material);
+
+                    if(Num >= m_MaterialCount)
+                    {
+                        HaveMaterials = true;
+                    }
+                    HUDMessage.AddMessage("You need ");
+                }
+
+                if (!HaveTool && !HaveMaterials)
+                {
+                    HUDMessage.AddMessage("You need "+ Utils.GetGearDisplayName(m_Tool) + " and x"+m_MaterialCount+" "+ Utils.GetGearDisplayName(m_Material) + "!");
+                    GameAudioManager.PlayGUIError();
+                } else if(!HaveTool && HaveMaterials) 
+                {
+                    HUDMessage.AddMessage("You need " + Utils.GetGearDisplayName(m_Tool) + "!");
+                    GameAudioManager.PlayGUIError();
+                } else if (HaveTool && !HaveMaterials)
+                {
+                    HUDMessage.AddMessage("You need x" + m_MaterialCount + " " + Utils.GetGearDisplayName(m_Material) + "!");
+                    GameAudioManager.PlayGUIError();
+                }
+
+                return HaveTool && HaveMaterials;
             }
         }
     }

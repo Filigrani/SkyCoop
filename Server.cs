@@ -263,6 +263,23 @@ namespace GameServer
             return "";
         }
 
+        public static List<string> GetMACsOfPlayers()
+        {
+            List<string> All = new List<string>();
+#if (!DEDICATED)
+            All.Add(MPSaveManager.GetSubNetworkGUID());
+#endif
+
+            for (int i = 1; i <= MaxPlayers; i++)
+            {
+                if (clients[i].IsBusy())
+                {
+                    All.Add(clients[i].SubNetworkGUID);
+                }
+            }
+            return All;
+        }
+
         public static int GetIDByMAC(string MAC)
         {
             if (MAC == MPSaveManager.GetSubNetworkGUID())
@@ -406,6 +423,15 @@ namespace GameServer
                 { (int)ClientPackets.PHOTOREQUEST, ServerHandle.PHOTOREQUEST},
                 { (int)ClientPackets.GOTPHOTOSLICE, ServerHandle.GOTPHOTOSLICE},
                 { (int)ClientPackets.STARTEXPEDITION, ServerHandle.STARTEXPEDITION},
+                { (int)ClientPackets.ACCEPTEXPEDITIONINVITE, ServerHandle.ACCEPTEXPEDITIONINVITE},
+                { (int)ClientPackets.REQUESTEXPEDITIONINVITES, ServerHandle.REQUESTEXPEDITIONINVITES},
+                { (int)ClientPackets.CREATEEXPEDITIONINVITE, ServerHandle.CREATEEXPEDITIONINVITE},
+                { (int)ClientPackets.ADDROCKCACH, ServerHandle.ADDROCKCACH},
+                { (int)ClientPackets.REMOVEROCKCACH, ServerHandle.REMOVEROCKCACH},
+                { (int)ClientPackets.REMOVEROCKCACHFINISHED, ServerHandle.REMOVEROCKCACHFINISHED},
+                { (int)ClientPackets.CHARCOALDRAW, ServerHandle.CHARCOALDRAW},
+                { (int)ClientPackets.CHATCOMMAND, ServerHandle.CHATCOMMAND},
+                { (int)ClientPackets.REQUESTCONTAINERSTATE, ServerHandle.REQUESTCONTAINERSTATE},
             };
             Log("Initialized packets.");
         }

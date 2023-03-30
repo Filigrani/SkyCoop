@@ -71,7 +71,7 @@ namespace GameServer
             {
                 if (MyMod.playersData[i] != null)
                 {
-                    if (MyMod.playersData[i].m_LastRegion == Region && !Server.clients[i].RCON)
+                    if (MyMod.playersData[i].m_LastWeatherRegion == Region && !Server.clients[i].RCON)
                     {
                         if (!IgnoreLoaders)
                         {
@@ -170,6 +170,7 @@ namespace GameServer
             {
                 _packet.Write(_toClient);
                 _packet.Write(maxPlayers);
+                _packet.Write(ModsValidation.GetModsHash(false).m_WhiteList);
 
                 SendTCPData(_toClient, _packet, true);
             }
@@ -822,6 +823,16 @@ namespace GameServer
                 }
             }
         }
+        public static void CHATPM(int OnlyFor, DataStr.MultiplayerChatMessage _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHAT))
+            {
+                _packet.Write(_msg);
+                _packet.Write(0);
+
+                SendUDPData(OnlyFor, _packet);
+            }
+        }
         public static void CHANGENAME(int _From, string _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CHANGENAME))
@@ -1377,12 +1388,13 @@ namespace GameServer
                 }
             }
         }
-        public static void LOOTEDHARVESTABLE(int _From, string GUID, string Scene, bool toEveryOne, int OnlyFor = -1)
+        public static void LOOTEDHARVESTABLE(int _From, string GUID, string Scene, int HarvestTime, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOOTEDHARVESTABLE))
             {
                 _packet.Write(GUID);
                 _packet.Write(Scene);
+                _packet.Write(HarvestTime);
                 if (toEveryOne == true)
                 {
 
@@ -2355,28 +2367,108 @@ namespace GameServer
         }
         public static void EXPEDITIONRESULT(int For, int State)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONRESULT))
+            if(For == 0)
             {
-                _packet.Write(State);
+#if (!DEDICATED)
+                MyMod.DoExpeditionState(State);
+#endif
+            } else
+            {
+                using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONRESULT))
+                {
+                    _packet.Write(State);
+                    SendUDPData(For, _packet);
+                }
+            }
+        }
+        public static void REQUESTEXPEDITIONINVITES(int For, List<ExpeditionManager.ExpeditionInvite> Invites)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTEXPEDITIONINVITES))
+            {
+                _packet.Write(Invites);
                 SendUDPData(For, _packet);
             }
         }
-        public static void PHOTOREQUEST(int For, string Base64, string GUID)
+        public static void NEWPLAYEREXPEDITION(int For, string PlayerName)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.PHOTOREQUEST))
+            using (Packet _packet = new Packet((int)ServerPackets.NEWPLAYEREXPEDITION))
             {
-                _packet.Write(Base64);
-                _packet.Write(GUID);
+                _packet.Write(PlayerName);
                 SendUDPData(For, _packet);
             }
         }
-        public static void PHOTOREQUEST(int From, string Base64, string GUID, string LevelGUID)
+        public static void NEWEXPEDITIONINVITE(int For, string PlayerName)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.PHOTOREQUEST))
+            using (Packet _packet = new Packet((int)ServerPackets.NEWEXPEDITIONINVITE))
             {
-                _packet.Write(Base64);
-                _packet.Write(GUID);
+                _packet.Write(PlayerName);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void BASE64SLICE(int For, DataStr.SlicedBase64Data Data)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.BASE64SLICE))
+            {
+                _packet.Write(Data);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void BASE64SLICE(DataStr.SlicedBase64Data Data, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.BASE64SLICE))
+            {
+                _packet.Write(Data);
+                SendUDPDataToAll(_packet, LevelGUID);
+            }
+        }
+        public static void ADDROCKCACH(int From, DataStr.FakeRockCacheVisualData Data, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDROCKCACH))
+            {
+                _packet.Write(Data);
                 SendUDPDataToAllButNotSender(_packet, From, LevelGUID);
+            }
+        }
+        public static void REMOVEROCKCACH(int From, DataStr.FakeRockCacheVisualData Data, int State, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEROCKCACH))
+            {
+                _packet.Write(Data);
+                _packet.Write(State);
+                SendUDPDataToAllButNotSender(_packet, From, LevelGUID);
+            }
+        }
+        public static void REMOVEROCKCACH(int From, DataStr.FakeRockCacheVisualData Data, int State)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEROCKCACH))
+            {
+                _packet.Write(Data);
+                _packet.Write(State);
+                SendUDPData(From, _packet);
+            }
+        }
+        public static void ADDUNIVERSALSYNCABLE(DataStr.UniversalSyncableObject Data, int For)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDUNIVERSALSYNCABLE))
+            {
+                _packet.Write(Data);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void ADDUNIVERSALSYNCABLE(DataStr.UniversalSyncableObject Data)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDUNIVERSALSYNCABLE))
+            {
+                _packet.Write(Data);
+                SendUDPDataToAll(_packet, Data.m_Scene);
+            }
+        }
+        public static void REMOVEUNIVERSALSYNCABLE(string GUID, string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEUNIVERSALSYNCABLE))
+            {
+                _packet.Write(GUID);
+                SendUDPDataToAll(_packet, Scene);
             }
         }
     }

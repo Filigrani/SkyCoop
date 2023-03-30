@@ -1,22 +1,8 @@
 ﻿using System;
 using UnityEngine;
-using System.Reflection;
-using System.Globalization;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Net;
-using System.Net.Sockets;
-using MelonLoader;
-using Harmony;
-using UnhollowerRuntimeLib;
-using UnhollowerBaseLib;
-using SkyCoop;
 
 using GameServer;
-using System.IO;
 
 namespace SkyCoop
 {
@@ -398,23 +384,11 @@ namespace SkyCoop
                     //ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), (int)GameManager.GetUniStorm().m_CurrentRegion);
                     MyMod.LogScreenshotData();
                 }
-                if (GUI.Button(new Rect(160, 160, 80, 20), "Expedition"))
+                if (GUI.Button(new Rect(160, 160, 80, 20), "CrashSite"))
                 {
-                    //string quote = "\"";
-                    //Vector3 pos = GameManager.GetPlayerTransform().position;
-                    //string Copy = "AddSafeZone(" + quote + MyMod.level_guid + quote + ", new Vector3(" + pos.x.ToString(CultureInfo.InvariantCulture) + "f, " + pos.y.ToString(CultureInfo.InvariantCulture) + "f, " + pos.z.ToString(CultureInfo.InvariantCulture) + "f), 50);";
-                    //GUIUtility.systemCopyBuffer = Copy;
-
                     if (MyMod.iAmHost)
                     {
-                        ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), (int)GameManager.GetUniStorm().m_CurrentRegion);
-                    } else
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.STARTEXPEDITION))
-                        {
-                            _packet.Write(true);
-                            MyMod.SendUDPData(_packet);
-                        }
+                        ExpeditionManager.StartCrashSite();
                     }
                 }
                 if (GUI.Button(new Rect(160, 190, 80, 20), "Show"))

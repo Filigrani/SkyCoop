@@ -332,8 +332,15 @@ namespace GameServer
             { (int)ServerPackets.TRIGGEREMOTE, ClientHandle.TRIGGEREMOTE},
             { (int)ServerPackets.EXPEDITIONSYNC, ClientHandle.EXPEDITIONSYNC},
             { (int)ServerPackets.EXPEDITIONRESULT, ClientHandle.EXPEDITIONRESULT},
-            { (int)ServerPackets.PHOTOREQUEST, ClientHandle.PHOTOREQUEST},
             { (int)ServerPackets.READYSENDNEXTSLICEPHOTO, ClientHandle.READYSENDNEXTSLICEPHOTO},
+            { (int)ServerPackets.REQUESTEXPEDITIONINVITES, ClientHandle.REQUESTEXPEDITIONINVITES},
+            { (int)ServerPackets.NEWPLAYEREXPEDITION, ClientHandle.NEWPLAYEREXPEDITION},
+            { (int)ServerPackets.NEWEXPEDITIONINVITE, ClientHandle.NEWEXPEDITIONINVITE},
+            { (int)ServerPackets.BASE64SLICE, ClientHandle.BASE64SLICE},
+            { (int)ServerPackets.ADDROCKCACH, ClientHandle.ADDROCKCACH},
+            { (int)ServerPackets.REMOVEROCKCACH, ClientHandle.REMOVEROCKCACH},
+            { (int)ServerPackets.ADDUNIVERSALSYNCABLE, ClientHandle.ADDUNIVERSALSYNCABLE},
+            { (int)ServerPackets.REMOVEUNIVERSALSYNCABLE, ClientHandle.REMOVEUNIVERSALSYNCABLE},
         };
             MelonLogger.Msg("Initialized packets.");
         }

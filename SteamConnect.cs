@@ -7,6 +7,7 @@ using System.IO;
 using System.Net;
 using GameServer;
 using System.Collections.Generic;
+using UnityEngine.Networking;
 
 namespace SkyCoop
 {
@@ -103,6 +104,7 @@ namespace SkyCoop
                     MyMod.LoadChatName(personaName);
                 }
                 Supporters.SetID(SID);
+                //GameServer();
             }
 
             public static void OnP2PSessionAccept(GameRichPresenceJoinRequested_t request)
@@ -1078,6 +1080,24 @@ namespace SkyCoop
                     }
                 }
             }
+
+            //public static void GameServer()
+            //{
+            //    bool Good = Steamworks.GameServer.Init(0, 7777, 7666, EServerMode.eServerModeAuthenticationAndSecure, "2.01");
+            //    Steamworks.SteamGameServer.SetModDir("tld_data");
+            //    Steamworks.SteamGameServer.SetProduct("TheLongDark");
+            //    Steamworks.SteamGameServer.SetServerName("Example");
+            //    Steamworks.SteamGameServer.SetGameDescription("Example");
+            //    Steamworks.SteamGameServer.SetDedicatedServer(true);
+            //    Steamworks.SteamGameServer.SetAdvertiseServerActive(true);
+            //    Steamworks.SteamGameServer.SetSpectatorPort(7666);
+            //    Steamworks.SteamGameServer.SetMaxPlayerCount(2);
+            //    Steamworks.SteamGameServer.SetBotPlayerCount(0);
+            //    Steamworks.SteamGameServer.SetMapName("greate_bear");
+            //    Steamworks.SteamGameServer.LogOnAnonymous();
+            //    MelonLogger.Msg("[SteamWorks.NET] Server Created " + Good);
+            //    MelonLogger.Msg("[SteamWorks.NET] BLoggedOn " + Steamworks.SteamGameServer.BLoggedOn());
+            //}
         }
     }
 }

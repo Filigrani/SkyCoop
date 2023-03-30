@@ -1,27 +1,15 @@
 ﻿using System;
 using UnityEngine;
-using System.Reflection;
-using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Net;
-using System.Net.Sockets;
 using MelonLoader;
-using Harmony;
 using UnhollowerRuntimeLib;
 using UnhollowerBaseLib;
-using SkyCoop;
 using MelonLoader.TinyJSON;
 using System.Diagnostics;
-
 using GameServer;
-using UnityEngine.SceneManagement;
 using static SkyCoop.DataStr;
 using static SkyCoop.Comps;
-using Il2CppSystem.Threading.Tasks;
 using static Utils;
 
 namespace SkyCoop
@@ -184,6 +172,19 @@ namespace SkyCoop
                 {
                     if (saveObj != null)
                     {
+                        if (saveObj.GetComponent<ObjectGuid>())
+                        {
+                            foreach (var item in ExpeditionEditor.m_Objects)
+                            {
+                                if (item.m_GUID == saveObj.GetComponent<ObjectGuid>().Get())
+                                {
+                                    ExpeditionEditor.ToggleColisionOfObject(saveObj, true);
+                                    MelonLogger.Msg("Expedition editor object placed!");
+                                    return;
+                                }
+                            }
+                        }
+
                         MelonLogger.Msg("Return gear to fake one");
                         int variant = 0;
                         if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
@@ -237,6 +238,23 @@ namespace SkyCoop
                 {
                     if (saveObj != null)
                     {
+                        if (saveObj.GetComponent<ObjectGuid>())
+                        {
+                            foreach (var item in ExpeditionEditor.m_Objects)
+                            {
+                                if(item.m_GUID == saveObj.GetComponent<ObjectGuid>().Get())
+                                {
+                                    item.m_Position = saveObj.transform.position;
+                                    item.m_Rotation = saveObj.transform.rotation;
+                                    ExpeditionEditor.ToggleColisionOfObject(saveObj, true);
+
+                                    MelonLogger.Msg("Expedition editor object placed!");
+                                    return;
+                                }
+                            }
+                        }
+
+
                         MelonLogger.Msg("Gear placed!");
                         int variant = 0;
                         if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
@@ -332,10 +350,19 @@ namespace SkyCoop
                         {
                             HUDMessage.AddMessage("This door can't be locked!");
                         }
-                    }else if(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<Container>() && MyMod.ExpeditionEditorUI != null && MyMod.ExpeditionEditorUI.activeSelf)
+                    }else if(MyMod.ExpeditionEditorUI != null && MyMod.ExpeditionEditorUI.activeSelf)
                     {
-                        ExpeditionEditor.AddContainer(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
-                    }else{
+                        if (__instance.m_InteractiveObjectUnderCrosshair.GetComponent<Container>())
+                        {
+                            ExpeditionEditor.AddContainer(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
+                        } else if(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<Harvestable>())
+                        {
+                            ExpeditionEditor.AddPlant(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
+                        } else if (__instance.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>())
+                        {
+                            ExpeditionEditor.AddBreakdown(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
+                        }
+                    } else{
                         MyMod.PlaceDroppedGear(__instance.m_InteractiveObjectUnderCrosshair);
                         MelonLogger.Msg("Going to place object");
                     }
@@ -794,6 +821,7 @@ namespace SkyCoop
                     shoot.m_projectilename = "GEAR_Arrow";
                     shoot.m_position = playerTransform.TransformPoint(transform.position);
                     shoot.m_rotation = playerTransform.rotation * transform.rotation;
+                    shoot.m_sceneguid = MyMod.level_guid;
 
                     if (MyMod.sendMyPosition == true)
                     {
@@ -824,6 +852,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
+                bool SendDropSync = true;
 
                 if(__instance.m_EmbeddedInAi != null)
                 {
@@ -840,11 +869,13 @@ namespace SkyCoop
                         Arrow.m_LocaName = asd.m_LocalName;
                         AU.m_Arrows.Add(Arrow);
                         MyMod.AddFakeArrowToAnimal(AU, AU.m_Arrows.Count - 1);
+                        SendDropSync = false;
                         UnityEngine.Object.Destroy(__instance.gameObject);
                         return;
                     }
                     else if(Animal.GetComponent<Comps.AnimalActor>() != null)
                     {
+                        SendDropSync = false;
                         UnityEngine.Object.Destroy(__instance.gameObject);
                     }
                 }
@@ -860,6 +891,7 @@ namespace SkyCoop
                         }
                         if(t.gameObject.GetComponent<Comps.AnimalActor>() != null)
                         {
+                            SendDropSync = false;
                             UnityEngine.Object.Destroy(__instance.gameObject);
                         }
                     }
@@ -868,6 +900,9 @@ namespace SkyCoop
                 if (__instance.gameObject.GetComponent<Comps.DestoryArrowOnHit>() != null)
                 {
                     UnityEngine.Object.Destroy(__instance.gameObject);
+                } else if(SendDropSync == true)
+                {
+                    //MyMod.SendDropItem(__instance.m_GearItem, 0, 0, true);
                 }
             }
         }
@@ -1186,6 +1221,7 @@ namespace SkyCoop
                         shoot.m_projectilename = __instance.ProjectilePrefab.name;
                         shoot.m_position = vector3;
                         shoot.m_rotation = quaternion;
+                        shoot.m_sceneguid = MyMod.level_guid;
 
                         if (__instance.ProjectilePrefab.name == "PistolBullet")
                         {
@@ -1219,6 +1255,15 @@ namespace SkyCoop
                             {
                                 ServerSend.SHOOTSYNC(0, shoot, true);
                             }
+                            if (shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
+                            {
+                                ExpeditionManager.RegisterFlaregunShot(MyMod.level_guid, GameManager.GetPlayerTransform().position);
+                            }
+                        }
+
+                        if (MyMod.ExpeditionEditorUI != null && MyMod.ExpeditionEditorUI.activeSelf && shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
+                        {
+                            ExpeditionEditor.AddGear("GEAR_FlareGunShoot", vector3, quaternion, "");
                         }
                         MyMod.PushActionToMyDoll("Shoot");
                     }
@@ -1243,7 +1288,7 @@ namespace SkyCoop
                 }
                 __instance.m_DailyHPDecay = 0;
 
-                if (MyMod.IsCustomHandItem(__instance.name) || __instance.name == "GEAR_SCPhoto")
+                if (MyMod.IsCustomHandItem(__instance.name) || MyMod.IsUserGeneratedHandItem(__instance.name))
                 {
                     if(__instance.name == "GEAR_SCPhoto")
                     {
@@ -1263,7 +1308,24 @@ namespace SkyCoop
                             __instance.m_FirstPersonItem = FPI;
                         }
                     }
-                    else if(__instance.name != "GEAR_Hacksaw")
+                    else if (__instance.name == "GEAR_SCMapPiece")
+                    {
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                            FPI.m_FirstPersonObjectName = "Stone";
+                            FPI.m_FPSMeshID = (int)GameManager.GetVpFPSCamera().GetWeaponIDFromName(FPI.m_FirstPersonObjectName);
+                            FPI.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(FPI.m_FPSMeshID);
+                            FPI.m_UnWieldAudio = "Play_MapPageFlip";
+                            FPI.m_WieldAudio = "Play_MapPageFlip";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Stone");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
+                        }
+                    } else if(__instance.name != "GEAR_Hacksaw")
                     {
                         if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
                         {
@@ -1307,22 +1369,33 @@ namespace SkyCoop
                             __instance.m_FirstPersonItem = FPI;
                         }
                     }
-                }
-                if(__instance.name == "GEAR_NoteMCU")
+                } else
                 {
-                    if(__instance.m_ObjectGuid != null)
+                    if (__instance.name == "GEAR_SCNote")
                     {
-                        __instance.m_NarrativeCollectibleItem.m_NarrativeTextLocID = Shared.DecompressString(__instance.m_ObjectGuid.Get());
-                        __instance.m_NarrativeCollectibleItem = null;
-                        __instance.m_LocalizedDisplayName.m_LocalizationID = "Note";
-                        __instance.m_LocalizedDescription.m_LocalizationID = "Charcoal note";
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                            FPI.m_FirstPersonObjectName = "Stone";
+                            FPI.m_FPSMeshID = (int)GameManager.GetVpFPSCamera().GetWeaponIDFromName(FPI.m_FirstPersonObjectName);
+                            FPI.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(FPI.m_FPSMeshID);
+                            FPI.m_UnWieldAudio = "Play_SndInvPaper";
+                            FPI.m_WieldAudio = "Play_SndInvPaper";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Stone");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
+                        }
                     }
-                }else if(__instance.name == "GEAR_SCPhoto")
+                }
+                if(MyMod.IsUserGeneratedHandItem(__instance.name))
                 {
                     if (__instance.m_ObjectGuid != null)
                     {
                         MelonLogger.Msg("Going render photo " + __instance.m_ObjectGuid.m_Guid);
-                        Texture2D tex = MPSaveManager.GetPhotoTexture(__instance.m_ObjectGuid.m_Guid);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(__instance.m_ObjectGuid.m_Guid, __instance.m_GearName);
                         if (tex)
                         {
                             __instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
@@ -1619,55 +1692,11 @@ namespace SkyCoop
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(BlueprintDisplayItem), "Setup")] // Once
-        private static class FixRecipeIcons
-        {
-            internal static void Postfix(BlueprintDisplayItem __instance, BlueprintItem bpi)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar")
-                {
-                    Texture2D medkitTexture = Utils.GetCachedTexture("ico_CraftItem__MedicalSupplies_hangar");
-                    if (!medkitTexture)
-                    {
-                        medkitTexture = MyMod.LoadedBundle.LoadAsset("ico_CraftItem__MedicalSupplies_hangar").Cast<Texture2D>();
-                        Utils.CacheTexture("ico_CraftItem__MedicalSupplies_hangar", medkitTexture);
-                    }
-                    __instance.m_Icon.mTexture = medkitTexture;
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "ItemPassesFilter")] // Once
-        private static class ShowRecipesInMedsTab
-        {
-            internal static void Postfix(Panel_Crafting __instance, ref bool __result, BlueprintItem bpi)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar" && __instance.m_CurrentCategory == Panel_Crafting.Category.FirstAid)
-                {
-                    __result = true;
-                }
-                if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar" && __instance.m_CurrentCategory != Panel_Crafting.Category.FirstAid)
-                {
-                    __result = false;
-                }
-            }
-        }
 
         [HarmonyLib.HarmonyPatch(typeof(Container), "Start")] // Once
-        private static class Container_Hack
+        private static class Container_Start
         {
-            internal static void Postfix(Container __instance)
+            internal static void Prefix(Container __instance)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -1675,10 +1704,10 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (__instance != null && __instance.gameObject != null)
+
+                if (__instance.gameObject.GetComponent<ContainersSync>() == null)
                 {
-                    __instance.gameObject.AddComponent<Comps.ContainersSync>();
-                    __instance.gameObject.GetComponent<Comps.ContainersSync>().m_Obj = __instance.gameObject;
+                    __instance.gameObject.AddComponent<Comps.ContainersSync>().m_Obj = __instance.gameObject;
                 }
             }
         }
@@ -2282,6 +2311,11 @@ namespace SkyCoop
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_Stone"))
                         {
                             stone.m_projectilename = "GEAR_Stone";
+                            Comps.DestoryStoneOnStop StoneComp = MyMod.SaveThrowingItem.gameObject.AddComponent<Comps.DestoryStoneOnStop>();
+                            StoneComp.m_Obj = MyMod.SaveThrowingItem.gameObject;
+                            StoneComp.m_RB = MyMod.SaveThrowingItem.GetComponent<Rigidbody>();
+                            StoneComp.m_Gear = MyMod.SaveThrowingItem.GetComponent<GearItem>();
+                            StoneComp.m_ShouldSendDrop = true;
                         }
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
                         {
@@ -2291,6 +2325,7 @@ namespace SkyCoop
                         stone.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
                         stone.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
                         stone.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+                        stone.m_sceneguid = MyMod.level_guid;
                         if (MyMod.sendMyPosition == true)
                         {
                             using (Packet _packet = new Packet((int)ClientPackets.SHOOTSYNC))
@@ -2335,6 +2370,7 @@ namespace SkyCoop
                 bomb.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
                 bomb.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
                 bomb.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+                bomb.m_sceneguid = MyMod.level_guid;
                 MelonLogger.Msg("[ProcessItemInHandDetonated] NoiseMaker burn explotion sync");
 
                 if (MyMod.sendMyPosition == true)
@@ -3339,6 +3375,24 @@ namespace SkyCoop
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "Update")]
+        public static class RopeAnchorPoint_Update
+        {
+            public static void Prefix(RopeAnchorPoint __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_RopeDeployed)
+                {
+                    __instance.enabled = false;
+                }
+            }
+        }
+
         //MAKING RANDOM GEARS SEEDED!
 
 
@@ -3796,7 +3850,7 @@ namespace SkyCoop
                         if (MyMod.playersData[mP.m_ID] != null && MyMod.playersData[mP.m_ID].m_Name != "")
                         {
                             PlayerName = MyMod.playersData[mP.m_ID].m_Name;
-                        }
+                        } 
                         else
                         {
                             PlayerName = "Player";
@@ -3807,165 +3861,162 @@ namespace SkyCoop
                             return;
                         }
                         __result = PlayerName + "\n" + actString;
-                    }
+                    } 
                     else if (interactiveObject.GetComponent<Comps.DroppedGearDummy>() != null)
                     {
                         Comps.DroppedGearDummy DGD = interactiveObject.GetComponent<Comps.DroppedGearDummy>();
 
-                        string ActionString = "Dropped";
-                        bool IsSnare = false;
-                        bool IsLamp = false;
-                        if (interactiveObject.name.Contains("GEAR_Snare"))
+                        if (string.IsNullOrEmpty(DGD.m_Extra.m_Dropper))
                         {
-                            IsSnare = true;
-                            if (DGD.m_Extra.m_Variant != 0)
-                            {
-                                ActionString = "Setup";
-                            }
-                        }
-                        if (interactiveObject.name.Contains("GEAR_KeroseneLampB"))
+                            string ColorPrefix = "[87DBF5]";
+                            string ColorAffix = "[-]";
+                            __result = ColorPrefix + DGD.m_LocalizedDisplayName + ColorAffix;
+                        } else
                         {
-                            IsLamp = true;
-                            if(DGD.m_Extra.m_Variant != 0)
+                            string ActionString = "Dropped";
+                            bool IsSnare = false;
+                            bool IsLamp = false;
+                            if (interactiveObject.name.Contains("GEAR_Snare"))
                             {
-                                ActionString = "Placed";
-                            }
-                        }
-                        if (interactiveObject.name.Contains("GEAR_NoteMCU"))
-                        {
-                            DGD.m_LocalizedDisplayName = "Note";
-                        }
-
-                        string DroppedString = " " + ActionString + " by " + DGD.m_Extra.m_Dropper;
-                        if (DGD.m_Extra.m_GoalTime == 0)
-                        {
-                            if (DroppedString != "")
-                            {
-                                __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
-                            }
-                            else
-                            {
-                                __result = DGD.m_LocalizedDisplayName;
-                            }
-                        }
-                        else if (DGD.m_Extra.m_GoalTime == -1)
-                        {
-                            if (!IsSnare && !IsLamp)
-                            {
-                                __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
-                            }
-                            else if(IsSnare)
-                            {
-
-                                if (DGD.m_Extra.m_Variant == 1)
+                                IsSnare = true;
+                                if (DGD.m_Extra.m_Variant != 0)
                                 {
-                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
-                                }else{
+                                    ActionString = "Setup";
+                                }
+                            }
+                            if (interactiveObject.name.Contains("GEAR_KeroseneLampB"))
+                            {
+                                IsLamp = true;
+                                if (DGD.m_Extra.m_Variant != 0)
+                                {
+                                    ActionString = "Placed";
+                                }
+                            }
+
+                            string DroppedString = " " + ActionString + " by " + DGD.m_Extra.m_Dropper;
+                            if (DGD.m_Extra.m_GoalTime == 0)
+                            {
+                                if (DroppedString != "")
+                                {
                                     __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
+                                } else
+                                {
+                                    __result = DGD.m_LocalizedDisplayName;
                                 }
+                            } else if (DGD.m_Extra.m_GoalTime == -1)
+                            {
+                                if (!IsSnare && !IsLamp)
+                                {
+                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
+                                } else if (IsSnare)
+                                {
+
+                                    if (DGD.m_Extra.m_Variant == 1)
+                                    {
+                                        __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
+                                    } else
+                                    {
+                                        __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
+                                    }
+                                }
+                            } else
+                            {
+                                int minutesLeft;
+                                if (IsLamp)
+                                {
+                                    minutesLeft = DGD.m_Extra.m_GoalTime - MyMod.MinutesFromStartServer;
+                                } else
+                                {
+                                    int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+                                    minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
+                                }
+
+                                int hours = minutesLeft / 60;
+
+                                string str = DGD.m_LocalizedDisplayName + "\n";
+                                if (!IsSnare && !IsLamp)
+                                {
+                                    str = str + "Cures in: ";
+                                } else if (IsSnare)
+                                {
+
+                                    if (DGD.m_Extra.m_Variant == 1)
+                                    {
+                                        str = str + "May catch: ";
+                                    } else
+                                    {
+                                        str = str + "Will catch: ";
+                                    }
+                                } else if (IsLamp)
+                                {
+                                    str = str + "Fuel left for ";
+                                }
+
+                                if (hours >= 24)
+                                {
+                                    int days = hours / 24;
+                                    if (days != 1)
+                                    {
+                                        str = str + days + " days";
+                                    } else
+                                    {
+                                        str = str + days + " day";
+                                    }
+
+                                } else
+                                {
+                                    if (hours >= 1)
+                                    {
+                                        if (hours != 1)
+                                        {
+                                            str = str + hours + " hours";
+                                        } else
+                                        {
+                                            str = str + hours + " hour";
+                                        }
+                                    } else
+                                    {
+                                        if (minutesLeft >= 1)
+                                        {
+                                            if (minutesLeft != 1)
+                                            {
+                                                str = str + minutesLeft + " minutes";
+                                            } else
+                                            {
+                                                str = str + minutesLeft + " minute";
+                                            }
+                                        } else
+                                        {
+                                            if (!IsSnare && !IsLamp)
+                                            {
+                                                str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
+                                            } else if (IsSnare)
+                                            {
+                                                str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
+                                            } else if (IsLamp)
+                                            {
+                                                str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
+                                            }
+                                        }
+                                    }
+                                }
+                                __result = str + DroppedString;
                             }
                         }
-                        else
-                        {
-                            int minutesLeft;
-                            if (IsLamp)
-                            {
-                                minutesLeft = DGD.m_Extra.m_GoalTime - MyMod.MinutesFromStartServer;
-                            }else{
-                                int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
-                                minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
-                            }
-
-                            int hours = minutesLeft / 60;
-
-                            string str = DGD.m_LocalizedDisplayName + "\n";
-                            if (!IsSnare && !IsLamp)
-                            {
-                                str = str + "Cures in: ";
-                            }
-                            else if(IsSnare)
-                            {
-
-                                if (DGD.m_Extra.m_Variant == 1)
-                                {
-                                    str = str + "May catch: ";
-                                }
-                                else
-                                {
-                                    str = str + "Will catch: ";
-                                }
-                            }
-                            else if (IsLamp)
-                            {
-                                str = str + "Fuel left for ";
-                            }
-
-                            if (hours >= 24)
-                            {
-                                int days = hours / 24;
-                                if (days != 1)
-                                {
-                                    str = str + days + " days";
-                                }
-                                else
-                                {
-                                    str = str + days + " day";
-                                }
-
-                            }
-                            else
-                            {
-                                if (hours >= 1)
-                                {
-                                    if (hours != 1)
-                                    {
-                                        str = str + hours + " hours";
-                                    }
-                                    else
-                                    {
-                                        str = str + hours + " hour";
-                                    }
-                                }
-                                else
-                                {
-                                    if (minutesLeft >= 1)
-                                    {
-                                        if (minutesLeft != 1)
-                                        {
-                                            str = str + minutesLeft + " minutes";
-                                        }
-                                        else
-                                        {
-                                            str = str + minutesLeft + " minute";
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (!IsSnare && !IsLamp)
-                                        {
-                                            str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
-                                        }
-                                        else if(IsSnare)
-                                        {
-                                            str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
-                                        }
-                                        else if (IsLamp)
-                                        {
-                                            str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
-                                        }
-                                    }
-                                }
-                            }
-                            __result = str + DroppedString;
-                        }
-                    }
+                    } 
                     else if (interactiveObject.gameObject.name.Contains("Rabbit") && interactiveObject.GetComponent<Comps.AnimalCorpseObject>() != null)
                     {
                         __result = "Pickup";
-                    }
+                    } 
                     else if(interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>() != null)
                     {
                         __result = interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>().m_Owner + "'s Backpack";
+                    } else if (interactiveObject.gameObject.GetComponent<FakeRockCache>() != null)
+                    {
+                        __result = interactiveObject.gameObject.GetComponent<FakeRockCache>().m_Owner + "'s " + Localization.Get("GAMEPLAY_RadialRockCache");
+                    } else if (interactiveObject.GetComponent<ExpeditionInteractive>())
+                    {
+                        __result = interactiveObject.GetComponent<ExpeditionInteractive>().m_ObjectText;
                     }
                 }
             }
@@ -4039,6 +4090,16 @@ namespace SkyCoop
                                 interactiveObj = bulletZone.m_Player;
                             }
                         }
+                    }
+                    else if(hit.transform.gameObject.GetComponent<FakeRockCache>() != null)
+                    {
+                        gi = new GearItem();
+                        interactiveObj = hit.transform.gameObject;
+                    }
+                    else if(hit.transform.gameObject.GetComponent<ExpeditionInteractive>() != null)
+                    {
+                        gi = new GearItem();
+                        interactiveObj = hit.transform.gameObject;
                     }
                 }
 
@@ -4151,8 +4212,10 @@ namespace SkyCoop
         {
             DataStr.MultiPlayerClientData pData = MyMod.playersData[m_ID];
             DataStr.PriorityActionForOtherPlayer act = new DataStr.PriorityActionForOtherPlayer();
-
-            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
+            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_HandheldShortwaveItem != null)
+            {
+                act = MyMod.GetActionForOtherPlayer("Invite");
+            } else if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
             {
                 act = MyMod.GetActionForOtherPlayer("Stim");
             }
@@ -4170,6 +4233,18 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessInteraction")] // Once
         internal class PlayerManager_InteractiveObjectsProcessInteraction
         {
+            internal static bool Prefix(PlayerManager __instance)
+            {
+                if (__instance.m_InteractiveObjectUnderCrosshair != null)
+                {
+                    GameObject obj = __instance.m_InteractiveObjectUnderCrosshair;
+                    if (obj.GetComponent<FakeRockCache>() != null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
             internal static void Postfix(PlayerManager __instance, ref bool __result)
             {
                 if (MyMod.CrazyPatchesLogger == true)
@@ -4194,37 +4269,11 @@ namespace SkyCoop
                             return;
                         }
 
-                        if (PAction == "Bandage")
+                        if (PAction == "Invite")
                         {
-                            int bandages = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_HeavyBandage");
-
-                            if (bandages > 0)
-                            {
-                                MyMod.DoLongAction(mP, ProcessText, PAction);
-                                __result = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU HAVE NOT ANY BANDAGES");
-                                GameAudioManager.PlayGUIError();
-                                __result = false;
-                            }
-                        }
-                        else if (PAction == "Sterilize")
-                        {
-                            bool HaveAntiseptic = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_BottleHydrogenPeroxide");
-
-                            if (HaveAntiseptic)
-                            {
-                                MyMod.DoLongAction(mP, ProcessText, PAction);
-                                __result = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU HAVE NOT HYDROGEN PEROXIDE");
-                                GameAudioManager.PlayGUIError();
-                                __result = false;
-                            }
+                            MyMod.SendInvietToPlayer(mP.m_ID);
+                            //MyMod.DoLongAction(mP, ProcessText, PAction);
+                            __result = true;
                         }
                         else if (PAction == "Stim")
                         {
@@ -4243,22 +4292,6 @@ namespace SkyCoop
                                 GameManager.GetPlayerManagerComponent().m_ItemInHands.m_TorchItem.IgniteDelayed(2f, "", true);
                                 GameManager.GetPlayerAnimationComponent().LookAt(mP.m_TorchIgniter.transform.position);
                                 __result = true;
-                            }
-                        }
-                        else if (PAction == "Revive")
-                        {
-                            bool HaveMedkit = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
-
-                            if (HaveMedkit)
-                            {
-                                MyMod.DoLongAction(mP, ProcessText, PAction);
-                                __result = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU HAVE NOT MEDKIT");
-                                GameAudioManager.PlayGUIError();
-                                __result = false;
                             }
                         }
                         else if (PAction == "Examine")
@@ -4288,6 +4321,10 @@ namespace SkyCoop
                         {
                             MyMod.AttemptToPickupRabbit(obj.GetComponent<ObjectGuid>().Get());
                         }
+                        __result = true;
+                    } else if(obj.GetComponent<FakeRockCache>() != null)
+                    {
+                        MyMod.ShowRockStashActionPicker(obj);
                         __result = true;
                     }
                 }
@@ -4458,7 +4495,7 @@ namespace SkyCoop
                 if (state == "Done")
                 {
                     MPSaveManager.AddHarvestedPlant(harvData.m_Guid, MyMod.level_guid);
-                    ServerSend.LOOTEDHARVESTABLE(0, harvData.m_Guid, MyMod.level_guid, false);
+                    ServerSend.LOOTEDHARVESTABLE(0, harvData.m_Guid, MyMod.level_guid, MyMod.MinutesFromStartServer, false);
                 }
             }
         }
@@ -5399,6 +5436,7 @@ namespace SkyCoop
                 _packet.Write(MyMod.levelid);
                 _packet.Write(MyMod.level_guid);
                 _packet.Write(GetWeatherVolunteerData());
+                _packet.Write((int)MyMod.ConvertGameRegion((GameRegion)GetWeatherVolunteerData().CurrentRegion));
                 MyMod.SetRepeatPacket(MyMod.ResendPacketType.Scene);
                 SendTCPData(_packet);
             }
@@ -5437,7 +5475,13 @@ namespace SkyCoop
                 {
                     foreach (var item in Furns)
                     {
-                        MyMod.RemoveBrokenFurniture(item.Value.m_Guid, item.Value.m_ParentGuid, false);
+                        if (item.Value.m_Broken)
+                        {
+                            MyMod.RemoveBrokenFurniture(item.Value.m_Guid, item.Value.m_ParentGuid, false);
+                        } else
+                        {
+                            MyMod.RepairBrokenFurniture(item.Value.m_Guid, item.Value.m_ParentGuid);
+                        }
                     }
                 }
                 MyMod.BakePreSpawnedGearsList();
@@ -5449,21 +5493,22 @@ namespace SkyCoop
                     MyMod.PickedGearsBackup.Clear();
                 }
 
+                Dictionary<string, UniversalSyncableObject> UniversalObjects = MPSaveManager.GetUniversalSyncablesForScene(MyMod.level_guid);
+                foreach (var item in UniversalObjects)
+                {
+                    MyMod.SpawnUniversalSyncableObject(item.Value);
+                }
+
                 Dictionary<string, int> LootedBoxes = MPSaveManager.LoadLootedContainersData(MyMod.level_guid);
                 if (LootedBoxes != null)
                 {
                     foreach (var item in LootedBoxes)
                     {
-                        int State = 0;
+                        int State = item.Value;
 
                         if (MPSaveManager.ContainerNotEmpty(MyMod.level_guid, item.Key))
                         {
                             State = 1;
-                        }
-
-                        if(item.Value == 2)
-                        {
-                            State = 2;
                         }
 
                         MyMod.RemoveLootFromContainer(item.Key, State);
@@ -5474,8 +5519,20 @@ namespace SkyCoop
                 {
                     foreach (var item in Plants)
                     {
-                        MyMod.RemoveHarvastedPlant(item.Key);
+                        int HarvestTime = item.Value;
+                        if(HarvestTime == -1)
+                        {
+                            MyMod.AddHarvastedPlant(item.Key);
+                        } else
+                        {
+                            MyMod.RemoveHarvastedPlant(item.Key);
+                        }
                     }
+                }
+                Dictionary<string, FakeRockCacheVisualData> RockCaches = MPSaveManager.GetRockCaches(MyMod.level_guid);
+                foreach (var item in RockCaches)
+                {
+                    MyMod.AddRockCache(item.Value);
                 }
 
                 MyMod.LoadAllDropsForScene();
@@ -6892,7 +6949,7 @@ namespace SkyCoop
         {
             private static void Prefix(PlayerManager __instance, GearItem gi)
             {
-                if (gi.m_GearName == "GEAR_SCPhoto")
+                if (MyMod.IsUserGeneratedHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCNote")
                 {
                     StoneItem SI = gi.gameObject.AddComponent<StoneItem>();
                     SI.m_RigidBody = gi.gameObject.AddComponent<Rigidbody>();
@@ -6901,23 +6958,38 @@ namespace SkyCoop
                     SI.m_CanThrow = false;
                     gi.m_StoneItem = SI;
 
-
                     if (gi.m_ObjectGuid && !string.IsNullOrEmpty(gi.m_ObjectGuid.m_Guid))
                     {
-                        if (MyMod.ViewModelPhoto)
+                        if (gi.m_GearName == "GEAR_SCPhoto")
                         {
-                            MyMod.ViewModelPhoto.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = gi.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture;
+                            if (MyMod.ViewModelPhoto)
+                            {
+                                MyMod.ViewModelPhoto.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = gi.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture;
+                            }
+                        }
+                        else if (gi.m_GearName == "GEAR_SCMapPiece")
+                        {
+                            if (MyMod.ViewModelMap)
+                            {
+                                MyMod.ViewModelMap.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = gi.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture;
+                            }
                         }
                     }
                 }
             }
             private static void Postfix(PlayerManager __instance, GearItem gi)
             {
-                if (gi.m_GearName == "GEAR_SCPhoto")
+                if (MyMod.IsUserGeneratedHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCNote")
                 {
                     StoneItem SI = gi.gameObject.GetComponent<StoneItem>();
-                    UnityEngine.Object.Destroy(SI.m_RigidBody);
-                    UnityEngine.Object.Destroy(SI);
+                    if (SI)
+                    {
+                        if (SI.m_RigidBody)
+                        {
+                            UnityEngine.Object.Destroy(SI.m_RigidBody);
+                        }
+                        UnityEngine.Object.Destroy(SI);
+                    }
                     gi.m_StoneItem = null;
                 }
             }
@@ -6936,10 +7008,10 @@ namespace SkyCoop
 
                 if (gi != null)
                 {
-                    if (MyMod.IsCustomHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCPhoto")
+                    if (MyMod.IsCustomHandItem(gi.m_GearName) || MyMod.IsUserGeneratedHandItem(gi.m_GearName))
                     {
                         __result = "GAMEPLAY_Use";
-                    } else if (gi.m_GearName == "GEAR_NoteMCU")
+                    } else if (gi.m_GearName == "GEAR_SCNote")
                     {
                         __result = "GAMEPLAY_Read";
                     }
@@ -6951,43 +7023,81 @@ namespace SkyCoop
             }
         }
 
-        public static GearItem LastNote = null;
+        public static bool HaveReadFakeNote = false;
 
-
-        [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "OnEquip")] // Once
-        private static class ItemDescriptionPage_OnEquip
+        public static void DisplayNote(GearItem gi)
         {
-            private static void Postfix(ItemDescriptionPage __instance)
+            HaveReadFakeNote = true;
+            string NoteText = "Gived with console notes doesnt store any text.";
+
+            if (gi.GetComponent<ObjectGuid>() != null)
             {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                MyMod.ProcessGivingItem(true);
-
-                GearItem gi = InterfaceManager.m_Panel_Inventory.GetCurrentlySelectedGearItem();
-
-                if (gi != null)
-                {
-                    if (gi.m_GearName == "GEAR_NoteMCU")
-                    {
-                        LastNote = gi;
-
-                        LastNote.m_NarrativeCollectibleItem = LastNote.gameObject.GetComponent<NarrativeCollectibleItem>();
-                        LastNote.m_NarrativeCollectibleItem.m_TextAlignment = NGUIText.Alignment.Center;
-                        InterfaceManager.m_Panel_HUD.ShowCollectibleNote(LastNote);
-                        InterfaceManager.m_Panel_Inventory.Enable(false, true);
-                        LastNote.m_NarrativeCollectibleItem = null;
-                    }else if (Shared.IsLocksmithItem(gi.m_GearName))
-                    {
-                        GameManager.GetPlayerManagerComponent().StartPlaceMesh(gi.gameObject, PlaceMeshFlags.None);
-                        InterfaceManager.m_Panel_Inventory.Enable(false, true);
-                    }
-                }
+                NoteText = Shared.DecompressString(gi.GetComponent<ObjectGuid>().Get());
             }
+            Panel_HUD Panel = InterfaceManager.m_Panel_HUD;
+
+            Panel.m_CollectibleNoteObject.SetActive(true);
+            Panel.m_CollectibleNoteObjectText.text = NoteText;
+            Panel.m_CollectibleNoteObjectText.alignment = NGUIText.Alignment.Center;
+            Panel.m_CollectibleNoteObjectTitle.text = gi.m_DisplayName;
+            Panel.m_InspectMode_StandardElementsParent.SetActive(false);
+            Panel.m_InspectMode_InventoryStatusSprite.gameObject.SetActive(false);
+            Panel.m_InspectMode_Equip.gameObject.SetActive(false);
+            Panel.m_InspectMode_Take.gameObject.SetActive(false);
+            Panel.m_InspectMode_PutBack.gameObject.SetActive(false);
+            if (Panel.m_CollectibleNoteObjectText.height > Panel.m_ScrollPanelHeight)
+            {
+                Panel.m_CollectibleNoteObjectTitle.transform.localPosition = new Vector3(0.0f, Panel.m_TitleY, 0.0f);
+                Panel.m_CollectibleNoteScrollObject.SetActive(true);
+                Panel.m_CollectibleNoteScrollView.Scroll(100f);
+                UIButton componentInChildren = Panel.m_CollectibleNoteScrollObject.GetComponentInChildren<UIButton>();
+                if (componentInChildren)
+                {
+                    componentInChildren.defaultColor = Panel.m_SliderDefaultColor;
+                }
+            } else
+            {
+                Panel.m_CollectibleNoteObjectText.transform.position = new Vector3(Panel.m_CollectibleNoteObjectText.transform.position.x, 0.0f, 0.0f);
+                Panel.m_CollectibleNoteObjectTitle.transform.localPosition = new Vector3(0.0f, 0.5f * (float)Panel.m_CollectibleNoteObjectText.height + Panel.m_TitleYOffset, 0.0f);
+                Panel.m_CollectibleNoteScrollObject.SetActive(false);
+            }
+            gi.gameObject.SetActive(false);
+            if (Panel.m_HudDisplayMode == HudDisplayMode.Off)
+            {
+                NGUITools.SetActive(Panel.m_NonEssentialHud, true);
+            }
+            Panel.UpdateCollectibleNote();
         }
+
+
+        //[HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "OnEquip")] // Once
+        //private static class ItemDescriptionPage_OnEquip
+        //{
+        //    private static void Postfix(ItemDescriptionPage __instance)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        MyMod.ProcessGivingItem(true);
+
+        //        GearItem gi = InterfaceManager.m_Panel_Inventory.GetCurrentlySelectedGearItem();
+
+        //        if (gi != null)
+        //        {
+        //            if (gi.m_GearName == "GEAR_SCNote")
+        //            {
+        //                DisplayNote(gi);
+        //            } else if (Shared.IsLocksmithItem(gi.m_GearName))
+        //            {
+        //                GameManager.GetPlayerManagerComponent().StartPlaceMesh(gi.gameObject, PlaceMeshFlags.None);
+        //            }
+        //            InterfaceManager.m_Panel_Inventory.Enable(false, true);
+        //        }
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(Panel_HUD), "OnCollectibleNoteReadingClickBack")] // Once
         private static class Panel_HUD_OnCollectibleNoteReadingClickBack
         {
@@ -7000,20 +7110,19 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
 
-                if (LastNote)
+                if (HaveReadFakeNote)
                 {
-                    InterfaceManager.m_Panel_Inventory.Enable(true, true);
                     __instance.m_InspectMode_StandardElementsParent.SetActive(false);
                     __instance.m_InspectMode_InventoryStatusSprite.gameObject.SetActive(false);
                     __instance.m_InspectMode_Equip.gameObject.SetActive(false);
                     __instance.m_InspectMode_Take.gameObject.SetActive(false);
                     __instance.m_InspectMode_PutBack.gameObject.SetActive(false);
-                    LastNote.gameObject.SetActive(false);
-                    LastNote = null;
+                    HaveReadFakeNote = false;
+                    GameManager.GetPlayerManagerComponent().m_Gear = null;
                 }
             }
         }
-        
+
         [HarmonyLib.HarmonyPatch(typeof(PlayerAnimation), "OnAnimationEvent_Generic_HiddenComplete")] // Once
         private static class PlayerAnimation_OnAnimationEvent_Generic_HiddenComplete
         {
@@ -7129,15 +7238,6 @@ namespace SkyCoop
                     __instance.m_ChallengeTexture.mainTexture = Utils.GetLargeTexture("challenge_HopelessRescue");
                     Utils.SetActive(__instance.m_ObjectiveTransform.gameObject, false);
                 }
-                //else if (MyMod.OnExpedition)
-                //{
-                //    __instance.m_TimerObject.SetActive(MyMod.ExpeditionLastTime != 0);
-                //    __instance.m_MissionNameLabel.text = MyMod.ExpeditionLastName;
-                //    __instance.m_MissionNameHeaderLabel.text = MyMod.ExpeditionLastName;
-                //    __instance.m_TimerLabel.text = InterfaceManager.m_Panel_ActionsRadial.m_MissionTimerLabel.text;
-                //    __instance.m_ChallengeTexture.mainTexture = Utils.GetLargeTexture("challenge_HopelessRescue");
-                //    Utils.SetActive(__instance.m_ObjectiveTransform.gameObject, false);
-                //}
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(InterfaceManager), "IsUsingSurvivalTabs")]
@@ -7149,10 +7249,6 @@ namespace SkyCoop
                 {
                     __result = false;
                 }
-                //if (MyMod.CurrentCustomChalleng.m_Started || MyMod.OnExpedition)
-                //{
-                //    __result = false;
-                //}
             }
         }
 
@@ -7211,8 +7307,6 @@ namespace SkyCoop
             private static bool Prefix(Panel_Log __instance)
             {
                 MyMod.BeginRespawn();
-
-
                 return false;
             }
         }
@@ -7593,60 +7687,7 @@ namespace SkyCoop
                 return false;
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(Weather), "Serialize")]
-        //internal static class Weather_Serialize
-        //{
-        //    private static void Postfix(Weather __instance, ref string __result)
-        //    {
-        //        MelonLogger.Msg("[Weather][Serialize] Overriden");
-        //        __result = null;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(WeatherTransition), "Serialize")]
-        //internal static class WeatherTransition_Serialize
-        //{
-        //    private static void Postfix(WeatherTransition __instance, ref string __result)
-        //    {
-        //        MelonLogger.Msg("[WeatherTransition][Serialize] Overriden");
-        //        __result = null;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Wind), "Serialize")]
-        //internal static class Wind_Serialize
-        //{
-        //    private static void Postfix(Wind __instance, ref string __result)
-        //    {
-        //        MelonLogger.Msg("[Wind][Serialize] Overriden");
-        //        __result = null;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Weather), "Deserialize")]
-        //internal static class Weather_Deserialize
-        //{
-        //    private static bool Prefix(Weather __instance)
-        //    {
-        //        MelonLogger.Msg("[Weather][Deserialize] Overriden");
-        //        return false;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(WeatherTransition), "Deserialize")]
-        //internal static class WeatherTransition_Deserialize
-        //{
-        //    private static bool Prefix(WeatherTransition __instance)
-        //    {
-        //        MelonLogger.Msg("[WeatherTransition][Deserialize] Overriden");
-        //        return false;
-        //    }
-        //}
-        //[HarmonyLib.HarmonyPatch(typeof(Wind), "Deserialize")]
-        //internal static class Wind_Deserialize
-        //{
-        //    private static bool Prefix(Wind __instance)
-        //    {
-        //        MelonLogger.Msg("[Wind][Deserialize] Overriden");
-        //        return false;
-        //    }
-        //}
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "AllowedToSave")]
         internal static class GameManager_AllowedToSave
         {
@@ -7686,6 +7727,164 @@ namespace SkyCoop
             private static void Postfix(WeatherSet __instance)
             {
                 WeatherTransition.m_WeatherTransitionTimeScalar = 1;
+            }
+        }
+        public static bool ShowInvitesAfterPicker = false;
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ActionPicker), "OnSelect")]
+        internal static class Panel_ActionPicker_OnSelect
+        {
+            private static void Postfix(Panel_ActionPicker __instance)
+            {
+                if (ShowInvitesAfterPicker)
+                {
+                    ShowInvitesAfterPicker = false;
+                    if (MyMod.iAmHost)
+                    {
+                        MyMod.ShowInvitesPicker(null, ExpeditionManager.GetInviteForClient(Shared.GetMacAddress()));
+                    } else
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.REQUESTEXPEDITIONINVITES))
+                        {
+                            MyMod.DoPleaseWait("Please wait...", "Calling to coordinator...");
+                            MyMod.SetRepeatPacket(MyMod.ResendPacketType.ExpeditionInvites);
+                            _packet.Write(true);
+                            MyMod.SendUDPData(_packet);
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(EquipItemPopup), "UpdateAmmoStatus")]
+        internal static class EquipItemPopup_UpdateAmmoStatus
+        {
+            private static void Postfix(EquipItemPopup __instance)
+            {
+                GearItem Gear = GameManager.GetPlayerManagerComponent().m_ItemInHands;
+                if (Gear && (MyMod.IsCustomHandItem(Gear.m_GearName) || Gear.m_GearName == "GEAR_HandheldShortwave"))
+                {
+                    __instance.HideAmmoPopup();
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(EquipItemPopup), "ShowEquippedItem")]
+        internal static class EquipItemPopup_ShowEquippedItem
+        {
+            private static void Postfix(EquipItemPopup __instance, GearItem gi)
+            {
+                if (gi)
+                {
+                    if (MyMod.IsCustomHandItem(gi.m_GearName))
+                    {
+                        __instance.HideAmmoPopup();
+                    }
+                    string PrimaryFire = "";
+                    string AltFire = "";
+                    bool Pad = Utils.IsGamepadActive();
+                    bool Show = false;
+                    if (gi.m_GearName == "GEAR_HandheldShortwave")
+                    {
+                        __instance.m_ButtonPromptScrollWheel.ShowPromptForKey("Change frequency", "Scroll");
+                        //AltFire = "Expeditions";
+                        Show = true;
+                    } else if (gi.m_GearName == "GEAR_SCNote")
+                    {
+                        PrimaryFire = "Read";
+                        Show = true;
+                    }
+
+                    if (Show)
+                    {
+                        __instance.ShowItemIcons(PrimaryFire, AltFire, false);
+                        __instance.m_ButtonPromptFire.ShowPromptForKey(Pad ? PrimaryFire : AltFire, Pad ? "Fire" : "AltFire");
+                        __instance.MaybeRepositionFireButtonPrompt(Pad ? AltFire : PrimaryFire);
+                        __instance.m_ButtonPromptAltFire.ShowPromptForKey(Pad ? AltFire : PrimaryFire, Pad ? "AltFire" : "Interact");
+                        __instance.MaybeRepositionAltFireButtonPrompt(Pad ? PrimaryFire : AltFire);
+                    }
+                    __instance.m_GearItem = gi;
+                }
+            }
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(RockCache), "SetupInWorld")]
+        internal static class RockCache_SetupInWorld
+        {
+            private static bool Prefix(RockCache __instance)
+            {
+                GameObject Obj = __instance.gameObject;
+                FakeRockCache Cach = Obj.GetComponent<FakeRockCache>();
+                if (Cach == null)
+                {
+                    Cach = Obj.AddComponent<FakeRockCache>();
+                }
+                string GUID = ObjectGuidManager.GenerateNewGuidString();
+                ObjectGuid GUIDobj = Obj.GetComponent<ObjectGuid>();
+                if (GUIDobj == null)
+                {
+                    GUIDobj = Obj.AddComponent<ObjectGuid>();
+                }
+                GUIDobj.Set(GUID);
+                Cach.m_GUID = GUID;
+                Cach.m_Owner = MyMod.MyChatName;
+                Cach.m_Rocks = __instance.m_NumRocksFromDismantle;
+                Cach.Created();
+                UnityEngine.Object.Destroy(__instance);
+                return false;
+            }
+        }
+        public static FakeRockCache FakeRockCacheCallback = null;
+        [HarmonyLib.HarmonyPatch(typeof(Panel_GenericProgressBar), "ProgressBarEnded")]
+        internal static class Panel_GenericProgressBar_ProgressBarEnded
+        {
+            private static void Postfix(Panel_GenericProgressBar __instance, bool success, bool playerCancel)
+            {
+                if(FakeRockCacheCallback != null)
+                {
+                    GameManager.s_IsAISuspended = false;
+                    if (success)
+                    {
+                        FakeRockCacheCallback.DismantleFinished();
+                    }
+                    GameManager.GetPlayerManagerComponent().m_RockCacheInProgress = null;
+                    FakeRockCacheCallback = null;
+
+                    if (MyMod.sendMyPosition)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.FURNBREAKINSTOP))
+                        {
+                            _packet.Write(true);
+                            SendTCPData(_packet);
+                        }
+                    } else
+                    {
+                        ServerSend.FURNBREAKINSTOP(0, true, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "DoDetailSurvey")]
+        internal static class Panel_Map_DoDetailSurvey
+        {
+            private static void Postfix(Panel_Map __instance, SurveyType surveyType)
+            {
+                if(surveyType == SurveyType.Charcoal)
+                {
+                    Vector3 Position = GameManager.GetPlayerTransform().position;
+
+                    if (MyMod.sendMyPosition)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.CHARCOALDRAW))
+                        {
+                            _packet.Write(MyMod.level_guid);
+                            _packet.Write(Position);
+                            SendTCPData(_packet);
+                        }
+                    } else
+                    {
+                        ExpeditionManager.RegisterCharcoalDrawing(MyMod.level_guid, Position);
+                    }
+                }
             }
         }
     }
