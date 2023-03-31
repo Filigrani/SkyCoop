@@ -467,6 +467,7 @@ namespace SkyCoop
             string BannedUsersJSON = LoadData("BanList");
             string RockCachesJSON = LoadData("RockCaches", SaveSeed);
             string UniversalSyncablesJSON = LoadData("UniversalSyncables", SaveSeed);
+            string ExpeditionManagerJSON = LoadData("ExpeditionManager", SaveSeed);
             if (!string.IsNullOrEmpty(LockedDoorsJSON))
             {
                 LockedDoors = JSON.Load(LockedDoorsJSON).Make<Dictionary<string, Dictionary<string, string>>>();
@@ -497,6 +498,10 @@ namespace SkyCoop
             if (!string.IsNullOrEmpty(UniversalSyncablesJSON))
             {
                 UniversalSyncableObjects = JSON.Load(UniversalSyncablesJSON).Make<Dictionary<string, Dictionary<string, UniversalSyncableObject>>>();
+            }
+            if (!string.IsNullOrEmpty(ExpeditionManagerJSON))
+            {
+                ExpeditionManager.Load(ExpeditionManagerJSON);
             }
         }
 
@@ -786,6 +791,7 @@ namespace SkyCoop
             RecentPickedGears = new Dictionary<string, Dictionary<long, PickedGearSync>>();
             RecentlyLootedContainers = new Dictionary<string, Dictionary<string, int>>();
             RecentlyHarvastedPlants = new Dictionary<string, Dictionary<string, int>>();
+            SaveData("ExpeditionManager", ExpeditionManager.Save(), GetSeed());
 
             if (watch != null)
             {

@@ -8,6 +8,7 @@ using System.Security.Policy;
 using static SkyCoop.DataStr;
 using static SkyCoop.ExpeditionBuilder;
 using System.Net.Sockets;
+using static SkyCoop.ExpeditionManager;
 #if (DEDICATED)
 using System.Numerics;
 using TinyJSON;
@@ -20,15 +21,94 @@ namespace SkyCoop
 {
     public class ExpeditionManager
     {
-        public static Dictionary<string, bool> m_TrackableGears = new Dictionary<string, bool>();
         public static List<Expedition> m_ActiveExpeditions = new List<Expedition>();
-        public static Expedition m_ActiveCrashSite = null;
+        public static string m_ActiveCrashSiteGUID = "";
         public static Dictionary<string, int> m_UnavailableGearSpawners = new Dictionary<string, int>();
         public static Dictionary<int, string> m_GearSpawnerGears = new Dictionary<int, string>();
         public static List<ExpeditionInvite> m_Invites = new List<ExpeditionInvite>();
         public static int NextCrashSiteIn = 3600 *2;
-
         public static bool Debug = true;
+
+        public class SaveData
+        {
+            public string m_ActiveExpeditions = "";
+            public string m_ActiveCrashSiteGUID = "";
+            public string m_UnavailableGearSpawners = "";
+            public string m_GearSpawnerGears = "";
+            public int NextCrashSiteIn = 3600 * 2;
+        }
+
+        public static string Save()
+        {
+            SaveData Data = new SaveData();
+            Data.m_ActiveExpeditions = JSON.Dump(m_ActiveExpeditions);
+
+            if(!string.IsNullOrEmpty(m_ActiveCrashSiteGUID))
+            {
+                Data.m_ActiveCrashSiteGUID = m_ActiveCrashSiteGUID;
+            }
+            Data.m_UnavailableGearSpawners = JSON.Dump(m_UnavailableGearSpawners);
+            Data.m_GearSpawnerGears = JSON.Dump(m_GearSpawnerGears);
+            Data.NextCrashSiteIn = NextCrashSiteIn;
+            return JSON.Dump(Data);
+        }
+
+        public static void Load(string JSONString)
+        {
+            if (string.IsNullOrEmpty(JSONString))
+            {
+                return;
+            }
+            DebugLog("[ExpeditionManager] Loading SaveData...");
+
+            JSONString = MPSaveManager.VectorsFixUp(JSONString);
+
+            SaveData Data = JSON.Load(JSONString).Make<SaveData>();
+            if (!string.IsNullOrEmpty(Data.m_ActiveExpeditions))
+            {
+                m_ActiveExpeditions = JSON.Load(Data.m_ActiveExpeditions).Make<List<Expedition>>();
+                foreach (Expedition Exp in m_ActiveExpeditions)
+                {
+                    DebugLog("[ExpeditionManager] " + Exp.m_Alias);
+                    DebugLog("[ExpeditionManager] GUID " + Exp.m_GUID);
+                    DebugLog("[ExpeditionManager] m_TimeLeft " + Exp.m_TimeLeft);
+                    DebugLog("[ExpeditionManager] m_Players: ");
+                    foreach (string MAC in Exp.m_Players)
+                    {
+                        DebugLog("[ExpeditionManager] Player "+ MAC);
+                    }
+                    DebugLog("[ExpeditionManager] m_Tasks:");
+                    foreach (ExpeditionTask Task in Exp.m_Tasks)
+                    {
+                        DebugLog("[ExpeditionManager] Task " + Task.m_Alias);
+                        DebugLog("[ExpeditionManager] m_ExpeditionGUID " + Task.m_ExpeditionGUID);
+                        DebugLog("[ExpeditionManager] m_IsComplete " + Task.m_IsComplete);
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(Data.m_ActiveCrashSiteGUID))
+            {
+                m_ActiveCrashSiteGUID = Data.m_ActiveCrashSiteGUID;
+                foreach (Expedition Exp in m_ActiveExpeditions)
+                {
+                    if(Exp.m_GUID == m_ActiveCrashSiteGUID)
+                    {
+                        DebugLog("[ExpeditionManager] m_ActiveCrashSite " + Exp.m_Alias);
+                    }
+                }
+            }
+            if (!string.IsNullOrEmpty(Data.m_UnavailableGearSpawners))
+            {
+                m_UnavailableGearSpawners = JSON.Load(Data.m_UnavailableGearSpawners).Make<Dictionary<string, int>>();
+            }
+            if (!string.IsNullOrEmpty(Data.m_GearSpawnerGears))
+            {
+                m_GearSpawnerGears = JSON.Load(Data.m_GearSpawnerGears).Make<Dictionary<int, string>>();
+            }
+            NextCrashSiteIn = Data.NextCrashSiteIn;
+
+            
+        }
 
         public static void Log(string LOG)
         {
@@ -115,7 +195,6 @@ namespace SkyCoop
             }
             
             Exp.m_Players.Add(LeaderMAC);
-            Exp.m_GUID = MPSaveManager.GetNewUGUID();
             m_ActiveExpeditions.Add(Exp);
 
             if (LeaderID != 0)
@@ -129,10 +208,29 @@ namespace SkyCoop
             }
         }
 
+        public static Expedition GetActiveCrashSite()
+        {
+            if (string.IsNullOrEmpty(m_ActiveCrashSiteGUID))
+            {
+                return null;
+            } else
+            {
+                foreach (Expedition Exp in m_ActiveExpeditions)
+                {
+                    if(Exp.m_GUID == m_ActiveCrashSiteGUID)
+                    {
+                        return Exp;
+                    }
+                }
+            }
+            return null;
+        }
+
         public static void MayInviteToCrashSite(int ClientID)
         {
             string MAC = Server.GetMACByID(ClientID);
-            if(m_ActiveCrashSite != null)
+            Expedition m_ActiveCrashSite = GetActiveCrashSite();
+            if (m_ActiveCrashSite != null)
             {
                 if (!m_ActiveCrashSite.m_Players.Contains(MAC))
                 {
@@ -145,6 +243,7 @@ namespace SkyCoop
 
         public static void StartCrashSite(int CrashSiteID = -1)
         {
+            Expedition m_ActiveCrashSite = GetActiveCrashSite();
             if (m_ActiveCrashSite != null)
             {
                 return;
@@ -209,9 +308,8 @@ namespace SkyCoop
                     ServerSend.EXPEDITIONRESULT(ClientID, 5);
                 }
             }
-            Exp.m_GUID = MPSaveManager.GetNewUGUID();
             m_ActiveExpeditions.Add(Exp);
-            m_ActiveCrashSite = Exp;
+            m_ActiveCrashSiteGUID = Exp.m_GUID;
             MultiplayerChatMessage Message = new MultiplayerChatMessage();
             Message.m_Message = "Plane with a valuable cargo crashed somewhere on " + GetRegionString(Exp.m_RegionBelong) + ", find the crash site before other players do.";
             Message.m_Type = 0;
@@ -413,9 +511,9 @@ namespace SkyCoop
         public static void CompleteCrashsite(int FinishState = -2, string GUID = "")
         {
             int RemoveID = -1;
-            if (string.IsNullOrEmpty(GUID) && m_ActiveCrashSite != null)
+            if (string.IsNullOrEmpty(GUID) && m_ActiveCrashSiteGUID != "")
             {
-                GUID = m_ActiveCrashSite.m_GUID;
+                GUID = m_ActiveCrashSiteGUID;
             }
             for (int i = 0; i < m_ActiveExpeditions.Count; i++)
             {
@@ -527,7 +625,7 @@ namespace SkyCoop
                 }
 
                 m_ActiveExpeditions.RemoveAt(RemoveID);
-                m_ActiveCrashSite = null;
+                m_ActiveCrashSiteGUID = "";
             }
             MultiplayerChatMessage Message = new MultiplayerChatMessage();
 
@@ -579,7 +677,7 @@ namespace SkyCoop
                     m_Invites.RemoveAt(i);
                 }
             }
-            if(m_ActiveCrashSite == null)
+            if(string.IsNullOrEmpty(m_ActiveCrashSiteGUID))
             {
                 NextCrashSiteIn--;
                 if (NextCrashSiteIn <= 0)
@@ -896,7 +994,7 @@ namespace SkyCoop
             public bool m_ObjectiveGearSpawned = false;
             public bool m_Debug = false;
             public bool m_RewardAlreadySpawned = false;
-            public Expedition m_Expedition = null;
+            public string m_ExpeditionGUID = null;
             public int m_LastPlayersAmout = 1;
             public bool m_CanCheckFlaregun = false;
             public bool m_DidFlareShots = false;
@@ -921,7 +1019,7 @@ namespace SkyCoop
                             Obj.m_Position = Spawner.m_Position;
                             Obj.m_Rotation = Spawner.m_Rotation;
 
-                            Obj.m_ExpeditionBelong = m_Expedition.m_GUID;
+                            Obj.m_ExpeditionBelong = m_ExpeditionGUID;
                             Obj.m_Scene = m_Scene;
                             Obj.m_CreationTime = MyMod.MinutesFromStartServer;
                             Obj.m_RemoveTime = MyMod.MinutesFromStartServer + 1440;
@@ -1015,7 +1113,14 @@ namespace SkyCoop
 
                 if(m_Type != ExpeditionTaskType.CRASHSITE)
                 {
-                    m_Expedition.OnTaskCompleted(this);
+                    foreach (Expedition Exp in m_ActiveExpeditions)
+                    {
+                        if(Exp.m_GUID == m_ExpeditionGUID)
+                        {
+                            Exp.OnTaskCompleted(this);
+                            break;
+                        }
+                    }
                 }
                 SpawnReward();
             }

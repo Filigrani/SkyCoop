@@ -362,6 +362,8 @@ namespace SkyCoop
                     Exp.m_TimeLeft = Templates[0].m_Time;
                 }
 
+                Exp.m_GUID = MPSaveManager.GetNewUGUID();
+
                 foreach (ExpeditionTaskTemplate Template in Templates)
                 {
                     ExpeditionTask Task = new ExpeditionTask();
@@ -384,7 +386,7 @@ namespace SkyCoop
                     Task.m_StayInZoneSeconds = Template.m_StaySeconds;
                     Task.m_ObjectSpawners = Template.m_Objects;
 
-                    Task.m_Expedition = Exp;
+                    Task.m_ExpeditionGUID = Exp.m_GUID;
 
                     Exp.m_Tasks.Add(Task);
                 }

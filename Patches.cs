@@ -2311,11 +2311,11 @@ namespace SkyCoop
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_Stone"))
                         {
                             stone.m_projectilename = "GEAR_Stone";
-                            Comps.DestoryStoneOnStop StoneComp = MyMod.SaveThrowingItem.gameObject.AddComponent<Comps.DestoryStoneOnStop>();
-                            StoneComp.m_Obj = MyMod.SaveThrowingItem.gameObject;
-                            StoneComp.m_RB = MyMod.SaveThrowingItem.GetComponent<Rigidbody>();
-                            StoneComp.m_Gear = MyMod.SaveThrowingItem.GetComponent<GearItem>();
-                            StoneComp.m_ShouldSendDrop = true;
+                            //Comps.DestoryStoneOnStop StoneComp = MyMod.SaveThrowingItem.gameObject.AddComponent<Comps.DestoryStoneOnStop>();
+                            //StoneComp.m_Obj = MyMod.SaveThrowingItem.gameObject;
+                            //StoneComp.m_RB = MyMod.SaveThrowingItem.GetComponent<Rigidbody>();
+                            //StoneComp.m_Gear = MyMod.SaveThrowingItem.GetComponent<GearItem>();
+                            //StoneComp.m_ShouldSendDrop = true;
                         }
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
                         {

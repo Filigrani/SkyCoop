@@ -1853,9 +1853,9 @@ namespace GameServer
         {
             string Scene = _packet.ReadString();
             string GUID = _packet.ReadString();
-            Log("Client " + _fromClient + " Requested Container State for " +GUID);
+            //Log("Client " + _fromClient + " Requested Container State for " +GUID);
             int State = MPSaveManager.GetContainerState(Scene, GUID);
-            Log("State is "+State+" sending it back to client "+_fromClient);
+            //Log("State is "+State+" sending it back to client "+_fromClient);
             ServerSend.CHANGECONTAINERSTATE(0, GUID, State, Scene, false, _fromClient);
         }
     }
