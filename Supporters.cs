@@ -49,7 +49,7 @@ namespace SkyCoop
             FlairsIDs.Add("Snw"); // 16
             FlairsIDs.Add("Lammy"); // 17
             FlairsIDs.Add("Dedi"); // 18
-
+            FlairsIDs.Add("Ogur"); // 19
             FlairsIDsReady = true;
         }
 #if (!DEDICATED)

@@ -325,7 +325,12 @@ namespace SkyCoop
                     //GameManager.LoadScene(LoadSceneSTR, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
 
                     //MyMod.DebugDiagnosis = true;
-                    //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
+
+                    //Condition Con = GameManager.GetConditionComponent();
+                    //Hunger Hun = GameManager.GetHungerComponent();
+                    //Thirst Thi = GameManager.GetThirstComponent();
+
+                    //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, Con.m_CurrentHP, Con.m_MaxHP,Thi.m_CurrentThirst, Hun.m_CurrentReserveCalories, Hun.m_MaxReserveCalories);
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
                     //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
                     //MyMod.AddSpray(Replica);

@@ -19,7 +19,6 @@ using MelonLoader.TinyJSON;
 using IL2CPP = Il2CppSystem.Collections.Generic;
 using static SkyCoop.Comps;
 using static SkyCoop.DataStr;
-using static ParadoxNotion.Services.Logger;
 
 namespace SkyCoop
 {
@@ -32,7 +31,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.11.4";
+            public const string Version = "0.11.5";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 5;
         }
@@ -6809,13 +6808,13 @@ namespace SkyCoop
             return ToReturn;
         }
 
-        public static void SendMyAffictions(int PlayerSendTo, float hp)
+        public static void SendMyAffictions(int PlayerSendTo, float hp, float hpmax, float thirst, float hunger, float hungermax)
         {
             List<DataStr.AffictionSync> Affs = BuildMyAfflictionList();
 
             if (iAmHost == true)
             {
-                ServerSend.SENDMYAFFLCTIONS(PlayerSendTo, Affs, hp, 0);
+                ServerSend.SENDMYAFFLCTIONS(PlayerSendTo, Affs, hp, hpmax, thirst, hunger, hungermax, 0);
             }
             if (sendMyPosition == true)
             {
@@ -6824,6 +6823,10 @@ namespace SkyCoop
                     _packet.Write(PlayerSendTo);
                     _packet.Write(Affs.Count);
                     _packet.Write(hp);
+                    _packet.Write(hpmax);
+                    _packet.Write(thirst);
+                    _packet.Write(hunger);
+                    _packet.Write(hungermax);
                     for (int index = 0; index < Affs.Count; ++index)
                     {
                         _packet.Write(Affs[index]);
@@ -6979,7 +6982,7 @@ namespace SkyCoop
 
         public static bool DebugDiagnosis = false;
 
-        public static void CheckOtherPlayer(List<DataStr.AffictionSync> Affs, int PlayerID, float health)
+        public static void CheckOtherPlayer(List<DataStr.AffictionSync> Affs, int PlayerID, float health, float maxhealth, float thirst, float hunger, float hungermax)
         {
             if (DiagnosisDummy != null)
             {
@@ -7034,7 +7037,13 @@ namespace SkyCoop
             }
 
             m_NPCcon.m_CurrentHP = health;
-            m_NPCcon.m_MaxHP = 100;
+            m_NPCcon.m_MaxHP = maxhealth;
+
+            m_Thirst.m_CurrentThirstPercentage = thirst;
+            m_Thirst.m_InitialThirstPercentage = thirst;
+            m_Thirst.m_ThirstIncreasePerHour = 0;
+            m_Cold.m_CurrentFreezing = 100 - Mathf.Clamp(0.5f + (100f * hunger) / hungermax, 0.0f, 100f);
+            m_Cold.m_MaxFreezing = hungermax;
             Panel_Diagnosis Panel = InterfaceManager.m_Panel_Diagnosis;
             RemovePleaseWait();
             DiscardRepeatPacket();
@@ -7042,8 +7051,10 @@ namespace SkyCoop
             Panel.Enable(true, m_NPC);
             GameObject thirstBar = Panel.gameObject.transform.GetChild(2).gameObject;
             GameObject TemertureBar = Panel.gameObject.transform.GetChild(3).gameObject;
-            thirstBar.SetActive(false);
-            TemertureBar.SetActive(false);
+            thirstBar.SetActive(true);
+            TemertureBar.transform.GetChild(1).GetChild(0).GetChild(0).GetChild(6).gameObject.GetComponent<UISprite>().mSpriteName = "ico_status_hunger1";
+            TemertureBar.transform.GetChild(1).GetChild(0).GetChild(0).GetChild(7).gameObject.GetComponent<UISprite>().mSpriteName = "ico_status_hunger3";
+            TemertureBar.SetActive(true);
 
             string Speach = "PLAY_SURVIVORDIAGNOSIS"; // Astrid Default
             if (GameManager.GetPlayerManagerComponent().m_VoicePersona == VoicePersona.Male) // If Makenzy

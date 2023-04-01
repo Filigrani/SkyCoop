@@ -1066,9 +1066,14 @@ namespace SkyCoop
                                 DisconnectMessage.m_Type = 0;
                                 DisconnectMessage.m_By = MyMod.playersData[i].m_Name;
                                 DisconnectMessage.m_Message = MyMod.playersData[i].m_Name + " disconnected!";
+
                                 ServerSend.KICKMESSAGE(i, "The host has disconnected you from the server due to a long period without receiving data from you.");
-                                SendMessageToChat(DisconnectMessage, true);
-                                SendLeave = true;
+
+                                if (!string.IsNullOrEmpty(Leaver))
+                                {
+                                    SendMessageToChat(DisconnectMessage, true);
+                                    SendLeave = true;
+                                }
                             } else
                             {
                                 ServerSend.KICKMESSAGE(i, "Your RCON session is over, please reconnect.");
@@ -3273,6 +3278,10 @@ namespace SkyCoop
         }
         public static void WebhookPlayerLeave(string PlayerName)
         {
+            if (string.IsNullOrEmpty(PlayerName))
+            {
+                return;
+            }
 #if (DEDICATED)            
             int Players = GetPlayersOnServer();
             DiscordManager.PlayerLeave(PlayerName, Players);

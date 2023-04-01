@@ -756,11 +756,11 @@ namespace SkyCoop
                 SaveData("UniversalSyncables", JSON.Dump(UniversalSyncableObjects), SaveSeed);
             }
 
-            foreach (var item in RecentVisual)
+            foreach (var item in RecentVisual.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.DropsVisual, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
-            foreach (var item in RecentData)
+            foreach (var item in RecentData.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.DropsData, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
@@ -768,19 +768,19 @@ namespace SkyCoop
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.Openables, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
-            foreach (var item in RecentBrokenFurns)
+            foreach (var item in RecentBrokenFurns.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.Furns, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
-            foreach (var item in RecentPickedGears)
+            foreach (var item in RecentPickedGears.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.PickedGears, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
-            foreach (var item in RecentlyLootedContainers)
+            foreach (var item in RecentlyLootedContainers.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.LootedContainers, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
-            foreach (var item in RecentlyHarvastedPlants)
+            foreach (var item in RecentlyHarvastedPlants.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.HarvestedPlants, item.Key), JSON.Dump(item.Value), SaveSeed);
             }

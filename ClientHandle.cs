@@ -1054,7 +1054,10 @@ namespace SkyCoop
         {
             MelonLogger.Msg(ConsoleColor.Green, "TRYDIAGNISISPLAYER");
             int from = _packet.ReadInt();
-            MyMod.SendMyAffictions(from, GameManager.GetConditionComponent().m_CurrentHP);
+            Condition Con = GameManager.GetConditionComponent();
+            Hunger Hun = GameManager.GetHungerComponent();
+            Thirst Thi = GameManager.GetThirstComponent();
+            MyMod.SendMyAffictions(from, Con.m_CurrentHP, Con.m_MaxHP, Thi.m_CurrentThirst, Hun.m_CurrentReserveCalories, Hun.m_MaxReserveCalories);
             MelonLogger.Msg(ConsoleColor.Green, "SendMyAffictions("+ from+","+" "+GameManager.GetConditionComponent().m_CurrentHP+");");
         }
         public static void SENDMYAFFLCTIONS(Packet _packet)
@@ -1062,6 +1065,10 @@ namespace SkyCoop
             int Who = _packet.ReadInt();
             int Count = _packet.ReadInt();
             float hp = _packet.ReadFloat();
+            float hpmax = _packet.ReadFloat();
+            float thirst = _packet.ReadFloat();
+            float hunger = _packet.ReadFloat();
+            float hungermax = _packet.ReadFloat();
             List<DataStr.AffictionSync> Affs = new List<DataStr.AffictionSync>();
 
             for (int index = 0; index < Count; ++index)
@@ -1069,7 +1076,7 @@ namespace SkyCoop
                 DataStr.AffictionSync newElement = _packet.ReadAffiction();
                 Affs.Add(newElement);
             }
-            MyMod.CheckOtherPlayer(Affs, Who, hp);
+            MyMod.CheckOtherPlayer(Affs, Who, hp, hpmax, thirst, hunger, hungermax);
         }
         public static void CUREAFFLICTION(Packet _packet)
         {

@@ -910,11 +910,11 @@ namespace GameServer
 
             if(box.m_Guid != "NULL")
             {
-                AddLootedContainer(box, true, _fromClient, -1);
+                AddLootedContainer(box, true, _fromClient, 0);
 #if (!DEDICATED)
                 if (box.m_LevelGUID == MyMod.level_guid)
                 {
-                    MyMod.RemoveLootFromContainer(box.m_Guid, -1);
+                    MyMod.RemoveLootFromContainer(box.m_Guid, 0);
                 }
 #endif
             }
@@ -1223,7 +1223,8 @@ namespace GameServer
                     {
                         State = 1;
                     }
-                    ServerSend.LOOTEDCONTAINER(0, BoxDummy, State, false, _fromClient);
+                    //ServerSend.LOOTEDCONTAINER(0, BoxDummy, State, false, _fromClient);
+                    ServerSend.CHANGECONTAINERSTATE(0, item.Key, State, Scene, false, _fromClient);
                 }
             }
             Dictionary<string, int> Plants = MPSaveManager.LoadHarvestedPlants(Scene);
@@ -1313,7 +1314,10 @@ namespace GameServer
 #if (!DEDICATED)
             if (ForWho == 0)
             {
-                MyMod.SendMyAffictions(_fromClient, GameManager.GetConditionComponent().m_CurrentHP);
+                Condition Con = GameManager.GetConditionComponent();
+                Hunger Hun = GameManager.GetHungerComponent();
+                Thirst Thi = GameManager.GetThirstComponent();
+                MyMod.SendMyAffictions(_fromClient, Con.m_CurrentHP,Con.m_MaxHP, Thi.m_CurrentThirst, Hun.m_CurrentReserveCalories, Hun.m_MaxReserveCalories);
             }else{
                 ServerSend.TRYDIAGNISISPLAYER(ForWho, _fromClient);
             }
@@ -1379,6 +1383,10 @@ namespace GameServer
             int forWho = _packet.ReadInt();
             int Count = _packet.ReadInt();
             float hp = _packet.ReadFloat();
+            float hpmax = _packet.ReadFloat();
+            float thirst = _packet.ReadFloat();
+            float hunger = _packet.ReadFloat();
+            float hungermax = _packet.ReadFloat();
             List<DataStr.AffictionSync> Affs = new List<DataStr.AffictionSync>();
 
             for (int index = 0; index < Count; ++index)
@@ -1392,13 +1400,13 @@ namespace GameServer
 #if (!DEDICATED)
             if (forWho == 0)
             {
-                MyMod.CheckOtherPlayer(Affs, _fromClient, hp);
+                MyMod.CheckOtherPlayer(Affs, _fromClient, hp, hpmax, thirst, hunger, hungermax);
             } else
             {
-                ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, _fromClient);
+                ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, hpmax, thirst, hunger, hungermax, _fromClient);
             }
 #else
-            ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, _fromClient);
+            ServerSend.SENDMYAFFLCTIONS(forWho, Affs, hp, hpmax, thirst, hunger, hungermax, _fromClient);
 #endif
 
         }

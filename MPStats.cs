@@ -44,6 +44,7 @@ namespace SkyCoop
         
         public static void StartDay(bool SendWebhook = false)
         {
+            string StatsString = TodayStats.GetString(false, true, true);
             DateTime DT = System.DateTime.Now;
             DataDay = DT.Day;
             string FileName = DT.Day + "_" + DT.Month + "_" + DT.Year;
@@ -53,7 +54,7 @@ namespace SkyCoop
             if (SendWebhook)
             {
 #if (DEDICATED)
-                DiscordManager.TodayStats(TodayStats.GetString(false, true, true));
+                DiscordManager.TodayStats(StatsString);
 #endif
             }
         }

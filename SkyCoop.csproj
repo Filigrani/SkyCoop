@@ -178,7 +178,9 @@
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <PropertyGroup>
-    <PostBuildEvent>@copy "D:\source\repos\SkyCoopBeforeTFTFT\Client.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Client.cs"
+    <PostBuildEvent>@del "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent"
+@del "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip"
+@copy "D:\source\repos\SkyCoopBeforeTFTFT\Client.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Client.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\DataStr.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\DataStr.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\MPSaveManager.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\MPSaveManager.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\Packet.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Packet.cs"
@@ -193,8 +195,9 @@
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\ExpeditionManager.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ExpeditionManager.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\ExpeditionBuilder.cs" "D:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ExpeditionBuilder.cs"
 @copy "D:\source\repos\SkyCoopBeforeTFTFT\bin\Release\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll"
-"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\ExpeditionTemplates"
-"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\BuildInfo.json" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\gear-spawns" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\blueprints" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\auto-mapped"</PostBuildEvent>
+"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\BuildInfo.json" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\blueprints" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\auto-mapped"
+@rename "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.zip" "SkyCoop.modcomponent"
+"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d"</PostBuildEvent>
   </PropertyGroup>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

@@ -1845,13 +1845,17 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void SENDMYAFFLCTIONS(int _toClient, List<DataStr.AffictionSync> _msg, float hp, int fromWho)
+        public static void SENDMYAFFLCTIONS(int _toClient, List<DataStr.AffictionSync> _msg, float hp, float hpmax, float thirst, float hunger, float hungermax, int fromWho)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SENDMYAFFLCTIONS))
             {
                 _packet.Write(fromWho);
                 _packet.Write(_msg.Count);
                 _packet.Write(hp);
+                _packet.Write(hpmax);
+                _packet.Write(thirst);
+                _packet.Write(hunger);
+                _packet.Write(hungermax);
                 for (int index = 0; index < _msg.Count; ++index)
                 {
                     _packet.Write(_msg[index]);
