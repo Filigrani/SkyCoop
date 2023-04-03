@@ -1,112 +1,151 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Text;
+
+#if(!DEDICATED)
 using UnityEngine;
+using Il2Cpp;
+#else
+using System.Numerics;
+#endif
 using SkyCoop;
+using System.Net;
+using System.Net.Sockets;
 
 namespace GameServer
 {
     class ServerSend
     {
-        public static void SendTCPData(int _toClient, Packet _packet)
+        public static void SendTCPData(int _toClient, Packet _packet, bool IgnoreReady = false)
         {
-            SendUDPData(_toClient, _packet);
+            SendUDPData(_toClient, _packet, IgnoreReady);
         }
-        public static void SendUDPData(int _toClient, Packet _packet)
+        public static void SendUDPData(int _toClient, Packet _packet, bool IgnoreReady = false)
         {
             _packet.WriteLength();
-            Server.clients[_toClient].udp.SendData(_packet);
-        }
 
-        public static void SendTCPDataToAll(Packet _packet)
-        {
-            _packet.WriteLength();
-            for (int i = 1; i <= Server.MaxPlayers; i++)
+            if (!Server.clients[_toClient].RCON)
             {
-                Server.clients[i].tcp.SendData(_packet);
+                Server.clients[_toClient].udp.SendData(_packet, IgnoreReady);
             }
         }
-        public static void SendTCPDataToAll(int _exceptClient, Packet _packet)
+        public static void SendUDPDataRCON(int Operator, Packet _packet)
+        {
+            _packet.WriteLength();
+            Server.clients[Operator].udp.SendData(_packet);
+        }
+        public static void SendUDPData(IPEndPoint _clientEndPoint, Packet _packet)
+        {
+            _packet.WriteLength();
+            Server.SendUDPData(_clientEndPoint, _packet);
+        }
+
+        public static void SendUDPDataToAll(Packet _packet, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
-                if (i != _exceptClient)
+                if (Server.clients[i].IsBusy() == true && !Server.clients[i].RCON)
                 {
-                    Server.clients[i].tcp.SendData(_packet);
+                    Server.clients[i].udp.SendData(_packet, IgnoreReady);
                 }
             }
         }
-
-        public static void SendUDPDataToAll(Packet _packet)
-        {
-            _packet.WriteLength();
-            for (int i = 1; i <= Server.MaxPlayers; i++)
-            {
-                if (Server.clients[i].IsBusy() == true)
-                {
-                    Server.clients[i].udp.SendData(_packet);
-                }
-            }
-        }
-        public static void SendUDPDataToAll(Packet _packet, string level_guid)
+        public static void SendUDPDataToAll(Packet _packet, string level_guid, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
             {
                 if (MyMod.playersData[i] != null)
                 {
-                    if (MyMod.playersData[i].m_LevelGuid == level_guid)
+                    if (MyMod.playersData[i].m_LevelGuid == level_guid && !Server.clients[i].RCON)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        Server.clients[i].udp.SendData(_packet, IgnoreReady);
                     }
                 }
             }
         }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId)
-        {
-            _packet.WriteLength();
-            for (int i = 1; i <= Server.MaxPlayers; i++)
-            {
-                if (i != SenderId && Server.clients[i].IsBusy() == true)
-                {
-                    Server.clients[i].udp.SendData(_packet);
-                }
-            }
-        }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, bool IsKey = false)
+        public static void SendUDPDataToAll(Packet _packet, int Region, bool IgnoreLoaders = false, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
             {
-                if (i != SenderId && MyMod.playersData[i] != null)
+                if (MyMod.playersData[i] != null)
+                {
+                    if (MyMod.playersData[i].m_LastWeatherRegion == Region && !Server.clients[i].RCON)
+                    {
+                        if (!IgnoreLoaders)
+                        {
+                            Server.clients[i].udp.SendData(_packet);
+                        } else
+                        {
+                            if(!MyMod.playersData[i].m_IsLoading)
+                            {
+                                Server.clients[i].udp.SendData(_packet, IgnoreReady);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public static void SendUDPDataToAllInArea(Packet _packet, int SenderId, Vector3 SpeakerPossition, string SpeakerScene, bool IgnoreReady = false)
+        {
+            _packet.WriteLength();
+            for (int i = 1; i < MyMod.playersData.Count; i++)
+            {
+                if (i != SenderId && MyMod.playersData[i] != null && !Server.clients[i].RCON)
+                {
+                    if (MyMod.playersData[i].m_LevelGuid == SpeakerScene && Vector3.Distance(MyMod.playersData[i].m_Position, SpeakerPossition) <= Shared.LocalChatMaxDistance)
+                    {
+                        Server.clients[i].udp.SendData(_packet, IgnoreReady);
+                    }
+                }
+            }
+        }
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, bool IgnoreReady = false)
+        {
+            _packet.WriteLength();
+            for (int i = 1; i <= Server.MaxPlayers; i++)
+            {
+                if (i != SenderId && Server.clients[i].IsBusy() == true && !Server.clients[i].RCON)
+                {
+                    Server.clients[i].udp.SendData(_packet, IgnoreReady);
+                }
+            }
+        }
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, bool IsKey = false, bool IgnoreReady = false)
+        {
+            _packet.WriteLength();
+            for (int i = 1; i < MyMod.playersData.Count; i++)
+            {
+                if (i != SenderId && MyMod.playersData[i] != null && !Server.clients[i].RCON)
                 {
                     if (!IsKey)
                     {
                         if (MyMod.playersData[i].m_LevelGuid == level_guid)
                         {
-                            Server.clients[i].udp.SendData(_packet);
+                            Server.clients[i].udp.SendData(_packet, IgnoreReady);
                         }
                     }else{
                         string Key = MyMod.playersData[i].m_Levelid + MyMod.playersData[i].m_LevelGuid;
                         if(Key == level_guid)
                         {
-                            Server.clients[i].udp.SendData(_packet);
+                            Server.clients[i].udp.SendData(_packet, IgnoreReady);
                         }
                     }
                 }
             }
         }
-        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, float RadioF)
+        public static void SendUDPDataToAllButNotSender(Packet _packet, int SenderId, string level_guid, float RadioF, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i < MyMod.playersData.Count; i++)
             {
-                if (i != SenderId && MyMod.playersData[i] != null)
+                if (i != SenderId && MyMod.playersData[i] != null && !Server.clients[i].RCON)
                 {                    
                     if (MyMod.playersData[i].m_LevelGuid == level_guid || MyMod.playersData[i].m_RadioFrequency == RadioF)
                     {
-                        Server.clients[i].udp.SendData(_packet);
+                        Server.clients[i].udp.SendData(_packet, IgnoreReady);
                     }
                 }
             }
@@ -114,14 +153,14 @@ namespace GameServer
         /// <summary>Sends a packet to all clients except one via UDP.</summary>
         /// <param name="_exceptClient">The client to NOT send the data to.</param>
         /// <param name="_packet">The packet to send.</param>
-        public static void SendUDPDataToAll(int _exceptClient, Packet _packet)
+        public static void SendUDPDataToAll(int _exceptClient, Packet _packet, bool IgnoreReady = false)
         {
             _packet.WriteLength();
             for (int i = 1; i <= Server.MaxPlayers; i++)
             {
                 if (i != _exceptClient)
                 {
-                    Server.clients[i].udp.SendData(_packet);
+                    Server.clients[i].udp.SendData(_packet, IgnoreReady);
                 }
             }
         }
@@ -132,8 +171,9 @@ namespace GameServer
             {
                 _packet.Write(_toClient);
                 _packet.Write(maxPlayers);
+                _packet.Write(ModsValidation.GetModsHash(false).m_WhiteList);
 
-                SendTCPData(_toClient, _packet);
+                SendTCPData(_toClient, _packet, true);
             }
         }
         public static void XYZ(int _From, Vector3 _msg, bool toEveryOne, int OnlyFor = -1)
@@ -259,7 +299,7 @@ namespace GameServer
                 }
             }
         }
-        public static void GOTITEM(int _toClient, MyMod.GearItemDataPacket _msg)
+        public static void GOTITEM(int _toClient, DataStr.GearItemDataPacket _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GOTITEM))
             {
@@ -269,7 +309,7 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void GOTITEMSLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        public static void GOTITEMSLICE(int _toClient, DataStr.SlicedJsonData _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GOTITEMSLICE))
             {
@@ -279,7 +319,7 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void GOTCONTAINERSLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        public static void GOTCONTAINERSLICE(int _toClient, DataStr.SlicedJsonData _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GOTCONTAINERSLICE))
             {
@@ -287,15 +327,6 @@ namespace GameServer
                 _packet.Write(_toClient);
 
                 int pSize = _packet.Length();
-
-                if (pSize > 1500)
-                {
-                    MelonLoader.MelonLogger.Msg("Packet reached limiet! Size of packet is " + pSize + "bytes");
-                }else{
-                    //MelonLoader.MelonLogger.Msg("Packet sent "+ pSize + "bytes");
-                }
-
-                //MelonLoader.MelonLogger.Msg("Limit is 1500bytes, slice split size is 1000bytes, final packet size is " + _packet.Length()+"bytes");
                 SendTCPData(_toClient, _packet);
             }
         }
@@ -310,7 +341,7 @@ namespace GameServer
             }
         }
 
-        public static void GETREQUESTEDITEMSLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        public static void GETREQUESTEDITEMSLICE(int _toClient, DataStr.SlicedJsonData _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GETREQUESTEDITEMSLICE))
             {
@@ -320,7 +351,7 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void GETREQUESTEDFORPLACESLICE(int _toClient, MyMod.SlicedJsonData _msg)
+        public static void GETREQUESTEDFORPLACESLICE(int _toClient, DataStr.SlicedJsonData _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GETREQUESTEDFORPLACESLICE))
             {
@@ -414,12 +445,11 @@ namespace GameServer
                 }
             }
         }
-        public static void SYNCWEATHER(int _toClient, MyMod.WeatherProxies _msg)
+        public static void SYNCWEATHER(DataStr.WeatherProxies _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SYNCWEATHER))
             {
                 _packet.Write(_msg);
-                _packet.Write(0);
 
                 SendUDPDataToAll(_packet);
             }
@@ -477,7 +507,7 @@ namespace GameServer
         //        SendOnlyToClosePlayers(_packet, _From, LevelID, AnimalV3);
         //    }
         //}
-        public static void ANIMALTEST(int _From, MyMod.AnimalCompactData _msg, MyMod.AnimalAnimsSync anim, int OnlyFor)
+        public static void ANIMALTEST(int _From, DataStr.AnimalCompactData _msg, DataStr.AnimalAnimsSync anim, int OnlyFor)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALTEST))
             {
@@ -528,7 +558,7 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void ANIMALSYNCTRIGG(int _From, MyMod.AnimalTrigger _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void ANIMALSYNCTRIGG(int _From, DataStr.AnimalTrigger _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALSYNCTRIGG))
             {
@@ -555,7 +585,7 @@ namespace GameServer
                 }
             }
         }
-        public static void SHOOTSYNC(int _From, MyMod.ShootSync _msg, bool toEveryOne)
+        public static void SHOOTSYNC(int _From, DataStr.ShootSync _msg, bool toEveryOne)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SHOOTSYNC))
             {
@@ -606,7 +636,7 @@ namespace GameServer
                 }
             }
         }
-        public static void SAVEDATA(int _toClient, MyMod.SaveSlotSync _msg)
+        public static void SAVEDATA(int _toClient, DataStr.SaveSlotSync _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SAVEDATA))
             {
@@ -618,6 +648,23 @@ namespace GameServer
         }
         public static void BULLETDAMAGE(int _toClient, float _msg,int bodypart, int _From, bool Melee = false, string MeleeWeapon = "")
         {
+#if (!DEDICATED)
+            
+            if(_From == 0)
+            {
+                if (GameManager.m_PlayerObject && (SafeZoneManager.SceneIsSafe(MyMod.level_guid) || SafeZoneManager.InsideSafeZone(MyMod.level_guid, GameManager.GetPlayerTransform().position)))
+                {
+                    HUDMessage.AddMessage("You cannot attack when you in the safe zone!");
+                    return;
+                }
+                if (MyMod.playersData[_toClient] != null && MyMod.playersData[_toClient].m_IsSafe)
+                {
+                    HUDMessage.AddMessage("You cannot attack players in the safe zone!");
+                    return;
+                }
+            }
+#endif
+
             using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
             {
                 _packet.Write(_msg);
@@ -651,7 +698,7 @@ namespace GameServer
                 }
             }
         }
-        public static void CONTAINEROPEN(int _From, MyMod.ContainerOpenSync _msg, bool toEveryOne)
+        public static void CONTAINEROPEN(int _From, DataStr.ContainerOpenSync _msg, bool toEveryOne)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CONTAINEROPEN))
             {
@@ -669,15 +716,9 @@ namespace GameServer
                 }
             }
         }
-        public static void LUREPLACEMENT(int _toClient, MyMod.WalkTracker _msg)
+        public static void LUREPLACEMENT(int _toClient, bool _msg)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.LUREPLACEMENT))
-            {
-                _packet.Write(_msg);
-                _packet.Write(_toClient);
 
-                SendTCPData(_toClient, _packet);
-            }
         }
         public static void LUREISACTIVE(int _toClient, bool _msg)
         {
@@ -689,25 +730,9 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void ALIGNANIMAL(int _toClient, MyMod.AnimalAligner _msg)
+        public static void ALIGNANIMAL(int _toClient, DataStr.AnimalAligner _msg)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.ALIGNANIMAL))
-            {
-                _packet.Write(_msg);
-                _packet.Write(_toClient);
 
-                SendTCPData(_toClient, _packet);
-            }
-        }
-        public static void ASKFORANIMALPROXY(int _toClient, string _msg)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.ASKFORANIMALPROXY))
-            {
-                _packet.Write(_msg);
-                _packet.Write(_toClient);
-
-                SendTCPData(_toClient, _packet);
-            }
         }
         public static void CARRYBODY(int _toClient, bool _msg)
         {
@@ -759,7 +784,7 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void EQUIPMENT(int _From, MyMod.PlayerEquipmentData _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void EQUIPMENT(int _From, DataStr.PlayerEquipmentData _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.EQUIPMENT))
             {
@@ -782,31 +807,31 @@ namespace GameServer
                 }
             }
         }
-        public static void CHAT(int _From, MyMod.MultiplayerChatMessage _msg, bool toEveryOne, int OnlyFor = -1)
+
+        public static void CHAT(int _From, DataStr.MultiplayerChatMessage _msg, Vector3 SpeakerPossition = default(Vector3), string SpeakerScene = "")
         {
             using (Packet _packet = new Packet((int)ServerPackets.CHAT))
             {
-                if (toEveryOne == true)
+                _packet.Write(_msg);
+                _packet.Write(_From);
+
+                if (_msg.m_Global)
                 {
-                    _packet.Write(_msg);
-                    _packet.Write(0);
-                    SendUDPDataToAll(_packet);
-                }
-                else
+                    SendUDPDataToAllButNotSender(_packet, _From);
+                } else
                 {
-                    if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPDataToAllButNotSender(_packet, _From);
-                    }
-                    else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPData(OnlyFor, _packet);
-                    }
+                    SendUDPDataToAllInArea(_packet, _From, SpeakerPossition, SpeakerScene);
                 }
+            }
+        }
+        public static void CHATPM(int OnlyFor, DataStr.MultiplayerChatMessage _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHAT))
+            {
+                _packet.Write(_msg);
+                _packet.Write(0);
+
+                SendUDPData(OnlyFor, _packet);
             }
         }
         public static void CHANGENAME(int _From, string _msg, bool toEveryOne, int OnlyFor = -1)
@@ -836,7 +861,7 @@ namespace GameServer
                 }
             }
         }
-        public static void CLOTH(int _From, MyMod.PlayerClothingData _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void CLOTH(int _From, DataStr.PlayerClothingData _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CLOTH))
             {
@@ -890,7 +915,7 @@ namespace GameServer
                 }
             }
         }
-        public static void FURNBROKEN(int _From, MyMod.BrokenFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void FURNBROKEN(int _From, DataStr.BrokenFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.FURNBROKEN))
             {
@@ -917,27 +942,7 @@ namespace GameServer
                 }
             }
         }
-        public static void FURNBROKENLIST(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.FURNBROKENLIST))
-            {
-                int ReadCount = MyMod.BrokenFurniture.Count;
-
-                if(ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.BrokenFurniture[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
-            }
-        }
-        public static void FURNBREAKINGGUID(int _From, MyMod.BrokenFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void FURNBREAKINGGUID(int _From, DataStr.BrokenFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.FURNBREAKINGGUID))
             {
@@ -992,7 +997,7 @@ namespace GameServer
             }
         }
 
-        public static void GEARPICKUP(int _From, MyMod.PickedGearSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void GEARPICKUP(int _From, DataStr.PickedGearSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.GEARPICKUP))
             {
@@ -1019,28 +1024,8 @@ namespace GameServer
                 }
             }
         }
-        public static void GEARPICKUPLIST(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.GEARPICKUPLIST))
-            {
-                int ReadCount = MyMod.PickedGears.Count;
 
-                if (ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.PickedGears[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
-            }
-        }
-
-        public static void ROPE(int _From, MyMod.ClimbingRopeSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void ROPE(int _From, DataStr.ClimbingRopeSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ROPE))
             {
@@ -1293,7 +1278,7 @@ namespace GameServer
                 }
             }
         }
-        public static void CANCLEPICKUP(int _From, MyMod.PickedGearSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void CANCLEPICKUP(int _From, DataStr.PickedGearSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CANCLEPICKUP))
             {
@@ -1320,7 +1305,7 @@ namespace GameServer
                 }
             }
         }
-        public static void CONTAINERINTERACT(int _From, MyMod.ContainerOpenSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void CONTAINERINTERACT(int _From, DataStr.ContainerOpenSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CONTAINERINTERACT))
             {
@@ -1347,7 +1332,7 @@ namespace GameServer
                 }
             }
         }
-        public static void LOOTEDCONTAINER(int _From, MyMod.ContainerOpenSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void LOOTEDCONTAINER(int _From, DataStr.ContainerOpenSync _msg, int State, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOOTEDCONTAINER))
             {
@@ -1355,6 +1340,7 @@ namespace GameServer
                 {
                     _packet.Write(_msg);
                     _packet.Write(0);
+                    _packet.Write(State);
                     SendUDPDataToAll(_packet);
                 }
                 else
@@ -1363,38 +1349,20 @@ namespace GameServer
                     {
                         _packet.Write(_msg);
                         _packet.Write(_From);
+                        _packet.Write(State);
                         SendUDPDataToAllButNotSender(_packet, _From);
                     }
                     else
                     {
                         _packet.Write(_msg);
                         _packet.Write(_From);
+                        _packet.Write(State);
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
             }
         }
-        public static void LOOTEDCONTAINERLIST(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.LOOTEDCONTAINERLIST))
-            {
-                int ReadCount = MyMod.LootedContainers.Count;
-
-                if (ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.LootedContainers[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
-            }
-        }
-        public static void HARVESTPLANT(int _From, MyMod.HarvestableSyncData _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void HARVESTPLANT(int _From, DataStr.HarvestableSyncData _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.HARVESTPLANT))
             {
@@ -1421,51 +1389,29 @@ namespace GameServer
                 }
             }
         }
-        public static void LOOTEDHARVESTABLE(int _From, string _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void LOOTEDHARVESTABLE(int _From, string GUID, string Scene, int HarvestTime, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOOTEDHARVESTABLE))
             {
+                _packet.Write(GUID);
+                _packet.Write(Scene);
+                _packet.Write(HarvestTime);
                 if (toEveryOne == true)
                 {
-                    _packet.Write(_msg);
-                    _packet.Write(0);
-                    SendUDPDataToAll(_packet);
+
+                    SendUDPDataToAll(_packet, Scene);
                 }
                 else
                 {
                     if (OnlyFor == -1)
                     {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPDataToAllButNotSender(_packet, _From);
+                        SendUDPDataToAllButNotSender(_packet, _From, Scene);
                     }
                     else
                     {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
                         SendUDPData(OnlyFor, _packet);
                     }
                 }
-            }
-        }
-        public static void LOOTEDHARVESTABLEALL(int OnlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.LOOTEDHARVESTABLEALL))
-            {
-                int ReadCount = MyMod.HarvestedPlants.Count;
-
-                if (ReadCount == 0)
-                {
-                    return;
-                }
-
-                _packet.Write(ReadCount);
-
-                for (int i = 0; i < ReadCount; i++)
-                {
-                    _packet.Write(MyMod.HarvestedPlants[i]);
-                }
-                SendUDPData(OnlyFor, _packet);
             }
         }
         public static void SELECTEDCHARACTER(int _From, int _msg, bool toEveryOne, int OnlyFor = -1)
@@ -1495,7 +1441,7 @@ namespace GameServer
                 }
             }
         }
-        public static void ADDSHELTER(int _From, MyMod.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void ADDSHELTER(int _From, DataStr.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ADDSHELTER))
             {
@@ -1522,7 +1468,7 @@ namespace GameServer
                 }
             }
         }
-        public static void REMOVESHELTER(int _From, MyMod.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void REMOVESHELTER(int _From, DataStr.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.REMOVESHELTER))
             {
@@ -1569,7 +1515,7 @@ namespace GameServer
                 SendUDPData(OnlyFor, _packet);
             }
         }
-        public static void USESHELTER(int _From, MyMod.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void USESHELTER(int _From, DataStr.ShowShelterByOther _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.USESHELTER))
             {
@@ -1596,7 +1542,7 @@ namespace GameServer
                 }
             }
         }
-        public static void FIRE(int _From, MyMod.FireSourcesSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void FIRE(int _From, DataStr.FireSourcesSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.FIRE))
             {
@@ -1619,7 +1565,7 @@ namespace GameServer
                 }
             }
         }
-        public static void FIREFUEL(int _From, MyMod.FireSourcesSync _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void FIREFUEL(int _From, DataStr.FireSourcesSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.FIREFUEL))
             {
@@ -1647,7 +1593,7 @@ namespace GameServer
             }
         }
 
-        public static void DROPITEM(int _From, MyMod.DroppedGearItemDataPacket _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void DROPITEM(int _From, DataStr.DroppedGearItemDataPacket _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.DROPITEM))
             {
@@ -1740,6 +1686,37 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void KICKMESSAGE(string _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.KICKMESSAGE))
+            {
+                _packet.Write(_msg);
+
+                SendUDPDataToAll(_packet);
+            }
+        }
+        public static void KICKMESSAGE(IPEndPoint EndPoint, string _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.KICKMESSAGE))
+            {
+                _packet.Write(_msg);
+
+                SendUDPData(EndPoint, _packet);
+            }
+        }
+
+        public static void MODSLIST(int _toClient, string _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.MODSLIST))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+
+        
         public static void VOICECHAT(int _From, byte[] _msg, int ReadLength, float RecordTime, string LevelGUID, float RadioF, int Sender)
         {
             using (Packet _packet = new Packet((int)ServerPackets.VOICECHAT))
@@ -1765,32 +1742,9 @@ namespace GameServer
             }
         }
 
-        public static void SLICEDBYTES(int _From, MyMod.SlicedBytesData _msg, bool toEveryOne, int OnlyFor = -1)
+        public static void SLICEDBYTES(int _From, DataStr.SlicedBytesData _msg, bool toEveryOne, int OnlyFor = -1)
         {
-            using (Packet _packet = new Packet((int)ServerPackets.SLICEDBYTES))
-            {
-                if (toEveryOne == true)
-                {
-                    _packet.Write(_msg);
-                    _packet.Write(0);
-                    SendUDPDataToAll(_packet);
-                }
-                else
-                {
-                    if (OnlyFor == -1)
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPDataToAllButNotSender(_packet, _From);
-                    }
-                    else
-                    {
-                        _packet.Write(_msg);
-                        _packet.Write(_From);
-                        SendUDPData(OnlyFor, _packet);
-                    }
-                }
-            }
+
         }
 
         public static void READYSENDNEXTSLICE(int _toClient, bool _msg)
@@ -1803,6 +1757,27 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
+        public static void READYSENDNEXTSLICEGEAR(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.READYSENDNEXTSLICEGEAR))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+        public static void READYSENDNEXTSLICEPHOTO(int _toClient, bool _msg)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.READYSENDNEXTSLICEPHOTO))
+            {
+                _packet.Write(_msg);
+                _packet.Write(_toClient);
+
+                SendTCPData(_toClient, _packet);
+            }
+        }
+
         public static void LOADINGSCENEDROPSDONE(int _toClient, bool _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.LOADINGSCENEDROPSDONE))
@@ -1861,7 +1836,7 @@ namespace GameServer
             }
         }
 
-        public static void CUREAFFLICTION(int _toClient, MyMod.AffictionSync _msg)
+        public static void CUREAFFLICTION(int _toClient, DataStr.AffictionSync _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CUREAFFLICTION))
             {
@@ -1871,13 +1846,17 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void SENDMYAFFLCTIONS(int _toClient, List<MyMod.AffictionSync> _msg, float hp, int fromWho)
+        public static void SENDMYAFFLCTIONS(int _toClient, List<DataStr.AffictionSync> _msg, float hp, float hpmax, float thirst, float hunger, float hungermax, int fromWho)
         {
             using (Packet _packet = new Packet((int)ServerPackets.SENDMYAFFLCTIONS))
             {
                 _packet.Write(fromWho);
                 _packet.Write(_msg.Count);
                 _packet.Write(hp);
+                _packet.Write(hpmax);
+                _packet.Write(thirst);
+                _packet.Write(hunger);
+                _packet.Write(hungermax);
                 for (int index = 0; index < _msg.Count; ++index)
                 {
                     _packet.Write(_msg[index]);
@@ -1912,7 +1891,7 @@ namespace GameServer
                 }
             }
         }
-        public static void ANIMALCORPSE(int _toClient, MyMod.AnimalKilled data, bool toAll = false)
+        public static void ANIMALCORPSE(int _toClient, DataStr.AnimalKilled data, bool toAll = false)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALCORPSE))
             {
@@ -2034,7 +2013,7 @@ namespace GameServer
                 SendUDPDataToAll(_packet);
             }
         }
-        public static void CHALLENGEUPDATE(MyMod.CustomChallengeData DAT)
+        public static void CHALLENGEUPDATE(DataStr.CustomChallengeData DAT)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CHALLENGEUPDATE))
             {
@@ -2052,7 +2031,7 @@ namespace GameServer
                 SendUDPDataToAll(_packet);
             }
         }
-        public static void ADDDEATHCONTAINER(MyMod.DeathContainerData data, string LevelKey, int Sender)
+        public static void ADDDEATHCONTAINER(DataStr.DeathContainerData data, string LevelKey, int Sender)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ADDDEATHCONTAINER))
             {
@@ -2060,7 +2039,7 @@ namespace GameServer
                 SendUDPDataToAllButNotSender(_packet, Sender, LevelKey);
             }
         }
-        public static void ADDDEATHCONTAINER(MyMod.DeathContainerData data, int JustFor)
+        public static void ADDDEATHCONTAINER(DataStr.DeathContainerData data, int JustFor)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ADDDEATHCONTAINER))
             {
@@ -2127,6 +2106,426 @@ namespace GameServer
                 }else{
                     SendUDPData(For, _packet);
                 }
+            }
+        }
+        public static void RCONCONNECTED(int OperatorID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RCONCONNECTED))
+            {
+                _packet.Write(true);
+                SendUDPDataRCON(OperatorID, _packet);
+            }
+        }
+        public static void RCONCALLBACK(int OperatorID, string CALLBACK)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RCONCALLBACK))
+            {
+                _packet.Write(CALLBACK);
+                SendUDPDataRCON(OperatorID, _packet);
+            }
+        }
+        public static void ADDDOORLOCK(int SendTo, string DoorGUID, string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDDOORLOCK))
+            {
+                _packet.Write(DoorGUID);
+                if (SendTo == -1)
+                {
+                    SendUDPDataToAll(_packet, Scene);
+                }else{
+                    SendUDPData(SendTo, _packet);
+                }
+            }
+        }
+        public static void DOORLOCKEDMSG(int SendTo, string Message)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.DOORLOCKEDMSG))
+            {
+                _packet.Write(Message);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void ENTERDOOR(int SendTo, string DoorGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ENTERDOOR))
+            {
+                _packet.Write(DoorGUID);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void REMOVEDOORLOCK(int SendTo, string DoorGUID, string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEDOORLOCK))
+            {
+                _packet.Write(DoorGUID);
+                if (SendTo == -1)
+                {
+                    SendUDPDataToAll(_packet, Scene);
+                }else{
+                    SendUDPData(SendTo, _packet);
+                }
+            }
+        }
+        public static void LOCKPICK(int SendTo, bool Swear)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.LOCKPICK))
+            {
+                _packet.Write(Swear);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void VERIFYSAVE(int SendTo, string UGUID, bool Valid)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.VERIFYSAVE))
+            {
+                _packet.Write(UGUID);
+                _packet.Write(Valid);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void RPC(int SendTo, string RPCDATA)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RPC))
+            {
+                _packet.Write(RPCDATA);
+
+                if(SendTo != -1)
+                {
+                    SendUDPData(SendTo, _packet);
+                }else{
+                    SendUDPDataToAll(SendTo, _packet);
+                }
+            }
+        }
+        public static void REQUESTLOCKSMITH(int SendTo, int State)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTLOCKSMITH))
+            {
+                _packet.Write(State);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void KNOCKKNOCK(string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.KNOCKKNOCK))
+            {
+                SendUDPDataToAll(_packet, Scene);
+            }
+        }
+        public static void KNOCKENTER(int SendTo, string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.KNOCKENTER))
+            {
+                _packet.Write(Scene);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void PEEPHOLE(int SendTo, List<int> Knockers)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.PEEPHOLE))
+            {
+                _packet.Write(Knockers);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+
+        public static string GetDifficultyString()
+        {
+#if (!DEDICATED)
+            switch (ExperienceModeManager.s_CurrentModeType)
+            {
+                case ExperienceModeType.Pilgrim:
+                    return "Pilgrim";
+                case ExperienceModeType.Voyageur:
+                    return "Voyageur";
+                case ExperienceModeType.Stalker:
+                    return "Stalker";
+                case ExperienceModeType.Interloper:
+                    return "Interloper";
+                default:
+                    return "Unknown";
+            }
+#else
+            switch (Shared.ExperienceForDS)
+            {
+                case 0:
+                    return "Pilgrim";
+                case 1:
+                    return "Voyageur";
+                case 2:
+                    return "Stalker";
+                case 9:
+                    return "Interloper";
+                default:
+                    return "Unknown";
+            }
+#endif
+        }
+
+        public static string GetStatusJson(string Players)
+        {
+            string Json = "{";
+            Json += "'players':[" + Players + "],";
+            Json += "'experience':'" + GetDifficultyString() + "',";
+            Json += "'pvp':'" + MyMod.ServerConfig.m_PVP + "'";
+            Json += "}";
+            return Json;
+        }
+
+
+        public static void PINGSERVER(IPEndPoint endPoint)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.PINGSERVER))
+            {
+                string List = "";
+                int Players = 0;
+                int PlayersMax = Server.MaxPlayers;
+                foreach (var c in Server.clients)
+                {
+                    if (c.Value.IsBusy())
+                    {
+                        if (!c.Value.RCON)
+                        {
+                            if (string.IsNullOrEmpty(List))
+                            {
+                                List = "'" + MyMod.playersData[c.Key].m_Name.Replace("'", "") + "'";
+                            } else
+                            {
+                                List = List+"," + "'" + MyMod.playersData[c.Key].m_Name.Replace("'", "") + "'";
+                            }
+                        }
+                        Players++;
+                    }
+                }
+                _packet.WriteUnicodeString(MyMod.CustomServerName);
+                _packet.Write(MyMod.BuildInfo.Version);
+                _packet.Write(Players);
+                _packet.Write(PlayersMax);
+                _packet.WriteUnicodeString(GetStatusJson(List));
+                Server.SendUDPData(endPoint, _packet);
+            }
+        }
+        public static void RESTART()
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RESTART))
+            {
+                SendUDPDataToAll(_packet);
+            }
+        }
+        public static void DEDICATEDWEATHER(int Region, int Type, int Indx, float StartAtFrac, int Seed, float Duration, List<float> Durations, List<float> Transitions, int TOD, float High, float Low, int PreviousStage)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.DEDICATEDWEATHER))
+            {
+                _packet.Write(Type);
+                _packet.Write(Indx);
+                _packet.Write(StartAtFrac);
+                _packet.Write(Seed);
+                _packet.Write(Duration);
+                _packet.Write(Durations);
+                _packet.Write(Transitions);
+                _packet.Write(TOD);
+                _packet.Write(High);
+                _packet.Write(Low);
+                _packet.Write(PreviousStage);
+                SendUDPDataToAll(_packet, Region, true);
+            }
+        }
+        public static void WEATHERVOLUNTEER(int Region)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.WEATHERVOLUNTEER))
+            {
+                _packet.Write(Region);
+                SendUDPDataToAll(_packet, Region, true);
+            }
+        }
+        public static void REREGISTERWEATHER(int For, int Region)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REREGISTERWEATHER))
+            {
+                _packet.Write(Region);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void REMOVEKEYBYSEED(int SendTo, string Seed)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEKEYBYSEED))
+            {
+                _packet.Write(Seed);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void ADDHUDMESSAGE(int SendTo, string Message)
+        {
+            if(SendTo == -1)
+            {
+                return;
+            }
+
+#if (!DEDICATED)
+            if (SendTo == 0)
+            {
+                HUDMessage.AddMessage(Message);
+                return;
+            }
+#endif
+            using (Packet _packet = new Packet((int)ServerPackets.ADDHUDMSG))
+            {
+                _packet.Write(Message);
+                SendUDPData(SendTo, _packet);
+            }
+        }
+        public static void CHANGECONTAINERSTATE(int _From, string GUID, int State, string Scene, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CHANGECONTAINERSTATE))
+            {
+                _packet.Write(GUID);
+                _packet.Write(State);
+                if (toEveryOne == true)
+                {
+                    SendUDPDataToAll(_packet, Scene);
+                } else
+                {
+                    if (OnlyFor == -1)
+                    {
+                        SendUDPDataToAllButNotSender(_packet, _From, Scene);
+                    } else
+                    {
+                        SendUDPData(OnlyFor, _packet);
+                    }
+                }
+            }
+        }
+        public static void FINISHEDSENDINGCONTAINER(int For, bool Result)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.FINISHEDSENDINGCONTAINER))
+            {
+                _packet.Write(Result);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void TRIGGEREMOTE(int From, int EmoteID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.TRIGGEREMOTE))
+            {
+                _packet.Write(From);
+                _packet.Write(EmoteID);
+                SendUDPDataToAllButNotSender(_packet, From);
+            }
+        }
+        public static void EXPEDITIONSYNC(int For, string Name, string Task, int Time)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONSYNC))
+            {
+                _packet.Write(Name);
+                _packet.Write(Task);
+                _packet.Write(Time);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void EXPEDITIONRESULT(int For, int State)
+        {
+            if(For == 0)
+            {
+#if (!DEDICATED)
+                MyMod.DoExpeditionState(State);
+#endif
+            } else
+            {
+                using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONRESULT))
+                {
+                    _packet.Write(State);
+                    SendUDPData(For, _packet);
+                }
+            }
+        }
+        public static void REQUESTEXPEDITIONINVITES(int For, List<ExpeditionManager.ExpeditionInvite> Invites)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTEXPEDITIONINVITES))
+            {
+                _packet.Write(Invites);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void NEWPLAYEREXPEDITION(int For, string PlayerName)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.NEWPLAYEREXPEDITION))
+            {
+                _packet.Write(PlayerName);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void NEWEXPEDITIONINVITE(int For, string PlayerName)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.NEWEXPEDITIONINVITE))
+            {
+                _packet.Write(PlayerName);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void BASE64SLICE(int For, DataStr.SlicedBase64Data Data)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.BASE64SLICE))
+            {
+                _packet.Write(Data);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void BASE64SLICE(DataStr.SlicedBase64Data Data, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.BASE64SLICE))
+            {
+                _packet.Write(Data);
+                SendUDPDataToAll(_packet, LevelGUID);
+            }
+        }
+        public static void ADDROCKCACH(int From, DataStr.FakeRockCacheVisualData Data, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDROCKCACH))
+            {
+                _packet.Write(Data);
+                SendUDPDataToAllButNotSender(_packet, From, LevelGUID);
+            }
+        }
+        public static void REMOVEROCKCACH(int From, DataStr.FakeRockCacheVisualData Data, int State, string LevelGUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEROCKCACH))
+            {
+                _packet.Write(Data);
+                _packet.Write(State);
+                SendUDPDataToAllButNotSender(_packet, From, LevelGUID);
+            }
+        }
+        public static void REMOVEROCKCACH(int From, DataStr.FakeRockCacheVisualData Data, int State)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEROCKCACH))
+            {
+                _packet.Write(Data);
+                _packet.Write(State);
+                SendUDPData(From, _packet);
+            }
+        }
+        public static void ADDUNIVERSALSYNCABLE(DataStr.UniversalSyncableObject Data, int For)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDUNIVERSALSYNCABLE))
+            {
+                _packet.Write(Data);
+                SendUDPData(For, _packet);
+            }
+        }
+        public static void ADDUNIVERSALSYNCABLE(DataStr.UniversalSyncableObject Data)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.ADDUNIVERSALSYNCABLE))
+            {
+                _packet.Write(Data);
+                SendUDPDataToAll(_packet, Data.m_Scene);
+            }
+        }
+        public static void REMOVEUNIVERSALSYNCABLE(string GUID, string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REMOVEUNIVERSALSYNCABLE))
+            {
+                _packet.Write(GUID);
+                SendUDPDataToAll(_packet, Scene);
             }
         }
     }

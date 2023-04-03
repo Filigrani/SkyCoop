@@ -1,23 +1,14 @@
 ﻿using System;
 using UnityEngine;
-using System.Reflection;
-using System.Globalization;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Net;
-using System.Net.Sockets;
 using MelonLoader;
-using Harmony;
-using UnhollowerRuntimeLib;
-using UnhollowerBaseLib;
-using SkyCoop;
+using Il2Cpp;
 using MelonLoader.TinyJSON;
 using System.Diagnostics;
-
 using GameServer;
+using static SkyCoop.DataStr;
+using static SkyCoop.Comps;
 
 namespace SkyCoop
 {
@@ -42,7 +33,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
                 MelonLogger.Msg("Item dropped " + __instance.m_GearName);
-                if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() == null)
+                if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<Comps.IgnoreDropOverride>() == null)
                 {
                     ShouldDrop = numUnits;
 
@@ -64,7 +55,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() == null)
+                if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<Comps.IgnoreDropOverride>() == null)
                 {
                     if (__instance.gameObject.GetComponent<Bed>() != null && __instance.gameObject.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
                     {
@@ -93,15 +84,15 @@ namespace SkyCoop
 
                     if (__result != null && __result.gameObject != null && __result != __instance)
                     {
-                        UnityEngine.Object.DestroyImmediate(__result.gameObject);
+                        UnityEngine.Object.Destroy(__result.gameObject);
                     }
                 }
                 else
                 {
-                    if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>() != null)
+                    if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<Comps.IgnoreDropOverride>() != null)
                     {
                         MelonLogger.Msg("[Postfix]Gear has IgnoreDropOverride doing drop without sync");
-                        UnityEngine.Object.DestroyImmediate(__instance.gameObject.GetComponent<MyMod.IgnoreDropOverride>());
+                        UnityEngine.Object.Destroy(__instance.gameObject.GetComponent<Comps.IgnoreDropOverride>());
                     }
                 }
             }
@@ -121,7 +112,7 @@ namespace SkyCoop
                 if (selectedItem != null)
                 {
                     MelonLogger.Msg("Gear going to be placed adding IgnoreDropOverride");
-                    selectedItem.gameObject.AddComponent<MyMod.IgnoreDropOverride>();
+                    selectedItem.gameObject.AddComponent<Comps.IgnoreDropOverride>();
                 }
             }
         }
@@ -139,7 +130,7 @@ namespace SkyCoop
                 if (gearItemToCook != null)
                 {
                     MelonLogger.Msg("Going to cook " + gearItemToCook.m_GearName + " IgnoreDropOverride");
-                    gearItemToCook.gameObject.AddComponent<MyMod.IgnoreDropOverride>();
+                    gearItemToCook.gameObject.AddComponent<Comps.IgnoreDropOverride>();
                 }
             }
         }
@@ -160,7 +151,7 @@ namespace SkyCoop
                     MelonLogger.Msg("Going to cancle placement");
                     if (__instance.m_ObjectToPlace != null)
                     {
-                        if (__instance.m_ObjectToPlace.GetComponent<MyMod.DropFakeOnLeave>() != null)
+                        if (__instance.m_ObjectToPlace.GetComponent<Comps.DropFakeOnLeave>() != null)
                         {
                             saveObj = __instance.m_ObjectToPlace;
                         }
@@ -179,6 +170,19 @@ namespace SkyCoop
                 {
                     if (saveObj != null)
                     {
+                        if (saveObj.GetComponent<ObjectGuid>())
+                        {
+                            foreach (var item in ExpeditionEditor.m_Objects)
+                            {
+                                if (item.m_GUID == saveObj.GetComponent<ObjectGuid>().Get())
+                                {
+                                    ExpeditionEditor.ToggleColisionOfObject(saveObj, true);
+                                    MelonLogger.Msg("Expedition editor object placed!");
+                                    return;
+                                }
+                            }
+                        }
+
                         MelonLogger.Msg("Return gear to fake one");
                         int variant = 0;
                         if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
@@ -232,6 +236,23 @@ namespace SkyCoop
                 {
                     if (saveObj != null)
                     {
+                        if (saveObj.GetComponent<ObjectGuid>())
+                        {
+                            foreach (var item in ExpeditionEditor.m_Objects)
+                            {
+                                if(item.m_GUID == saveObj.GetComponent<ObjectGuid>().Get())
+                                {
+                                    item.m_Position = saveObj.transform.position;
+                                    item.m_Rotation = saveObj.transform.rotation;
+                                    ExpeditionEditor.ToggleColisionOfObject(saveObj, true);
+
+                                    MelonLogger.Msg("Expedition editor object placed!");
+                                    return;
+                                }
+                            }
+                        }
+
+
                         MelonLogger.Msg("Gear placed!");
                         int variant = 0;
                         if (saveObj.GetComponent<Bed>() != null && saveObj.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
@@ -248,7 +269,7 @@ namespace SkyCoop
                             variant = 1;
                         }
 
-                        MyMod.DropFakeOnLeave DFL = saveObj.GetComponent<MyMod.DropFakeOnLeave>();
+                        Comps.DropFakeOnLeave DFL = saveObj.GetComponent<Comps.DropFakeOnLeave>();
                         if (DFL != null)
                         {
                             DFL.m_OldPossition = saveObj.transform.position;
@@ -265,7 +286,7 @@ namespace SkyCoop
                             }
                             if (gi.m_Cookable == null || gi.m_Cookable.IsNearFire() == false)
                             {
-                                DFL = saveObj.AddComponent<MyMod.DropFakeOnLeave>();
+                                DFL = saveObj.AddComponent<Comps.DropFakeOnLeave>();
                                 DFL.m_OldPossition = saveObj.transform.position;
                                 DFL.m_OldRotation = saveObj.transform.rotation;
                                 MyMod.SendDropItem(saveObj.gameObject.GetComponent<GearItem>(), 0, 0, true, variant);
@@ -290,8 +311,60 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MelonLogger.Msg("Going to place object");
-                MyMod.PlaceDroppedGear(__instance.m_InteractiveObjectUnderCrosshair);
+
+                if (__instance.m_InteractiveObjectUnderCrosshair)
+                {
+                    if (__instance.m_InteractiveObjectUnderCrosshair.GetComponent<LoadScene>())
+                    {
+                        LoadScene Door = __instance.m_InteractiveObjectUnderCrosshair.GetComponent<LoadScene>();
+
+                        if (GameManager.GetWeatherComponent().IsIndoorEnvironment())
+                        {
+                            if (MyMod.iAmHost)
+                            {
+                                MyMod.ShowKnockersPicker(Door.gameObject, MPSaveManager.GetKnocksOnScene(MyMod.level_guid));
+                            }
+                            if (MyMod.sendMyPosition)
+                            {
+                                MyMod.TempDoor = Door.gameObject;
+                                MyMod.DoPleaseWait("Looking through the peephole", "Please wait...");
+                                using (Packet _packet = new Packet((int)ClientPackets.PEEPHOLE))
+                                {
+                                    _packet.Write(MyMod.level_guid);
+                                    SendTCPData(_packet);
+                                }
+                            }
+                            return;
+                        }
+
+
+                        if (Door.m_SceneCanBeInstanced && !string.IsNullOrEmpty(Door.m_GUID) && Door.m_Active)
+                        {
+                            if (Door.GetComponent<Comps.DoorLockedOnKey>() == null)
+                            {
+                                MyMod.SelectKeys(__instance.m_InteractiveObjectUnderCrosshair, MyMod.KeysAction.LOCK);
+                            }
+                        } else
+                        {
+                            HUDMessage.AddMessage("This door can't be locked!");
+                        }
+                    }else if(MyMod.ExpeditionEditorUI != null && MyMod.ExpeditionEditorUI.activeSelf)
+                    {
+                        if (__instance.m_InteractiveObjectUnderCrosshair.GetComponent<Container>())
+                        {
+                            ExpeditionEditor.AddContainer(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
+                        } else if(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<Harvestable>())
+                        {
+                            ExpeditionEditor.AddPlant(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
+                        } else if (__instance.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>())
+                        {
+                            ExpeditionEditor.AddBreakdown(__instance.m_InteractiveObjectUnderCrosshair.GetComponent<ObjectGuid>().Get());
+                        }
+                    } else{
+                        MyMod.PlaceDroppedGear(__instance.m_InteractiveObjectUnderCrosshair);
+                        MelonLogger.Msg("Going to place object");
+                    }
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "Update")] // When open
@@ -328,9 +401,9 @@ namespace SkyCoop
                 {
                     MyMod.WaitForSleepLable.SetActive(false);
                 }
-                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<Comps.FakeBedDummy>() != null)
                 {
-                    UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
+                    UnityEngine.Object.Destroy(__instance.m_Bed.gameObject);
                 }
             }
         }
@@ -345,13 +418,13 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent< Comps.FakeBedDummy >() != null)
                 {
-                    if (__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject != null)
+                    if (__instance.m_Bed.gameObject.GetComponent<Comps.FakeBedDummy >().m_LinkedFakeObject != null)
                     {
-                        MyMod.PickupDroppedGear(__instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>().m_LinkedFakeObject);
+                        MyMod.PickupDroppedGear(__instance.m_Bed.gameObject.GetComponent< Comps.FakeBedDummy >().m_LinkedFakeObject);
                     }
-                    UnityEngine.Object.DestroyImmediate(__instance.m_Bed.gameObject);
+                    UnityEngine.Object.Destroy(__instance.m_Bed.gameObject);
                     __instance.m_Bed = null;
                     __instance.Enable(false);
                     return false;
@@ -410,7 +483,7 @@ namespace SkyCoop
             }
             internal static void Postfix(PassTime __instance)
             {
-                if (saveObj != null && saveObj.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                if (saveObj != null && saveObj.gameObject.GetComponent<Comps.FakeBedDummy>() != null)
                 {
                     if (MyMod.CrazyPatchesLogger == true)
                     {
@@ -418,11 +491,40 @@ namespace SkyCoop
                         MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                         MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                     }
-                    UnityEngine.Object.DestroyImmediate(saveObj.gameObject);
+                    UnityEngine.Object.Destroy(saveObj.gameObject);
                     MelonLogger.Msg("Dummy bed removed");
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnCancel")] // Once
+        private static class Panel_Confirmation_OnCancel
+        {
+            internal static void Postfix(Panel_Confirmation __instance)
+            {
+                if (CharcoalItem.m_CharcoalItemInUseForSurvey != null)
+                {
+                    CharcoalItem.m_CharcoalItemInUseForSurvey.StopSurveyAudio();
+                    GameManager.GetPlayerManagerComponent().UnequipItemInHands();
+                    CharcoalItem.m_CharcoalItemInUseForSurvey = null;
+                }
+                if (Shared.CloseContainerOnCancle)
+                {
+                    Shared.CloseContainerOnCancle = false;
+                    DataStr.ContainerOpenSync pendingContainer = new DataStr.ContainerOpenSync();
+                    pendingContainer.m_Guid = "NULL";
+                    if (MyMod.sendMyPosition == true)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.CONTAINERINTERACT))
+                        {
+                            _packet.Write(pendingContainer);
+                            SendTCPData(_packet);
+                        }
+                    }
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "OnConfirm")] // Once
         private static class Panel_Confirmation_Ok
         {
@@ -437,9 +539,19 @@ namespace SkyCoop
                 if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT SERVER ADDRESS")
                 {
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
-                    MyMod.DoConnectToIp(text);
+                    ClientUser.DoConnectToIp(text);
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text.StartsWith("YOU GOT A NEW FLAIR"))
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INVALID CONTAINER DATA")
+                {
+                    Shared.CloseContainerOnCancle = false;
+                    if (MyMod.GoingToOpenContinaer != null)
+                    {
+                        MyMod.OpenFakeContainer(MyMod.GoingToOpenContinaer);
+                    }
+                }
+                if (__instance.m_CurrentGroup != null && 
+                    (__instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "YOU GOT A NEW FLAIR!" ||
+                     __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "YOU GOT NEW FLAIRS!"))
                 {
                     // Open Flairs Menu
                     Supporters.SetFlairsUpdateData();
@@ -461,6 +573,86 @@ namespace SkyCoop
                     }else{
                         MyMod.MyChatName = text;
                         MPSaveManager.SaveMyName(text);
+                    }
+                }
+                if (__instance.m_CurrentGroup != null)
+                {
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    string Error = "";
+                    bool Seed = true;
+                    bool RightThing = true;
+                    string ErrorAlias = "seed";
+
+                    if (__instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT SECRET SEED FOR KEY")
+                    {
+                        Seed = true;
+                        ErrorAlias = "seed";
+                    }
+                    else if(__instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT NAME FOR KEY")
+                    {
+                        Seed = false;
+                        ErrorAlias = "name";
+                    }else{
+                        RightThing = false;
+                    }
+
+                    if (RightThing)
+                    {
+                        if (text.Contains('_'))
+                        {
+                            Error = "Sorry " + ErrorAlias + " should not contain _ symbol";
+                        }
+                        else if (!MyMod.ValidNickName(text))
+                        {
+                            Error = "Sorry " + ErrorAlias + " should not contain non latin symbols";
+                        }
+
+                        if (Error != "")
+                        {
+                            if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                            {
+                                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + Error, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                            }
+                        }else{
+                            if (Seed)
+                            {
+                                MyMod.PendingKeySeed = text;
+                                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input name for key", "", Panel_Confirmation.ButtonLayout.Button_2, "Next", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                            }else{
+                                MyMod.PendingKeyName = text;
+
+
+                                if (MyMod.PendingRegisterKey)
+                                {
+                                    MyMod.LocksmithWork(MyMod.PendingRegisterKey, 1);
+                                }
+                            }
+                        }
+                    }
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "DATA FOR DEBUG KEY")
+                {
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+
+                    if (text.Contains('_'))
+                    {
+                        string[] texts = text.Split('_');
+                        MPSaveManager.AlignKey(GameManager.GetPlayerManagerComponent().AddItemCONSOLE("GEAR_SCDoorKey", 1), texts[0], texts[1]);
+                    } else
+                    {
+                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + "It should be seed_name format!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                    }
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "NOTE MESSAGE")
+                {
+                    string text = __instance.m_CurrentGroup.m_InputField.GetText();
+                    if (CharcoalItem.m_CharcoalItemInUseForSurvey != null)
+                    {
+                        CharcoalItem.m_CharcoalItemInUseForSurvey.StopSurveyAudio();
+                        GameManager.GetPlayerAnimationComponent().Trigger_Generic_Unstow();
+                        CharcoalItem.m_CharcoalItemInUseForSurvey.ConsumeCharcoal();
+                        CharcoalItem.m_CharcoalItemInUseForSurvey = null;
+                        MyMod.CreateCustomNote(text);
                     }
                 }
                 if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TELEPORT TO")
@@ -487,7 +679,8 @@ namespace SkyCoop
                         HUDMessage.AddMessage("Animal with GUID " + text + " not exist!");
                     }
                 }
-                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT ID OF PLAYER TO TELEPORT TO")
+
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT ID OF PLAYER TELEPORT TO")
                 {
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
 
@@ -508,6 +701,17 @@ namespace SkyCoop
                             GameManager.GetPlayerManagerComponent().TeleportPlayer(MyMod.playersData[ID].m_Position, MyMod.playersData[ID].m_Rotation);
                             HUDMessage.AddMessage("You has been teleported to " + MyMod.playersData[ID].m_Name);
                         }
+                    }
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "DISCONNECT TIMEOUT")
+                {
+                    Application.Quit();
+                }
+                if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "DISCONNECTED")
+                {
+                    if (MyMod.QuitWithoutSaving)
+                    {
+                        Application.Quit();
                     }
                 }
                 if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "INPUT GUID TO TRACK")
@@ -569,43 +773,6 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnCompletedDecalPlaceDown")] // Once
-        internal class PlayerManager_Start
-        {
-
-            public static void Prefix(PlayerManager __instance)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                MelonLogger.Msg("Placed Decal " + __instance.m_DecalToPlace.m_DecalName);
-                MelonLogger.Msg("X " + __instance.m_DecalToPlace.m_Pos.x + " Y " + __instance.m_DecalToPlace.m_Pos.y + " Z " + __instance.m_DecalToPlace.m_Pos.z);
-                if (MyMod.InDarkWalkerMode == true && MyMod.IamShatalker == false && __instance.m_DecalToPlace.m_DecalName == "NowhereToHide_Lure")
-                {
-                    MyMod.WalkTracker WT = new MyMod.WalkTracker();
-                    WT.m_levelid = MyMod.levelid;
-                    WT.m_V3 = __instance.m_DecalToPlace.m_Pos;
-                    if (MyMod.sendMyPosition == true)
-                    {
-                        using (Packet _packet = new Packet((int)ClientPackets.LUREPLACEMENT))
-                        {
-                            _packet.Write(WT);
-                            SendTCPData(_packet);
-                        }
-                    }
-                    if (MyMod.iAmHost == true)
-                    {
-                        using (Packet _packet = new Packet((int)ServerPackets.LUREPLACEMENT))
-                        {
-                            ServerSend.LUREPLACEMENT(1, WT);
-                        }
-                    }
-                }
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(ObjectAnim), "Play")] // Once
         internal class ObjectAnim_Hack
         {
@@ -618,12 +785,12 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
                 //MelonLogger.Msg("ObjectAnim last played anim " + name);
-                if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.ContainersSync>() != null)
+                if (__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.ContainersSync>() != null)
                 {
-                    if (__instance.gameObject.GetComponent<MyMod.ContainersSync>().m_LastAnim != name)
+                    if (__instance.gameObject.GetComponent<Comps.ContainersSync>().m_LastAnim != name)
                     {
-                        __instance.gameObject.GetComponent<MyMod.ContainersSync>().m_LastAnim = name;
-                        __instance.gameObject.GetComponent<MyMod.ContainersSync>().CallSync();
+                        __instance.gameObject.GetComponent<Comps.ContainersSync>().m_LastAnim = name;
+                        __instance.gameObject.GetComponent<Comps.ContainersSync>().CallSync();
                     }
                 }
             }
@@ -648,10 +815,11 @@ namespace SkyCoop
                     Transform playerTransform = GameManager.GetPlayerTransform();
 
                     MelonLogger.Msg("[BowItem] Arrow Fire! " + __instance.m_GearArrow.gameObject.name);
-                    MyMod.ShootSync shoot = new MyMod.ShootSync();
+                    DataStr.ShootSync shoot = new DataStr.ShootSync();
                     shoot.m_projectilename = "GEAR_Arrow";
                     shoot.m_position = playerTransform.TransformPoint(transform.position);
                     shoot.m_rotation = playerTransform.rotation * transform.rotation;
+                    shoot.m_sceneguid = MyMod.level_guid;
 
                     if (MyMod.sendMyPosition == true)
                     {
@@ -682,27 +850,30 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
+                bool SendDropSync = true;
 
                 if(__instance.m_EmbeddedInAi != null)
                 {
                     BaseAi _Ai = __instance.m_EmbeddedInAi;
                     GameObject Animal = _Ai.gameObject;
-                    if(Animal.GetComponent<MyMod.AnimalUpdates>() != null)
+                    if(Animal.GetComponent<Comps.AnimalUpdates >() != null)
                     {
-                        MyMod.AnimalUpdates AU = Animal.GetComponent<MyMod.AnimalUpdates>();
+                        Comps.AnimalUpdates AU = Animal.GetComponent<Comps.AnimalUpdates>();
                         ArrowSaveData asd = __instance.Serialize();
-                        MyMod.AnimalArrow Arrow = new MyMod.AnimalArrow();
+                        DataStr.AnimalArrow Arrow = new DataStr.AnimalArrow();
                         Arrow.m_Position = asd.m_LocalPosition;
                         Arrow.m_Angle = asd.m_LocalAngles;
                         Arrow.m_Depth = asd.m_EmbeddedDepth;
                         Arrow.m_LocaName = asd.m_LocalName;
                         AU.m_Arrows.Add(Arrow);
                         MyMod.AddFakeArrowToAnimal(AU, AU.m_Arrows.Count - 1);
+                        SendDropSync = false;
                         UnityEngine.Object.Destroy(__instance.gameObject);
                         return;
                     }
-                    else if(Animal.GetComponent<MyMod.AnimalActor>() != null)
+                    else if(Animal.GetComponent<Comps.AnimalActor>() != null)
                     {
+                        SendDropSync = false;
                         UnityEngine.Object.Destroy(__instance.gameObject);
                     }
                 }
@@ -712,20 +883,24 @@ namespace SkyCoop
                     if(surfaceResponseInfo.impactEffect == ArrowImpactEffectType.ArrowImpactEffect_Flesh)
                     {
                         Transform t = collider.transform;
-                        while (t.gameObject.GetComponent<MyMod.AnimalActor>() == null && t.parent != null)
+                        while (t.gameObject.GetComponent<Comps.AnimalActor>() == null && t.parent != null)
                         {
                             t = t.parent;
                         }
-                        if(t.gameObject.GetComponent<MyMod.AnimalActor>() != null)
+                        if(t.gameObject.GetComponent<Comps.AnimalActor>() != null)
                         {
+                            SendDropSync = false;
                             UnityEngine.Object.Destroy(__instance.gameObject);
                         }
                     }
                 }
 
-                if (__instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() != null)
+                if (__instance.gameObject.GetComponent<Comps.DestoryArrowOnHit>() != null)
                 {
                     UnityEngine.Object.Destroy(__instance.gameObject);
+                } else if(SendDropSync == true)
+                {
+                    //MyMod.SendDropItem(__instance.m_GearItem, 0, 0, true);
                 }
             }
         }
@@ -749,10 +924,10 @@ namespace SkyCoop
 
                     bool MyBullet = true;
                     int ShooterID = 0;
-                    if (__instance.gameObject.GetComponent<MyMod.ClientProjectile>() != null)
+                    if (__instance.gameObject.GetComponent<Comps.ClientProjectile>() != null)
                     {
                         MyBullet = false;
-                        ShooterID = __instance.gameObject.GetComponent<MyMod.ClientProjectile>().m_ClientID;
+                        ShooterID = __instance.gameObject.GetComponent<Comps.ClientProjectile>().m_ClientID;
                     }
 
                     float RandomRotate = 0;
@@ -796,25 +971,25 @@ namespace SkyCoop
                         if ((bool)(UnityEngine.Object)hit.collider)
                             __instance.SpawnImpactEffects(hit);
                         BaseAi baseAiFromObject = AiUtils.GetBaseAiFromObject(hit.collider.gameObject);
-                        MyMod.AnimalActor ActorFromObject;
+                        Comps.AnimalActor ActorFromObject;
                         if (!hit.collider.gameObject)
                         {
                             ActorFromObject = null;
                         }
                         else if(hit.collider.gameObject.layer == 16)
                         {
-                            ActorFromObject = hit.collider.gameObject.GetComponent<MyMod.AnimalActor>();
+                            ActorFromObject = hit.collider.gameObject.GetComponent<Comps.AnimalActor>();
                         }else{
                             if(hit.collider.gameObject.layer == 27)
                             {
-                                ActorFromObject = hit.collider.gameObject.transform.GetComponentInParent<MyMod.AnimalActor>();
+                                ActorFromObject = hit.collider.gameObject.transform.GetComponentInParent<Comps.AnimalActor>();
                             }else{
                                 ActorFromObject = null;
                             }
                         }
-                            
-                        
-                        MyMod.PlayerBulletDamage PlayerDamage = hit.collider.gameObject.GetComponent<MyMod.PlayerBulletDamage>();
+
+
+                        Comps.PlayerBulletDamage PlayerDamage = hit.collider.gameObject.GetComponent<Comps.PlayerBulletDamage>();
                         MelonLogger.Msg("Trying understand what hit point is");
                         if (baseAiFromObject != null)
                         {
@@ -1039,18 +1214,19 @@ namespace SkyCoop
                             MelonLogger.Msg("[vp_FPSShooter] Bullet projectile spawn " + __instance.ProjectilePrefab.name);
                         }
 
-                        MyMod.ShootSync shoot = new MyMod.ShootSync();
+                        DataStr.ShootSync shoot = new DataStr.ShootSync();
 
                         shoot.m_projectilename = __instance.ProjectilePrefab.name;
                         shoot.m_position = vector3;
                         shoot.m_rotation = quaternion;
+                        shoot.m_sceneguid = MyMod.level_guid;
 
                         if (__instance.ProjectilePrefab.name == "PistolBullet")
                         {
                             shoot.m_skill = GameManager.GetSkillRifle().GetEffectiveRange();
                             if (MyMod.playersData[0].m_Mimic == true && MyMod.players[0] != null)
                             {
-                                if (MyMod.players[0] != null && MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerAnimator>() != null)
+                                if (MyMod.players[0] != null && MyMod.players[0].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
                                 {
                                     string shootStrhing = "RifleShoot";
                                     if (MyMod.playersData[0] != null && MyMod.playersData[0].m_AnimState == "Ctrl")
@@ -1058,7 +1234,7 @@ namespace SkyCoop
                                         shootStrhing = "RifleShoot_Sit";
                                     }
 
-                                    MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_PreAnimStateHands = shootStrhing;
+                                    MyMod.players[0].GetComponent<Comps.MultiplayerPlayerAnimator>().m_PreAnimStateHands = shootStrhing;
                                 }
                             }
                         }
@@ -1077,6 +1253,15 @@ namespace SkyCoop
                             {
                                 ServerSend.SHOOTSYNC(0, shoot, true);
                             }
+                            if (shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
+                            {
+                                ExpeditionManager.RegisterFlaregunShot(MyMod.level_guid, GameManager.GetPlayerTransform().position);
+                            }
+                        }
+
+                        if (MyMod.ExpeditionEditorUI != null && MyMod.ExpeditionEditorUI.activeSelf && shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
+                        {
+                            ExpeditionEditor.AddGear("GEAR_FlareGunShoot", vector3, quaternion, "");
                         }
                         MyMod.PushActionToMyDoll("Shoot");
                     }
@@ -1101,30 +1286,121 @@ namespace SkyCoop
                 }
                 __instance.m_DailyHPDecay = 0;
 
-                if (MyMod.IsCustomHandItem(__instance.name))
+                if (MyMod.IsCustomHandItem(__instance.name) || MyMod.IsUserGeneratedHandItem(__instance.name))
                 {
-                    if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                    if(__instance.name == "GEAR_SCPhoto")
                     {
-                        FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                            FPI.m_FirstPersonObjectName = "Stone";
+                            FPI.m_FPSMeshID = (int)GameManager.GetVpFPSCamera().GetWeaponIDFromName(FPI.m_FirstPersonObjectName);
+                            FPI.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(FPI.m_FPSMeshID);
+                            FPI.m_UnWieldAudio = "Play_Photo";
+                            FPI.m_WieldAudio = "Play_Photo";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Stone");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
+                        }
+                    }
+                    else if (__instance.name == "GEAR_SCMapPiece")
+                    {
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                            FPI.m_FirstPersonObjectName = "Stone";
+                            FPI.m_FPSMeshID = (int)GameManager.GetVpFPSCamera().GetWeaponIDFromName(FPI.m_FirstPersonObjectName);
+                            FPI.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(FPI.m_FPSMeshID);
+                            FPI.m_UnWieldAudio = "Play_MapPageFlip";
+                            FPI.m_WieldAudio = "Play_MapPageFlip";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Stone");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
+                        }
+                    } else if(__instance.name != "GEAR_Hacksaw")
+                    {
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
 
-                        FPI.m_FirstPersonObjectName = "Flare";
-                        FPI.m_FPSMeshID = (int)FPSMeshID.Flare;
-                        GameObject FlareVp = GameObject.Find("/CHARACTER_FPSPlayer/WeaponView/FlareTransform/Flare");
-                        if(FlareVp != null && FlareVp.GetComponent<vp_FPSWeapon>() != null)
-                        {
-                            FPI.m_FPSWeapon = FlareVp.GetComponent<vp_FPSWeapon>();
+                            FPI.m_FirstPersonObjectName = "Flare";
+                            FPI.m_FPSMeshID = (int)FPSMeshID.Flare;
+                            GameObject FlareVp = GameObject.Find("/CHARACTER_FPSPlayer/WeaponView/FlareTransform/Flare");
+                            if (FlareVp != null && FlareVp.GetComponent<vp_FPSWeapon>() != null)
+                            {
+                                FPI.m_FPSWeapon = FlareVp.GetComponent<vp_FPSWeapon>();
+                            }
+                            FPI.m_UnWieldAudio = "Play_UnwieldItemFlare";
+                            FPI.m_WieldAudio = "Play_WieldItemFlare";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_FlareA");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
                         }
-                        FPI.m_UnWieldAudio = "Play_UnwieldItemFlare";
-                        FPI.m_WieldAudio = "Play_WieldItemFlare";
-                        GameObject reference = MyMod.GetGearItemObject("GEAR_FlareA");
-                        if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                    }else{
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
                         {
-                            FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+
+                            FPI.m_FirstPersonObjectName = "Revolver";
+                            FPI.m_FPSMeshID = (int)FPSMeshID.Revolver;
+                            GameObject FlareVp = GameObject.Find("/CHARACTER_FPSPlayer/WeaponView/RevolverTransform/Revolver");
+                            if (FlareVp != null && FlareVp.GetComponent<vp_FPSWeapon>() != null)
+                            {
+                                FPI.m_FPSWeapon = FlareVp.GetComponent<vp_FPSWeapon>();
+                            }
+                            FPI.m_UnWieldAudio = "Play_UnwieldItemFlare";
+                            FPI.m_WieldAudio = "Play_WieldItemFlare";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Revolver");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
                         }
-                        __instance.m_FirstPersonItem = FPI;
+                    }
+                } else
+                {
+                    if (__instance.name == "GEAR_SCNote")
+                    {
+                        if (__instance.gameObject.GetComponent<FirstPersonItem>() == null)
+                        {
+                            FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                            FPI.m_FirstPersonObjectName = "Stone";
+                            FPI.m_FPSMeshID = (int)GameManager.GetVpFPSCamera().GetWeaponIDFromName(FPI.m_FirstPersonObjectName);
+                            FPI.m_FPSWeapon = GameManager.GetVpFPSCamera().GetWeaponFromID(FPI.m_FPSMeshID);
+                            FPI.m_UnWieldAudio = "Play_SndInvPaper";
+                            FPI.m_WieldAudio = "Play_SndInvPaper";
+                            GameObject reference = MyMod.GetGearItemObject("GEAR_Stone");
+                            if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
+                            {
+                                FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
+                            }
+                            __instance.m_FirstPersonItem = FPI;
+                        }
                     }
                 }
-                if (__instance.name == "GEAR_CookingPot")
+                if(MyMod.IsUserGeneratedHandItem(__instance.name))
+                {
+                    if (__instance.m_ObjectGuid != null)
+                    {
+                        MelonLogger.Msg("Going render photo " + __instance.m_ObjectGuid.m_Guid);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(__instance.m_ObjectGuid.m_Guid, __instance.m_GearName);
+                        if (tex)
+                        {
+                            __instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                        }
+                    }
+                }
+                else if (__instance.name == "GEAR_CookingPot")
                 {
                     if (__instance.gameObject.GetComponent<ClothingItem>() == null)
                     {
@@ -1151,14 +1427,24 @@ namespace SkyCoop
                         CLTH.m_EquippedLayer = ClothingLayer.Mid;
                         __instance.m_ClothingItem = CLTH;
                         CLTH.m_GearItem = __instance;
-                        __instance.gameObject.AddComponent<MyMod.CookpotHelmet>();
-                        __instance.gameObject.GetComponent<MyMod.CookpotHelmet>().m_GearItem =  __instance;
-                        __instance.gameObject.GetComponent<MyMod.CookpotHelmet>().m_ClothingItem = CLTH;
+                        __instance.gameObject.AddComponent<Comps.CookpotHelmet>();
+                        __instance.gameObject.GetComponent<Comps.CookpotHelmet>().m_GearItem =  __instance;
+                        __instance.gameObject.GetComponent<Comps.CookpotHelmet>().m_ClothingItem = CLTH;
                     }
                 }
                 if (__instance.m_ResearchItem)
                 {
                     MyMod.PatchBookReadTime(__instance);
+                }
+                if(__instance.name == "GEAR_SCDoorKey" || __instance.name == "GEAR_SCDoorKeyLead")
+                {
+                    if (__instance.m_ObjectGuid == null)
+                    {
+                        __instance.m_ObjectGuid = __instance.gameObject.AddComponent<ObjectGuid>();
+                    }else if (!string.IsNullOrEmpty(__instance.m_ObjectGuid.m_Guid) && __instance.m_ObjectGuid.m_Guid.Contains('_'))
+                    {
+                        __instance.m_LocalizedDisplayName.m_LocalizationID = __instance.m_ObjectGuid.m_Guid.Split('_')[0];
+                    }
                 }
             }
         }
@@ -1252,6 +1538,7 @@ namespace SkyCoop
             {
                 return true;
             }
+
             return false;
         }
 
@@ -1299,7 +1586,7 @@ namespace SkyCoop
                     {
                         return;
                     }
-                    MyMod.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, ISNTID, true);
+                    Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, GearName, true);
                 }
             }
         }
@@ -1347,7 +1634,7 @@ namespace SkyCoop
                     {
                         return;
                     }
-                    MyMod.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, ISNTID, true);
+                    Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, GearName, true);
                 }
             }
         }
@@ -1398,60 +1685,16 @@ namespace SkyCoop
                         {
                             return;
                         }
-                        MyMod.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, MyMod.instance.myId, ISNTID, true);
+                        Shared.AddPickedGear(V3, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, ClientUser.myId, ISNTID, GearName, true);
                     }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(BlueprintDisplayItem), "Setup")] // Once
-        private static class FixRecipeIcons
-        {
-            internal static void Postfix(BlueprintDisplayItem __instance, BlueprintItem bpi)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar")
-                {
-                    Texture2D medkitTexture = Utils.GetCachedTexture("ico_CraftItem__MedicalSupplies_hangar");
-                    if (!medkitTexture)
-                    {
-                        medkitTexture = MyMod.LoadedBundle.LoadAsset("ico_CraftItem__MedicalSupplies_hangar").Cast<Texture2D>();
-                        Utils.CacheTexture("ico_CraftItem__MedicalSupplies_hangar", medkitTexture);
-                    }
-                    __instance.m_Icon.mTexture = medkitTexture;
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "ItemPassesFilter")] // Once
-        private static class ShowRecipesInMedsTab
-        {
-            internal static void Postfix(Panel_Crafting __instance, ref bool __result, BlueprintItem bpi)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar" && __instance.m_CurrentCategory == Panel_Crafting.Category.FirstAid)
-                {
-                    __result = true;
-                }
-                if (bpi?.m_CraftedResult?.name == "GEAR_MedicalSupplies_hangar" && __instance.m_CurrentCategory != Panel_Crafting.Category.FirstAid)
-                {
-                    __result = false;
                 }
             }
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Container), "Start")] // Once
-        private static class Container_Hack
+        private static class Container_Start
         {
-            internal static void Postfix(Container __instance)
+            internal static void Prefix(Container __instance)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -1459,10 +1702,10 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (__instance != null && __instance.gameObject != null)
+
+                if (__instance.gameObject.GetComponent<ContainersSync>() == null)
                 {
-                    __instance.gameObject.AddComponent<MyMod.ContainersSync>();
-                    __instance.gameObject.GetComponent<MyMod.ContainersSync>().m_Obj = __instance.gameObject;
+                    __instance.gameObject.AddComponent<Comps.ContainersSync>().m_Obj = __instance.gameObject;
                 }
             }
         }
@@ -1710,7 +1953,7 @@ namespace SkyCoop
                         GameObject animal = __instance.gameObject;
                         //MelonLogger.Msg("Animal with GUID " + animal.GetComponent<ObjectGuid>().Get() + " used trigger with hash name " + id);
 
-                        MyMod.AnimalTrigger trigg = new MyMod.AnimalTrigger();
+                        DataStr.AnimalTrigger trigg = new DataStr.AnimalTrigger();
 
                         trigg.m_Guid = animal.GetComponent<ObjectGuid>().Get();
                         trigg.m_Trigger = id;
@@ -1751,11 +1994,11 @@ namespace SkyCoop
                 if (__instance != null && __instance.gameObject != null)
                 {
                     GameObject animal = __instance.gameObject;
-                    MyMod.AnimalUpdates au = animal.GetComponent<MyMod.AnimalUpdates>();
+                    Comps.AnimalUpdates au = animal.GetComponent<Comps.AnimalUpdates>();
                     if (au == null)
                     {
-                        animal.AddComponent<MyMod.AnimalUpdates>();
-                        au = animal.GetComponent<MyMod.AnimalUpdates>();
+                        animal.AddComponent<Comps.AnimalUpdates>();
+                        au = animal.GetComponent<Comps.AnimalUpdates>();
                         au.m_Animal = animal;
                     }
                 }
@@ -1858,7 +2101,7 @@ namespace SkyCoop
                     MelonLogger.Msg("Harvested guts " + __instance.m_MenuItem_Gut.m_HarvestAmount);
                     MelonLogger.Msg("Harvested hide " + __instance.m_MenuItem_Hide.m_HarvestAmount);
 
-                    MyMod.HarvestStats Harvey = new MyMod.HarvestStats();
+                    DataStr.HarvestStats Harvey = new DataStr.HarvestStats();
                     Harvey.m_Meat = __instance.m_MenuItem_Meat.m_HarvestAmount;
                     Harvey.m_Guts = (int)__instance.m_MenuItem_Gut.m_HarvestAmount;
                     Harvey.m_Hide = (int)__instance.m_MenuItem_Hide.m_HarvestAmount;
@@ -1879,7 +2122,7 @@ namespace SkyCoop
                     }
                     else if (MyMod.iAmHost == true)
                     {
-                        MyMod.OnAnimalCorpseChanged(Harvey.m_Guid, Harvey.m_Meat, Harvey.m_Guts, Harvey.m_Hide);
+                        Shared.OnAnimalCorpseChanged(Harvey.m_Guid, Harvey.m_Meat, Harvey.m_Guts, Harvey.m_Hide);
                     }
                 }
             }
@@ -1896,7 +2139,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MyMod.AnimalUpdates au = __instance.gameObject.GetComponent<MyMod.AnimalUpdates>();
+                Comps.AnimalUpdates au = __instance.gameObject.GetComponent<Comps.AnimalUpdates>();
                 bool NeedApplyDamage = false;
                 if (MyMod.AnimalsController == true || au.m_MyControlled)
                 {
@@ -1950,7 +2193,7 @@ namespace SkyCoop
 
                 if (baseAi.GetAiMode() != AiMode.Dead)
                 {
-                    if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.DestoryArrowOnHit>() == null)
+                    if (__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.DestoryArrowOnHit>() == null)
                     {
                         MelonLogger.Msg("I am hit target with bow");
                         GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Archery, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
@@ -2053,16 +2296,24 @@ namespace SkyCoop
                         MelonLogger.Msg("[PlayerManager][Postfix] Throwing stone " + V3.x + " y " + V3.y + " z " + V3.z);
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
                         {
-                            MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageInflictionInRadius = 15;
-                            MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageRadius = MyMod.SaveThrowingItem.m_NoiseMakerItem.m_AIDamageRadius;
+                            if (!MyMod.ServerConfig.m_PVP)
+                            {
+                                MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageInflictionInRadius = 15;
+                                MyMod.SaveThrowingItem.m_NoiseMakerItem.m_PlayerDamageRadius = MyMod.SaveThrowingItem.m_NoiseMakerItem.m_AIDamageRadius;
+                            }
                         }
 
-                        MyMod.ShootSync stone = new MyMod.ShootSync();
+                        DataStr.ShootSync stone = new DataStr.ShootSync();
                         stone.m_position = V3;
                         stone.m_rotation = Qu;
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_Stone"))
                         {
                             stone.m_projectilename = "GEAR_Stone";
+                            //Comps.DestoryStoneOnStop StoneComp = MyMod.SaveThrowingItem.gameObject.AddComponent<Comps.DestoryStoneOnStop>();
+                            //StoneComp.m_Obj = MyMod.SaveThrowingItem.gameObject;
+                            //StoneComp.m_RB = MyMod.SaveThrowingItem.GetComponent<Rigidbody>();
+                            //StoneComp.m_Gear = MyMod.SaveThrowingItem.GetComponent<GearItem>();
+                            //StoneComp.m_ShouldSendDrop = true;
                         }
                         if (MyMod.SaveThrowingItem.name.StartsWith("GEAR_NoiseMaker"))
                         {
@@ -2072,6 +2323,7 @@ namespace SkyCoop
                         stone.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
                         stone.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
                         stone.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+                        stone.m_sceneguid = MyMod.level_guid;
                         if (MyMod.sendMyPosition == true)
                         {
                             using (Packet _packet = new Packet((int)ClientPackets.SHOOTSYNC))
@@ -2108,7 +2360,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MyMod.ShootSync bomb = new MyMod.ShootSync();
+                DataStr.ShootSync bomb = new DataStr.ShootSync();
                 bomb.m_position = GameManager.GetPlayerObject().transform.position;
                 bomb.m_rotation = GameManager.GetPlayerObject().transform.rotation;
                 bomb.m_projectilename = "GEAR_NoiseMaker";
@@ -2116,6 +2368,7 @@ namespace SkyCoop
                 bomb.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
                 bomb.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
                 bomb.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+                bomb.m_sceneguid = MyMod.level_guid;
                 MelonLogger.Msg("[ProcessItemInHandDetonated] NoiseMaker burn explotion sync");
 
                 if (MyMod.sendMyPosition == true)
@@ -2212,6 +2465,8 @@ namespace SkyCoop
             return false;
         }
 
+        public static bool AutoSaveAllTheCost = false;
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string), typeof(string) })] // Once
         public class GameManager_LoadSceneOverLoad1
         {
@@ -2225,6 +2480,7 @@ namespace SkyCoop
                 }
                 MelonLogger.Msg(ConsoleColor.Yellow, "Loading other scene...");
                 MyMod.ApplyOtherCampfires = false;
+                AutoSaveAllTheCost = true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadScene", new Type[] { typeof(string) })] // Once
@@ -2242,8 +2498,6 @@ namespace SkyCoop
                 MyMod.ApplyOtherCampfires = false;
             }
         }
-
-        public static bool OldPostLoadActionType = false;
 
         [HarmonyLib.HarmonyPatch(typeof(SceneManager), "OnSceneLoaded")] // Once
         public class SceneManager_Load
@@ -2289,12 +2543,6 @@ namespace SkyCoop
                     bool HasJoin = false;
                     if (v_type == "Steam")
                     {
-                        MelonLogger.Msg("[SteamWorks.NET] Loading...");
-                        //if (!SteamConnect.StartSteam())
-                        //{
-                        //    return;
-                        //}
-
                         string[] arguments = Environment.GetCommandLineArgs();
                         for (int i = 0; i < arguments.Length; i++)
                         {
@@ -2329,12 +2577,10 @@ namespace SkyCoop
                         }
                     }
 
-                    if (Application.isBatchMode)
+                    if (MyMod.DedicatedServerAppMode)
                     {
                         MyMod.StartDSAfterLoad = 3;
                     }
-
-                    MyMod.FirstBoot = false;
                 }
                 if (MyMod.level_name != "Empty" && MyMod.level_name != "Boot" && MyMod.level_name != "MainMenu")
                 {
@@ -2342,22 +2588,6 @@ namespace SkyCoop
 
 
                     MyMod.NotNeedToPauseUntilLoaded = false;
-
-                    if (OldPostLoadActionType == true)
-                    {
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateRopesAndFurnsAndCampfires in 2 seconds!");
-                        MyMod.UpdateRopesAndFurns = 2;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateLootedContainers in 3 seconds!");
-                        MyMod.UpdateLootedContainers = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedPlants in 3 seconds!");
-                        MyMod.UpdatePickedPlants = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateSnowshelters in 3 seconds!");
-                        MyMod.UpdateSnowshelters = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdatePickedGears in 3 seconds!");
-                        MyMod.UpdatePickedGears = 3;
-                        MelonLogger.Msg(ConsoleColor.Blue, "Gonna UpdateCampfires in 4 seconds!");
-                        MyMod.UpdateCampfires = 4;
-                    }
                 }
             }
         }
@@ -2391,14 +2621,13 @@ namespace SkyCoop
                         }
                     }
                 }
-
+                MyMod.BakePreSpawnedGearsList();
                 if (breakGuid == "" && breakParentGuid == "")
                 {
                     MelonLogger.Msg("Deny listing that furn, cause have not any GUIDs, so it should be duppable");
                     return;
                 }
-
-                MyMod.OnFurnitureDestroyed(breakGuid, breakParentGuid, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
+                MyMod.SendBrokeFurniture(breakGuid, breakParentGuid, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Start")] // Once
@@ -2473,41 +2702,10 @@ namespace SkyCoop
                 return false;
             }
         }
-
-        public static void SaveBrokenFurtiture(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Saving...");
-            MyMod.BrokenFurnitureSync[] saveProxy = MyMod.BrokenFurniture.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_furns", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Fail!");
-            }
-        }
-        public static void SavePickedGears(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][PickedGearSync] Saving...");
-            MyMod.PickedGearSync[] saveProxy = MyMod.PickedGears.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_pickedgears", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][PickedGearSync] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][PickedGearSync] Fail!");
-            }
-        }
         public static void SaveDeathCreates(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][SaveDeathCreates] Saving...");
-            MyMod.DeathContainerData[] saveProxy = MyMod.DeathCreates.ToArray();
+            DataStr.DeathContainerData[] saveProxy = MyMod.DeathCreates.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_DeathCreates", data);
             if (ok == true)
@@ -2517,11 +2715,16 @@ namespace SkyCoop
                 //MelonLogger.Msg("[Saving][SaveDeathCreates] Fail!");
             }
         }
-
+        public static void SaveUGUID(SaveSlotType gameMode, string name)
+        {
+            string[] saveProxy = { MyMod.MyUGUID };
+            string data = JSON.Dump(saveProxy);
+            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "UserGUID", data);
+        }
         public static void SaveDeployedRopes(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][ClimbingRopeSync] Saving...");
-            MyMod.ClimbingRopeSync[] saveProxy = MyMod.DeployedRopes.ToArray();
+            DataStr.ClimbingRopeSync[] saveProxy = MyMod.DeployedRopes.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_ropes", data);
             if (ok == true)
@@ -2531,22 +2734,6 @@ namespace SkyCoop
             else
             {
                 //MelonLogger.Msg("[Saving][ClimbingRopeSync] Fail!");
-            }
-        }
-
-        public static void SaveLootedBoxes(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][LootedContainers] Saving...");
-            MyMod.ContainerOpenSync[] saveProxy = MyMod.LootedContainers.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_containers", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][LootedContainers] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][LootedContainers] Fail!");
             }
         }
 
@@ -2570,26 +2757,10 @@ namespace SkyCoop
             }
         }
 
-        public static void SavePlants(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][HarvestableSyncData] Saving...");
-            string[] saveProxy = MyMod.HarvestedPlants.ToArray();
-            string data = JSON.Dump(saveProxy);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_plants", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Successfully!");
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Fail!");
-            }
-        }
-
         public static void SaveSnowShelters(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][SnowShelters] Saving...");
-            MyMod.ShowShelterByOther[] saveProxy = MyMod.ShowSheltersBuilded.ToArray();
+            DataStr.ShowShelterByOther[] saveProxy = MyMod.ShowSheltersBuilded.ToArray();
             string data = JSON.Dump(saveProxy);
             bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_shelters", data);
             if (ok == true)
@@ -2615,13 +2786,6 @@ namespace SkyCoop
                     MyMod.LastLoadedGenVersion = MyMod.BuildInfo.RandomGenVersion;
                 }
             }
-        }
-        public static void SaveSeedInt(SaveSlotType gameMode, string name)
-        {
-            int[] saveProxy = { GameManager.m_SceneTransitionData.m_GameRandomSeed };
-            string data = JSON.Dump(saveProxy);
-
-            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_seed", data);
         }
         public static void SaveSeedRadioFQ(SaveSlotType gameMode, string name)
         {
@@ -2652,18 +2816,6 @@ namespace SkyCoop
 
             SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_fixedP", data);
         }
-        public static void SaveKilledAnimals(SaveSlotType gameMode, string name)
-        {
-            //MelonLogger.Msg("[Saving][AnimalsKilled] Saving...");
-            string data = JSON.Dump(MyMod.AnimalsKilled);
-            bool ok = SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_killedanimals", data);
-            if (ok == true)
-            {
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Successfully!");
-            }else{
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Fail!");
-            }
-        }
         public static void SaveBookReaded(SaveSlotType gameMode, string name)
         {
             //MelonLogger.Msg("[Saving][BooksResearched] Saving...");
@@ -2690,15 +2842,10 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                //SaveServerConfig(gameMode, name);
-                SaveBrokenFurtiture(gameMode, name);
-                SavePickedGears(gameMode, name);
                 SaveDeployedRopes(gameMode, name);
-                SaveLootedBoxes(gameMode, name);
-                SavePlants(gameMode, name);
                 SaveSnowShelters(gameMode, name);
                 SaveGenVersion(gameMode, name);
-                SaveSeedInt(gameMode, name);
+                //SaveSeedInt(gameMode, name);
                 SaveRealtimeTime(gameMode, name);
 
                 if (MyMod.ServerConfig.m_PlayersSpawnType != 3 && MyMod.iAmHost) // Fixed spawn only
@@ -2706,62 +2853,10 @@ namespace SkyCoop
                     SaveFixedSpawn(gameMode, name);
                     SaveFixedSpawnPosition(gameMode, name);
                 }
-                SaveKilledAnimals(gameMode, name);
                 SaveBookReaded(gameMode, name);
                 SaveSeedRadioFQ(gameMode, name);
                 SaveDeathCreates(gameMode, name);
-            }
-        }
-
-        public static void LoadBrokenFurtiture(string name)
-        {
-            //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_furns");
-            if (data != null)
-            {
-                MyMod.BrokenFurnitureSync[] saveProxy = JSON.Load(data).Make<MyMod.BrokenFurnitureSync[]>();
-                List<MyMod.BrokenFurnitureSync> loadedData = saveProxy.ToList<MyMod.BrokenFurnitureSync>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    MyMod.BrokenFurnitureSync ToAdd = loadedData[i];
-                    if (MyMod.BrokenFurniture.Contains(ToAdd) == false)
-                    {
-                        MyMod.BrokenFurniture.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] Total Entries: " + MyMod.BrokenFurniture.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][BrokenFurnitureSync] No saves found!");
-            }
-        }
-
-        public static void LoadPickedGears(string name)
-        {
-            //MelonLogger.Msg("[Saving][PickedGearSync] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_pickedgears");
-            if (data != null)
-            {
-                MyMod.PickedGearSync[] saveProxy = JSON.Load(data).Make<MyMod.PickedGearSync[]>();
-                List<MyMod.PickedGearSync> loadedData = saveProxy.ToList<MyMod.PickedGearSync>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    MyMod.PickedGearSync ToAdd = loadedData[i];
-                    if (MyMod.PickedGears.Contains(ToAdd) == false)
-                    {
-                        MyMod.PickedGears.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][PickedGearSync] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][PickedGearSync] Total Entries: " + MyMod.PickedGears.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][PickedGearSync] No saves found!");
+                SaveUGUID(gameMode, name);
             }
         }
 
@@ -2771,8 +2866,8 @@ namespace SkyCoop
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_DeathCreates");
             if (data != null)
             {
-                MyMod.DeathContainerData[] saveProxy = JSON.Load(data).Make<MyMod.DeathContainerData[]>();
-                List<MyMod.DeathContainerData> loadedData = saveProxy.ToList<MyMod.DeathContainerData>();
+                DataStr.DeathContainerData[] saveProxy = JSON.Load(data).Make<DataStr.DeathContainerData[]>();
+                List<DataStr.DeathContainerData> loadedData = saveProxy.ToList<DataStr.DeathContainerData>();
 
                 MyMod.DeathCreates = loadedData;
 
@@ -2786,19 +2881,27 @@ namespace SkyCoop
                 //}
             }
         }
-
+        public static void LoadUGUID(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "UserGUID");
+            if (data != null)
+            {
+                string[] saveProxy = JSON.Load(data).Make<string[]>();
+                MyMod.MyUGUID = saveProxy[0];
+            }
+        }
         public static void LoadDeployedRopes(string name)
         {
             //MelonLogger.Msg("[Saving][ClimbingRopeSync] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_ropes");
             if (data != null)
             {
-                MyMod.ClimbingRopeSync[] saveProxy = JSON.Load(data).Make<MyMod.ClimbingRopeSync[]>();
-                List<MyMod.ClimbingRopeSync> loadedData = saveProxy.ToList<MyMod.ClimbingRopeSync>();
+                DataStr.ClimbingRopeSync[] saveProxy = JSON.Load(data).Make<DataStr.ClimbingRopeSync[]>();
+                List<DataStr.ClimbingRopeSync> loadedData = saveProxy.ToList<DataStr.ClimbingRopeSync>();
 
                 for (int i = 0; i < loadedData.Count; i++)
                 {
-                    MyMod.ClimbingRopeSync ToAdd = loadedData[i];
+                    DataStr.ClimbingRopeSync ToAdd = loadedData[i];
                     if (MyMod.DeployedRopes.Contains(ToAdd) == false)
                     {
                         MyMod.DeployedRopes.Add(ToAdd);
@@ -2813,70 +2916,18 @@ namespace SkyCoop
             }
         }
 
-        public static void LoadLootedBoxes(string name)
-        {
-            //MelonLogger.Msg("[Saving][LootedContainers] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_containers");
-            if (data != null)
-            {
-                MyMod.ContainerOpenSync[] saveProxy = JSON.Load(data).Make<MyMod.ContainerOpenSync[]>();
-                List<MyMod.ContainerOpenSync> loadedData = saveProxy.ToList<MyMod.ContainerOpenSync>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    MyMod.ContainerOpenSync ToAdd = loadedData[i];
-                    if (MyMod.LootedContainers.Contains(ToAdd) == false)
-                    {
-                        MyMod.LootedContainers.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][LootedContainers] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][LootedContainers] Total Entries: " + MyMod.LootedContainers.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][LootedContainers] No saves found!");
-            }
-        }
-
-        public static void LoadPlants(string name)
-        {
-            //MelonLogger.Msg("[Saving][HarvestableSyncData] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_plants");
-            if (data != null)
-            {
-                string[] saveProxy = JSON.Load(data).Make<string[]>();
-                List<string> loadedData = saveProxy.ToList<string>();
-
-                for (int i = 0; i < loadedData.Count; i++)
-                {
-                    string ToAdd = loadedData[i];
-                    if (MyMod.HarvestedPlants.Contains(ToAdd) == false)
-                    {
-                        MyMod.HarvestedPlants.Add(ToAdd);
-                    }
-                }
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Loaded Entries: " + loadedData.Count);
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] Total Entries: " + MyMod.HarvestedPlants.Count);
-            }
-            else
-            {
-                //MelonLogger.Msg("[Saving][HarvestableSyncData] No saves found!");
-            }
-        }
-
         public static void LoadSnowShelters(string name)
         {
             //MelonLogger.Msg("[Saving][SnowShelters] Loading...");
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_shelters");
             if (data != null)
             {
-                MyMod.ShowShelterByOther[] saveProxy = JSON.Load(data).Make<MyMod.ShowShelterByOther[]>();
-                List<MyMod.ShowShelterByOther> loadedData = saveProxy.ToList<MyMod.ShowShelterByOther>();
+                DataStr.ShowShelterByOther[] saveProxy = JSON.Load(data).Make<DataStr.ShowShelterByOther[]>();
+                List<DataStr.ShowShelterByOther> loadedData = saveProxy.ToList<DataStr.ShowShelterByOther>();
 
                 for (int i = 0; i < loadedData.Count; i++)
                 {
-                    MyMod.ShowShelterByOther ToAdd = loadedData[i];
+                    DataStr.ShowShelterByOther ToAdd = loadedData[i];
                     if (MyMod.ShowSheltersBuilded.Contains(ToAdd) == false)
                     {
                         MyMod.ShowSheltersBuilded.Add(ToAdd);
@@ -2904,7 +2955,7 @@ namespace SkyCoop
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_cfg");
             if (data != null)
             {
-                MyMod.ServerConfigData saveProxy = JSON.Load(data).Make<MyMod.ServerConfigData>();
+                DataStr.ServerConfigData saveProxy = JSON.Load(data).Make<DataStr.ServerConfigData>();
                 MyMod.ServerConfig = saveProxy;
                 //MelonLogger.Msg("[Saving][ServerConfig] m_FastConsumption: " + saveProxy.m_FastConsumption);
                 //MelonLogger.Msg("[Saving][ServerConfig] m_DuppedSpawns: " + saveProxy.m_DuppedSpawns);
@@ -2933,19 +2984,6 @@ namespace SkyCoop
                 MyMod.LastLoadedGenVersion = 0;
                 MyMod.CantBeUsedForMP = true;
                 MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
-            }
-        }
-        public static int LoadSeedInt(string name)
-        {
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_seed");
-            if (data != null)
-            {
-                int[] saveProxy = JSON.Load(data).Make<int[]>();
-                return saveProxy[0];
-            }
-            else
-            {
-                return 0;
             }
         }
         public static float LoadRadioFQ(string name)
@@ -2990,27 +3028,6 @@ namespace SkyCoop
                 MyMod.FixedPlaceLoaded = true;
             }
         }
-        public static void LoadKilledAnimals(string name)
-        {
-            //MelonLogger.Msg("[Saving][HarvestableSyncData] Loading...");
-            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_killedanimals");
-            if (data != null)
-            {
-                Dictionary<string, MyMod.AnimalKilled> loadedData = JSON.Load(data).Make<Dictionary<string, MyMod.AnimalKilled>>();
-                int loadedCount = 0;
-                
-                foreach (var item in loadedData)
-                {
-                    if (!MyMod.AnimalsKilled.ContainsKey(item.Key))
-                    {
-                        MyMod.AnimalsKilled.Add(item.Key, item.Value);
-                        loadedCount++;
-                    }
-                }
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Loaded Entries: " + loadedCount);
-                //MelonLogger.Msg("[Saving][AnimalsKilled] Total Entries: " + MyMod.AnimalsKilled.Count);
-            }
-        }
         public static void LoadReadedBooks(string name)
         {
             string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_books");
@@ -3051,35 +3068,6 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "DeleteSaveFiles")] // Once
-        public static class SaveGameSystemPatch_DeleteSaveFiles
-        {
-            public static void Prefix(string name)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                //MelonLogger.Msg("[DroppedGearsUnloader] Wiping unloads data before delete file " + name + "...");
-                int seed = LoadSeedInt(name);
-                string dir = @"Mods\Unloads\" + seed;
-                bool exists = System.IO.Directory.Exists(dir);
-                if (exists)
-                {
-                    clearFolder(dir);
-
-                    System.IO.Directory.Delete(dir);
-                    //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " has been deleted");
-                }
-                else
-                {
-                    //MelonLogger.Msg("[DroppedGearsUnloader] Directory " + dir + " not exist, so doing nothing");
-                }
-            }
-        }
-
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "RestoreGlobalData")]  // Once
         public static class SaveGameSystemPatch_RestoreGlobalData
         {
@@ -3091,46 +3079,21 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
+
                 MelonLogger.Msg(ConsoleColor.Yellow, "[Saving] Loading " + name + "...");
-                //LoadServerConfig(name);
-                LoadBrokenFurtiture(name);
-                LoadPickedGears(name);
                 LoadDeployedRopes(name);
-                LoadLootedBoxes(name);
-                LoadPlants(name);
                 LoadSnowShelters(name);
                 LoadGenVersion(name);
                 LoadRealtimeTime(name);
                 LoadFixedSpawn(name);
                 LoadFixedSpawnPosition(name);
-                LoadKilledAnimals(name);
                 LoadReadedBooks(name);
                 float FQ = LoadRadioFQ(name);
                 MyMod.RadioFrequency = Mathf.Round(FQ * 10.0f) * 0.1f;
                 LoadDeathCreates(name);
+                LoadUGUID(name);
             }
         }
-
-
-        public static void FlushAllSavable()
-        {
-            MelonLogger.Msg("[Saving] Wipe all savables cause of quit");
-            MyMod.ServerConfig = new MyMod.ServerConfigData();
-            MyMod.BrokenFurniture = new List<MyMod.BrokenFurnitureSync>();
-            MyMod.PickedGears = new List<MyMod.PickedGearSync>();
-            MyMod.DeployedRopes = new List<MyMod.ClimbingRopeSync>();
-            MyMod.LootedContainers = new List<MyMod.ContainerOpenSync>();
-            MyMod.CantBeUsedForMP = false;
-            MyMod.LastLoadedGenVersion = 0;
-            MyMod.IsDead = false;
-            if (MyMod.sendMyPosition == true)
-            {
-                MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
-                MyMod.Disconnect();
-            }
-        }
-
-
 
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadMainMenu")] // Once
         public static class GameManager_BackToMenu
@@ -3180,7 +3143,7 @@ namespace SkyCoop
                         }
                     }
 
-                    MyMod.BrokenFurnitureSync furn = new MyMod.BrokenFurnitureSync();
+                    DataStr.BrokenFurnitureSync furn = new DataStr.BrokenFurnitureSync();
                     furn.m_Guid = breakGuid;
                     furn.m_ParentGuid = breakParentGuid;
                     furn.m_LevelID = MyMod.levelid;
@@ -3264,7 +3227,7 @@ namespace SkyCoop
                     }
                 }
 
-                MyMod.BrokenFurnitureSync furn = new MyMod.BrokenFurnitureSync();
+                DataStr.BrokenFurnitureSync furn = new DataStr.BrokenFurnitureSync();
                 furn.m_Guid = breakGuid;
                 furn.m_ParentGuid = breakParentGuid;
                 furn.m_LevelID = MyMod.levelid;
@@ -3274,7 +3237,7 @@ namespace SkyCoop
                 {
                     if (MyMod.playersData[i] != null)
                     {
-                        MyMod.BrokenFurnitureSync otherFurn = MyMod.playersData[i].m_BrakingObject;
+                        DataStr.BrokenFurnitureSync otherFurn = MyMod.playersData[i].m_BrakingObject;
                         if (otherFurn.m_Guid == furn.m_Guid && otherFurn.m_ParentGuid == furn.m_ParentGuid && otherFurn.m_LevelID == MyMod.levelid && otherFurn.m_LevelGUID == MyMod.level_guid)
                         {
                             HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " IS BREAKING THIS");
@@ -3304,7 +3267,7 @@ namespace SkyCoop
                     boxGUID = c.gameObject.GetComponent<ObjectGuid>().Get();
                 }
 
-                MyMod.ContainerOpenSync box = new MyMod.ContainerOpenSync();
+                DataStr.ContainerOpenSync box = new DataStr.ContainerOpenSync();
                 box.m_Guid = boxGUID;
                 box.m_LevelID = MyMod.levelid;
                 box.m_LevelGUID = GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent;
@@ -3315,7 +3278,7 @@ namespace SkyCoop
                     {
                         if (MyMod.playersData[i].m_Container != null)
                         {
-                            MyMod.ContainerOpenSync otherBox = MyMod.playersData[i].m_Container;
+                            DataStr.ContainerOpenSync otherBox = MyMod.playersData[i].m_Container;
                             if (otherBox.m_Guid == box.m_Guid && otherBox.m_LevelID == MyMod.levelid && otherBox.m_LevelGUID == MyMod.level_guid)
                             {
                                 HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " IS USING THIS");
@@ -3347,7 +3310,7 @@ namespace SkyCoop
                 if (__instance.m_StartHasBeenCalled)
                     return;
                 MelonLogger.Msg("Rope Start");
-                MyMod.AddDeployedRopes(__instance.gameObject.transform.position, __instance.m_RopeDeployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
+                Shared.AddDeployedRopes(__instance.gameObject.transform.position, __instance.m_RopeDeployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "SnapRope")] // REALLY WEIRD ONE!!!
@@ -3366,7 +3329,7 @@ namespace SkyCoop
                     return;
                 }
                 MelonLogger.Msg("Rope Snapped");
-                MyMod.AddDeployedRopes(__instance.gameObject.transform.position, __instance.m_RopeDeployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
+                Shared.AddDeployedRopes(__instance.gameObject.transform.position, __instance.m_RopeDeployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "ActionFinished")] // REALLY WEIRD ONE!!!
@@ -3404,8 +3367,26 @@ namespace SkyCoop
                             MelonLogger.Msg("Rope Taken");
                             deployed = false;
                         }
-                        MyMod.AddDeployedRopes(__instance.gameObject.transform.position, deployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
+                        Shared.AddDeployedRopes(__instance.gameObject.transform.position, deployed, __instance.m_RopeSnapped, MyMod.levelid, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent, true);
                     }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(RopeAnchorPoint), "Update")]
+        public static class RopeAnchorPoint_Update
+        {
+            public static void Prefix(RopeAnchorPoint __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_RopeDeployed)
+                {
+                    __instance.enabled = false;
                 }
             }
         }
@@ -3845,9 +3826,9 @@ namespace SkyCoop
                 }
                 if (interactiveObject != null)
                 {
-                    if (interactiveObject.GetComponent<MyMod.MultiplayerPlayer>() != null)
+                    if (interactiveObject.GetComponent<Comps.MultiplayerPlayer>() != null)
                     {
-                        MyMod.MultiplayerPlayer mP = interactiveObject.GetComponent<MyMod.MultiplayerPlayer>();
+                        Comps.MultiplayerPlayer mP = interactiveObject.GetComponent<Comps.MultiplayerPlayer>();
 
                         int m_LevelId = 0;
                         string m_LevelGUID = "";
@@ -3867,7 +3848,7 @@ namespace SkyCoop
                         if (MyMod.playersData[mP.m_ID] != null && MyMod.playersData[mP.m_ID].m_Name != "")
                         {
                             PlayerName = MyMod.playersData[mP.m_ID].m_Name;
-                        }
+                        } 
                         else
                         {
                             PlayerName = "Player";
@@ -3878,165 +3859,162 @@ namespace SkyCoop
                             return;
                         }
                         __result = PlayerName + "\n" + actString;
-                    }
-                    else if (interactiveObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    } 
+                    else if (interactiveObject.GetComponent<Comps.DroppedGearDummy>() != null)
                     {
-                        MyMod.DroppedGearDummy DGD = interactiveObject.GetComponent<MyMod.DroppedGearDummy>();
+                        Comps.DroppedGearDummy DGD = interactiveObject.GetComponent<Comps.DroppedGearDummy>();
 
-                        string ActionString = "Dropped";
-                        bool IsSnare = false;
-                        bool IsLamp = false;
-                        if (interactiveObject.name.Contains("GEAR_Snare"))
+                        if (string.IsNullOrEmpty(DGD.m_Extra.m_Dropper))
                         {
-                            IsSnare = true;
-                            if (DGD.m_Extra.m_Variant != 0)
-                            {
-                                ActionString = "Setup";
-                            }
-                        }
-                        if (interactiveObject.name.Contains("GEAR_KeroseneLampB"))
+                            string ColorPrefix = "[87DBF5]";
+                            string ColorAffix = "[-]";
+                            __result = ColorPrefix + DGD.m_LocalizedDisplayName + ColorAffix;
+                        } else
                         {
-                            IsLamp = true;
-                            if(DGD.m_Extra.m_Variant != 0)
+                            string ActionString = "Dropped";
+                            bool IsSnare = false;
+                            bool IsLamp = false;
+                            if (interactiveObject.name.Contains("GEAR_Snare"))
                             {
-                                ActionString = "Placed";
-                            }
-                        }
-
-                        string DroppedString = " " + ActionString + " by " + DGD.m_Extra.m_Dropper;
-                        if (DGD.m_Extra.m_GoalTime == 0)
-                        {
-                            if (DroppedString != "")
-                            {
-                                __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
-                            }
-                            else
-                            {
-                                __result = DGD.m_LocalizedDisplayName;
-                            }
-                        }
-                        else if (DGD.m_Extra.m_GoalTime == -1)
-                        {
-                            if (!IsSnare && !IsLamp)
-                            {
-                                __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
-                            }
-                            else if(IsSnare)
-                            {
-
-                                if (DGD.m_Extra.m_Variant == 1)
+                                IsSnare = true;
+                                if (DGD.m_Extra.m_Variant != 0)
                                 {
-                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
-                                }else{
+                                    ActionString = "Setup";
+                                }
+                            }
+                            if (interactiveObject.name.Contains("GEAR_KeroseneLampB"))
+                            {
+                                IsLamp = true;
+                                if (DGD.m_Extra.m_Variant != 0)
+                                {
+                                    ActionString = "Placed";
+                                }
+                            }
+
+                            string DroppedString = " " + ActionString + " by " + DGD.m_Extra.m_Dropper;
+                            if (DGD.m_Extra.m_GoalTime == 0)
+                            {
+                                if (DroppedString != "")
+                                {
                                     __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
+                                } else
+                                {
+                                    __result = DGD.m_LocalizedDisplayName;
                                 }
+                            } else if (DGD.m_Extra.m_GoalTime == -1)
+                            {
+                                if (!IsSnare && !IsLamp)
+                                {
+                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
+                                } else if (IsSnare)
+                                {
+
+                                    if (DGD.m_Extra.m_Variant == 1)
+                                    {
+                                        __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
+                                    } else
+                                    {
+                                        __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
+                                    }
+                                }
+                            } else
+                            {
+                                int minutesLeft;
+                                if (IsLamp)
+                                {
+                                    minutesLeft = DGD.m_Extra.m_GoalTime - MyMod.MinutesFromStartServer;
+                                } else
+                                {
+                                    int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+                                    minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
+                                }
+
+                                int hours = minutesLeft / 60;
+
+                                string str = DGD.m_LocalizedDisplayName + "\n";
+                                if (!IsSnare && !IsLamp)
+                                {
+                                    str = str + "Cures in: ";
+                                } else if (IsSnare)
+                                {
+
+                                    if (DGD.m_Extra.m_Variant == 1)
+                                    {
+                                        str = str + "May catch: ";
+                                    } else
+                                    {
+                                        str = str + "Will catch: ";
+                                    }
+                                } else if (IsLamp)
+                                {
+                                    str = str + "Fuel left for ";
+                                }
+
+                                if (hours >= 24)
+                                {
+                                    int days = hours / 24;
+                                    if (days != 1)
+                                    {
+                                        str = str + days + " days";
+                                    } else
+                                    {
+                                        str = str + days + " day";
+                                    }
+
+                                } else
+                                {
+                                    if (hours >= 1)
+                                    {
+                                        if (hours != 1)
+                                        {
+                                            str = str + hours + " hours";
+                                        } else
+                                        {
+                                            str = str + hours + " hour";
+                                        }
+                                    } else
+                                    {
+                                        if (minutesLeft >= 1)
+                                        {
+                                            if (minutesLeft != 1)
+                                            {
+                                                str = str + minutesLeft + " minutes";
+                                            } else
+                                            {
+                                                str = str + minutesLeft + " minute";
+                                            }
+                                        } else
+                                        {
+                                            if (!IsSnare && !IsLamp)
+                                            {
+                                                str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
+                                            } else if (IsSnare)
+                                            {
+                                                str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
+                                            } else if (IsLamp)
+                                            {
+                                                str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
+                                            }
+                                        }
+                                    }
+                                }
+                                __result = str + DroppedString;
                             }
                         }
-                        else
-                        {
-                            int minutesLeft;
-                            if (IsLamp)
-                            {
-                                minutesLeft = DGD.m_Extra.m_GoalTime - MyMod.MinutesFromStartServer;
-                            }else{
-                                int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
-                                minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
-                            }
-
-                            int hours = minutesLeft / 60;
-
-                            string str = DGD.m_LocalizedDisplayName + "\n";
-                            if (!IsSnare && !IsLamp)
-                            {
-                                str = str + "Cures in: ";
-                            }
-                            else if(IsSnare)
-                            {
-
-                                if (DGD.m_Extra.m_Variant == 1)
-                                {
-                                    str = str + "May catch: ";
-                                }
-                                else
-                                {
-                                    str = str + "Will catch: ";
-                                }
-                            }
-                            else if (IsLamp)
-                            {
-                                str = str + "Fuel left for ";
-                            }
-
-                            if (hours >= 24)
-                            {
-                                int days = hours / 24;
-                                if (days != 1)
-                                {
-                                    str = str + days + " days";
-                                }
-                                else
-                                {
-                                    str = str + days + " day";
-                                }
-
-                            }
-                            else
-                            {
-                                if (hours >= 1)
-                                {
-                                    if (hours != 1)
-                                    {
-                                        str = str + hours + " hours";
-                                    }
-                                    else
-                                    {
-                                        str = str + hours + " hour";
-                                    }
-                                }
-                                else
-                                {
-                                    if (minutesLeft >= 1)
-                                    {
-                                        if (minutesLeft != 1)
-                                        {
-                                            str = str + minutesLeft + " minutes";
-                                        }
-                                        else
-                                        {
-                                            str = str + minutesLeft + " minute";
-                                        }
-                                    }
-                                    else
-                                    {
-                                        if (!IsSnare && !IsLamp)
-                                        {
-                                            str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
-                                        }
-                                        else if(IsSnare)
-                                        {
-                                            str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
-                                        }
-                                        else if (IsLamp)
-                                        {
-                                            str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
-                                        }
-                                    }
-                                }
-                            }
-                            __result = str + DroppedString;
-                        }
-                    }
-                    else if (interactiveObject.gameObject.name.Contains("Rabbit") && interactiveObject.GetComponent<MyMod.AnimalCorpseObject>() != null)
+                    } 
+                    else if (interactiveObject.gameObject.name.Contains("Rabbit") && interactiveObject.GetComponent<Comps.AnimalCorpseObject>() != null)
                     {
                         __result = "Pickup";
-                    }
-                    else if(interactiveObject.gameObject.GetComponent<MyMod.Borrowable>() != null)
+                    } 
+                    else if(interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>() != null)
                     {
-                        __result = "Borrow "+Utils.GetGearDisplayName(interactiveObject.gameObject.GetComponent<MyMod.Borrowable>().m_GearName);
-                    }
-                    else if(interactiveObject.gameObject.GetComponent<MyMod.DeathDropContainer>() != null)
+                        __result = interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>().m_Owner + "'s Backpack";
+                    } else if (interactiveObject.gameObject.GetComponent<FakeRockCache>() != null)
                     {
-                        __result = interactiveObject.gameObject.GetComponent<MyMod.DeathDropContainer>().m_Owner + "'s Backpack";
+                        __result = interactiveObject.gameObject.GetComponent<FakeRockCache>().m_Owner + "'s " + Localization.Get("GAMEPLAY_RadialRockCache");
+                    } else if (interactiveObject.GetComponent<ExpeditionInteractive>())
+                    {
+                        __result = interactiveObject.GetComponent<ExpeditionInteractive>().m_ObjectText;
                     }
                 }
             }
@@ -4090,14 +4068,14 @@ namespace SkyCoop
                 }
                 if (hit.transform.gameObject != null)
                 {
-                    if(hit.transform.gameObject.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    if(hit.transform.gameObject.GetComponent<Comps.DroppedGearDummy>() != null)
                     {
                         gi = new GearItem();
                         interactiveObj = hit.transform.gameObject;
                     }
-                    else if (hit.transform.gameObject.GetComponent<MyMod.PlayerBulletDamage>() != null)
+                    else if (hit.transform.gameObject.GetComponent<Comps.PlayerBulletDamage>() != null)
                     {
-                        MyMod.PlayerBulletDamage bulletZone = hit.transform.gameObject.GetComponent<MyMod.PlayerBulletDamage>();
+                        Comps.PlayerBulletDamage bulletZone = hit.transform.gameObject.GetComponent<Comps.PlayerBulletDamage>();
                         int m_ID = bulletZone.m_ClientId;
 
                         if (MyMod.playersData[m_ID] != null && bulletZone.m_Player != null)
@@ -4111,10 +4089,15 @@ namespace SkyCoop
                             }
                         }
                     }
-                    else if(hit.transform.gameObject.GetComponent<MyMod.Borrowable>() != null)
+                    else if(hit.transform.gameObject.GetComponent<FakeRockCache>() != null)
                     {
                         gi = new GearItem();
-                        interactiveObj = hit.transform.gameObject;   
+                        interactiveObj = hit.transform.gameObject;
+                    }
+                    else if(hit.transform.gameObject.GetComponent<ExpeditionInteractive>() != null)
+                    {
+                        gi = new GearItem();
+                        interactiveObj = hit.transform.gameObject;
                     }
                 }
 
@@ -4122,18 +4105,18 @@ namespace SkyCoop
                 {
                     if (hit.collider.gameObject.layer == 16)
                     {
-                        if (hit.collider.gameObject.GetComponent<MyMod.AnimalCorpseObject>())
+                        if (hit.collider.gameObject.GetComponent<Comps.AnimalCorpseObject>())
                         {
                             gi = new GearItem();
-                            interactiveObj = hit.collider.gameObject.GetComponent<MyMod.AnimalCorpseObject>().gameObject;
+                            interactiveObj = hit.collider.gameObject.GetComponent<Comps.AnimalCorpseObject>().gameObject;
                         }
                     }else{
                         if (hit.collider.gameObject.layer == 27)
                         {
-                            if (hit.collider.gameObject.transform.GetComponentInParent<MyMod.AnimalCorpseObject>())
+                            if (hit.collider.gameObject.transform.GetComponentInParent<Comps.AnimalCorpseObject>())
                             {
                                 gi = new GearItem();
-                                interactiveObj = hit.collider.gameObject.transform.GetComponentInParent<MyMod.AnimalCorpseObject>().gameObject;
+                                interactiveObj = hit.collider.gameObject.transform.GetComponentInParent<Comps.AnimalCorpseObject>().gameObject;
                             }
                         }
                     }
@@ -4223,16 +4206,14 @@ namespace SkyCoop
         //    }
         //}
 
-        public static MyMod.PriorityActionForOtherPlayer GetPriorityActionForPlayer(int m_ID, MyMod.MultiplayerPlayer mP)
+        public static DataStr.PriorityActionForOtherPlayer GetPriorityActionForPlayer(int m_ID, Comps.MultiplayerPlayer mP)
         {
-            MyMod.MultiPlayerClientData pData = MyMod.playersData[m_ID];
-            MyMod.PriorityActionForOtherPlayer act = new MyMod.PriorityActionForOtherPlayer();
-
-            //if (pData != null && MyMod.playersData[mP.m_ID].m_AnimState == "Knock")
-            //{
-            //    act = MyMod.GetActionForOtherPlayer("Revive");
-            //}
-            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
+            DataStr.MultiPlayerClientData pData = MyMod.playersData[m_ID];
+            DataStr.PriorityActionForOtherPlayer act = new DataStr.PriorityActionForOtherPlayer();
+            if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_HandheldShortwaveItem != null)
+            {
+                act = MyMod.GetActionForOtherPlayer("Invite");
+            } else if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
             {
                 act = MyMod.GetActionForOtherPlayer("Stim");
             }
@@ -4240,14 +4221,6 @@ namespace SkyCoop
             {
                 act = MyMod.GetActionForOtherPlayer("Lit");
             }
-            //else if (mP.m_BloodLosts > 0)
-            //{
-            //    act = MyMod.GetActionForOtherPlayer("Bandage");
-            //}
-            //else if (mP.m_NeedAntiseptic == true)
-            //{
-            //    act = MyMod.GetActionForOtherPlayer("Sterilize");
-            //}
             else
             {
                 act = MyMod.GetActionForOtherPlayer("Examine");
@@ -4258,6 +4231,18 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessInteraction")] // Once
         internal class PlayerManager_InteractiveObjectsProcessInteraction
         {
+            internal static bool Prefix(PlayerManager __instance)
+            {
+                if (__instance.m_InteractiveObjectUnderCrosshair != null)
+                {
+                    GameObject obj = __instance.m_InteractiveObjectUnderCrosshair;
+                    if (obj.GetComponent<FakeRockCache>() != null)
+                    {
+                        return false;
+                    }
+                }
+                return true;
+            }
             internal static void Postfix(PlayerManager __instance, ref bool __result)
             {
                 if (MyMod.CrazyPatchesLogger == true)
@@ -4269,9 +4254,9 @@ namespace SkyCoop
                 if (__instance.m_InteractiveObjectUnderCrosshair != null)
                 {
                     GameObject obj = __instance.m_InteractiveObjectUnderCrosshair;
-                    if (obj.GetComponent<MyMod.MultiplayerPlayer>() != null)
+                    if (obj.GetComponent<Comps.MultiplayerPlayer>() != null)
                     {
-                        MyMod.MultiplayerPlayer mP = obj.GetComponent<MyMod.MultiplayerPlayer>();
+                        Comps.MultiplayerPlayer mP = obj.GetComponent<Comps.MultiplayerPlayer>();
 
                         string PAction = GetPriorityActionForPlayer(mP.m_ID, mP).m_Action;
                         string ProcessText = GetPriorityActionForPlayer(mP.m_ID, mP).m_ProcessText;
@@ -4282,37 +4267,11 @@ namespace SkyCoop
                             return;
                         }
 
-                        if (PAction == "Bandage")
+                        if (PAction == "Invite")
                         {
-                            int bandages = GameManager.GetInventoryComponent().NumGearInInventory("GEAR_HeavyBandage");
-
-                            if (bandages > 0)
-                            {
-                                MyMod.DoLongAction(mP, ProcessText, PAction);
-                                __result = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU HAVE NOT ANY BANDAGES");
-                                GameAudioManager.PlayGUIError();
-                                __result = false;
-                            }
-                        }
-                        else if (PAction == "Sterilize")
-                        {
-                            bool HaveAntiseptic = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_BottleHydrogenPeroxide");
-
-                            if (HaveAntiseptic)
-                            {
-                                MyMod.DoLongAction(mP, ProcessText, PAction);
-                                __result = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU HAVE NOT HYDROGEN PEROXIDE");
-                                GameAudioManager.PlayGUIError();
-                                __result = false;
-                            }
+                            MyMod.SendInvietToPlayer(mP.m_ID);
+                            //MyMod.DoLongAction(mP, ProcessText, PAction);
+                            __result = true;
                         }
                         else if (PAction == "Stim")
                         {
@@ -4333,32 +4292,16 @@ namespace SkyCoop
                                 __result = true;
                             }
                         }
-                        else if (PAction == "Revive")
-                        {
-                            bool HaveMedkit = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
-
-                            if (HaveMedkit)
-                            {
-                                MyMod.DoLongAction(mP, ProcessText, PAction);
-                                __result = true;
-                            }
-                            else
-                            {
-                                HUDMessage.AddMessage("YOU HAVE NOT MEDKIT");
-                                GameAudioManager.PlayGUIError();
-                                __result = false;
-                            }
-                        }
                         else if (PAction == "Examine")
                         {
                             MyMod.DoLongAction(mP, ProcessText, PAction);
                             __result = true;
                         }
                     }
-                    else if (obj.GetComponent<MyMod.DroppedGearDummy>() != null)
+                    else if (obj.GetComponent<Comps.DroppedGearDummy>() != null)
                     {
                         MelonLogger.Msg("Trying interact with fake gear");
-                        if (obj.GetComponent<MyMod.FakeBed>() == null)
+                        if (obj.GetComponent<Comps.FakeBed>() == null)
                         {
                             MelonLogger.Msg("Trying pickup fake drop");
                             MyMod.PickupDroppedGear(obj);
@@ -4370,19 +4313,16 @@ namespace SkyCoop
                             __result = true;
                         }
                     }
-                    else if(obj.GetComponent<MyMod.AnimalCorpseObject>() != null && obj.name.Contains("Rabbit"))
+                    else if(obj.GetComponent<Comps.AnimalCorpseObject>() != null && obj.name.Contains("Rabbit"))
                     {
                         if (obj.GetComponent<ObjectGuid>() != null)
                         {
                             MyMod.AttemptToPickupRabbit(obj.GetComponent<ObjectGuid>().Get());
                         }
                         __result = true;
-                    }
-                    else if(obj.GetComponent<MyMod.Borrowable>() != null)
+                    } else if(obj.GetComponent<FakeRockCache>() != null)
                     {
-                        MyMod.LastBorrowable = obj.GetComponent<MyMod.Borrowable>();
-                        MyMod.PriorityActionForOtherPlayer act = MyMod.GetActionForOtherPlayer("Borrow");
-                        MyMod.DoLongAction(obj.GetComponent<MyMod.Borrowable>().m_mP, act.m_ProcessText, act.m_Action);
+                        MyMod.ShowRockStashActionPicker(obj);
                         __result = true;
                     }
                 }
@@ -4405,7 +4345,7 @@ namespace SkyCoop
                     {
                         MyMod.MyContainer = null;
                         //MelonLogger.Msg("Stop interacting wtih container");
-                        MyMod.ContainerOpenSync pendingContainer = new MyMod.ContainerOpenSync();
+                        DataStr.ContainerOpenSync pendingContainer = new DataStr.ContainerOpenSync();
                         pendingContainer.m_Guid = "NULL";
                         if (MyMod.sendMyPosition == true)
                         {
@@ -4440,7 +4380,7 @@ namespace SkyCoop
                 }
                 if (__result == true)
                 {
-                    MyMod.ContainerOpenSync pendingContainer = new MyMod.ContainerOpenSync();
+                    DataStr.ContainerOpenSync pendingContainer = new DataStr.ContainerOpenSync();
                     pendingContainer.m_LevelID = MyMod.levelid;
                     pendingContainer.m_LevelGUID = MyMod.level_guid;
                     pendingContainer.m_Inspected = __instance.m_Inspected;
@@ -4485,7 +4425,39 @@ namespace SkyCoop
                             }
                         }
 
-                        MyMod.AddLootedContainer(MyMod.MyContainer, true, MyMod.instance.myId);
+                        if (!__instance.m_Inspected)
+                        {
+                            Shared.AddLootedContainer(MyMod.MyContainer, true, ClientUser.myId, 0);
+                            if (__instance.GetComponent<ContainersSync>() != null)
+                            {
+                                __instance.GetComponent<ContainersSync>().m_Empty = true;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Container), "GetInteractiveDisplayText")] // Once
+        public static class Container_GetInteractiveDisplayText
+        {
+            public static void Postfix(Container __instance, ref string __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                
+                if(__instance.m_Inspected && __instance.gameObject && __instance.gameObject.GetComponent<ContainersSync>() != null)
+                {
+                    bool Empty = __instance.gameObject.GetComponent<ContainersSync>().m_Empty;
+
+                    if (!Empty)
+                    {
+                        __result = __instance.GetInteractiveActionText() + "\n" + Localization.Get("GAMEPLAY_SearchedPostfix");
+                    } else{
+                        __result = __instance.GetInteractiveActionText() + "\n" + Localization.Get("GAMEPLAY_EmptyPostfix");
                     }
                 }
             }
@@ -4493,7 +4465,7 @@ namespace SkyCoop
 
         public static void SendHarvestPlantState(string state, Harvestable plant)
         {
-            MyMod.HarvestableSyncData harvData = new MyMod.HarvestableSyncData();
+            DataStr.HarvestableSyncData harvData = new DataStr.HarvestableSyncData();
             harvData.m_State = state;
             if (plant.gameObject != null)
             {
@@ -4520,7 +4492,8 @@ namespace SkyCoop
 
                 if (state == "Done")
                 {
-                    MyMod.AddHarvastedPlant(harvData.m_Guid, 0);
+                    MPSaveManager.AddHarvestedPlant(harvData.m_Guid, MyMod.level_guid);
+                    ServerSend.LOOTEDHARVESTABLE(0, harvData.m_Guid, MyMod.level_guid, MyMod.MinutesFromStartServer, false);
                 }
             }
         }
@@ -4551,6 +4524,37 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
                 SendHarvestPlantState("Cancel", __instance);
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "RollSpawnChance")] // Once
+        public static class Harvestable_RollSpawnChance
+        {
+            public static bool Prefix(Harvestable __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                int seed = 0;
+                if (__instance.gameObject.GetComponent<ObjectGuid>())
+                {
+                    seed = Shared.GetVectorHash(__instance.gameObject.transform.position);
+                }
+
+                System.Random RNG = new System.Random(seed);
+
+                if (!__instance.m_IgnoreCustomModeSpawnChance && GameManager.InCustomMode())
+                    __instance.m_SpawnChance *= GameManager.GetExperienceModeManagerComponent().GetCustomPlantSpawnModifier();
+                if (Utils.Approximately(__instance.m_SpawnChance, 100f, 0.0001f) || MyMod.RollChanceSeeded(__instance.m_SpawnChance, RNG))
+                {
+                    return false;
+                }
+                    
+                __instance.m_Harvested = true;
+                __instance.gameObject.SetActive(false);
+                return false;
             }
         }
 
@@ -4637,7 +4641,7 @@ namespace SkyCoop
                         Application.Quit();
                     }
                 }else{
-                    if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
+                    if (NeedSkipCauseConnect() == false && MyMod.DedicatedServerAppMode == false)
                     {
                         return;
                     }
@@ -4705,7 +4709,7 @@ namespace SkyCoop
                         }
                     }
                 }else{
-                    if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
+                    if (NeedSkipCauseConnect() == false && !MyMod.DedicatedServerAppMode)
                     {
                         return;
                     }
@@ -4718,10 +4722,26 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "Enable")] // Once
-        public class SkipIntroReduxSkipIntro
+        public static void RemoveSinglePlayer(Panel_MainMenu __instance)
         {
-            public static void Prefix(Panel_MainMenu __instance)
+            Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+            for (int i = 0; i < 3; i++)
+            {
+                Grid.GetChild(i).gameObject.SetActive(false);
+            }
+            if (MyMod.MyLobby != "")
+            {
+                MenuChange.OverrideMenuButton(Grid, 3, "LOBBY", false);
+            }else{
+                MenuChange.OverrideMenuButton(Grid, 3, "MULTIPLAYER", false);
+            }
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "UpdateFading")] // Always
+        internal class Panel_MainMenu_UpdateFading
+        {
+            private static void Postfix(Panel_MainMenu __instance)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -4729,11 +4749,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
-                {
-                    return;
-                }
-                MoviePlayer.m_HasIntroPlayedForMainMenu = true;
+                RemoveSinglePlayer(__instance);
             }
         }
 
@@ -4748,12 +4764,17 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (NeedSkipCauseConnect() == false && Application.isBatchMode == false)
+
+                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+                RemoveSinglePlayer(__instance);
+                __instance.m_BasicMenu.SetItemSelected(4);
+                if (NeedSkipCauseConnect() == false && !MyMod.DedicatedServerAppMode)
                 {
                     return;
                 }
+                MoviePlayer.m_HasIntroPlayedForMainMenu = true;
                 __instance?.m_HinterlandMailingListWidget?.gameObject?.SetActive(false);
-                Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+                
                 for (int i = 0; i < 4; i++)
                 {
                     Grid.GetChild(i).gameObject.SetActive(false);
@@ -4771,15 +4792,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if(MyMod.MyLobby != "")
-                {
-                    Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(5).GetChild(2);
-                    for (int i = 0; i < 3; i++)
-                    {
-                        Grid.GetChild(i).gameObject.SetActive(false);
-                    }
-                    MenuChange.OverrideMenuButton(Grid, 3, "LOBBY", false);
-                }
+                RemoveSinglePlayer(__instance);
             }
         }
 
@@ -4818,7 +4831,7 @@ namespace SkyCoop
                     return false;
                 }
                 __instance.m_StartHasBeenCalled = true;
-                if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.DoNotSerializeThis>() == null)
+                if (__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.DoNotSerializeThis>() == null)
                 {
                     SnowShelterManager.Add(__instance);
                     //MelonLogger.Msg("Registered an snowshelter, cause have not DoNotSerializeThis component.");
@@ -4846,7 +4859,7 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("Shelter builded!");
                     GameObject shelter = __instance.m_SnowShelter.gameObject;
-                    MyMod.ShelterCreated(shelter.transform.position, shelter.transform.rotation, MyMod.levelid, MyMod.level_guid, true);
+                    Shared.ShelterCreated(shelter.transform.position, shelter.transform.rotation, MyMod.levelid, MyMod.level_guid, true);
                 }
             }
         }
@@ -4863,7 +4876,7 @@ namespace SkyCoop
                 }
                 MelonLogger.Msg("Shelter removed!");
                 GameObject shelter = __instance.gameObject;
-                MyMod.ShelterRemoved(shelter.transform.position, MyMod.levelid, MyMod.level_guid, true);
+                Shared.ShelterRemoved(shelter.transform.position, MyMod.levelid, MyMod.level_guid, true);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_SnowShelterInteract), "OnUse")] // Once
@@ -4881,7 +4894,7 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("Entering shelter");
 
-                    MyMod.ShowShelterByOther shelter = new MyMod.ShowShelterByOther();
+                    DataStr.ShowShelterByOther shelter = new DataStr.ShowShelterByOther();
                     shelter.m_Position = __instance.m_SnowShelter.gameObject.transform.position;
                     shelter.m_Rotation = __instance.m_SnowShelter.gameObject.transform.rotation;
                     shelter.m_LevelID = MyMod.levelid;
@@ -4916,7 +4929,7 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("Entering shelter");
 
-                    MyMod.ShowShelterByOther shelter = new MyMod.ShowShelterByOther();
+                    DataStr.ShowShelterByOther shelter = new DataStr.ShowShelterByOther();
                     shelter.m_Position = ss.gameObject.transform.position;
                     shelter.m_Rotation = ss.gameObject.transform.rotation;
                     shelter.m_LevelID = MyMod.levelid;
@@ -4950,7 +4963,7 @@ namespace SkyCoop
                 if (ss != null)
                 {
                     MelonLogger.Msg("Exiting shelter");
-                    MyMod.ShowShelterByOther shelter = new MyMod.ShowShelterByOther();
+                    DataStr.ShowShelterByOther shelter = new DataStr.ShowShelterByOther();
                     if (MyMod.sendMyPosition == true)
                     {
                         using (Packet _packet = new Packet((int)ClientPackets.USESHELTER))
@@ -4977,7 +4990,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MyMod.ShowShelterByOther FindData = new MyMod.ShowShelterByOther();
+                DataStr.ShowShelterByOther FindData = new DataStr.ShowShelterByOther();
                 if (__instance.m_SnowShelter != null && __instance.m_SnowShelter.gameObject != null)
                 {
                     FindData.m_Position = __instance.m_SnowShelter.gameObject.transform.position;
@@ -4989,7 +5002,7 @@ namespace SkyCoop
                 {
                     if (MyMod.playersData[i] != null)
                     {
-                        MyMod.ShowShelterByOther shelter = MyMod.playersData[i].m_Shelter;
+                        DataStr.ShowShelterByOther shelter = MyMod.playersData[i].m_Shelter;
                         if (FindData == shelter)
                         {
                             HUDMessage.AddMessage(MyMod.playersData[i].m_Name + " INSIDE, CAN'T DISMANTLE THIS!");
@@ -5313,7 +5326,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
                 MelonLogger.Msg("[Panel_Rest] DoRest");
-                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<MyMod.FakeBedDummy>() != null)
+                if (__instance.m_Bed != null && __instance.m_Bed.gameObject != null && __instance.m_Bed.gameObject.GetComponent<Comps.FakeBedDummy>() != null)
                 {
                     MelonLogger.Msg("[Rest] Saving link on fake bed");
                     FakeBedRoll = __instance.m_Bed.gameObject;
@@ -5340,17 +5353,88 @@ namespace SkyCoop
                 if (FakeBedRoll != null)
                 {
                     MelonLogger.Msg("Dummy bed removed");
-                    UnityEngine.Object.DestroyImmediate(FakeBedRoll);
+                    UnityEngine.Object.Destroy(FakeBedRoll);
                 }
             }
         }
 
+        public static WeatherVolunteerData GetWeatherVolunteerData(bool DoNext = false)
+        {     
+            WeatherVolunteerData Data = new WeatherVolunteerData();
+
+            if (GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
+            {
+                Weather Weather = GameManager.GetWeatherComponent();
+                WeatherStage PreviousStage = Weather.m_CurrentWeatherStage;
+                WeatherTransition WeatherTransition = GameManager.GetWeatherTransitionComponent();
+                if (DoNext)
+                {
+                    WeatherTransition.ChooseNextWeatherSet(WeatherTransition.GetCustomWeightsForCurrentXpMode());
+                }
+                Data.HighMin = Weather.m_HighTempMinCelsius;
+                Data.HighMax = Weather.m_HighTempMaxCelsius;
+                Data.LowMin = Weather.m_LowTempMinCelsius;
+                Data.LowMax = Weather.m_LowTempMaxCelsius;
+                Data.CoolingHours = Weather.m_HourCoolingBegins;
+                Data.WarmingHours = Weather.m_HourWarmingBegins;
+                WeatherSet Set = GameManager.GetWeatherTransitionComponent().m_CurrentWeatherSet;
+                Set.m_WeatherStages[0].m_PreviousType = PreviousStage;
+                Data.WeatherType = (int)Set.m_CharacterizingType;
+                Data.WeatherDuration = Set.m_CurrentSetDuration;
+                Data.CurrentRegion = (int)GameManager.GetUniStorm().m_CurrentRegion;
+                Data.PreviousStage = (int)PreviousStage;
+                for (int i = 0; i < Set.m_WeatherStages.Count; i++)
+                {
+                    Data.StageDuration.Add(Set.m_WeatherStages[i].m_CurrentDuration);
+                    Data.StageTransition.Add(Set.m_WeatherStages[i].m_CurrentTransitionTime);
+                }
+
+                for (int i = 0; i < Weather.m_WeatherSetsForScene.Count; i++)
+                {
+                    if (Weather.m_WeatherSetsForScene[i].gameObject.name == Set.gameObject.name)
+                    {
+                        Data.SetIndex = i;
+                        break;
+                    }
+                }
+            } else
+            {
+                Data.WeatherType = (int)WeatherStage.Clear;
+                Data.WeatherDuration = 1f;
+                if (GameManager.GetUniStorm() != null)
+                {
+                    Data.CurrentRegion = (int)GameManager.GetUniStorm().m_CurrentRegion;
+                } else
+                {
+                    Data.CurrentRegion = (int)GameRegion.LakeRegion;
+                }
+                Data.StageDuration.Add(1f);
+                Data.StageTransition.Add(0);
+            }
+            return Data;
+        }
+
+
+
+        public static void SendWeatherVolunteerData()
+        {
+            using (Packet _packet = new Packet((int)ClientPackets.REREGISTERWEATHER))
+            {
+                _packet.Write(GetWeatherVolunteerData(true));
+                SendTCPData(_packet);
+            }
+        }
+
+
         public static void RequestDropsForScene()
         {
+            MyMod.DelayedGearsPickup = true;
             using (Packet _packet = new Packet((int)ClientPackets.REQUESTDROPSFORSCENE))
             {
                 _packet.Write(MyMod.levelid);
                 _packet.Write(MyMod.level_guid);
+                _packet.Write(GetWeatherVolunteerData());
+                _packet.Write((int)MyMod.ConvertGameRegion((GameRegion)GetWeatherVolunteerData().CurrentRegion));
                 MyMod.SetRepeatPacket(MyMod.ResendPacketType.Scene);
                 SendTCPData(_packet);
             }
@@ -5358,33 +5442,119 @@ namespace SkyCoop
 
         public static void LoadEverything()
         {
+            MyMod.BakePreSpawnedGearsList();
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading everything...");
             MyMod.SendSpawnData();
-            MyMod.DestoryBrokenFurniture();
             MyMod.UpdateDeployedRopes();
-            MyMod.ApplyLootedContainers();
-            MyMod.RemoveHarvastedPlants();
             MyMod.LoadAllSnowSheltersByOther();
-            MyMod.DestoryPickedGears();
             MyMod.ApplyOtherCampfires = true;
             MelonLogger.Msg(ConsoleColor.Yellow, "Loading done!");
             MyMod.DroppedGearsObjs.Clear();
             MyMod.TrackableDroppedGearsObjs.Clear();
             MyMod.OpenableThings.Clear();
+            MyMod.DoorsObjs.Clear();
 
-            if (MyMod.iAmHost == true || MyMod.InOnline() == false)
+            if (!MyMod.DedicatedServerAppMode && (MyMod.iAmHost == true || MyMod.InOnline() == false))
             {
+                MyMod.PickedGearsBackup.Clear();
+                
+                Dictionary<long, PickedGearSync> PickedGears = MPSaveManager.LoadPickedGearsData(MyMod.level_guid);
+                if (PickedGears != null)
+                {
+                    foreach (var item in PickedGears)
+                    {
+                        MyMod.PickedGearsBackup.Add(item.Value);
+                        MyMod.RemovePickedGear(MPSaveManager.GetPickedGearKey(item.Value));
+                    }
+                }
+                Dictionary<string, BrokenFurnitureSync> Furns = MPSaveManager.LoadFurnsData(MyMod.level_guid);
+                MyMod.FoundSomethingToBreak = false;
+                if (Furns != null)
+                {
+                    foreach (var item in Furns)
+                    {
+                        if (item.Value.m_Broken)
+                        {
+                            MyMod.RemoveBrokenFurniture(item.Value.m_Guid, item.Value.m_ParentGuid, false);
+                        } else
+                        {
+                            MyMod.RepairBrokenFurniture(item.Value.m_Guid, item.Value.m_ParentGuid);
+                        }
+                    }
+                }
+                MyMod.BakePreSpawnedGearsList();
+                if (MyMod.FoundSomethingToBreak)
+                {
+                    MyMod.RemoveAttachedGears = 2;
+                } else
+                {
+                    MyMod.PickedGearsBackup.Clear();
+                }
+
+                Dictionary<string, UniversalSyncableObject> UniversalObjects = MPSaveManager.GetUniversalSyncablesForScene(MyMod.level_guid);
+                foreach (var item in UniversalObjects)
+                {
+                    MyMod.SpawnUniversalSyncableObject(item.Value);
+                }
+
+                Dictionary<string, int> LootedBoxes = MPSaveManager.LoadLootedContainersData(MyMod.level_guid);
+                if (LootedBoxes != null)
+                {
+                    foreach (var item in LootedBoxes)
+                    {
+                        int State = item.Value;
+
+                        if (MPSaveManager.ContainerNotEmpty(MyMod.level_guid, item.Key))
+                        {
+                            State = 1;
+                        }
+
+                        MyMod.RemoveLootFromContainer(item.Key, State);
+                    }
+                }
+                Dictionary<string, int> Plants = MPSaveManager.LoadHarvestedPlants(MyMod.level_guid);
+                if (Plants != null)
+                {
+                    foreach (var item in Plants)
+                    {
+                        int HarvestTime = item.Value;
+                        if(HarvestTime == -1)
+                        {
+                            MyMod.AddHarvastedPlant(item.Key);
+                        } else
+                        {
+                            MyMod.RemoveHarvastedPlant(item.Key);
+                        }
+                    }
+                }
+                Dictionary<string, FakeRockCacheVisualData> RockCaches = MPSaveManager.GetRockCaches(MyMod.level_guid);
+                foreach (var item in RockCaches)
+                {
+                    MyMod.AddRockCache(item.Value);
+                }
+
                 MyMod.LoadAllDropsForScene();
                 MyMod.LoadAllOpenableThingsForScene();
                 MyMod.LoadAniamlCorpsesForScene();
-                foreach (MyMod.DeathContainerData create in MyMod.DeathCreates)
+                foreach (DataStr.DeathContainerData create in MyMod.DeathCreates)
                 {
                     if (create.m_LevelKey == MyMod.level_guid)
                     {
                         MyMod.MakeDeathCreate(create);
                     }
                 }
+                Dictionary<string, string> Doors = MPSaveManager.GetDoorsOnScene(MyMod.level_guid);
+                foreach (var item in Doors)
+                {
+                    string GUID = item.Key.Split('_')[1];
+                    MyMod.AddLocksToDoorsByGUID(GUID);
+                }
                 MyMod.CreateCairnsSearchList();
+
+                if (MyMod.InOnline())
+                {
+                    Shared.RegisterWeatherSetForRegion(0, GetWeatherVolunteerData());
+                }
             }
             if (MyMod.sendMyPosition == true)
             {
@@ -5472,6 +5642,21 @@ namespace SkyCoop
                 MyMod.UpdateEverything = 2;
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Loading), "OnQuoteFinished")] // Once
+        public static class Panel_Loading_OnQuoteFinished
+        {
+            public static void Postfix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg(ConsoleColor.Yellow, "[Cold Start] Scene loaded!");
+                MyMod.UpdateEverything = 2;
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(InputManager), "PauseGame")] // Once
         public static class InputManager_DuckYOuPause
         {
@@ -5535,7 +5720,7 @@ namespace SkyCoop
                 if (MyMod.DiagnosisDummy != null)
                 {
                     MelonLogger.Msg("Cured other player");
-                    MyMod.AffictionSync aff = new MyMod.AffictionSync();
+                    DataStr.AffictionSync aff = new DataStr.AffictionSync();
 
                     aff.m_Location = (int)__instance.GetSelectedAffliction().m_Location;
                     aff.m_Type = (int)__instance.GetSelectedAfflictionType();
@@ -5697,7 +5882,7 @@ namespace SkyCoop
                         string GUID = __instance.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
                         if (MyMod.iAmHost)
                         {
-                            MyMod.OnAnimalQuarted(GUID);
+                            Shared.OnAnimalQuarted(GUID);
                             ServerSend.QUARTERANIMAL(0, GUID, true);
                         }
                         else if (MyMod.sendMyPosition)
@@ -5973,6 +6158,72 @@ namespace SkyCoop
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(ConsoleManager), "CONSOLE_next_weather")] // Once
+        internal static class ConsoleManager_CONSOLE_next_weather
+        {
+            private static bool Prefix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.InOnline() == false)
+                {
+                    return true;
+                } else
+                {
+                    return false;
+                }
+            }
+            private static void Postfix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.iAmHost)
+                {
+                    Shared.ForceNextWeather();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(ConsoleManager), "CONSOLE_next_weatherset")] // Once
+        internal static class ConsoleManager_CONSOLE_next_weatherset
+        {
+            private static bool Prefix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.InOnline() == false)
+                {
+                    return true;
+                } else
+                {
+                    return false;
+                }
+            }
+            private static void Postfix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.iAmHost)
+                {
+                    Shared.ForceNextWeatherSet();
+                }
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "MaybeReRollActive")] // Unknown
         internal static class SpawnRegion_MaybeReRollActive
         {
@@ -5986,9 +6237,9 @@ namespace SkyCoop
                 }
                 if (MyMod.InOnline())
                 {
-                    if (__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.SpawnRegionSimple>() != null)
+                    if (__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.SpawnRegionSimple>() != null)
                     {
-                        __instance.gameObject.GetComponent<MyMod.SpawnRegionSimple>().UpdateFromManager();
+                        __instance.gameObject.GetComponent<Comps.SpawnRegionSimple>().UpdateFromManager();
                     }
                 }
                 return MyMod.InOnline();
@@ -6084,10 +6335,13 @@ namespace SkyCoop
                 }
             }
         }
+
+        public static bool QuitOnSave = false;
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "DoQuitGame")]  // Once
         internal static class Panel_PauseMenu_Quit
         {
-            private static void Prefix(Panel_PauseMenu __instance)
+            private static bool Prefix(Panel_PauseMenu __instance)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -6097,8 +6351,19 @@ namespace SkyCoop
                 }
                 if (MyMod.InOnline() == true)
                 {
-                    Application.Quit();
+                    //Application.Quit();
+                    MyMod.DoPleaseWait("Saving","Saving before exit...");
+                    QuitOnSave = true;
+                    MyMod.QuitWithoutSaving = true;
+                    if (MyMod.iAmHost)
+                    {
+                        MPSaveManager.SaveRecentStuff();
+                    }
+                    SaveGameSystem.SetAsyncEnabled(false);
+                    GameManager.ForceSaveGame();
+                    return false;
                 }
+                return true;
             }
         }
 
@@ -6143,7 +6408,7 @@ namespace SkyCoop
                 {
                     if (MyMod.iAmHost == true)
                     {
-                        MyMod.ChangeOpenableThingState(MyMod.level_guid, _GUID, true);
+                        Shared.ChangeOpenableThingState(MyMod.level_guid, _GUID, true);
                     }else{
                         MyMod.SendOpenableThing(MyMod.level_guid, _GUID, true);
                     }
@@ -6177,7 +6442,7 @@ namespace SkyCoop
                 {
                     if (MyMod.iAmHost == true)
                     {
-                        MyMod.ChangeOpenableThingState(MyMod.level_guid, _GUID, false);
+                        Shared.ChangeOpenableThingState(MyMod.level_guid, _GUID, false);
                     }else{
                         MyMod.SendOpenableThing(MyMod.level_guid, _GUID, false);
                     }
@@ -6493,9 +6758,9 @@ namespace SkyCoop
                 {
                     __instance.SetActive(false);
                 }
-                if(__instance.gameObject != null && __instance.gameObject.GetComponent<MyMod.SpawnRegionSimple>() == null)
+                if(__instance.gameObject != null && __instance.gameObject.GetComponent<Comps.SpawnRegionSimple>() == null)
                 {
-                    MyMod.SpawnRegionSimple SRS = __instance.gameObject.AddComponent<MyMod.SpawnRegionSimple>();
+                    Comps.SpawnRegionSimple SRS = __instance.gameObject.AddComponent<Comps.SpawnRegionSimple>();
                     SRS.m_Region = __instance;
                     SRS.m_GUID = __instance.gameObject.GetComponent<ObjectGuid>().Get();
                 }                
@@ -6549,7 +6814,7 @@ namespace SkyCoop
                 {
                     if(MyMod.AnimalsController == true)
                     {
-                        MyMod.OnReleaseRabbit(MyMod.instance.myId);
+                        MyMod.OnReleaseRabbit(ClientUser.myId);
                     }else{
                         if (MyMod.iAmHost)
                         {
@@ -6567,7 +6832,7 @@ namespace SkyCoop
                     if (__instance.gameObject)
                     {
                         
-                        UnityEngine.Object.DestroyImmediate(__instance.gameObject);
+                        UnityEngine.Object.Destroy(__instance.gameObject);
                     }
                     return false;
                 }
@@ -6592,7 +6857,7 @@ namespace SkyCoop
                     for (int index = 0; index < contacts.Length; ++index)
                     {
                         ContactPoint contact = contacts[index];
-                        MyMod.AnimalActor Actor =  contact.otherCollider.GetComponentInParent<MyMod.AnimalActor>();
+                        Comps.AnimalActor Actor =  contact.otherCollider.GetComponentInParent<Comps.AnimalActor>();
                         if (Actor != null)
                         {
                             if (Actor.gameObject.GetComponent<ObjectGuid>())
@@ -6677,6 +6942,56 @@ namespace SkyCoop
                 return true;
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "EquipItem")] // Once
+        private static class PlayerManager_EquipItem
+        {
+            private static void Prefix(PlayerManager __instance, GearItem gi)
+            {
+                if (MyMod.IsUserGeneratedHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCNote")
+                {
+                    StoneItem SI = gi.gameObject.AddComponent<StoneItem>();
+                    SI.m_RigidBody = gi.gameObject.AddComponent<Rigidbody>();
+                    SI.m_RigidBody.isKinematic = true;
+                    SI.m_GearItem = gi;
+                    SI.m_CanThrow = false;
+                    gi.m_StoneItem = SI;
+
+                    if (gi.m_ObjectGuid && !string.IsNullOrEmpty(gi.m_ObjectGuid.m_Guid))
+                    {
+                        if (gi.m_GearName == "GEAR_SCPhoto")
+                        {
+                            if (MyMod.ViewModelPhoto)
+                            {
+                                MyMod.ViewModelPhoto.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = gi.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture;
+                            }
+                        }
+                        else if (gi.m_GearName == "GEAR_SCMapPiece")
+                        {
+                            if (MyMod.ViewModelMap)
+                            {
+                                MyMod.ViewModelMap.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = gi.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture;
+                            }
+                        }
+                    }
+                }
+            }
+            private static void Postfix(PlayerManager __instance, GearItem gi)
+            {
+                if (MyMod.IsUserGeneratedHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCNote")
+                {
+                    StoneItem SI = gi.gameObject.GetComponent<StoneItem>();
+                    if (SI)
+                    {
+                        if (SI.m_RigidBody)
+                        {
+                            UnityEngine.Object.Destroy(SI.m_RigidBody);
+                        }
+                        UnityEngine.Object.Destroy(SI);
+                    }
+                    gi.m_StoneItem = null;
+                }
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "GetEquipButtonLocalizationId")] // Once
         private static class ItemDescriptionPage_GetEquipButtonLocalizationId
         {
@@ -6689,12 +7004,123 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
 
-                if (gi != null && MyMod.IsCustomHandItem(gi.m_GearName))
+                if (gi != null)
                 {
-                    __result = "GAMEPLAY_Use";
+                    if (MyMod.IsCustomHandItem(gi.m_GearName) || MyMod.IsUserGeneratedHandItem(gi.m_GearName))
+                    {
+                        __result = "GAMEPLAY_Use";
+                    } else if (gi.m_GearName == "GEAR_SCNote")
+                    {
+                        __result = "GAMEPLAY_Read";
+                    }
+                    //}else if (Shared.IsLocksmithItem(gi.m_GearName))
+                    //{
+                    //    __result = "GAMEPLAY_Place";
+                    //}
                 }
             }
         }
+
+        public static bool HaveReadFakeNote = false;
+
+        public static void DisplayNote(GearItem gi)
+        {
+            HaveReadFakeNote = true;
+            string NoteText = "Gived with console notes doesnt store any text.";
+
+            if (gi.GetComponent<ObjectGuid>() != null)
+            {
+                NoteText = Shared.DecompressString(gi.GetComponent<ObjectGuid>().Get());
+            }
+            Panel_HUD Panel = InterfaceManager.m_Panel_HUD;
+
+            Panel.m_CollectibleNoteObject.SetActive(true);
+            Panel.m_CollectibleNoteObjectText.text = NoteText;
+            Panel.m_CollectibleNoteObjectText.alignment = NGUIText.Alignment.Center;
+            Panel.m_CollectibleNoteObjectTitle.text = gi.m_DisplayName;
+            Panel.m_InspectMode_StandardElementsParent.SetActive(false);
+            Panel.m_InspectMode_InventoryStatusSprite.gameObject.SetActive(false);
+            Panel.m_InspectMode_Equip.gameObject.SetActive(false);
+            Panel.m_InspectMode_Take.gameObject.SetActive(false);
+            Panel.m_InspectMode_PutBack.gameObject.SetActive(false);
+            if (Panel.m_CollectibleNoteObjectText.height > Panel.m_ScrollPanelHeight)
+            {
+                Panel.m_CollectibleNoteObjectTitle.transform.localPosition = new Vector3(0.0f, Panel.m_TitleY, 0.0f);
+                Panel.m_CollectibleNoteScrollObject.SetActive(true);
+                Panel.m_CollectibleNoteScrollView.Scroll(100f);
+                UIButton componentInChildren = Panel.m_CollectibleNoteScrollObject.GetComponentInChildren<UIButton>();
+                if (componentInChildren)
+                {
+                    componentInChildren.defaultColor = Panel.m_SliderDefaultColor;
+                }
+            } else
+            {
+                Panel.m_CollectibleNoteObjectText.transform.position = new Vector3(Panel.m_CollectibleNoteObjectText.transform.position.x, 0.0f, 0.0f);
+                Panel.m_CollectibleNoteObjectTitle.transform.localPosition = new Vector3(0.0f, 0.5f * (float)Panel.m_CollectibleNoteObjectText.height + Panel.m_TitleYOffset, 0.0f);
+                Panel.m_CollectibleNoteScrollObject.SetActive(false);
+            }
+            gi.gameObject.SetActive(false);
+            if (Panel.m_HudDisplayMode == HudDisplayMode.Off)
+            {
+                NGUITools.SetActive(Panel.m_NonEssentialHud, true);
+            }
+            Panel.UpdateCollectibleNote();
+        }
+
+
+        //[HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "OnEquip")] // Once
+        //private static class ItemDescriptionPage_OnEquip
+        //{
+        //    private static void Postfix(ItemDescriptionPage __instance)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        MyMod.ProcessGivingItem(true);
+
+        //        GearItem gi = InterfaceManager.m_Panel_Inventory.GetCurrentlySelectedGearItem();
+
+        //        if (gi != null)
+        //        {
+        //            if (gi.m_GearName == "GEAR_SCNote")
+        //            {
+        //                DisplayNote(gi);
+        //            } else if (Shared.IsLocksmithItem(gi.m_GearName))
+        //            {
+        //                GameManager.GetPlayerManagerComponent().StartPlaceMesh(gi.gameObject, PlaceMeshFlags.None);
+        //            }
+        //            InterfaceManager.m_Panel_Inventory.Enable(false, true);
+        //        }
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(Panel_HUD), "OnCollectibleNoteReadingClickBack")] // Once
+        private static class Panel_HUD_OnCollectibleNoteReadingClickBack
+        {
+            private static void Postfix(Panel_HUD __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+
+                if (HaveReadFakeNote)
+                {
+                    __instance.m_InspectMode_StandardElementsParent.SetActive(false);
+                    __instance.m_InspectMode_InventoryStatusSprite.gameObject.SetActive(false);
+                    __instance.m_InspectMode_Equip.gameObject.SetActive(false);
+                    __instance.m_InspectMode_Take.gameObject.SetActive(false);
+                    __instance.m_InspectMode_PutBack.gameObject.SetActive(false);
+                    HaveReadFakeNote = false;
+                    GameManager.GetPlayerManagerComponent().m_Gear = null;
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(PlayerAnimation), "OnAnimationEvent_Generic_HiddenComplete")] // Once
         private static class PlayerAnimation_OnAnimationEvent_Generic_HiddenComplete
         {
@@ -6741,12 +7167,12 @@ namespace SkyCoop
 
                 bool Pass = true;
 
-                if(MyMod.ShouldReEquipFaster || MyMod.ShouldPerformAttack)
+                if (MyMod.ShouldReEquipFaster || MyMod.ShouldPerformAttack)
                 {
                     Pass = false;
                 }
 
-                if(__instance.GetState() == PlayerAnimation.State.Showing)
+                if (__instance.GetState() == PlayerAnimation.State.Showing)
                 {
                     MyMod.ShouldReEquipFaster = false;
                 }
@@ -6873,33 +7299,12 @@ namespace SkyCoop
                 MyMod.m_Panel_ChallengeComplete = __instance;
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerCameraAnim), "Start")]
-        //private static class PlayerCameraAnim_Start
-        //{
-        //    private static void Postfix(PlayerCameraAnim __instance)
-        //    {
-        //        if (__instance.gameObject)
-        //        {
-        //            if (__instance.gameObject.name == "NEW_FPHand_Rig")
-        //            {
-        //                MyMod.LeftHandHelper Helper = __instance.gameObject.GetComponent<MyMod.LeftHandHelper>();
-        //                if (Helper == null)
-        //                {
-        //                    Helper = __instance.gameObject.AddComponent<MyMod.LeftHandHelper>();
-        //                    Helper.MirrorThis = __instance.gameObject;
-        //                }
-        //            }
-        //        }
-        //    }
-        //}
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "OnQuitToMainMenu")]
         private static class Panel_Log_OnQuitToMainMenu
         {
             private static bool Prefix(Panel_Log __instance)
             {
                 MyMod.BeginRespawn();
-
-
                 return false;
             }
         }
@@ -6955,27 +7360,81 @@ namespace SkyCoop
                 return false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveCompletedInternal")]
-        private static class SaveGameSystem_SaveCompletedInternal
-        {
-            private static void Postfix(SaveGameSystem __instance)
+
+        public static void OnSaveCompleted(string name = "")
+        {            
+            if (MyMod.PendingRespawn)
             {
-                if (MyMod.PendingRespawn)
+                SaveGameSystem.SetAsyncEnabled(true);
+                MyMod.PendingRespawn = false;
+                MelonLogger.Msg("[SaveGameSystem] SaveCompletedInternal PendingRespawn");
+                SaveSlotInfo SSI = SaveGameSlotHelper.GetCurrentSaveSlotInfo();
+
+                if (SSI == null)
                 {
-                    SaveGameSystem.SetAsyncEnabled(true);
-                    MyMod.PendingRespawn = false;
-                    MelonLogger.Msg("[SaveGameSystem] SaveCompletedInternal PendingRespawn");
-                    SaveSlotInfo SSI = SaveGameSlotHelper.GetCurrentSaveSlotInfo();
-                    if (SSI == null)
+                    MelonLogger.Msg("Wooh Save info is null, trying other way...");
+                    MelonLogger.Msg("SaveGameSystem.GetCurrentSaveName() = " + SaveGameSystem.GetCurrentSaveName());
+                    GameManager.LoadSaveGameSlot(SaveGameSystem.GetCurrentSaveName(), 0);
+                }else{
+                    MelonLogger.Msg("[SaveGameSystem] Saving done, loading");
+                    GameManager.LoadSaveGameSlot(SSI);
+                }
+            }
+            SaveSlotInfo Sav = SaveGameSlotHelper.GetCurrentSaveSlotInfo();
+            if (Sav != null)
+            {
+                MelonLogger.Msg("[SaveGameSystem] " + Sav.m_SaveSlotName + " just has been saved");
+                long Hash = Shared.GetDeterministicId(SaveGameSlots.LoadDataFromSlot(Sav.m_SaveSlotName, "global"));
+                MelonLogger.Msg("[SaveGameSystem] Save hash: " + Hash);
+                if (QuitOnSave)
+                {
+                    MyMod.PendingSaveHashToSend = Hash;
+                    SaveGameSlots.WriteSlotToDisk(name);
+                    MyMod.QuitWhenSaveOperationFinished = true;
+                }else{
+                    if (MyMod.sendMyPosition && MyMod.ServerConfig.m_SaveScamProtection && MyMod.MyUGUID != "")
                     {
-                        MelonLogger.Msg("Woops Save info is null, trying other way...");
-                        MelonLogger.Msg("SaveGameSystem.GetCurrentSaveName() = " + SaveGameSystem.GetCurrentSaveName());
-                        GameManager.LoadSaveGameSlot(SaveGameSystem.GetCurrentSaveName(), 0);
-                    }else{
-                        MelonLogger.Msg("[SaveGameSystem] SaveCompletedInternal Saving done, loading");
-                        GameManager.LoadSaveGameSlot(SSI);
+                        using (Packet _packet = new Packet((int)ClientPackets.SAVEHASH))
+                        {
+                            _packet.Write(MyMod.MyUGUID);
+                            _packet.Write(Hash);
+                            _packet.Write(false);
+                            SendTCPData(_packet);
+                        }
                     }
                 }
+            }else{
+                MelonLogger.Msg("[SaveGameSystem] " + name + " just has been saved");
+                long Hash = Shared.GetDeterministicId(SaveGameSlots.LoadDataFromSlot(name, "global"));
+                MelonLogger.Msg("[SaveGameSystem] Save hash: " + Hash);
+
+                if (QuitOnSave)
+                {
+                    MyMod.PendingSaveHashToSend = Hash;
+                    SaveGameSlots.WriteSlotToDisk(name);
+                    MyMod.QuitWhenSaveOperationFinished = true;
+                }else{
+                    if (MyMod.sendMyPosition && MyMod.ServerConfig.m_SaveScamProtection && MyMod.MyUGUID != "")
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.SAVEHASH))
+                        {
+                            _packet.Write(MyMod.MyUGUID);
+                            _packet.Write(Hash);
+                            _packet.Write(false);
+                            SendTCPData(_packet);
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGame")]
+        private static class SaveGameSlots_SaveCompletedInternal
+        {
+            private static void Postfix(SaveGameSystem __instance, string name)
+            {
+                MelonLogger.Msg(ConsoleColor.Green, "SaveGame(" + name+")");
+                OnSaveCompleted(name);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "EnableDeathView")]
@@ -7019,7 +7478,7 @@ namespace SkyCoop
                         string InHandName = Gear.m_GearName;
                         if(InHandName == "GEAR_KnifeImprovised")
                         {
-                            MyMod.PriorityActionForOtherPlayer act = MyMod.GetKnifeUpgradeAction();
+                            DataStr.PriorityActionForOtherPlayer act = MyMod.GetCustomAction("Excision");
                             MyMod.DoLongAction(Gear.gameObject, act.m_ProcessText, act.m_Action);
                             return false;
                         }
@@ -7041,27 +7500,6 @@ namespace SkyCoop
                 MelonLogger.Msg("[EpicOnlineServicesManager] null");
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "GetDelegateForRadial")]
-        //private static class Panel_ActionsRadial_GetDelegateForRadial
-        //{
-        //    private static void Postfix(Panel_ActionsRadial __instance, Panel_ActionsRadial.RadialType radialType, ref Il2CppSystem.Action __result)
-        //    {
-        //        if(radialType == Panel_ActionsRadial.RadialType.Weapons)
-        //        {
-        //            bool HasWeapons = __instance.GetShouldGreyOut(Panel_ActionsRadial.RadialType.Weapons);
-        //            bool HasMelee = __instance.GetShouldGreyOut(Panel_ActionsRadial.RadialType.Tools);
-        //            if(HasWeapons)
-        //            {
-        //                __result = new System.Action(__instance.ShowWeaponRadial);
-        //            }else if (HasMelee)
-        //            {
-        //                __result = new System.Action(__instance.ShowToolsRadial);
-        //            }else{
-        //                __result = new System.Action(__instance.ShowNoWeaponMessage);
-        //            }
-        //        }
-        //    }
-        //}
         [HarmonyLib.HarmonyPatch(typeof(Keypad), "ProcessInteraction")]
         private static class Keypad_ProcessInteraction
         {
@@ -7069,6 +7507,382 @@ namespace SkyCoop
             {
                 MelonLogger.Msg(ConsoleColor.Blue, "[Papers codes] Interact with keypad that has code: " + __instance.m_Code);
                 MyMod.RestoreCodeFromGears();
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Lock), "ForceLockBegin")]
+        private static class LoadScene_ForceLockBegin
+        {
+            private static bool Prefix(Lock __instance)
+            {
+                if (__instance.gameObject.GetComponent<Comps.DoorLockedOnKey>())
+                {
+                    MyMod.SelectKeys(__instance.gameObject, MyMod.KeysAction.OPEN);
+                    return false;
+                }else{
+                    return true;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(uConsoleLog), "Add")]
+        internal static class uConsoleLog_Add
+        {
+            private static void Postfix(string text)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.DedicatedServerAppMode)
+                {
+                    MelonLogger.Msg(ConsoleColor.DarkGray,"[InGameConsole] " + text);
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "ForceSaveGame")]
+        internal static class GameManager_ForceSaveGame
+        {
+            private static void Prefix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.DedicatedServerAppMode)
+                {
+                    SaveGameSystem.AbortScreenshot();
+                }
+            }
+            private static void Postfix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (MyMod.DedicatedServerAppMode)
+                {
+                    SaveGameSystem.AbortScreenshot();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(CharcoalItem), "StartDetailSurvey")]
+        internal static class CharcoalItem_StartDetailSurvey
+        {
+            private static bool Prefix(CharcoalItem __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+
+                MyMod.ShowCharCoalPicker(__instance.gameObject, __instance);
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "ExitInterface")]
+        internal static class Panel_Log_ExitInterface
+        {
+            private static void Postfix(Panel_Log __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                string text = __instance.m_NotesTextField.GetText();
+                if (!string.IsNullOrEmpty(text))
+                {
+                    
+                    if (CharcoalItem.m_CharcoalItemInUseForSurvey != null)
+                    {
+                        CharcoalItem.m_CharcoalItemInUseForSurvey.StopSurveyAudio();
+                        GameManager.GetPlayerAnimationComponent().Trigger_Generic_Unstow();
+                        CharcoalItem.m_CharcoalItemInUseForSurvey.ConsumeCharcoal();
+                        CharcoalItem.m_CharcoalItemInUseForSurvey = null;
+                        MyMod.CreateCustomNote(text);
+                        __instance.m_NotesTextField.SetText("");
+                        __instance.Enable(false);
+                    }
+                } else
+                {
+                    if (CharcoalItem.m_CharcoalItemInUseForSurvey != null)
+                    {
+                        CharcoalItem.m_CharcoalItemInUseForSurvey.StopSurveyAudio();
+                        GameManager.GetPlayerManagerComponent().UnequipItemInHands();
+                        CharcoalItem.m_CharcoalItemInUseForSurvey = null;
+                        __instance.m_NotesTextField.SetText("");
+                        __instance.Enable(false);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(CabinFever), "DisabledForXPMode")]
+        internal static class CabinFever_DisabledForXPMode
+        {
+            private static void Postfix(CabinFever __instance, ref bool __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                __result = true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(IntestinalParasites), "IntestinalParasitesStart")]
+        internal static class IntestinalParasites_IntestinalParasitesStart
+        {
+            private static bool Prefix(IntestinalParasites __instance, bool nofx)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (GameManager.GetPlayerManagerComponent().PlayerIsDead() || InterfaceManager.IsPanelEnabled<Panel_ChallengeComplete>() || __instance.GetNumDosesRequired() == 0)
+                {
+                    return false;
+                }
+
+                float Damage = -5 * __instance.m_NumPiecesEatenThisRiskCycle;
+                float Fatigue = 8 * __instance.m_NumPiecesEatenThisRiskCycle;
+                float Thirst = 9 * __instance.m_NumPiecesEatenThisRiskCycle;
+
+                GameManager.GetConditionComponent().AddHealth(Damage, DamageSource.IntestinalParasites);
+                FoodPoisoning Poison = GameManager.GetFoodPoisoningComponent();
+                Poison.FoodPoisoningStart("GAMEPLAY_TaintedFood", true);
+                GameManager.GetFatigueComponent().AddFatigue(Fatigue);
+                GameManager.GetThirstComponent().AddThirst(Thirst);
+                GameManager.GetHungerComponent().AddReserveCalories(-300);
+
+                Poison.m_DurationHours = Poison.m_DurationHoursMin * __instance.m_NumPiecesEatenThisRiskCycle;
+                MelonLogger.Msg(ConsoleColor.Blue, "Intestinal Parasites risk evolved to food poison, m_NumPiecesEatenThisRiskCycle " + __instance.m_NumPiecesEatenThisRiskCycle + " Damage " + Damage);
+                __instance.m_NumPiecesEatenThisRiskCycle = 0;
+                __instance.m_HasParasiteRisk = false;
+                __instance.m_HasParasites = false;
+
+                StatsManager.IncrementValue(StatID.IntestinalParasites);
+                if (nofx)
+                {
+                    return false;
+                }
+                    
+                GameManager.GetPlayerVoiceComponent().Play(__instance.m_ParasitesVO, Voice.Priority.Critical);
+
+
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "AllowedToSave")]
+        internal static class GameManager_AllowedToSave
+        {
+            private static void Postfix(GameManager __instance, SaveState state, ref bool __result)
+            {
+                if(state == SaveState.InMemory)
+                {
+                    MelonLogger.Msg("[GameManager][AllowedToSave] state " + state);
+                    MelonLogger.Msg("s_SaveGameDelayTime " + GameManager.s_SaveGameDelayTime);
+                    bool g = (double)GameManager.s_SaveGameDelayTime <= (double)Time.time;
+                    MelonLogger.Msg("(double)GameManager.s_SaveGameDelayTime <= (double)Time.time = " + g);
+                    MelonLogger.Msg("AllowedToLoadActiveGame() " + GameManager.AllowedToLoadActiveGame());
+                    MelonLogger.Msg("m_AllowSaveWithoutGrounding " + GameManager.m_AllowSaveWithoutGrounding);
+                    MelonLogger.Msg("GameManager.m_PendingSave " + GameManager.m_PendingSave);
+
+                    if (__result == false)
+                    {
+                        if (AutoSaveAllTheCost)
+                        {
+                            MelonLogger.Msg(ConsoleColor.Red, "Can't autosave now, but we really need to, saving... ");
+                            AutoSaveAllTheCost = false;
+                            __result = true;
+                        }
+                    } else{
+                        AutoSaveAllTheCost = false;
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(WeatherSet), "Update")]
+        internal static class WeatherSet_Update
+        {
+            private static void Prefix(WeatherSet __instance)
+            {
+                WeatherTransition.m_WeatherTransitionTimeScalar = 0;
+            }
+            private static void Postfix(WeatherSet __instance)
+            {
+                WeatherTransition.m_WeatherTransitionTimeScalar = 1;
+            }
+        }
+        public static bool ShowInvitesAfterPicker = false;
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ActionPicker), "OnSelect")]
+        internal static class Panel_ActionPicker_OnSelect
+        {
+            private static void Postfix(Panel_ActionPicker __instance)
+            {
+                if (ShowInvitesAfterPicker)
+                {
+                    ShowInvitesAfterPicker = false;
+                    if (MyMod.iAmHost)
+                    {
+                        MyMod.ShowInvitesPicker(null, ExpeditionManager.GetInviteForClient(Shared.GetMacAddress()));
+                    } else
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.REQUESTEXPEDITIONINVITES))
+                        {
+                            MyMod.DoPleaseWait("Please wait...", "Calling to coordinator...");
+                            MyMod.SetRepeatPacket(MyMod.ResendPacketType.ExpeditionInvites);
+                            _packet.Write(true);
+                            MyMod.SendUDPData(_packet);
+                        }
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(EquipItemPopup), "UpdateAmmoStatus")]
+        internal static class EquipItemPopup_UpdateAmmoStatus
+        {
+            private static void Postfix(EquipItemPopup __instance)
+            {
+                GearItem Gear = GameManager.GetPlayerManagerComponent().m_ItemInHands;
+                if (Gear && (MyMod.IsCustomHandItem(Gear.m_GearName) || Gear.m_GearName == "GEAR_HandheldShortwave"))
+                {
+                    __instance.HideAmmoPopup();
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(EquipItemPopup), "ShowEquippedItem")]
+        internal static class EquipItemPopup_ShowEquippedItem
+        {
+            private static void Postfix(EquipItemPopup __instance, GearItem gi)
+            {
+                if (gi)
+                {
+                    if (MyMod.IsCustomHandItem(gi.m_GearName))
+                    {
+                        __instance.HideAmmoPopup();
+                    }
+                    string PrimaryFire = "";
+                    string AltFire = "";
+                    bool Pad = Utils.IsGamepadActive();
+                    bool Show = false;
+                    if (gi.m_GearName == "GEAR_HandheldShortwave")
+                    {
+                        __instance.m_ButtonPromptScrollWheel.ShowPromptForKey("Change frequency", "Scroll");
+                        //AltFire = "Expeditions";
+                        Show = true;
+                    } else if (gi.m_GearName == "GEAR_SCNote")
+                    {
+                        PrimaryFire = "Read";
+                        Show = true;
+                    }
+
+                    if (Show)
+                    {
+                        __instance.ShowItemIcons(PrimaryFire, AltFire, false);
+                        __instance.m_ButtonPromptFire.ShowPromptForKey(Pad ? PrimaryFire : AltFire, Pad ? "Fire" : "AltFire");
+                        __instance.MaybeRepositionFireButtonPrompt(Pad ? AltFire : PrimaryFire);
+                        __instance.m_ButtonPromptAltFire.ShowPromptForKey(Pad ? AltFire : PrimaryFire, Pad ? "AltFire" : "Interact");
+                        __instance.MaybeRepositionAltFireButtonPrompt(Pad ? PrimaryFire : AltFire);
+                    }
+                    __instance.m_GearItem = gi;
+                }
+            }
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(RockCache), "SetupInWorld")]
+        internal static class RockCache_SetupInWorld
+        {
+            private static bool Prefix(RockCache __instance)
+            {
+                GameObject Obj = __instance.gameObject;
+                FakeRockCache Cach = Obj.GetComponent<FakeRockCache>();
+                if (Cach == null)
+                {
+                    Cach = Obj.AddComponent<FakeRockCache>();
+                }
+                string GUID = ObjectGuidManager.GenerateNewGuidString();
+                ObjectGuid GUIDobj = Obj.GetComponent<ObjectGuid>();
+                if (GUIDobj == null)
+                {
+                    GUIDobj = Obj.AddComponent<ObjectGuid>();
+                }
+                GUIDobj.Set(GUID);
+                Cach.m_GUID = GUID;
+                Cach.m_Owner = MyMod.MyChatName;
+                Cach.m_Rocks = __instance.m_NumRocksFromDismantle;
+                Cach.Created();
+                UnityEngine.Object.Destroy(__instance);
+                return false;
+            }
+        }
+        public static FakeRockCache FakeRockCacheCallback = null;
+        [HarmonyLib.HarmonyPatch(typeof(Panel_GenericProgressBar), "ProgressBarEnded")]
+        internal static class Panel_GenericProgressBar_ProgressBarEnded
+        {
+            private static void Postfix(Panel_GenericProgressBar __instance, bool success, bool playerCancel)
+            {
+                if(FakeRockCacheCallback != null)
+                {
+                    GameManager.s_IsAISuspended = false;
+                    if (success)
+                    {
+                        FakeRockCacheCallback.DismantleFinished();
+                    }
+                    GameManager.GetPlayerManagerComponent().m_RockCacheInProgress = null;
+                    FakeRockCacheCallback = null;
+
+                    if (MyMod.sendMyPosition)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.FURNBREAKINSTOP))
+                        {
+                            _packet.Write(true);
+                            SendTCPData(_packet);
+                        }
+                    } else
+                    {
+                        ServerSend.FURNBREAKINSTOP(0, true, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "DoDetailSurvey")]
+        internal static class Panel_Map_DoDetailSurvey
+        {
+            private static void Postfix(Panel_Map __instance, SurveyType surveyType)
+            {
+                if(surveyType == SurveyType.Charcoal)
+                {
+                    Vector3 Position = GameManager.GetPlayerTransform().position;
+
+                    if (MyMod.sendMyPosition)
+                    {
+                        using (Packet _packet = new Packet((int)ClientPackets.CHARCOALDRAW))
+                        {
+                            _packet.Write(MyMod.level_guid);
+                            _packet.Write(Position);
+                            SendTCPData(_packet);
+                        }
+                    } else
+                    {
+                        ExpeditionManager.RegisterCharcoalDrawing(MyMod.level_guid, Position);
+                    }
+                }
             }
         }
     }

@@ -1,19 +1,7 @@
 ﻿using System;
 using UnityEngine;
-using System.Reflection;
-using System.Globalization;
+using Il2Cpp;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Net;
-using System.Net.Sockets;
-using MelonLoader;
-using Harmony;
-using UnhollowerRuntimeLib;
-using UnhollowerBaseLib;
-using SkyCoop;
 
 using GameServer;
 
@@ -23,14 +11,62 @@ namespace SkyCoop
     {
         public static int DebugVal = 0;
         public static uint DebugSound = 0U;
+        public static string ContainerOverride = "";
 
         public static DecalProjectorInstance Replica;
+        public static bool Inited = false;
+
+        public class DebugFunction 
+        {
+            public float X = 0;
+            public float Y = 0;
+            public Action Fn = null;
+            public DebugFunction(float _X, float _Y, Action _Fn) 
+            {
+                X = _X;
+                Y = _Y;
+                Fn = _Fn;
+            }
+        }
+        public static Dictionary<string, List<DebugFunction>> Categories = new Dictionary<string, List<DebugFunction>>();
+
+        public void AddOption(string Tab, Action Fn)
+        {
+            List<DebugFunction> Options;
+            if(!Categories.TryGetValue(Tab, out Options))
+            {
+                Categories.Add(Tab, new List<DebugFunction>());
+                Categories.TryGetValue(Tab, out Options);
+            }
+
+            float X = 20;
+
+            if(Tab == "Main")
+            {
+                X = 160;
+            }
+            int offset = 20;
+
+            float Y = 10 + offset * Options.Count;
+
+            Options.Add(new DebugFunction(X, Y, Fn));
+        }
+
+        public static void InitUI()
+        {
+            Inited = true;
+        }
 
         public static void Render()
         {
             if (MyMod.DebugGUI == false)
             {
                 return;
+            }
+
+            if (!Inited)
+            {
+                InitUI();
             }
 
             if (MyMod.AdvancedDebugMode != "")
@@ -60,7 +96,7 @@ namespace SkyCoop
 
                     if (stillExists == true && MyMod.DebugLastAnimal != null && MyMod.AdvancedDebugMode == "AnimalsAllStats")
                     {
-                        MyMod.AnimalUpdates _AU = MyMod.DebugLastAnimal.GetComponent<MyMod.AnimalUpdates>();
+                        Comps.AnimalUpdates _AU = MyMod.DebugLastAnimal.GetComponent<Comps.AnimalUpdates>();
                         BaseAi _AI = MyMod.DebugLastAnimal.GetComponent<BaseAi>();
 
                         string spawnRegionString = "";
@@ -138,7 +174,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.BLOCK))
                     {
                         _packet.Write(cube.transform.position);
-                        MyMod.SendTCPData(_packet);
+                        MyMod.SendUDPData(_packet);
                     }
                 }
                 if (MyMod.iAmHost == true)
@@ -151,7 +187,7 @@ namespace SkyCoop
             }
             if (GUI.Button(new Rect(20, 70, 80, 20), "Hour skip"))
             {
-                MyMod.SkipRTTime(1);
+                Shared.SkipRTTime(1);
             }
             if (GUI.Button(new Rect(20, 100, 80, 20), "More"))
             {
@@ -193,13 +229,65 @@ namespace SkyCoop
                 {
                     HarmonyLib.Harmony.UnpatchAll();
                 }
-                if (GUI.Button(new Rect(160, 160, 120, 20), "EverySecond="+MyMod.KillEverySecond))
+                if (GUI.Button(new Rect(160, 160, 120, 20), "SecondBan="+MyMod.KillEverySecond))
                 {
                     MyMod.KillEverySecond = !MyMod.KillEverySecond;
                 }
-                if (GUI.Button(new Rect(160, 190, 120, 20), "Close"))
+                if (GUI.Button(new Rect(160, 190, 120, 20), "MinuteBan=" + MyMod.KillEveryInGameMinute))
                 {
-                    MyMod.UIDebugType = "";
+                    MyMod.KillEveryInGameMinute = !MyMod.KillEveryInGameMinute;
+                }
+                if (GUI.Button(new Rect(160, 220, 120, 20), "Flag1=" + MyMod.Flag1))
+                {
+                    MyMod.Flag1 = !MyMod.Flag1;
+                }
+                if (GUI.Button(new Rect(160, 250, 120, 20), "Flag2=" + MyMod.Flag2))
+                {
+                    MyMod.Flag2 = !MyMod.Flag2;
+                }
+                if (GUI.Button(new Rect(160, 280, 120, 20), "Flag3=" + MyMod.Flag3))
+                {
+                    MyMod.Flag3 = !MyMod.Flag3;
+                }
+                if (GUI.Button(new Rect(160, 310, 120, 20), "Flag4=" + MyMod.Flag4))
+                {
+                    MyMod.Flag4 = !MyMod.Flag4;
+                }
+                if (GUI.Button(new Rect(160, 340, 120, 20), "Flag5=" + MyMod.Flag5))
+                {
+                    MyMod.Flag5 = !MyMod.Flag5;
+                }
+                if (GUI.Button(new Rect(160, 370, 120, 20), "Flag6=" + MyMod.Flag6))
+                {
+                    MyMod.Flag6 = !MyMod.Flag6;
+                }
+                if (GUI.Button(new Rect(160, 400, 120, 20), "Flag7=" + MyMod.Flag7))
+                {
+                    MyMod.Flag7 = !MyMod.Flag7;
+                }
+                if (GUI.Button(new Rect(160, 430, 120, 20), "Flag8=" + MyMod.Flag8))
+                {
+                    MyMod.Flag8 = !MyMod.Flag8;
+                }
+                if (GUI.Button(new Rect(160, 460, 120, 20), "Flag9=" + MyMod.Flag9))
+                {
+                    MyMod.Flag9 = !MyMod.Flag9;
+                }
+                if (GUI.Button(new Rect(160, 490, 120, 20), "Flag10=" + MyMod.Flag10))
+                {
+                    MyMod.Flag10 = !MyMod.Flag10;
+                }
+                if (GUI.Button(new Rect(160, 520, 120, 20), "Flag11=" + MyMod.Flag11))
+                {
+                    MyMod.Flag11 = !MyMod.Flag11;
+                }
+                if (GUI.Button(new Rect(160, 550, 120, 20), "Flag12=" + MyMod.Flag12))
+                {
+                    MyMod.Flag12 = !MyMod.Flag12;
+                }
+                if (GUI.Button(new Rect(160, 580, 120, 20), "Flag13=" + MyMod.Flag13))
+                {
+                    MyMod.Flag13 = !MyMod.Flag13;
                 }
             }
 
@@ -218,7 +306,7 @@ namespace SkyCoop
                 {
                     MyMod.UIDebugType = "AnimalsDebug";
                 }
-                if (GUI.Button(new Rect(160, 130, 80, 20), "Test"))
+                if (GUI.Button(new Rect(160, 130, 80, 20), "Photo"))
                 {
                     //string LoadSceneSTR = "BlackrockPrisonZone";
                     //GameManager.GetPlayerManagerComponent().m_SceneTransitionStarted = true;
@@ -238,7 +326,12 @@ namespace SkyCoop
                     //GameManager.LoadScene(LoadSceneSTR, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
 
                     //MyMod.DebugDiagnosis = true;
-                    //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, GameManager.GetConditionComponent().m_CurrentHP);
+
+                    //Condition Con = GameManager.GetConditionComponent();
+                    //Hunger Hun = GameManager.GetHungerComponent();
+                    //Thirst Thi = GameManager.GetThirstComponent();
+
+                    //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, Con.m_CurrentHP, Con.m_MaxHP,Thi.m_CurrentThirst, Hun.m_CurrentReserveCalories, Hun.m_MaxReserveCalories);
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
                     //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
                     //MyMod.AddSpray(Replica);
@@ -280,29 +373,33 @@ namespace SkyCoop
                     //    ServerSend.CAIRNS();
                     //}
                     //GameManager.GetPlayerAnimationComponent().Trigger_Breakdown_Intro(StruggleBonus.StruggleWeaponType.Hammer);
-                    if(MyMod.NpcDummy == null)
-                    {
-                        GameObject NPCDummy = new GameObject();
+                    //string quote = "\"";
+                    //string Copy = "AddSafeScene("+ quote + MyMod.level_guid + quote+ ");";
+                    //GUIUtility.systemCopyBuffer = Copy;
 
-                        NPC NPCcon = NPCDummy.AddComponent<NPC>();
-                        NPCThirst T = NPCDummy.AddComponent<NPCThirst>();
-                        NPCFreezing F = NPCDummy.AddComponent<NPCFreezing>();
-                        NPCCondition C = NPCDummy.AddComponent<NPCCondition>();
-                        T.m_NPC = NPCcon;
-                        F.m_NPC = NPCcon;
-                        C.m_NPC = NPCcon;
-                        NPCcon.m_Thirst = T;
-                        NPCcon.m_Condition = C;
-                        NPCcon.m_Freezing = F;
-                        NPCcon.m_HasBeenInteractedWith = true;
-                        NPCcon.m_EnableConditionUpdate = true;
-                        NPCcon.m_Body = NPCDummy.AddComponent<CarryableBody>();
-                        MyMod.NpcDummy = NPCDummy;
+                    //MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
+                    //MelonLogger.Msg("Save slot userdefined name " + SaveGameSlots.GetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName()));
+
+                    //if (string.IsNullOrEmpty(ContainerOverride))
+                    //{
+                    //    ContainerOverride = "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";
+                    //} else
+                    //{
+                    //    ContainerOverride = "";
+                    //}
+                    //ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), (int)GameManager.GetUniStorm().m_CurrentRegion);
+                    MyMod.LogScreenshotData();
+                }
+                if (GUI.Button(new Rect(160, 160, 80, 20), "CrashSite"))
+                {
+                    if (MyMod.iAmHost)
+                    {
+                        ExpeditionManager.StartCrashSite();
                     }
                 }
-                if (GUI.Button(new Rect(160, 160, 80, 20), "Close"))
+                if (GUI.Button(new Rect(160, 190, 80, 20), "Show"))
                 {
-                    MyMod.UIDebugType = "";
+                    SafeZoneManager.DebugRenderZones();
                 }
             }
 
@@ -501,7 +598,7 @@ namespace SkyCoop
             if (MyMod.UIDebugType == "AnimalsDebug")
             {
                 GUI.Box(new Rect(150, 10, 100, 270), "Debug Animals");
-                if (GUI.Button(new Rect(160, 40, 80, 20), "UNUSED"))
+                if (GUI.Button(new Rect(160, 40, 80, 20), ThreadManager.executeOnMainThread.Count + "-" + ThreadManager.executeCopiedOnMainThread.Count))
                 {
 
                 }
@@ -535,35 +632,6 @@ namespace SkyCoop
                 {
                     InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT GUID TO TRACK", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
-                if (GUI.Button(new Rect(160, 190, 80, 20), "Glow"))
-                {
-                    if (MyMod.DebugLastAnimal != null)
-                    {
-                        MyMod.Outline OL = MyMod.DebugLastAnimal.GetComponent<MyMod.Outline>();
-
-                        if (OL == null)
-                        {
-                            MyMod.DebugLastAnimal.AddComponent<MyMod.Outline>();
-                            OL = MyMod.DebugLastAnimal.GetComponent<MyMod.Outline>();
-                            OL.m_OutlineColor = Color.green;
-                            OL.needsUpdate = true;
-                            MelonLogger.Msg("Added outlines");
-                        }
-                        else
-                        {
-                            if (OL.m_OutlineColor == Color.green)
-                            {
-                                OL.m_OutlineColor = Color.clear;
-                                OL.needsUpdate = true;
-                            }
-                            else
-                            {
-                                OL.m_OutlineColor = Color.green;
-                                OL.needsUpdate = true;
-                            }
-                        }
-                    }
-                }
                 if (GUI.Button(new Rect(160, 220, 80, 20), "Remove all"))
                 {
                     for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
@@ -587,7 +655,7 @@ namespace SkyCoop
                 if (GUI.Button(new Rect(160, 40, 80, 20), "Next Top"))
                 {
                     int topsCount = MyMod.players[0].transform.GetChild(0).GetChild(1).childCount;
-                    MyMod.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerClothingManager>();
+                    Comps.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<Comps.MultiplayerPlayerClothingManager>();
                     mPMC.m_Debug = true;
                     mPMC.m_DebugT = mPMC.m_DebugT + 1;
                     if (mPMC.m_DebugT >= topsCount)
@@ -599,7 +667,7 @@ namespace SkyCoop
                 if (GUI.Button(new Rect(160, 70, 80, 20), "Next Bottom"))
                 {
                     int pantsCount = MyMod.players[0].transform.GetChild(0).GetChild(2).childCount;
-                    MyMod.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<MyMod.MultiplayerPlayerClothingManager>();
+                    Comps.MultiplayerPlayerClothingManager mPMC = MyMod.players[0].GetComponent<Comps.MultiplayerPlayerClothingManager>();
                     mPMC.m_Debug = true;
                     mPMC.m_DebugB = mPMC.m_DebugB + 1;
                     if (mPMC.m_DebugB >= pantsCount)

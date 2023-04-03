@@ -3,8 +3,13 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+#if(!DEDICATED)
 using UnityEngine;
 using MelonLoader.TinyJSON;
+using Il2Cpp;
+#else
+using TinyJSON;
+#endif
 using System.Net;
 
 namespace SkyCoop
@@ -22,6 +27,7 @@ namespace SkyCoop
         public static SupporterBenefits AvailableBenefits = new SupporterBenefits();
         public static SupporterBenefits ConfiguratedBenefits = new SupporterBenefits();
         public static int FlairSpots = 4;
+        public static WebClient web;
 
         public static void FlairsIDsInit()
         {
@@ -40,9 +46,14 @@ namespace SkyCoop
             FlairsIDs.Add("WiRo"); // 12
             FlairsIDs.Add("Bear"); // 13
             FlairsIDs.Add("Kai"); // 14
-
+            FlairsIDs.Add("Pie"); // 15
+            FlairsIDs.Add("Snw"); // 16
+            FlairsIDs.Add("Lammy"); // 17
+            FlairsIDs.Add("Dedi"); // 18
+            FlairsIDs.Add("Ogur"); // 19
             FlairsIDsReady = true;
         }
+#if (!DEDICATED)
 
         public static void ApplyFlairsForModel(int PlayerIndex, List<int> FlairsConfig)
         {
@@ -53,6 +64,7 @@ namespace SkyCoop
                 DebugLog("Can't apply flairs, there no player object with index " + PlayerIndex);
             }
         }
+
 
         public static void ApplyFlairsForModel(GameObject obj, List<int> FlairsConfig, string DebugName = "unknown")
         {
@@ -80,14 +92,14 @@ namespace SkyCoop
                             Flair.SetActive(false);
                         }else {
                             Flair.SetActive(true);
-                            int DisplaySpot = FlairInx + 1;
+                            int DisplaySpot = Spot + 1;
                             DebugLog(DebugName + " equipped "+GetFlairNameByID(FlairInx)+" on spot "+ DisplaySpot);
                         }
                     }
                 }
             }
         }
-
+#endif
         public static int GetFlairIDByName(string name)
         {
             for (int i = 0; i < FlairsIDs.Count; i++)
@@ -121,6 +133,14 @@ namespace SkyCoop
         // if user has old or modified saves where listed benefits that can't be used anymore.
         public static SupporterBenefits VerifyBenefitsWithConfig(string Owner, SupporterBenefits Desired)
         {
+            if (DeBug)
+            {
+                Log("Player "+Owner+ " Desired following flairs:");
+                for (int i = 0; i < Desired.m_Flairs.Count; i++)
+                {
+                    Log("Slot" + i + " FlairID "+ Desired.m_Flairs[i]);
+                }
+            }
             SupporterBenefits Original = GetPlayerBenefits(Owner);
             SupporterBenefits Configurated = new SupporterBenefits();
             for (int i = 0; i < FlairSpots; i++)
@@ -136,6 +156,7 @@ namespace SkyCoop
             {
                 Configurated.m_BrightNick = true;
             }
+            DebugLog("Configurated flairs for this player:");
             for (int i = 0; i < Desired.m_Flairs.Count; i++)
             {
                 if(i >= FlairSpots)
@@ -150,7 +171,9 @@ namespace SkyCoop
                         Configurated.m_Flairs[i] = Flair;
                     }
                 }
+                DebugLog("Slot" + i + " FlairID " + Configurated.m_Flairs[i]);
             }
+
 
             return Configurated;
         }
@@ -176,18 +199,30 @@ namespace SkyCoop
         }
         public static void Log(string LOG)
         {
+#if (!DEDICATED)
             MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[Supporters] " + LOG);
+#else
+            Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Blue);
+#endif
         }
         public static void DebugLog(string LOG)
         {
             if (DeBug)
             {
+#if (!DEDICATED)
                 MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[Supporters] " + LOG);
+#else
+                Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Blue);
+#endif
             }
         }
         public static void Error(string LOG)
         {
+#if (!DEDICATED)
             MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[Supporters] " + LOG);
+#else
+            Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Red);
+#endif
         }
 
         public static bool IsLoaded()
@@ -337,6 +372,8 @@ namespace SkyCoop
                     PrintAll();
                 }
             }
+            web.Dispose();
+            web = null;
         }
 
         public static void GetSupportersList(bool Force = false)
@@ -348,7 +385,14 @@ namespace SkyCoop
             if (!Force && !IsLoaded())
             {
                 Log("Trying to get supporters list...");
-                WebClient web = new WebClient();
+
+                if(web != null)
+                {
+                    web.Dispose();
+                    web = null;
+                }
+
+                web = new WebClient();
                 string url = "https://raw.githubusercontent.com/Filigrani/SkyCoop/main/Supporters.json";
                 Uri uri = new Uri(url);
                 web.DownloadStringCompleted += new DownloadStringCompletedEventHandler(GotJsonCallback);
@@ -385,6 +429,7 @@ namespace SkyCoop
                 }
             }
         }
+#if (!DEDICATED)
         public static void EquipFlair(int Slot, int FlairID)
         {
             Log("Equip Flair " + FlairID + " To Slot " + Slot);
@@ -393,6 +438,7 @@ namespace SkyCoop
             MPSaveManager.SaveData("ConfiguratedBenefits", JSON.Dump(ConfiguratedBenefits));
             ApplyFlairsForModel(MyMod.MyPlayerDoll, ConfiguratedBenefits.m_Flairs, "I am");
         }
+#endif
         public static void CheckForNewFlairs()
         {
             int Amount = GetFlairsUpdateData();
@@ -420,10 +466,12 @@ namespace SkyCoop
             {
                 AvailableBenefits = GetPlayerBenefits(MyID);
                 LoadConfiguredBenfits();
+#if (!DEDICATED)
                 if (MyMod.MyPlayerDoll)
                 {
                     ApplyFlairsForModel(MyMod.MyPlayerDoll, ConfiguratedBenefits.m_Flairs, "I am");
                 }
+#endif
                 Log("My Supporter Bonuses loaded!");
                 CheckForNewFlairs();
             }else{

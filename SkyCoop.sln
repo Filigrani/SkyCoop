@@ -1,9 +1,9 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31402.337
+# Visual Studio Version 17
+VisualStudioVersion = 17.4.33110.190
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SkyCoop", "ClassLibrary1\SkyCoop.csproj", "{7F1E1453-C20A-4A4C-9C7D-41DD727613BF}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkyCoop", "SkyCoop.csproj", "{AE6A851F-E92F-441C-B1DC-F57DE59855BC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -11,15 +11,15 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{7F1E1453-C20A-4A4C-9C7D-41DD727613BF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{7F1E1453-C20A-4A4C-9C7D-41DD727613BF}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{7F1E1453-C20A-4A4C-9C7D-41DD727613BF}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{7F1E1453-C20A-4A4C-9C7D-41DD727613BF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE6A851F-E92F-441C-B1DC-F57DE59855BC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE6A851F-E92F-441C-B1DC-F57DE59855BC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE6A851F-E92F-441C-B1DC-F57DE59855BC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE6A851F-E92F-441C-B1DC-F57DE59855BC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
-		SolutionGuid = {DDE64EF4-2B1F-4AA4-9504-2D14102E9166}
+		SolutionGuid = {0E29672E-1C53-48A5-A221-673017448719}
 	EndGlobalSection
 EndGlobal

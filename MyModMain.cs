@@ -1,27 +1,43 @@
 ﻿using System;
 using UnityEngine;
-using System.Reflection;
 using System.Globalization;
-using System.Collections.Generic;
-using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Net;
-using System.Net.Sockets;
-using System.IO;
 using System.IO.Compression;
 using MelonLoader;
 using Harmony;
-using UnhollowerRuntimeLib;
-using UnhollowerBaseLib;
 using GameServer;
 using MelonLoader.TinyJSON;
-using UnityEngine.Networking;
-using KeyboardUtilities;
-using System.Runtime.InteropServices;
-using IL2CPP = Il2CppSystem.Collections.Generic;
+using Il2Cpp;
+using static SkyCoop.Comps;
+using static SkyCoop.DataStr;
+using static System.ConsoleColor;
+using Il2CppTLD.Gear;
+using Il2CppTLD.AddressableAssets;
+using Il2CppTLD.Audio;
+using Il2CppTLD.Cooking;
+using Il2CppTLD.Electrostatic;
+using Il2CppTLD.Encryption;
+using Il2CppTLD.Events;
+using Il2CppTLD.Gameplay;
+using Il2CppTLD.GameplayTags;
+using Il2CppTLD.Interactions;
+using Il2CppTLD.IO;
+using Il2CppTLD.Logging;
+using Il2CppTLD.ModularElectrolizer;
+using Il2CppTLD.News;
+using Il2CppTLD.OptionalContent;
+using Il2CppTLD.PDID;
+using Il2CppTLD.Platform;
+using Il2CppTLD.RuntimeTest;
+using Il2CppTLD.SaveState;
+using Il2CppTLD.Scenes;
+using Il2CppTLD.Serialization;
+using Il2CppTLD.Stats;
+using Il2CppTLD.Switch;
+using Il2CppTLD.TimeLib;
+using Il2CppTLD.Trial;
+using Il2CppTLD.UI;
+using Il2CppTLD.UserGeneratedContent;
 
 namespace SkyCoop
 {
@@ -34,9 +50,9 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.10.4";
+            public const string Version = "0.11.6";
             public const string DownloadLink = null;
-            public const int RandomGenVersion = 3;
+            public const int RandomGenVersion = 5;
         }
         public static int LastLoadedGenVersion = 0;
         public static bool CantBeUsedForMP = false;
@@ -49,6 +65,11 @@ namespace SkyCoop
         public static string LobbyState = "Idle";
         public static bool StartServerAfterSelectSave = false;
         public static int PortsToHostOn = 26950;
+        public static bool LastSafeStatus = false;
+        public static bool OnExpedition = false;
+        public static string ExpeditionLastTaskText = "";
+        public static string ExpeditionLastName = "";
+        public static int ExpeditionLastTime = 0;
 
         //VARS
         #region VARS
@@ -56,31 +77,17 @@ namespace SkyCoop
         public static bool sendMyPosition = false;
         public static bool iAmHost = false;
         public static bool IamShatalker = false;
+        public static string MyUGUID = "";
         public static GameObject playerbody = null;
         public static List<GameObject> players = new List<GameObject>();
-        public static List<MultiPlayerClientData> playersData = new List<MultiPlayerClientData>();
+        public static List<DataStr.MultiPlayerClientData> playersData = new List<DataStr.MultiPlayerClientData>();
         public static GameObject MyPlayerDoll = null;
         public static GameObject DollCameraDummy = null;
         public static bool IsDead = false;
-        public static InvisibleEntityManager ShatalkerObject = null;
-        public static HUDNowhereToHide DarkWalkerHUD = null;
-        public static GameObject WardWidget = null;
-        public static GameObject LureWidget = null;
-        public static GameObject DistanceWidget = null;
-        public static UILabel DistanceLable = null;
-        public static bool WardIsActive = false;
-        public static bool LureIsActive = false;
-        public static bool PreviousDarkWalkerReady = false;
-        public static bool DarkWalkerIsReady = false;
-        public static bool ShatalkerModeClient = false;
         public static int levelid = 0;
         public static string level_name = "";
         public static string level_guid = "";
         public static string previous_level_guid = "";
-        public static Vector3 PreviousBlock = new Vector3(0, 0, 0);
-        public static Vector3 LastRecivedShatalkerVector = new Vector3(0, 0, 0);
-        public static Vector3 LastRecivedOtherPlayerVector = new Vector3(0, 0, 0);
-        public static Quaternion LastRecivedOtherPlayerQuatration = new Quaternion(0, 0, 0, 0);
         public static bool NeedSyncTime = false;
         public static bool LightSource = false;
         public static bool PreviousLightSource = false;
@@ -92,7 +99,7 @@ namespace SkyCoop
         public static GearItem LastSelectedGear = null;
         public static bool NeedRefreshInv = false;
         public static string MyAnimState = "Idle";
-        public static MultiplayerEmote MyEmote = null;
+        public static DataStr.MultiplayerEmote MyEmote = null;
         public static string MyPreviousAnimState = "Idle";
         public static bool MyHasRifle = false;
         public static bool HasRevolver = false;
@@ -105,46 +112,25 @@ namespace SkyCoop
         public static bool IsSleeping = false;
         public static bool PreviousSleeping = false;
         public static bool IsCycleSkiping = false;
-        public static List<string> KnownAnimals = new List<string>();
         public static int MyArrows = 0;
         public static int MyFlares = 0;
         public static int MyBlueFlares = 0;
         public static int StepState = 0;
-        public static GameObject LastObjectUnderCrosshair = null;
-        public static Vector3 V3BeforeSleep = new Vector3(0, 0, 0);
-        public static bool NeedV3BeforeSleep = false;
-        public static GameObject MenuStuffSpawned = null;
         public static bool AnimalsController = true;
         public static int MyTicksOnScene = 0;
-        public static float MaxAniamlsSyncDistance = 245f;
-        public static int MaxAnimalsSyncCount = 11;
-        public static int MaxAnimalsSyncCountOnConnect = 2;
-        public static int MaxAnimalsSyncNeed = 0;
         public static int DeltaAnimalsMultiplayer = 4;
         public static string DebugAnimalGUID = "";
         public static string DebugAnimalGUIDLast = "";
         public static GameObject DebugLastAnimal = null;
-        public static bool InDarkWalkerMode = false;
-        public static bool RealTimeCycleSpeed = true;
         public static string HarvestingAnimal = "";
         public static string PreviousHarvestingAnimal = "";
-        public static List<WalkTracker> SurvivorWalks = new List<WalkTracker>();
-        public static WalkTracker LastLure = new WalkTracker();
         public static bool ALWAYS_FUCKING_CURSOR_ON = false;
-        public static bool AnimalSyncOption = true;
         public static GameObject PistolBulletPrefab = null;
         public static GameObject RevolverBulletPrefab = null;
-        public static ShootSync PendingShoot = null;
-        public static float OverridenStartCountDown = 900f;
         public static bool NeedTryReconnect = false;
         public static bool TryingReconnect = false;
         public static int NoHostResponceSeconds = 0;
-        public static int AttempsToReconnect = 0;
-        public static bool SendRQEvent = false;
-        public static bool NeedDoBearDamage = false;
-        public static bool NeedDoMooseDamage = false;
         public static GearItem SaveThrowingItem = null;
-        public static string LastStruggleAnimalName = "";
         public static int OverridedHourse = 12;
         public static int OverridedMinutes = 0;
         public static string OveridedTime = "12:0";
@@ -154,8 +140,6 @@ namespace SkyCoop
         public static string SteamLobbyToJoin = "";
         public static AssetBundle LoadedBundle = null;
         public static int MaxPlayers = 1;
-        public static GameObject GiveItemLableObj = null;
-        public static UILabel GiveItemLable = null;
         public static int GiveItemTo = -1;
         public static string MyHat = "";
         public static string MyTop = "";
@@ -163,32 +147,25 @@ namespace SkyCoop
         public static string MyBoots = "";
         public static string MyScarf = "";
         public static string MyBalaclava = "";
-        public static List<BrokenFurnitureSync> BrokenFurniture = new List<BrokenFurnitureSync>();
-        public static List<PickedGearSync> PickedGears = new List<PickedGearSync>();
-        public static List<PickedGearSync> RecentlyPickedGears = new List<PickedGearSync>();
-        public static List<ClimbingRopeSync> DeployedRopes = new List<ClimbingRopeSync>();
-        public static List<ContainerOpenSync> LootedContainers = new List<ContainerOpenSync>();
-        public static List<DeathContainerData> DeathCreates = new List<DeathContainerData>();
-        public static Dictionary<string, Dictionary<string, string>> LootedContainersNew = new Dictionary<string, Dictionary<string, string>>();
-        public static List<string> HarvestedPlants = new List<string>();
-        public static List<ShowShelterByOther> ShowSheltersBuilded = new List<ShowShelterByOther>();
+        public static List<DataStr.PickedGearSync> RecentlyPickedGears = new List<DataStr.PickedGearSync>();
+        public static List<DataStr.ClimbingRopeSync> DeployedRopes = new List<DataStr.ClimbingRopeSync>();
+        public static List<DataStr.DeathContainerData> DeathCreates = new List<DataStr.DeathContainerData>();
+        public static List<DataStr.ShowShelterByOther> ShowSheltersBuilded = new List<DataStr.ShowShelterByOther>();
         public static bool IsDrinking = false;
         public static bool PreviousIsDrinking = false;
         public static bool IsEating = false;
         public static bool PreviousIsEating = false;
-        public static ServerConfigData ServerConfig = new ServerConfigData();
+        public static DataStr.ServerConfigData ServerConfig = new DataStr.ServerConfigData();
         public static bool NowHeavyBreath = false;
         public static bool PreviousNowHeavyBreath = false;
         public static int BloodLosts = 0;
         public static int PreviousBloodLosts = 0;
         public static PlayerControlMode PreviousControlModeBeforeAction = PlayerControlMode.Normal;
-        public static MultiplayerPlayer PlayerInteractionWith = null;
+        public static Comps.MultiplayerPlayer PlayerInteractionWith = null;
         public static GearItem EmergencyStimBeforeUse = null;
         public static bool HasInfecitonRisk = false;
         public static bool PreviousHasInfectionRisk = false;
-        public static ContainerOpenSync MyContainer = null;
-        public static int UpdateLootedContainers = -1;
-        public static int UpdatePickedGears = -1;
+        public static DataStr.ContainerOpenSync MyContainer = null;
         public static int UpdatePickedPlants = -1;
         public static int NeedConnectAfterLoad = -1;
         public static int NeedLoadSaveAfterLoad = -1;
@@ -196,16 +173,16 @@ namespace SkyCoop
         public static int UpdateRopesAndFurns = -1;
         public static int UpdateCampfires = -1;
         public static int UpdateEverything = -1;
+        public static int RemoveAttachedGears = -1;
         public static int StartDSAfterLoad = -1;
         public static int SendAfterLoadingFinished = -1;
         public static int TryMakeLobbyAgain = -1;
         public static int RegularUpdateSeconds = 7;
         public static int MinutesFromStartServer = 0;
-        public static int TimeOutSeconds = 30;
+        public static int TimeOutSeconds = 300;
         public static int TimeOutSecondsForLoaders = 300;
-        public static int TimeToWorryAboutLastRequest = 35;
+        public static int TimeToWorryAboutLastRequest = 10;
         public static bool SkipEverythingForConnect = false;
-        public static GameObject UISteamFreindsMenuObj = null;
         public static int PlayersOnServer = 0;
         public static GameObject UIHostMenu = null;
         public static GameObject MicrophoneIdicator = null;
@@ -224,11 +201,13 @@ namespace SkyCoop
         public static Transform CustomizeUiScrollContentRoot = null;
         public static int TargetFlairSlot = 1;
         public static string NotificationString = "";
+        public static GameObject ExpeditionEditorUI = null;
+        public static GameObject ExpeditionEditorSelectUI = null;
 
         public static string CustomServerName = "";
         public static string MyLobby = "";
         public static bool ApplyOtherCampfires = false;
-        public static Dictionary<int, string> SlicedJsonDataBuffer = new Dictionary<int, string>();
+        public static Dictionary<long, string> SlicedJsonDataBuffer = new Dictionary<long, string>();
         public static Dictionary<int, List<byte>> SlicedBytesDataBuffer = new Dictionary<int, List<byte>>();
         public static bool DebugTrafficCheck = false;
         public static Dictionary<string, bool> OpenableThings = new Dictionary<string, bool>();
@@ -236,8 +215,12 @@ namespace SkyCoop
         public static Dictionary<int, GameObject> TrackableDroppedGearsObjs = new Dictionary<int, GameObject>();
         public static int OverrideLampReduceFuel = -1;
         public static Dictionary<string, float> BooksResearched = new Dictionary<string, float>();
-        public static GameObject GasMaskOverlay = null;
-        public static GameObject NpcDummy = null;
+        public static Dictionary<string, LoadScene> DoorsObjs = new Dictionary<string, LoadScene>();
+        public static bool DelayedGearsPickup = false;
+        public static List<DataStr.PickedGearSync> PickedGearsBackup = new List<DataStr.PickedGearSync>();
+        public static List<DataStr.BrokenFurnitureSync> BrokenFurnsBackup = new List<DataStr.BrokenFurnitureSync>();
+        public static Vector3 LastPickedVisualPosition = new Vector3(0, 0, 0);
+        public static Quaternion LastPickedVisualRotation = new Quaternion(0, 0, 0, 0);
 
         //Voice chat
         public static bool DoingRecord = false;
@@ -252,18 +235,22 @@ namespace SkyCoop
         public static GameObject ViewModelHatchet2 = null;//mesh_Hatchet_improvised
         public static GameObject ViewModelKnife = null; //mesh_knife
         public static GameObject ViewModelKnife2 = null; //mesh_knife_improvised
-        public static GameObject ViewModelJeremiahKnife = null; 
+        public static GameObject ViewModelJeremiahKnife = null;
         public static GameObject ViewModelPrybar = null; //mesh_prybar
         public static GameObject ViewModelHammer = null; //mesh_hammer
         public static GameObject ViewModelShovel = null;
         public static GameObject ViewModelBolt = null;
         public static GameObject ViewModelStone = null;
         public static GameObject ViewModelFireAxe = null;
-        public static Borrowable LastBorrowable = null;
+        public static GameObject ViewModelHackSaw = null;
+        public static GameObject ViewModelPhoto = null;
+        public static GameObject ViewModelMap = null;
+        public static GameObject ViewModelNote = null;
         public static bool UseBoltInsteadOfStone = false;
-        public static bool UseGasMaskOverlay = false;
         public static bool OriginalRadioSeaker = false;
         public static bool VanilaRadio = false;
+        public static GameObject RefMan = null;
+        public static bool SeenRefMan = false;
 
 
         public static GameObject ViewModelDummy = null;
@@ -275,9 +262,8 @@ namespace SkyCoop
         public static Quaternion LastSleepQuat = new Quaternion(0, 0, 0, 0);
         public static bool AtBed = false;
         public static Vector3 OutOfBedPosition = new Vector3(0, 0, 0);
-
-        public static bool GearIDListReady = false;
         public static Dictionary<string, int> GearIDList = new Dictionary<string, int>();
+        public static bool GearIDListReady = false;
         //public static bool AntiCheat = false;
         public static bool InterloperHook = false;
         public static string OverridedSceneForSpawn = "";
@@ -287,107 +273,43 @@ namespace SkyCoop
         public static bool FixedPlaceLoaded = false;
         public static float InteractTimer = 0.0f;
         public static GameObject ObjectInteractWith = null;
+        public static bool InteractionInprocess = false;
         public static string InteractionType = "";
+        public static bool InteractHold = false;
+
 
         public static string AutoStartSlot = "";
         public static List<string> AutoCMDs = new List<string>();
         public static bool CrazyPatchesLogger = false;
         public static bool KillOnUpdate = false;
         public static bool KillEverySecond = false;
+        public static bool KillEveryInGameMinute = false;
         public static bool NoAnimalSync = false;
+        public static string RCON = "12345";
+        public static bool SwearOnLockpickingDone = false;
+        public static bool DedicatedServerAppMode = false;
+
 
         // Other stuff
         public static List<BoardGameSession> BoardGamesSessions = new List<BoardGameSession>();
 
         public static void KillConsole()
         {
-            if(ServerConfig.m_CheatsMode == 2 || (iAmHost == true && ServerConfig.m_CheatsMode == 1) || InOnline() == false)
+            if (ServerConfig.m_CheatsMode == 2 || (iAmHost == true && ServerConfig.m_CheatsMode == 1) || InOnline() == false || DedicatedServerAppMode)
             {
                 return;
             }
-                        
-            if(uConsole.m_CommandsDict.Count > 0)
-            {
-                uConsole.m_CommandsDict.Clear();
-                uConsole.m_CommandsList.Clear();
-                uConsole.m_CommandsHelp.Clear();
-            }
-            if(uConsole.m_Instance != null)
+
+            if (uConsole.m_Instance != null)
             {
                 uConsole.m_Instance.m_Activate = KeyCode.None;
             }
         }
 
-        public static void InitGearsIDS()
-        {
-            for (int index = 0; index < ConsoleManager.m_AllGearItemNames.Count; ++index)
-            {
-                int exist;
-                if(GearIDList.TryGetValue(ConsoleManager.m_AllGearItemNames[index], out exist) == false)
-                {
-                    GearIDList.Add(ConsoleManager.m_AllGearItemNames[index], index);
-                }
-            }
-            GearIDListReady = true;
-        }
-        public static string GetGearNameByID(int index)
-        {
-            if (index >= 0 && index < ConsoleManager.m_AllGearItemNames.Count - 1)
-            {
-                return ConsoleManager.m_AllGearItemNames[index];
-            }
-            return "";
-        }
-        public static int GetGearIDByName(string name)
-        {
-            int ID;
-            if(GearIDList.TryGetValue(name, out ID) == true)
-            {
-                return ID;
-            }
-            return -1;
-        }
 
-        public static bool HasNonASCIIChars(string str)
+        public static void AddSlicedJsonData(DataStr.SlicedJsonData jData)
         {
-            return (Encoding.UTF8.GetByteCount(str) != str.Length);
-        }
-
-        public static void AddSlicedJsonData(SlicedJsonData jData)
-        {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
-            if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
-            {
-                string previousString = "";
-                if(SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
-                {
-                    string wholeString = previousString + jData.m_Str;
-                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
-                }else{
-                    SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
-                }
-            }else{
-                SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
-            }
-
-            if (jData.m_Last)
-            {
-                string finalJsonData = "";
-                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
-                {
-                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    GearItemDataPacket gData = new GearItemDataPacket();
-                    gData.m_GearName = jData.m_GearName;
-                    gData.m_DataProxy = finalJsonData;
-                    MyMod.GiveRecivedItem(gData);
-                }
-            }
-        }
-
-        public static void AddSlicedJsonDataForDrop(SlicedJsonData jData)
-        {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Dropped Item Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
+            //MelonLogger.Msg(Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
             if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
             {
                 string previousString = "";
@@ -396,12 +318,10 @@ namespace SkyCoop
                     string wholeString = previousString + jData.m_Str;
                     SlicedJsonDataBuffer.Remove(jData.m_Hash);
                     SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
-                }
-                else
-                {
+                } else {
                     SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
                 }
-            }else{
+            } else {
                 SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
             }
 
@@ -411,8 +331,10 @@ namespace SkyCoop
                 if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
                 {
                     SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    AddDroppedGear(jData.m_SendTo, jData.m_Hash, finalJsonData, jData.m_GearName, jData.m_Extra);
-                    MelonLogger.Msg(ConsoleColor.Green, "Finished adding data for:" + jData.m_Hash);
+                    DataStr.GearItemDataPacket gData = new DataStr.GearItemDataPacket();
+                    gData.m_GearName = jData.m_GearName;
+                    gData.m_DataProxy = finalJsonData;
+                    GiveRecivedItem(gData);
                 }
             }
         }
@@ -429,7 +351,7 @@ namespace SkyCoop
                 __instance.m_ObjectGuid = __instance.gameObject.AddComponent<ObjectGuid>();
                 __instance.m_ObjectGuid.Generate();
                 //MelonLogger.Msg("Added GUID for Book " + __instance.m_GearName + " GUID " + __instance.m_ObjectGuid.Get());
-            }else{
+            } else {
                 string Key = __instance.m_ObjectGuid.Get();
                 //MelonLogger.Msg("There Book " + __instance.m_GearName + " GUID " + Key);
 
@@ -442,22 +364,22 @@ namespace SkyCoop
                         __instance.m_ResearchItem.m_ElapsedHours = GotProg;
                         //MelonLogger.Msg("Have information about it Progress " + __instance.m_ResearchItem.m_ElapsedHours + "/" + __instance.m_ResearchItem.m_TimeRequirementHours);
                     }
-                }else{
+                } else {
                     __instance.m_ResearchItem.m_ElapsedHours = 0;
                 }
 
-                if (__instance.m_ResearchItem.IsResearchComplete())
-                {
-                    __instance.m_ResearchItem.UpdateItemType(GearTypeEnum.Firestarting);
-                }else{
-                    __instance.m_ResearchItem.UpdateItemType(GearTypeEnum.Tool);
-                }
+                //if (__instance.m_ResearchItem.IsResearchComplete())
+                //{
+                //    __instance.m_ResearchItem.UpdateItemType(GearTypeEnum.Firestarting);
+                //} else {
+                //    __instance.m_ResearchItem.UpdateItemType(GearTypeEnum.Tool);
+                //}
             }
         }
 
-        public static void AddSlicedJsonDataForPicker(SlicedJsonData jData, bool place)
+        public static void AddSlicedJsonDataForPicker(DataStr.SlicedJsonData jData, bool place)
         {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Requested Item Slice for hash:" + jData.m_Hash + " DATA: " + jData.m_Str);
+            //MelonLogger.Msg(Yellow, "Got Requested Item Slice for hash:" + jData.m_Hash + " DATA: " + jData.m_Str);
             if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
             {
                 string previousString = "";
@@ -466,10 +388,10 @@ namespace SkyCoop
                     string wholeString = previousString + jData.m_Str;
                     SlicedJsonDataBuffer.Remove(jData.m_Hash);
                     SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
-                }else{
+                } else {
                     SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
                 }
-            }else{
+            } else {
                 SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
             }
 
@@ -481,52 +403,78 @@ namespace SkyCoop
                 if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
                 {
                     SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    MelonLogger.Msg(ConsoleColor.Green, "Finished getting data for:" + jData.m_Hash);
+                    MelonLogger.Msg(Green, "Finished getting data for:" + jData.m_Hash);
 
-                    string gearName = "";
-
-                    if (jData.m_SendTo != -1)
-                    {
-                        gearName = GetGearNameByID(jData.m_SendTo);
-                    }else{
-                        gearName = jData.m_Extra.m_GearName;
-                    }
+                    string gearName = jData.m_Extra.m_GearName;
+                    MelonLogger.Msg(Cyan, "Going to get " + jData.m_Extra.m_GearName);
 
                     GameObject reference = GetGearItemObject(gearName);
 
                     if (reference == null)
                     {
-                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                         return;
                     }
 
 
-                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, new Vector3(0,0,0), new Quaternion(0,0,0,0));
+                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0));
                     DisableObjectForXPMode.RemoveDisabler(newGear.gameObject);
-                    if(newGear == null)
+                    if (newGear == null)
                     {
-                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                         return;
                     }
 
                     newGear.name = CloneTrimer(newGear.name);
 
-                    ExtraDataForDroppedGear Extra = jData.m_Extra;
-
-                    if(newGear.GetComponent<KeroseneLampItem>() != null && Extra != null)
+                    DataStr.ExtraDataForDroppedGear Extra = jData.m_Extra;
+                    if (newGear.GetComponent<KeroseneLampItem>() != null && Extra != null)
                     {
                         int minutesDroped = MinutesFromStartServer - Extra.m_DroppedTime;
                         OverrideLampReduceFuel = minutesDroped;
-                        MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
+                        MelonLogger.Msg(Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                     }
-                    
-
-                    newGear.GetComponent<GearItem>().Deserialize(finalJsonData);
+                    bool UseLastVisualDropPos = false;
+                    if (!string.IsNullOrEmpty(finalJsonData))
+                    {
+                        newGear.GetComponent<GearItem>().Deserialize(finalJsonData);
+                    } else
+                    {
+                        UseLastVisualDropPos = true;
+                    }
+                    MelonLogger.Msg(Cyan, "UseLastVisualDropPos " + UseLastVisualDropPos);
+                    if (!string.IsNullOrEmpty(jData.m_Extra.m_PhotoGUID))
+                    {
+                        GearItem gi = newGear.GetComponent<GearItem>();
+                        if (gi.m_ObjectGuid == null)
+                        {
+                            string GUID = jData.m_Extra.m_PhotoGUID;
+                            ObjectGuid GUIDComp = newGear.AddComponent<ObjectGuid>();
+                            GUIDComp.m_Guid = GUID;
+                            gi.m_ObjectGuid = GUIDComp;
+                            MelonLogger.Msg("Going render photo " + GUID);
+                            Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, gi.m_GearName);
+                            if (tex)
+                            {
+                                newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                            }
+                        }
+                    }
                     newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
 
-                    DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
-                    DFL.m_OldPossition = newGear.gameObject.transform.position;
-                    DFL.m_OldRotation = newGear.gameObject.transform.rotation;
+                    Comps.DropFakeOnLeave DFL = newGear.AddComponent<Comps.DropFakeOnLeave>();
+
+                    if (!UseLastVisualDropPos)
+                    {
+                        DFL.m_OldPossition = newGear.gameObject.transform.position;
+                        DFL.m_OldRotation = newGear.gameObject.transform.rotation;
+                    } else
+                    {
+                        DFL.m_OldPossition = LastPickedVisualPosition;
+                        DFL.m_OldRotation = LastPickedVisualRotation;
+                    }
+
+
                     if (Extra != null)
                     {
                         if (Extra.m_GoalTime != 0 && Extra.m_GoalTime != -1)
@@ -537,9 +485,13 @@ namespace SkyCoop
                                 int minutesOnDry = MinutesFromStartServer - Extra.m_DroppedTime;
 
                                 gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = (float)minutesOnDry / 60;
-                                MelonLogger.Msg(ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
-                                MelonLogger.Msg(ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                                MelonLogger.Msg(Blue, "Saving minutesOnDry " + minutesOnDry);
+                                MelonLogger.Msg(Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
                             }
+                        }
+                        if (!string.IsNullOrEmpty(Extra.m_ExpeditionNote))
+                        {
+                            CreateCustomNote(Extra.m_ExpeditionNote, newGear.GetComponent<GearItem>());
                         }
                     }
 
@@ -548,20 +500,20 @@ namespace SkyCoop
                         bool skipPickup = false;
                         if (newGear.GetComponent<GearItem>().m_Bed != null)
                         {
-                            if(newGear.GetComponent<GearItem>().m_Bed.GetState() == BedRollState.Placed)
+                            if (newGear.GetComponent<GearItem>().m_Bed.GetState() == BedRollState.Placed)
                             {
                                 newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Rolled);
                                 skipPickup = true;
                             }
                         }
-                        if(skipPickup == false)
+                        if (skipPickup == false)
                         {
-                            GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
-                        }else{
                             GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(newGear.GetComponent<GearItem>(), false, false);
+                        } else {
+                            GameManager.GetPlayerManagerComponent().ProcessPickupWithNoInspectScreen(newGear.GetComponent<GearItem>(), true);
                         }
-                        
-                    }else{
+
+                    } else {
                         newGear.GetComponent<GearItem>().PlayPickUpClip();
                         GameManager.GetPlayerManagerComponent().StartPlaceMesh(newGear, PlaceMeshFlags.None);
                     }
@@ -571,600 +523,73 @@ namespace SkyCoop
             }
         }
 
-        public static void AddSlicedJsonDataForContainer(SlicedJsonData jData, int From = -1)
-        {
-            if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
-            {
-                string previousString = "";
-                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
-                {
-                    string wholeString = previousString + jData.m_Str;
-                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
-                }
-                else
-                {
-                    SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
-                }
-            }else{
-                SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
-            }
-
-            if (jData.m_Last)
-            {
-                string finalJsonData = "";
-                if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
-                {
-                    SlicedJsonDataBuffer.Remove(jData.m_Hash);
-
-                    string OriginalData = jData.m_GearName;
-                    string Scene = OriginalData.Split(Convert.ToChar("|"))[0];
-                    string GUID = OriginalData.Split(Convert.ToChar("|"))[1];
-
-                    MelonLogger.Msg(ConsoleColor.Green, "Finished loading container data for " + jData.m_Hash);
-
-                    if(iAmHost == true)
-                    {
-                        MPSaveManager.SaveContainer(Scene, GUID, finalJsonData);
-                    }
-                    if(sendMyPosition == true)
-                    {
-                        DiscardRepeatPacket();
-                        FinishOpeningFakeContainer(finalJsonData);
-                    }
-                }
-            }
-
-            if(From != -1)
-            {
-                ServerSend.READYSENDNEXTSLICE(From, true);
-            }
-        }
-
-        public static void AddSlicedBytesData(SlicedBytesData bytesData, int from)
-        {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Bytes Slice for hash:" + bytesData.m_Hash);
-            if (SlicedBytesDataBuffer.ContainsKey(bytesData.m_Hash))
-            {
-                List<byte> Buffer;
-                if (SlicedBytesDataBuffer.TryGetValue(bytesData.m_Hash, out Buffer) == true)
-                {
-                    Buffer.AddRange(bytesData.m_Data);
-                    SlicedBytesDataBuffer.Remove(bytesData.m_Hash);
-                    SlicedBytesDataBuffer.Add(bytesData.m_Hash, Buffer);
-                }else{
-                    List<byte> Buffer2 = new List<byte>();
-                    Buffer2.AddRange(bytesData.m_Data);
-                    SlicedBytesDataBuffer.Add(bytesData.m_Hash, Buffer2);
-                }
-            }else{
-                List<byte> Buffer2 = new List<byte>();
-                Buffer2.AddRange(bytesData.m_Data);
-                SlicedBytesDataBuffer.Add(bytesData.m_Hash, Buffer2);
-            }
-
-            if (bytesData.m_Last)
-            {
-                //MelonLogger.Msg(ConsoleColor.Yellow, "Got last slice for hash:" + bytesData.m_Hash);
-                List<byte> FinalBuffer;
-                if (SlicedBytesDataBuffer.TryGetValue(bytesData.m_Hash, out FinalBuffer) == true)
-                {
-                    SlicedBytesDataBuffer.Remove(bytesData.m_Hash);
-                    //GotLargeDataArray(FinalBuffer.ToArray(), bytesData.m_Action, from, bytesData.m_ExtraInt);
-                }
-            }
-        }
-
-        public static void SendSlicedData(byte[] array, int startIdx, int length, int ClientId, string action, bool LastSlice, int ExtraInt)
-        {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice for array with hash:" + array.GetHashCode());
-            SlicedBytesData Data = new SlicedBytesData();
-            Data.m_Hash = array.GetHashCode();
-            Data.m_Last = LastSlice;
-            Data.m_SendTo = ClientId;
-            Data.m_Action = action;
-
-            byte[] sendData = new byte[CHUNK_SIZE];
-
-            int ToWrite = 0;
-
-            for (int i = startIdx; i < length; i++)
-            {
-                sendData[ToWrite] = array[i];
-                ToWrite = ToWrite + 1;
-            }
-            Data.m_Data = sendData;
-            Data.m_Length = sendData.Length;
-            if(LastSlice == true)
-            {
-                Data.m_ExtraInt = ExtraInt;
-            }
-            if (iAmHost == true)
-            {
-                using (Packet _packet = new Packet((int)ServerPackets.SLICEDBYTES))
-                {
-                    ServerSend.SLICEDBYTES(0, Data, false, ClientId);
-                }
-            }
-            if (sendMyPosition == true)
-            {
-                using (Packet _packet = new Packet((int)ClientPackets.SLICEDBYTES))
-                {
-                    _packet.Write(Data);
-                    SendTCPData(_packet);
-                }
-            }
-        }
-
         private const int CHUNK_SIZE = 500;
 
-        private static void SendLargeArray(byte[] array, int ForClient, string action, int ExtraInt = 0)
+        public static void ShowCFGData()
         {
-            MelonLogger.Msg(ConsoleColor.Yellow, "SendLargeArray with hash:" + array.GetHashCode());
-            for (int startIdx = 0; startIdx < array.Length; startIdx += CHUNK_SIZE)
-            {
-                bool IsLast = false;
-                if(startIdx+CHUNK_SIZE > array.Length)
-                {
-                    IsLast = true;
-                }
-                int length = Math.Min(array.Length - startIdx, CHUNK_SIZE);
-                SendSlicedData(array, startIdx, length, ForClient, action, IsLast, ExtraInt);
-            }
-        }
-        private static void SendLargeArrayToAll(byte[] array, string action, int ExtraInt = 0)
-        {
-            for (int i = 1; i <= Server.MaxPlayers; i++)
-            {
-                if (Server.clients[i].IsBusy() == true)
-                {
-                    SendLargeArray(array, i, action, ExtraInt);
-                }
-            }
+            MelonLogger.Msg(Green, "[Server Config Data] Data updated");
+            MelonLogger.Msg(Blue, "m_FastConsumption: " + ServerConfig.m_FastConsumption);
+            MelonLogger.Msg(Blue, "m_DuppedSpawns: " + ServerConfig.m_DuppedSpawns);
+            MelonLogger.Msg(Blue, "m_DuppedContainers: " + ServerConfig.m_DuppedContainers);
+            MelonLogger.Msg(Blue, "m_PlayersSpawnType: " + ServerConfig.m_PlayersSpawnType);
+            MelonLogger.Msg(Blue, "m_FireSync: " + ServerConfig.m_FireSync);
+            MelonLogger.Msg(Blue, "m_CheatsMode: " + ServerConfig.m_CheatsMode);
+            MelonLogger.Msg(Blue, "m_CheckModsValidation: " + ServerConfig.m_CheckModsValidation);
+            MelonLogger.Msg(Blue, "m_SaveScamProtection: " + ServerConfig.m_SaveScamProtection);
+            MelonLogger.Msg(Blue, "m_PVP: " + ServerConfig.m_PVP);
         }
 
         //STRUCTS
         #region STRUCTS
-        public class ServerConfigData
-        {
-            public bool m_FastConsumption = true;
-            public bool m_DuppedSpawns = false;
-            public bool m_DuppedContainers = false;
-            public int m_PlayersSpawnType = 0;
-            public int m_FireSync = 2;
-            public int m_CheatsMode = 2;
-        }
-        public class ServerSettingsData
-        {
-            public ServerConfigData m_CFG = new ServerConfigData();
-            public int m_MaxPlayers = 2;
-            public int m_Port = 26950;
-            public int m_Accessibility = 0;
-            public bool m_P2P = true;
-        }
-        public class SlicedJsonData
-        {
-            public bool m_Last = false;
-            public string m_Str = "";
-            public int m_Hash = 0;
-            public string m_GearName = "";
-            public int m_SendTo = 0;
-            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
-        }
-        public class SlicedBytesData
-        {
-            public bool m_Last = false;
-            public byte[] m_Data;
-            public int m_Length = 0; 
-            public int m_Hash = 0;
-            public int m_SendTo = 0;
-            public string m_Action = "";
-            public int m_ExtraInt = 0;
-        }
-        public class SlicedJsonDroppedGear
-        {
-            public string m_GearName = "";
-            public string m_Json = "";
-            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
-        }
-        public class ExtraDataForDroppedGear
-        {
-            public int m_DroppedTime = 0;
-            public int m_GoalTime = 0;
-            public string m_Dropper = "";
-            public int m_Variant = 0;
-            public string m_GearName = "";
-        }
-        public class AnimalCompactData
-        {
-            public string m_PrefabName = "";
-            public Vector3 m_Position = new Vector3(0, 0, 0);
-            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
-            public string m_GUID = "";
-            public int m_LastSeen = 0;
-            public float m_Health = 100;
-            public bool m_Bleeding = false;
-            public int m_TimeOfBleeding = 0;
-            public string m_RegionGUID = "";
-            public int m_LastController = 0;
-            public int m_LastAiMode = 0;
-            public int m_ArrowsCount = 0;
-            public List<AnimalArrow> m_Arrows = new List<AnimalArrow>();
-        }
-        public class PlayerEquipmentData //: MelonMod
-        {
-            public string m_HoldingItem = "";
-            public bool m_LightSourceOn = false;
-            public bool m_HasAxe = false;
-            public bool m_HasRifle = false;
-            public bool m_HasRevolver = false;
-            public bool m_HasMedkit = false;
-            public int m_Arrows = 0;
-            public int m_Flares = 0;
-            public int m_BlueFlares = 0;
-        }
-        public class PlayerClothingData 
-        {
-            public string m_Hat = "";
-            public string m_Top = "";
-            public string m_Bottom = "";
-            public string m_Boots = "";
-            public string m_Scarf = "";
-            public string m_Balaclava = "";
-        }
-        public class MultiPlayerClientData
-        {
-            public PlayerEquipmentData m_PlayerEquipmentData = new PlayerEquipmentData();
-            public PlayerClothingData m_PlayerClothingData = new PlayerClothingData();
-            public string m_Name = "";
-            public Vector3 m_Position = new Vector3();
-            public Quaternion m_Rotation = new Quaternion();
-            public int m_Levelid = 0;
-            public string m_AnimState = "Idle";
-            public int m_SleepHours = 0;
-            public string m_HarvestingAnimal = "";
-            public bool m_Mimic = false;
-            public bool m_Used = false;
-            public bool m_Dead = false;
-            public int m_TicksOnScene = 0;
-            public int m_PreviousLevelId = 0;
-            public string m_LevelGuid = "";
-            public string m_BrakingSounds = "";
-            public BrokenFurnitureSync m_BrakingObject = new BrokenFurnitureSync();
-            public bool m_HeavyBreath = false;
-            public int m_BloodLosts = 0;
-            public bool m_NeedAntiseptic = false;
-            public ContainerOpenSync m_Container = null;
-            public string m_Plant = "";
-            public bool m_Female = false;
-            public int m_Character = 0;
-            public ShowShelterByOther m_Shelter = null;
-            public bool m_Aiming = false;
-            public float m_RadioFrequency = 0;
-            public Supporters.SupporterBenefits m_SupporterBenefits = new Supporters.SupporterBenefits();
-        }
-        public class MultiPlayerClientStatus //: MelonMod
-        {
-            public int m_ID = 0;
-            public string m_Name = "";
-            public bool m_Sleep = false;
-            public bool m_Dead = false;
-        }
 
-        public class DeathContainerData
+        public static DataStr.PriorityActionForOtherPlayer GetCustomAction(string ActionName)
         {
-            public string m_Guid = "";
-            public string m_LevelKey = "";
-            public string m_Owner = "";
-            public string m_ContainerPrefab = "CONTAINER_BackPack";
-            public Vector3 m_Position = Vector3.zero;
-            public Quaternion m_Rotation = Quaternion.identity;
-            public bool Equals(DeathContainerData other)
+            DataStr.PriorityActionForOtherPlayer act = new DataStr.PriorityActionForOtherPlayer();
+
+
+            if (ActionName == "Lockpick")
             {
-                if (other == null)
-                    return false;
-
-                if (m_Guid == other.m_Guid)
-                {
-                    return true;
-                }else{
-                    return false;
-                }
+                act.m_Action = "Lockpick";
+                act.m_DisplayText = act.m_Action;
+                act.m_ProcessText = "Lockpicking...";
+                act.m_CancleOnMove = false;
+                act.m_ActionDuration = 15;
+                act.m_Hold = false;
+                act.m_EscCancle = true;
             }
-        }
-
-        public class ContainerOpenSync : IEquatable<ContainerOpenSync>
-        {
-            public string m_Guid = "";
-            public bool m_State = false;
-            public int m_LevelID = 0;
-            public string m_LevelGUID = "";
-            public bool m_Inspected = true;
-
-            public bool Equals(ContainerOpenSync other)
+            else if (ActionName == "Excision")
             {
-                if (other == null)
-                    return false;
-
-                if (this.m_Guid == other.m_Guid &&
-                    this.m_LevelID == other.m_LevelID &&
-                    this.m_LevelGUID == other.m_LevelGUID)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
+                act.m_Action = "Excision";
+                act.m_DisplayText = act.m_Action;
+                act.m_ProcessText = "Excision...";
+                act.m_CancleOnMove = false;
+                act.m_ActionDuration = 10;
             }
-        }
-        public class ShootSync //: MelonMod
-        {
-            public Vector3 m_position = new Vector3(0, 0, 0);
-            public Quaternion m_rotation = new Quaternion(0, 0, 0, 0);
-            public string m_projectilename = "";
-            public float m_skill = 0;
-            public Vector3 m_camera_forward = new Vector3(0, 0, 0);
-            public Vector3 m_camera_right = new Vector3(0, 0, 0);
-            public Vector3 m_camera_up = new Vector3(0, 0, 0);
-        }
-        public class HarvestStats //: MelonMod
-        {
-            public float m_Meat = 0;
-            public int m_Guts = 0;
-            public int m_Hide = 0;
-            public string m_Guid = "";
-        }
-        public class AnimalSync //: MelonMod
-        {
-            public Vector3 m_position = new Vector3(0, 0, 0);
-            public Quaternion m_rotation = new Quaternion(0, 0, 0, 0);
-            public string m_guid = "";
-            public string m_name = "";
-            public float m_Hp = 100;
-            public bool m_Bleeding = false;
-
-            public int m_Controller = 0;
-            public string m_ProxySave = "";
-            public int m_LevelD = 0;
-            public string m_SpawnRegionGUID = "";
-        }
-        public class AnimalAnimsSync
-        {
-            public float AP_TurnAngle; //0
-            public float AP_TurnSpeed; //1
-            public float AP_Speed; //2
-            public float AP_Wounded; //3
-            public float AP_Roll; //4
-            public float AP_Pitch; //5
-            public float AP_TargetHeading; //6
-            public float AP_TargetHeadingSmooth; //7
-            public float AP_TapMeter; //8
-            //AE_Trigger_Branchpoint; //9
-            public int AP_AiState; //10
-            //StruggleStart //11
-            //StruggleEnd //12
-            //DamageImpact //13
-            public bool AP_Corpse; //14
-            public bool AP_Dead; //15
-            public int AP_DeadSide; //16
-            //AE_IsInStruggle //17
-            //public int AP_AE_NavigationState; //18
-            public int AP_DamageBodyPart; //19
-            //public int AP_AE_CorpseID; //20
-            //ScriptedSequence_Hostile //21
-            //ScriptedSequence_Feeding //22
-            public int AP_AttackId; //23
-            //Attack_Trigger //24
-            public bool AP_Stunned;
-        }
-
-        public class WalkTracker //: MelonMod
-        {
-            public int m_levelid = 0;
-            public Vector3 m_V3 = new Vector3(0, 0, 0);
-        }
-        public class WeatherProxies //: MelonMod
-        {
-            public string m_WeatherProxy = "";
-            public string m_WeatherTransitionProxy = "";
-            public string m_WindProxy = "";
-        }
-        public class AnimalAligner //: MelonMod
-        {
-            public string m_Proxy = "";
-            public string m_Guid = "";
-        }
-        public class SaveSlotSync //: MelonMod
-        {
-            public int m_Episode;
-            public int m_SaveSlotType;
-            public int m_Seed;
-            public int m_ExperienceMode;
-            public int m_Location;
-            public string m_FixedSpawnScene;
-            public Vector3 m_FixedSpawnPosition;
-            public string m_CustomExperienceStr;
-        }
-        public class MultiplayerChatMessage //: MelonMod
-        {
-            public int m_Type = 0;
-            public string m_Message = "";
-            public string m_By = "";
-            public UnityEngine.UI.Text m_TextObj = null;
-        }
-        public class GearItemDataPacket
-        {
-            public string m_GearName = "";
-            public string m_DataProxy = "";
-            public float m_Water = 0;
-            public int m_SendedTo = -1;
-        }
-        public class DroppedGearItemDataPacket
-        {
-            public int m_GearID = -1;
-            public Vector3 m_Position;
-            public Quaternion m_Rotation;
-            public int m_LevelID = 0;
-            public string m_LevelGUID = "";
-            public int m_Hash = 0;
-            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
-        }
-        public class BrokenFurnitureSync : IEquatable<BrokenFurnitureSync>
-        {
-            public string m_Guid = "";
-            public string m_ParentGuid = "";
-            public int m_LevelID = 0;
-            public string m_LevelGUID = "";
-
-            public bool Equals(BrokenFurnitureSync other)
+            else if (ActionName == "Locksmith0")
             {
-                if (other == null)
-                    return false;
-
-                if (this.m_Guid == other.m_Guid &&
-                    this.m_ParentGuid == other.m_ParentGuid &&
-                    this.m_LevelID == other.m_LevelID &&
-                    this.m_LevelGUID == other.m_LevelGUID)
-                {
-                    return true;
-                }else{
-                    return false;
-                } 
+                act.m_Action = "Locksmith0";
+                act.m_DisplayText = "Sawing";
+                act.m_ProcessText = "Sawing...";
+                act.m_CancleOnMove = false;
+                act.m_ActionDuration = 10;
+                act.m_Hold = false;
             }
-        }
-        public class PickedGearSync : IEquatable<PickedGearSync>
-        {
-            public Vector3 m_Spawn = new Vector3(0,0,0);
-            public int m_LevelID = 0;
-            public string m_LevelGUID = "";
-            public int m_PickerID = 0;
-            public int m_Recently = 0;
-            public int m_MyInstanceID = 0;
-
-            public bool Equals(PickedGearSync other)
+            else if (ActionName == "Locksmith1")
             {
-                if (other == null)
-                    return false;
-
-                if (this.m_LevelID == other.m_LevelID && this.m_LevelGUID == other.m_LevelGUID && this.m_Spawn == other.m_Spawn)
-                {
-                    return true;
-                }else{
-                    return false;
-                }
+                act.m_Action = "Locksmith1";
+                act.m_DisplayText = "Grinding";
+                act.m_ProcessText = "Grinding...";
+                act.m_CancleOnMove = false;
+                act.m_ActionDuration = 10;
+                act.m_Hold = false;
             }
-        }
-        public class ClimbingRopeSync : IEquatable<ClimbingRopeSync>
-        {
-            public Vector3 m_Position = new Vector3(0, 0, 0);
-            public int m_LevelID = 0;
-            public string m_LevelGUID = "";
-            public bool m_Deployed = false;
-            public bool m_Snapped = false;
 
-            public bool Equals(ClimbingRopeSync other)
-            {
-                if (other == null)
-                    return false;
-
-                if (this.m_LevelID == other.m_LevelID && this.m_LevelGUID == other.m_LevelGUID && this.m_Position == other.m_Position)
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-        public class HarvestableSyncData : IEquatable<HarvestableSyncData>
-        {
-            public string m_Guid = "";
-            public string m_State = "";
-            public bool Equals(HarvestableSyncData other)
-            {
-                if (other == null)
-                    return false;
-
-                if (this.m_Guid == other.m_Guid)
-                {
-                    return true;
-                }else{
-                    return false;
-                }
-            }
-        }
-        public class ShowShelterByOther : IEquatable<ShowShelterByOther>
-        {
-            public Vector3 m_Position = new Vector3(0, 0, 0);
-            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
-            public int m_LevelID = 0;
-            public string m_LevelGUID = "";
-            public bool Equals(ShowShelterByOther other)
-            {
-                if (other == null)
-                    return false;
-
-                if (this.m_LevelID == other.m_LevelID && this.m_LevelGUID == other.m_LevelGUID && this.m_Position == other.m_Position)
-                {
-                    return true;
-                }else{
-                    return false;
-                }
-            }
-        }
-        public class FireSourcesSync : IEquatable<FireSourcesSync>
-        {
-            public string m_Guid = "";
-            public int m_LevelId = 0;
-            public string m_LevelGUID = "";
-            public Vector3 m_Position = new Vector3(0, 0, 0);
-            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
-            public float m_Fuel = 0;
-            public int m_RemoveIn = 0;
-            public bool m_IsCampfire = false;
-            public string m_FuelName = "";
-
-            public bool Equals(FireSourcesSync other)
-            {
-                if (other == null)
-                    return false;
-
-                if ((this.m_LevelId == other.m_LevelId && this.m_LevelGUID == other.m_LevelGUID) 
-                 && ((this.m_Guid != "" && this.m_Guid == other.m_Guid) || this.m_Position == other.m_Position))
-                {
-                    return true;
-                }
-                else
-                {
-                    return false;
-                }
-            }
-        }
-        public class PriorityActionForOtherPlayer
-        {
-            public string m_Action = "";
-            public string m_DisplayText = "";
-            public string m_ProcessText = "";
-            public bool m_CancleOnMove = false;
-            public float m_ActionDuration = 3;
-        }
-
-        public static PriorityActionForOtherPlayer GetKnifeUpgradeAction()
-        {
-            PriorityActionForOtherPlayer act = new PriorityActionForOtherPlayer();
-            act.m_Action = "Excision";
-            act.m_DisplayText = act.m_Action;
-            act.m_ProcessText = "Excision...";
-            act.m_CancleOnMove = false;
-            act.m_ActionDuration = 20;
             return act;
         }
 
-        public static PriorityActionForOtherPlayer GetActionForOtherPlayer(string ActName)
+        public static DataStr.PriorityActionForOtherPlayer GetActionForOtherPlayer(string ActName)
         {
-            PriorityActionForOtherPlayer act = new PriorityActionForOtherPlayer();
+            DataStr.PriorityActionForOtherPlayer act = new DataStr.PriorityActionForOtherPlayer();
             if (ActName == "Revive")
             {
                 act.m_Action = "Revive";
@@ -1180,8 +605,14 @@ namespace SkyCoop
                 act.m_ProcessText = "Injecting...";
                 act.m_CancleOnMove = false;
                 act.m_ActionDuration = 1;
-            }
-            else if (ActName == "Lit")
+            } else if (ActName == "Invite")
+            {
+                act.m_Action = "Invite";
+                act.m_DisplayText = "Invite to expedition";
+                act.m_ProcessText = "Inviting...";
+                act.m_CancleOnMove = false;
+                act.m_ActionDuration = 1;
+            } else if (ActName == "Lit")
             {
                 act.m_Action = "Lit";
                 act.m_DisplayText = "Ignite from player's fire";
@@ -1189,14 +620,14 @@ namespace SkyCoop
                 act.m_CancleOnMove = false;
                 act.m_ActionDuration = 0;
             }
-            else if(ActName == "Examine")
+            else if (ActName == "Examine")
             {
                 act.m_Action = "Examine";
                 act.m_DisplayText = "Examine";
                 act.m_ProcessText = "Diagnosing...";
                 act.m_CancleOnMove = true;
                 act.m_ActionDuration = 1;
-            }else if(ActName == "Borrow")
+            } else if (ActName == "Borrow")
             {
                 act.m_Action = "Borrow";
                 act.m_DisplayText = "Borrow";
@@ -1207,11 +638,6 @@ namespace SkyCoop
 
             return act;
         }
-        public class VoiceChatQueueElement
-        {
-            public byte[] m_VoiceData;
-            public float m_Length = 0; 
-        }
         #endregion
 
         public static void LoadChatName(string _name = "")
@@ -1221,30 +647,15 @@ namespace SkyCoop
             if (ValidNickName(NameFromFile))
             {
                 MyChatName = NameFromFile;
-            }else{
+            } else {
                 if (ValidNickName(_name))
                 {
                     MyChatName = _name;
-                }else{
+                } else {
                     MyChatName = "Player";
                 }
             }
-            MelonLogger.Msg("Your chat name is "+ MyChatName);
-        }
-
-        public class DedicatedServerData
-        {
-            public string SaveSlot;
-            public bool ItemDupes;
-            public bool ContainersDupes;
-            public int SpawnStyle;
-            public int MaxPlayers;
-            public bool UsingSteam;
-            public int Ports;
-            public string[] WhiteList;
-            public string ServerName;
-            public int Cheats;
-            public int SteamServerAccessibility;
+            MelonLogger.Msg("Your chat name is " + MyChatName);
         }
 
         public static void ForceLoadSlotByName(string searchname)
@@ -1268,13 +679,13 @@ namespace SkyCoop
             }
         }
 
-        public static void ForceLoadSlotForDs(string searchname)
+        public static void ForceLoadSlotForDs(string searchname, int Region, int Expereince, int Seed)
         {
+            SaveGameSlots.LoadAllSavedGameFiles();
             bool HaveSaveFile = false;
             SaveSlotInfo SaveToLoad = null;
 
             Il2CppSystem.Collections.Generic.List<SaveSlotInfo> Slots = SaveGameSystem.GetSortedSaveSlots(Episode.One, SaveSlotType.SANDBOX);
-
             for (int i = 0; i < Slots.Count; i++)
             {
                 SaveSlotInfo Slot = Slots[i];
@@ -1286,24 +697,53 @@ namespace SkyCoop
                     break;
                 }
             }
-            if(HaveSaveFile == false)
+            if (HaveSaveFile == false)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "[Dedicated server] No save file with name "+ searchname+" found!");
-            }else{
+                MelonLogger.Msg(Yellow, "[Dedicated server] No save file with name " + searchname + " found!");
+                MelonLogger.Msg(Yellow, "[Dedicated server] Found " + SaveGameSlots.m_SaveSlots.Count + " saves");
+                ForceCreateSlotForPlayingSilently(Region, Expereince, Seed, searchname);
+            }
+            else{
                 SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot name " + SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot user defined name " + SaveGameSlots.GetUserDefinedSlotName(SaveToLoad.m_SaveSlotName));
+                MelonLogger.Msg(Magenta, "[Dedicated server] Save found!");
+                MelonLogger.Msg(Magenta, "[Dedicated server] Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
+                MelonLogger.Msg(Magenta, "[Dedicated server] Save slot name " + SaveToLoad.m_SaveSlotName);
+                MelonLogger.Msg(Magenta, "[Dedicated server] Save slot user defined name " + SaveGameSlots.GetUserDefinedSlotName(SaveToLoad.m_SaveSlotName));
                 SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Selecting slot " + SaveGameSystem.GetCurrentSaveName());
+                MelonLogger.Msg(Magenta, "[Dedicated server] Selecting slot " + SaveGameSystem.GetCurrentSaveName());
+                MelonLogger.Msg(Magenta, "[Dedicated server] Save slot hash " + SaveGameSlots.LoadDataFromSlot(SaveToLoad.m_SaveSlotName, "global").GetHashCode());
                 GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
+            }
+        }
+
+        public static void ForceCreateSlotForPlayingSilently(int Reg, int Expereince, int Seed, string SlotName)
+        {
+            ExperienceModeType ExpType = (ExperienceModeType)Expereince;
+            GameRegion Region = (GameRegion)Reg;
+
+            if(Seed == 0)
+            {
+                MelonLogger.Msg(Green, "[Dedicated server] Creating save slot " + SlotName + " with random seed");
+            }else{
+                MelonLogger.Msg(Green, "[Dedicated server] Creating save slot " + SlotName + " with seed " + Seed);
+            }
+
+            SaveGameSystem.SetCurrentSaveInfo(Episode.One, SaveSlotType.SANDBOX, SaveGameSlots.GetUnusedGameId(), null);
+            GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
+            GameManager.m_StartRegion = Region;
+            SaveGameSlots.SetSlotDisplayName(SaveGameSystem.GetCurrentSaveName(), SlotName);
+
+            GameManager.Instance().LaunchSandbox();
+            if (Seed != 0)
+            {
+                GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
             }
         }
 
         public static void ForceCreateSlotForPlaying(int Region, int Experience)
         {
-            MyMod.m_Panel_Sandbox.Enable(false);
-            SaveSlotSync SaveFile = new SaveSlotSync();
+            m_Panel_Sandbox.Enable(false);
+            DataStr.SaveSlotSync SaveFile = new DataStr.SaveSlotSync();
             SaveFile.m_Episode = (int)Episode.One;
             SaveFile.m_SaveSlotType = (int)SaveSlotType.SANDBOX;
             SaveFile.m_Seed = 0;
@@ -1338,9 +778,9 @@ namespace SkyCoop
             }
             if (HaveSaveFile == false)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "[-slot] No save file with name " + searchname + " found!");
-            }else{
-                MelonLogger.Msg(ConsoleColor.Magenta, "[-slot] Save found! Loading...");
+                MelonLogger.Msg(Red, "[-slot] No save file with name " + searchname + " found!");
+            } else {
+                MelonLogger.Msg(Magenta, "[-slot] Save found! Loading...");
                 SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
                 SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
                 GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
@@ -1351,9 +791,14 @@ namespace SkyCoop
         {
             SteamConnect.Main.SetLobbyName(CustomServerName);
             Server.StartSteam(MaxPlayers);
+            MelonLogger.Msg(Magenta, "[Dedicated server] Server is ready! Have fun!");
         }
 
         public static bool SetP2PToLobbyForDSAfterLoad = false;
+        public static bool HostUDDSAfterLoad = false;
+        public static int PortForDSLoad = 0;
+        public static int DsSavePerioud = 60;
+        public static int RestartPerioud = 10800;
 
         public static void StartDedicatedServer(bool ds = true)
         {
@@ -1362,180 +807,89 @@ namespace SkyCoop
             {
                 ServStr = "[AutoStart server]";
             }
-            
-            if (System.IO.File.Exists("Mods\\server.json"))
-            {
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Reading server.json...");
-                string readText = System.IO.File.ReadAllText("Mods\\server.json");
-                DedicatedServerData ServerData = JSON.Load(readText).Make<DedicatedServerData>();
-                MelonLogger.Msg(ConsoleColor.Magenta, ServStr+" Server settings: ");
-                if(ds == true)
-                {
-                    MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] SaveSlot: " + ServerData.SaveSlot);
-                }
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " ItemDupes: " + ServerData.ItemDupes);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " ContainersDupes: " + ServerData.ContainersDupes);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " SpawnStyle: " + ServerData.SpawnStyle);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " MaxPlayers: " + ServerData.MaxPlayers);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " UsingSteam: " + ServerData.UsingSteam);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " Ports: " + ServerData.Ports);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " Cheats: " + ServerData.Cheats);
-                MelonLogger.Msg(ConsoleColor.Blue, ServStr + " SteamServerAccessibility: " + ServerData.SteamServerAccessibility);
-                MelonLogger.Msg(ConsoleColor.Magenta, ServStr + " No problems with server.json found!");
 
-                ServerConfig.m_DuppedContainers = ServerData.ContainersDupes;
-                ServerConfig.m_DuppedSpawns = ServerData.ItemDupes;
-                ServerConfig.m_PlayersSpawnType = ServerData.SpawnStyle;
-                ServerConfig.m_CheatsMode = ServerData.Cheats;
-                MaxPlayers = ServerData.MaxPlayers;
+            DataStr.DedicatedServerData ServerData = Shared.LoadDedicatedServerConfig();
+
+            if (ds == true)
+            {
+                MelonLogger.Msg(Magenta, "[Dedicated server] Trying to load save file...");
+                MyChatName = "DedicatedServer";
+            }
+
+            if (SteamConnect.CanUseSteam == false && ServerData.UsingSteam == true)
+            {
+                ServerData.UsingSteam = false;
+                MelonLogger.Msg(Red, ServStr + " In server.json 'UsingSteam' set to true, but you using version of the game that not support Hosting with using Steam! If you use licence version of the game, but still see this, reboot steam.");
+                MelonLogger.Msg(Magenta, ServStr + " Forced changing 'UsingSteam' to false, and running regular server.");
+            }
+
+            if (ServerData.UsingSteam == false)
+            {
                 if (ds == true)
                 {
-                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Trying to load save file...");
-                    MyChatName = "DedicatedServer";
-                }
-
-                if(SteamConnect.CanUseSteam == false && ServerData.UsingSteam == true)
+                    PortForDSLoad = ServerData.Ports;
+                    HostUDDSAfterLoad = true;
+                    Shared.InitAllPlayers();
+                } else
                 {
-                    ServerData.UsingSteam = false;
-                    MelonLogger.Msg(ConsoleColor.Red, ServStr + " In server.json 'UsingSteam' set to true, but you using version of the game that not support Hosting with using Steam! If you use licence version of the game, but still see this, reboot steam.");
-                    MelonLogger.Msg(ConsoleColor.Magenta, ServStr + " Forced changing 'UsingSteam' to false, and running regular server.");
+                    Shared.HostAServer(ServerData.Ports);
                 }
-
-                if (ServerData.UsingSteam == false)
+            } else
+            {
+                CustomServerName = ServerData.ServerName;
+                if (ds == true)
                 {
-                    HostAServer(ServerData.Ports);
-                }else{
-                    CustomServerName = ServerData.ServerName;
-                    if(ds == true)
-                    {
-                        InitAllPlayers();
-                        SteamConnect.Main.MakeLobby(ServerData.SteamServerAccessibility, ServerData.MaxPlayers);
-                        SetP2PToLobbyForDSAfterLoad = true;
-                    }else{
-                        Server.StartSteam(MaxPlayers);
-                    }
-                }
-                if(ds == true)
+                    Shared.InitAllPlayers();
+                    SteamConnect.Main.MakeLobby(ServerData.SteamServerAccessibility, ServerData.MaxPlayers);
+                    SetP2PToLobbyForDSAfterLoad = true;
+                } else
                 {
-                    ForceLoadSlotForDs(ServerData.SaveSlot);
+                    Server.StartSteam(MaxPlayers);
                 }
-            }else{
-                MelonLogger.Msg(ConsoleColor.Red, ServStr + " Can't find server.json!");
+            }
+            if (ds == true)
+            {
+                ForceLoadSlotForDs(ServerData.SaveSlot.ToUpper(), ServerData.StartRegion, ServerData.ExperienceMode, ServerData.Seed);
             }
         }
 
-        private static void CreateZipFromText(string text)
+        public static void Disable()
         {
-            MelonLogger.Msg("[Plugins] Preparing to unzip virual archive with plugins...");
-            byte[] zipBytes = Convert.FromBase64String(text);
-            using (var memoryStream = new MemoryStream(zipBytes))
-            {
-                using (var archive = new ZipArchive(memoryStream, ZipArchiveMode.Read))
-                {
-                    archive.ExtractToDirectory("Plugins");
-                }
-            }
-            MelonLogger.Msg("[Plugins] Unzip finished! Now need to restart the game!");
-        }
-
-        public static bool CheckPlugins()
-        {
-            MelonLogger.Msg("[Plugins] Checking plugins...");
-            
-            if (Directory.Exists("Plugins"))
-            {
-                bool AutoUpdatingPlugin = false;
-                bool AudioCore = false;
-                bool AudioCoreData = false;
-
-                string AutoUpdatingPluginPath = "Plugins\\AutoUpdatingPlugin.dll";
-                string AudioCorePath = "Plugins\\AudioCore.dll";
-                string AudioCoreDataPath = "Plugins\\AudioCoreData.tpk";
-
-                if (File.Exists(AutoUpdatingPluginPath))
-                {
-                    AutoUpdatingPlugin = true;
-                }else{
-                    MelonLogger.Msg("[Plugins] There no AutoUpdatingPlugin.dll");
-                }
-
-                if (File.Exists(AudioCorePath))
-                {
-                    AudioCore = true;
-                }else{
-                    MelonLogger.Msg("[Plugins] There no AudioCore.dll");
-                }
-
-                if (File.Exists(AudioCoreDataPath))
-                {
-                    AudioCoreData = true;
-                }else{
-                    MelonLogger.Msg("[Plugins] There no AudioCoreData.tpk");
-                }
-
-                if(AutoUpdatingPlugin && AudioCore && AudioCoreData)
-                {
-                    return true;
-                }else{
-                    MelonLogger.Msg(ConsoleColor.Yellow, "[Plugins] Some plugins are missing, removing current installed ones for safe replace of them");
-                    if (AutoUpdatingPlugin)
-                    {
-                        File.Delete(AutoUpdatingPluginPath);
-                    }
-                    if (AudioCore)
-                    {
-                        File.Delete(AudioCorePath);
-                    }
-                    if (AudioCoreData)
-                    {
-                        File.Delete(AudioCoreDataPath);
-                    }
-                    return false;
-                }
-            }else{
-                MelonLogger.Msg("[Plugins] No plugins folder, creating one");
-                Directory.CreateDirectory("Plugins");
-                return false;
-            }
+            KillOnUpdate = true;
+            KillEveryInGameMinute = true;
+            KillEverySecond = true;
+            HarmonyLib.Harmony.UnpatchAll();
         }
 
         public override void OnApplicationStart()
         {
-            if (CheckPlugins())
-            {
-                MelonLogger.Msg(ConsoleColor.Green, "[Plugins] Everything is alright!");
-            }else{
-                MelonLogger.Msg(ConsoleColor.Yellow, "[Plugins] Need install plugins!");
-                CreateZipFromText(Base64Files.PluginsZip);
-                KillOnUpdate = true;
-                return;
-            }
+            SetAppBackgroundMode();
+            bool DedicatedServerWithRender = Environment.GetCommandLineArgs().Contains("-dedicated");
+            DedicatedServerAppMode = DedicatedServerWithRender || Application.isBatchMode;
+
+            ModsValidation.GetModsHash(true);
 
             bool ForceNoSteam = Environment.GetCommandLineArgs().Contains("-nosteam");
-            bool ForceNoEgs= Environment.GetCommandLineArgs().Contains("-noegs");
+            bool ForceNoEgs = Environment.GetCommandLineArgs().Contains("-noegs");
+
             if (typeof(SteamManager).GetMethod("Awake") == null || ForceNoSteam)
             {
                 if (ForceNoSteam)
                 {
-                    MelonLogger.Msg(ConsoleColor.DarkMagenta, "[SteamWorks.NET] Force no steam enabled");
+                    MelonLogger.Msg(DarkMagenta, "[SteamWorks.NET] Force no steam enabled");
                 }
                 MelonLogger.Msg("[SteamWorks.NET] This game version has not SteamManager");
                 var original = typeof(EpicOnlineServicesManager).GetMethod("Start");
                 if (original == null || ForceNoEgs)
                 {
                     MelonLogger.Msg("[EpicOnlineServicesManager] This game version has not EpicOnlineServicesManager");
-                    MelonLogger.Msg("[EpicOnlineServicesManager] This probably pirated GOG version, can't verify, so good bye");
-                    //Watch out this is GOG
-                    Application.OpenURL("https://youtu.be/-2ySzV-HGxM");
-                    Application.OpenURL("https://www.google.com/search?q=how+to+buy+The+Long+Dark+on+steam+if+I+am+pirate");
-                    Application.Quit();
-                }else{
+                } else {
                     MelonLogger.Msg("[EpicOnlineServicesManager] This game version has EpicOnlineServicesManager");
                     var postfix = typeof(Pathes).GetMethod("EGSHook");
                     HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
                     MelonLogger.Msg("[EpicOnlineServicesManager] Patching EpicOnlineServicesManager complete!");
                 }
-            }else{
+            } else {
                 MelonLogger.Msg("[SteamWorks.NET] This game version has SteamManager");
                 var original = typeof(SteamManager).GetMethod("Awake");
                 var postfix = typeof(SteamConnect).GetMethod("Init");
@@ -1546,70 +900,26 @@ namespace SkyCoop
             Supporters.GetSupportersList();
 
             Debug.Log($"[{InfoAttribute.Name}] Version {InfoAttribute.Version} loaded!");
-            ClassInjector.RegisterTypeInIl2Cpp<AnimalUpdates>();
-            ClassInjector.RegisterTypeInIl2Cpp<DestoryArrowOnHit>();
-            ClassInjector.RegisterTypeInIl2Cpp<PlayerBulletDamage>();
-            ClassInjector.RegisterTypeInIl2Cpp<ClientProjectile>();
-            ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayer>();
-            ClassInjector.RegisterTypeInIl2Cpp<ContainersSync>();
-            ClassInjector.RegisterTypeInIl2Cpp<Outline>();
-            ClassInjector.RegisterTypeInIl2Cpp<UiButtonPressHook>();
-            ClassInjector.RegisterTypeInIl2Cpp<DestoryStoneOnStop>();
-            ClassInjector.RegisterTypeInIl2Cpp<GearSpawnPointSave>();
-            ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerAnimator>();
-            ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerClothingManager>();
-            ClassInjector.RegisterTypeInIl2Cpp<FakeFire>();
-            ClassInjector.RegisterTypeInIl2Cpp<FakeFireLight>();
-            ClassInjector.RegisterTypeInIl2Cpp<DoNotSerializeThis>();
-            ClassInjector.RegisterTypeInIl2Cpp<MultiplayerPlayerVoiceChatPlayer>();
-            ClassInjector.RegisterTypeInIl2Cpp<DroppedGearDummy>();
-            ClassInjector.RegisterTypeInIl2Cpp<IgnoreDropOverride>();
-            ClassInjector.RegisterTypeInIl2Cpp<DropFakeOnLeave>();
-            ClassInjector.RegisterTypeInIl2Cpp<FakeBed>();
-            ClassInjector.RegisterTypeInIl2Cpp<FakeBedDummy>();
-            ClassInjector.RegisterTypeInIl2Cpp<AnimalActor>();
-            ClassInjector.RegisterTypeInIl2Cpp<AnimalCorpseObject>();
-            ClassInjector.RegisterTypeInIl2Cpp<SpawnRegionSimple>();
-            ClassInjector.RegisterTypeInIl2Cpp<LobbyHoverNickname>();
-            ClassInjector.RegisterTypeInIl2Cpp<CookpotHelmet>();
-            ClassInjector.RegisterTypeInIl2Cpp<Borrowable>();
-            ClassInjector.RegisterTypeInIl2Cpp<UiButtonKeyboardPressSkip>();
-            ClassInjector.RegisterTypeInIl2Cpp<LeftHandHelper>();
-            ClassInjector.RegisterTypeInIl2Cpp<DeathDropContainer>();
 
-            if (instance == null)
-            {
-                instance = this;
-                tcp = new TCP();
-                udp = new UDP();
-            }
 
             LoadedBundle = AssetBundle.LoadFromFile("Mods\\multiplayerstuff.unity3d");
             if (LoadedBundle == null)
             {
                 MelonLogger.Msg("Have problems with loading multiplayerstuff.unity3d!!");
-            }else{
+            } else {
                 MelonLogger.Msg("Models loaded.");
             }
 
-            if (Application.isBatchMode)
+            if (DedicatedServerAppMode)
             {
-                MelonLogger.Msg(ConsoleColor.Magenta,"[Dedicated server] Please wait...");
+                MelonLogger.Msg(Magenta, "[Dedicated server] Please wait...");
                 InputManager.m_InputDisableTime = float.PositiveInfinity;
+                MPSaveManager.SaveRecentTimer = 30;
             }
             uConsole.RegisterCommand("oleg", new Action(LootEverything));
-
-
-            //SaveGameData.LoadData("MultiplayerGUID");
-
-            //System.Random RNG = new System.Random();
-            //int GUIDseed = RNG.Next(1, 999999);
-            //int GUIDx = RNG.Next(-7000, 999999);
-            //int GUIDy = RNG.Next(-3000, 999999);
-            //int GUIDz = RNG.Next(-5370, 999999);
-
-            //string MyMpGUID = GenerateSeededGUID(GUIDseed, new Vector3(GUIDx, GUIDy, GUIDz));
-            //SaveGameData.SaveData("MultiplayerGUID", SaveGameSystem.PROFILE_DISPLAYNAME, MyMpGUID);
+            uConsole.RegisterCommand("gimmekey", new Action(CreateDebugKey));
+            uConsole.RegisterCommand("givemekey", new Action(CreateDebugKey));
+            Comps.RegisterComponents();
         }
 
         public static void LootEverything()
@@ -1652,7 +962,7 @@ namespace SkyCoop
                     {
                         lootedByOleg = lootedByOleg + 1;
                         GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(gearItem, false, false);
-                    }  
+                    }
                 }
                 currentBox.m_Items.Clear();
             }
@@ -1660,15 +970,53 @@ namespace SkyCoop
             Debug.Log("Oleg found and looted " + lootedByOleg + " gears");
         }
 
-        public override void OnApplicationQuit()
+        public static bool QuitWithoutSaving = false;
+        public static bool IReallyWantToQuit = false;
+        public static bool NoMelonQuit = false;
+
+        public override void OnPreferencesSaved()
         {
-            MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
-            Disconnect();
+            if (NoMelonQuit)
+            {
+                Application.CancelQuit();
+            }
         }
 
-        public static Container MakeDeathCreate(DeathContainerData data)
+        public override void OnApplicationQuit()
         {
-            if(ObjectGuidManager.Lookup(data.m_Guid) != null)
+            if (IReallyWantToQuit || DedicatedServerAppMode)
+            {
+                if (InOnline())
+                {
+                    MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
+                    Disconnect();
+                }
+                return;
+            }
+
+            if (InOnline())
+            {                
+                if (!QuitWithoutSaving)
+                {
+                    if (level_name != "MainMenu")
+                    {
+                        Pathes.QuitOnSave = true;
+                        QuitWithoutSaving = true;
+                        NoMelonQuit = true;
+                        SaveGameSystem.SetAsyncEnabled(false);
+                        GameManager.ForceSaveGame();
+                        Application.CancelQuit();
+                    }
+                } else {
+                    MelonLogger.Msg("[CLIENT] Disconnect cause quit game");
+                    Disconnect();
+                }
+            }
+        }
+
+        public static Container MakeDeathCreate(DataStr.DeathContainerData data)
+        {
+            if (ObjectGuidManager.Lookup(data.m_Guid) != null)
             {
                 MelonLogger.Msg("Death container  " + data.m_Guid + " already exist");
                 return null;
@@ -1686,7 +1034,7 @@ namespace SkyCoop
             {
                 UnityEngine.Object.Destroy(trash);
             }
-            if(box.GetComponent<GearItem>() != null)
+            if (box.GetComponent<GearItem>() != null)
             {
                 UnityEngine.Object.Destroy(box.GetComponent<GearItem>());
             }
@@ -1714,7 +1062,7 @@ namespace SkyCoop
             gu.Set(data.m_Guid);
             box.SetActive(true);
             Container Con = box.GetComponent<Container>();
-            if(Con == null)
+            if (Con == null)
             {
                 Con = box.AddComponent<Container>();
                 Con.m_CloseAudio = "Play_SndGenCanvasBagZipperClose1";
@@ -1726,33 +1074,33 @@ namespace SkyCoop
             Con.m_CapacityKG = 0;
             Con.m_Inspected = true;
             Con.m_StartInspected = true;
-            if(box.GetComponent<DeathDropContainer>() == null)
+            if (box.GetComponent<Comps.DeathDropContainer>() == null)
             {
-                box.AddComponent<DeathDropContainer>().m_Owner = data.m_Owner;
+                box.AddComponent<Comps.DeathDropContainer>().m_Owner = data.m_Owner;
             }
             BoxCollider BoxCol = box.GetComponent<BoxCollider>();
             if (BoxCol)
             {
                 BoxCol.isTrigger = true;
             }
-            
+
             return Con;
         }
 
         public static void RemoveDeathContainer(string GUID, string Scene)
         {
             GameObject Box = ObjectGuidManager.Lookup(GUID);
-            if(Box == null)
+            if (Box == null)
             {
-                MelonLogger.Msg("Death container "+ GUID + " not exist, can't be deleted");
-            }else{
+                MelonLogger.Msg("Death container " + GUID + " not exist, can't be deleted");
+            } else {
                 UnityEngine.Object.Destroy(Box);
             }
-            
+
 
             if (iAmHost)
             {
-                foreach (DeathContainerData create in DeathCreates)
+                foreach (DataStr.DeathContainerData create in DeathCreates)
                 {
                     if (create.m_Guid == GUID)
                     {
@@ -1765,7 +1113,7 @@ namespace SkyCoop
 
         public static void DropAll()
         {
-            DeathContainerData ObjSync = new DeathContainerData();
+            DataStr.DeathContainerData ObjSync = new DataStr.DeathContainerData();
             ObjSync.m_Guid = ObjectGuidManager.GenerateNewGuidString();
             ObjSync.m_LevelKey = level_guid;
             ObjSync.m_Position = GameManager.GetPlayerTransform().position;
@@ -1784,7 +1132,7 @@ namespace SkyCoop
             if (Box)
             {
                 Inventory Inv = GameManager.GetInventoryComponent();
-                List<GearItem> Gears = new List<GearItem>() ;
+                List<GearItem> Gears = new List<GearItem>();
                 for (int index = 0; index < Inv.m_Items.Count; ++index)
                 {
                     GearItem gearItem = (GearItem)Inv.m_Items[index];
@@ -1794,14 +1142,20 @@ namespace SkyCoop
                         {
                             gearItem.m_ClothingItem.SetFullyWet();
                         }
-                        
+
                         Gears.Add(gearItem);
 
-                        if(GameManager.GetPlayerManagerComponent().m_ItemInHands && GameManager.GetPlayerManagerComponent().m_ItemInHands == gearItem)
+                        if (GameManager.GetPlayerManagerComponent().m_ItemInHands && GameManager.GetPlayerManagerComponent().m_ItemInHands == gearItem)
                         {
                             GameManager.GetPlayerManagerComponent().UnequipImmediate(false);
                         }
                     }
+                }
+
+                Panel_PickWater Pick;
+                if (!InterfaceManager.TryGetPanel<Panel_PickWater>(out Pick))
+                {
+                    return;
                 }
 
                 foreach (GearItem Gear in Gears)
@@ -1810,12 +1164,12 @@ namespace SkyCoop
                     {
                         if (Gear.m_WaterSupply)
                         {
-                            InterfaceManager.m_Panel_PickWater.TransferAllWaterInventoryToContainer(Box, Gear.m_WaterSupply);
+                            Pick.TransferAllWaterInventoryToContainer(Box, Gear.m_WaterSupply);
                         }
                         else if (Gear.m_StackableItem && Box.AddToExistingStackable(Gear.name, Gear.GetNormalizedCondition(), Gear.m_StackableItem.m_Units, Gear))
                         {
                             Inv.DestroyGear(Gear.gameObject);
-                        }else{
+                        } else {
                             Box.AddGear(Gear);
                             Inv.RemoveGear(Gear.gameObject, true);
                         }
@@ -1826,18 +1180,18 @@ namespace SkyCoop
 
                 if (iAmHost)
                 {
-                    MPSaveManager.SaveContainer(ObjSync.m_LevelKey, ObjSync.m_Guid, CompressString(Content));
+                    MPSaveManager.SaveContainer(ObjSync.m_LevelKey, ObjSync.m_Guid, Shared.CompressString(Content));
                     DeathCreates.Add(ObjSync);
                     ServerSend.ADDDEATHCONTAINER(ObjSync, ObjSync.m_LevelKey, 0);
                 }
                 else if (sendMyPosition)
                 {
                     DoPleaseWait("Please wait...", "Sending container data...");
-                    SendContainerData(CompressString(Content), ObjSync.m_LevelKey, ObjSync.m_Guid);
+                    Shared.SendContainerData(Shared.CompressString(Content), ObjSync.m_LevelKey, ObjSync.m_Guid, Content);
                     using (Packet _packet = new Packet((int)ClientPackets.ADDDEATHCONTAINER))
                     {
                         _packet.Write(ObjSync);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
 
@@ -1849,48 +1203,49 @@ namespace SkyCoop
 
         public override void OnLevelWasInitialized(int level)
         {
-            if(KillOnUpdate == true)
+            if (KillOnUpdate == true)
             {
                 return;
             }
-            
+
             OpenablesObjs.Clear();
             MelonLogger.Msg("Level initialized: " + level);
             levelid = level;
+
+            if (levelid == 0 && sendMyPosition)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.FORCELOADING))
+                {
+                    _packet.Write(true);
+                    SendUDPData(_packet);
+                }
+            }
+
             MelonLogger.Msg("Level name: " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             level_name = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
             MyTicksOnScene = 0;
-            if (IamShatalker == true)
-            {
-                uConsole.RunCommandSilent("Ghost");
-                uConsole.RunCommandSilent("God");
-            }
 
-            if(level_name != "MainMenu" && level_name != "Boot" && level_name != "Empty")
+            if (level_name != "MainMenu" && level_name != "Boot" && level_name != "Empty")
             {
                 CheckHaveBookMod();
             }
 
             DisableOriginalAnimalSpawns();
-            if (level_name == "MainMenu" && GearIDListReady == false)
-            {
-                InitGearsIDS(); // Compilating List of Gear names by ID, to reference on it to shorten names in sync packets
-            }
-            InitAllPlayers();
+            Shared.InitAllPlayers();
         }
 
         public static GameObject MakeModObject(string _name, Transform newparent = null)
         {
-            if(LoadedBundle == null)
+            if (LoadedBundle == null)
             {
                 MelonLogger.Msg("[Object loader] Bundle is null ");
             }
 
             GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>(_name);
 
-            if(LoadedAssets == null)
+            if (LoadedAssets == null)
             {
-                MelonLogger.Msg("[Object loader] Can't load asset. Has try load "+ _name);
+                MelonLogger.Msg("[Object loader] Can't load asset. Has try load " + _name);
             }
 
             GameObject _Obj = null;
@@ -1898,39 +1253,21 @@ namespace SkyCoop
             if (newparent == null)
             {
                 _Obj = GameObject.Instantiate(LoadedAssets);
-            }else{
+            } else {
                 _Obj = GameObject.Instantiate(LoadedAssets, newparent);
             }
 
             if (_Obj == null)
             {
-                MelonLogger.Msg("[Object loader] Object is null  "+ _name);
+                MelonLogger.Msg("[Object loader] Object is null  " + _name);
             }
 
             return _Obj;
-        }
-
-        private void Start()
-        {
-            tcp = new TCP();
-            udp = new UDP();
         }
         public static bool IsZero(float a)
         {
             return Mathf.Abs(a) <= 0.0001f;
         }
-
-        public static MyMod instance;
-        public static int dataBufferSize = 4096;
-
-        public string ip = "127.0.0.1";
-        public int port = 26950;
-        public int myId = 0;
-        public TCP tcp;
-        public UDP udp;
-
-        private delegate void PacketHandler(Packet _packet);
-        private static Dictionary<int, PacketHandler> packetHandlers;
 
         public static void SimUDPHandle(int _packetId, Packet _packet, int _from)
         {
@@ -1940,10 +1277,10 @@ namespace SkyCoop
         public static void SimUDPHandle_Client(int _packetId, Packet _packet)
         {
             //MelonLogger.Msg("[UDP SIM CLIENT] Trying sim packet " + _packetId);
-            packetHandlers[_packetId](_packet);
+            ClientUser.packetHandlers[_packetId](_packet);
         }
 
-        public static void NoSyncFurtitureDestory(BreakDown breakDown)
+        public static void NoSyncFurtitureDestory(BreakDown breakDown, string GUID, bool ReBake)
         {
             breakDown.gameObject.SetActive(false);
             if (breakDown.gameObject.transform.parent && breakDown.gameObject.transform.parent.GetComponent<RadialObjectSpawner>())
@@ -1953,190 +1290,126 @@ namespace SkyCoop
                 RadialSpawnManager.ReturnToObjectPool(breakDown.gameObject);
             }
             breakDown.StickSurfaceObjectsToGround();
-            MissionUtils.PostObjectEvent(breakDown.gameObject, MissionTypes.MissionObjectEvent.ObjectBrokenDown);
+            if (ReBake)
+            {
+                BakePreSpawnedGearsList();
+            }
+            
+            MissionUtils.PostObjectEvent(breakDown.gameObject, Il2CppMissionTypes.MissionObjectEvent.ObjectBrokenDown);
+            MelonLogger.Msg("Furn " + GUID+" removed");
+        }
+        public static void NoSyncFurtitureRepair(BreakDown breakDown, string GUID)
+        {
+            breakDown.gameObject.SetActive(true);
+            MelonLogger.Msg("Furn " + GUID + " repaired");
         }
 
-        //public static void DestoryBrokenFurniture()
-        //{
-        //    for (int i = 0; i < BreakDown.m_BreakDownObjects.Count; i++)
-        //    {
-        //        GameObject gameObject = BreakDown.m_BreakDownObjects[i].gameObject;
-        //        string breakGuid = "";
-        //        string breakParentGuid = "";
-        //        if (gameObject != null)
-        //        {
-        //            ObjectGuid BreakGuidComp = gameObject.GetComponent<ObjectGuid>();
-        //            if (BreakGuidComp != null)
-        //            {
-        //                breakGuid = BreakGuidComp.Get();
-        //            }
-        //            if (gameObject.transform.parent != null)
-        //            {
-        //                ObjectGuid BreakGuidParentComp = gameObject.transform.parent.GetComponent<ObjectGuid>();
-        //                if (BreakGuidParentComp != null)
-        //                {
-        //                    breakParentGuid = BreakGuidParentComp.Get();
-        //                }
-        //            }
-        //        }
-        //        BrokenFurnitureSync furntest = new BrokenFurnitureSync();
-        //        furntest.m_Guid = breakGuid;
-        //        furntest.m_ParentGuid = breakParentGuid;
-        //        furntest.m_LevelID = levelid;
-        //        furntest.m_LevelGUID = level_guid;
-
-        //        MelonLogger.Msg("BrokenFurniture.Count " + BrokenFurniture.Count);
-
-        //        for (int n = 0; n < BrokenFurniture.Count; n++)
-        //        {
-        //            BrokenFurnitureSync furnCurr = BrokenFurniture[n];
-        //            if (furnCurr.m_Guid == furntest.m_Guid &&
-        //                furnCurr.m_ParentGuid == furntest.m_ParentGuid &&
-        //                furnCurr.m_LevelID == furntest.m_LevelID &&
-        //                furnCurr.m_LevelGUID == furntest.m_LevelGUID)
-        //            {
-        //                MelonLogger.Msg("Found " + breakGuid);
-        //                NoSyncFurtitureDestory(BreakDown.m_BreakDownObjects[i]);
-        //            }
-        //        }
-        //    }
-        //}
-
-        public static string GetBreakDownSound(BrokenFurnitureSync FindData)
+        public static string GetBreakDownSound(DataStr.BrokenFurnitureSync FindData)
         {
             GameObject furn = ObjectGuidManager.Lookup(FindData.m_Guid);
-            if (furn != null)
+            if (furn != null )
             {
-                if (FindData.m_ParentGuid != "")
+                if (furn.GetComponent<BreakDown>())
                 {
-                    if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == FindData.m_ParentGuid)
+                    if (FindData.m_ParentGuid != "")
+                    {
+                        if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == FindData.m_ParentGuid)
+                        {
+                            return furn.GetComponent<BreakDown>().m_BreakDownAudio;
+                        }
+                    } else
                     {
                         return furn.GetComponent<BreakDown>().m_BreakDownAudio;
                     }
-                }else{
-                    return furn.GetComponent<BreakDown>().m_BreakDownAudio;
+                } else if(furn.GetComponent<FakeRockCache>())
+                {
+                    return "Play_RockCache";
                 }
             }
             return "";
         }
+        public static bool FoundSomethingToBreak = false;
 
-        public static bool RemoveAttachedObjectsAfterSecond = false;
-
-        public static void DestoryBrokenFurniture()
+        public static void RemoveBrokenFurniture(string GUID, string ParentGUID, bool ReBake = true)
         {
-            bool FoundSomethingToBreak = false;
-            for (int n = 0; n < BrokenFurniture.Count; n++)
+            MelonLogger.Msg("Going to remove furn "+ GUID+ ParentGUID);
+            GameObject furn = ObjectGuidManager.Lookup(GUID);
+            if (furn != null)
             {
-                BrokenFurnitureSync FindData = BrokenFurniture[n];
-
-                if(FindData.m_LevelID == levelid && FindData.m_LevelGUID == level_guid)
+                if (ParentGUID != "")
                 {
-                    GameObject furn = ObjectGuidManager.Lookup(FindData.m_Guid);
-                    if (furn != null)
+                    if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == ParentGUID)
                     {
-                        if (FindData.m_ParentGuid != "")
-                        {
-                            if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == FindData.m_ParentGuid)
-                            {
-                                NoSyncFurtitureDestory(furn.GetComponent<BreakDown>());
-                                FoundSomethingToBreak = true;
-                            }
-                        }else{
-                            NoSyncFurtitureDestory(furn.GetComponent<BreakDown>());
-                            FoundSomethingToBreak = true;
-                        }
+                        NoSyncFurtitureDestory(furn.GetComponent<BreakDown>(), GUID+ParentGUID, ReBake);
+                        FoundSomethingToBreak = true;
                     }
+                } else
+                {
+                    NoSyncFurtitureDestory(furn.GetComponent<BreakDown>(), GUID + ParentGUID, ReBake);
+                    FoundSomethingToBreak = true;
                 }
             }
-            if(FoundSomethingToBreak == true)
-            {
-                RemoveAttachedObjectsAfterSecond = true; //Because some of gears may be was on that broken prop.
-            }
         }
-
-        public static void DestoryJustOneGear()
+        public static void RepairBrokenFurniture(string GUID, string ParentGUID)
         {
-
-        }
-
-        public static void DestoryAnSpecificGear(GearItem currentGear)
-        {
-            if (ServerConfig.m_DuppedSpawns == true)
+            MelonLogger.Msg("Going to repair furn " + GUID + ParentGUID);
+            GameObject furn = ObjectGuidManager.Lookup(GUID);
+            if (furn != null)
             {
-                return;
-            }
-
-            if (GearManager.m_Gear.Count == 0 || PickedGears.Count == 0)
-            {
-                return;
-            }
-
-            PickedGearSync FindData = new PickedGearSync();
-            FindData.m_LevelID = levelid;
-            FindData.m_LevelGUID = level_guid;
-            FindData.m_Spawn = currentGear.gameObject.transform.position;
-
-            if (currentGear.m_BeenInPlayerInventory == false && currentGear.gameObject.activeSelf == true)
-            {
-                SaveGearSpawn(currentGear.gameObject);
-            }
-
-            if (PickedGears.Contains(FindData) == true)
-            {
-                if (currentGear.m_BeenInPlayerInventory == false && currentGear.gameObject.activeSelf == true)
+                if (ParentGUID != "")
                 {
-                    if (currentGear.gameObject.transform.position == FindData.m_Spawn)
+                    if (furn.transform.parent != null && furn.transform.parent.GetComponent<ObjectGuid>() != null && furn.transform.parent.GetComponent<ObjectGuid>().Get() == ParentGUID)
                     {
-                        MelonLogger.Msg("Destroy Picked Gear X " + currentGear.transform.position.x + " Y " + currentGear.transform.position.y + " Z " + currentGear.transform.position.z);
-                        currentGear.gameObject.SetActive(false);
+                        NoSyncFurtitureRepair(furn.GetComponent<BreakDown>(), GUID + ParentGUID);
+                        FoundSomethingToBreak = true;
                     }
+                } else
+                {
+                    NoSyncFurtitureRepair(furn.GetComponent<BreakDown>(), GUID + ParentGUID);
+                    FoundSomethingToBreak = true;
                 }
             }
         }
 
-        public static void DestoryPickedGears()
+        public static Dictionary<long, GameObject> PreSpawnedGears = new Dictionary<long, GameObject>();
+        public static void BakePreSpawnedGearsList()
         {
-            MelonLogger.Msg("DestoryPickedGears called");
-            //float d = Time.time;
-            //MelonLogger.Msg("DestoryPickedGears Time before "+ d);
-
-            if (ServerConfig.m_DuppedSpawns == true)
-            {
-                return;
-            }
-
-            if(GearManager.m_Gear.Count == 0 || PickedGears.Count == 0)
-            {
-                return;
-            }
-
+            PreSpawnedGears.Clear();
             for (int i = 0; i < GearManager.m_Gear.Count; i++)
             {
                 GearItem currentGear = GearManager.m_Gear[i];
-                PickedGearSync FindData = new PickedGearSync();
-                FindData.m_LevelID = levelid;
-                FindData.m_LevelGUID = level_guid;
-                FindData.m_Spawn = currentGear.gameObject.transform.position;
+                GameObject obj = currentGear.gameObject;
+                long Key = MPSaveManager.GetPickedGearKey(obj.transform.position);
 
-                if (currentGear.m_BeenInPlayerInventory == false && currentGear.gameObject.activeSelf == true)
+                if (currentGear.m_BeenInPlayerInventory == false && obj.activeSelf == true && currentGear.m_InsideContainer == false)
                 {
-                    SaveGearSpawn(currentGear.gameObject);
-                }
-
-                if(PickedGears.Contains(FindData) == true)
-                {
-                    if (currentGear.m_BeenInPlayerInventory == false && currentGear.gameObject.activeSelf == true)
+                    //MelonLogger.Msg("[BakePreSpawnedGearsList] " + currentGear.m_GearName + " Key " + Key);
+                    if (!PreSpawnedGears.ContainsKey(Key))
                     {
-                        if (currentGear.gameObject.transform.position == FindData.m_Spawn)
-                        {
-                            MelonLogger.Msg("Destroy Picked Gear X " + currentGear.transform.position.x + " Y " + currentGear.transform.position.y + " Z " + currentGear.transform.position.z);
-                            currentGear.gameObject.SetActive(false);
-                        }
+                        PreSpawnedGears.Add(Key, obj);
+                    } else
+                    {
+                        //MelonLogger.Msg(Red,"[BakePreSpawnedGearsList] GEAR ALREADY IN THE LIST! " + currentGear.m_GearName + " Key " + Key);
                     }
                 }
             }
-            //float r = Time.time - d;
-            //MelonLogger.Msg("[DestoryPickedGears] Time after: " + Time.time + " Result " + r + "ms");
+        }
+
+        public static void RemovePickedGear(long Key)
+        {
+            MelonLogger.Msg("[RemovePickedGear] Key " + Key);
+            if (ServerConfig.m_DuppedSpawns == true)
+            {
+                return;
+            }
+            GameObject Gear;
+            if (PreSpawnedGears.TryGetValue(Key, out Gear))
+            {
+                if(Gear.GetComponent<GearItem>() && Gear.GetComponent<GearItem>().m_BeenInPlayerInventory == false && Gear.gameObject.activeSelf == true)
+                {
+                    Gear.gameObject.SetActive(false);
+                }
+            }
         }
 
         public static void UpdateDeployedRopes()
@@ -2145,16 +1418,16 @@ namespace SkyCoop
             for (int i = 0; i < RopeAnchorPoint.m_RopeAnchorPoints.Count; i++)
             {
                 RopeAnchorPoint rope = RopeAnchorPoint.m_RopeAnchorPoints[i];
-                ClimbingRopeSync FindData = new ClimbingRopeSync();
+                DataStr.ClimbingRopeSync FindData = new DataStr.ClimbingRopeSync();
                 FindData.m_LevelID = levelid;
                 FindData.m_LevelGUID = level_guid;
                 FindData.m_Position = rope.gameObject.transform.position;
                 if (DeployedRopes.Contains(FindData) == true)
                 {
-                    ClimbingRopeSync FoundData = new ClimbingRopeSync();
+                    DataStr.ClimbingRopeSync FoundData = new DataStr.ClimbingRopeSync();
                     for (int n = 0; n < DeployedRopes.Count; n++)
                     {
-                        ClimbingRopeSync currRope = DeployedRopes[n];
+                        DataStr.ClimbingRopeSync currRope = DeployedRopes[n];
                         if (currRope.m_Position == FindData.m_Position && currRope.m_LevelID == levelid && currRope.m_LevelGUID == level_guid)
                         {
                             FoundData = currRope;
@@ -2164,10 +1437,10 @@ namespace SkyCoop
                     if (rope.gameObject.transform.position == FoundData.m_Position)
                     {
                         MelonLogger.Msg("Processing synced rope " + FoundData.m_Position.x + " Y " + FoundData.m_Position.y + " Z " + FoundData.m_Position.z);
-                        if(FoundData.m_Deployed == rope.m_RopeDeployed && FoundData.m_Snapped == rope.m_RopeSnapped)
+                        if (FoundData.m_Deployed == rope.m_RopeDeployed && FoundData.m_Snapped == rope.m_RopeSnapped)
                         {
                             MelonLogger.Msg("Rope already has desired state");
-                        }else{
+                        } else {
                             if (FoundData.m_Deployed == true)
                             {
                                 rope.SetRopeActiveState(FoundData.m_Deployed, false);
@@ -2185,7 +1458,7 @@ namespace SkyCoop
                                         rope.m_RopeSnapped = true;
                                     }
                                 }
-                            }else if(FoundData.m_Deployed == false)
+                            } else if (FoundData.m_Deployed == false)
                             {
                                 rope.m_RopeDeployed = false;
                                 rope.SetRopeActiveState(false, true);
@@ -2215,7 +1488,7 @@ namespace SkyCoop
             GameObject RadioTransform = GameObject.Find(Path);
             if (!VanilaRadio && RadioTransform)
             {
-                if(ViewModelRadio == null)
+                if (ViewModelRadio == null)
                 {
                     GameObject reference = GetGearItemObject("GEAR_HandheldShortwave");
                     //OBJ_CellPhoneA_Prefab
@@ -2261,8 +1534,8 @@ namespace SkyCoop
                     ViewModelRadioLED = obj;
                 }
             }
-            
-            ViewModelHatchet = GameObject.Find(Path+"mesh_hatchet");
+
+            ViewModelHatchet = GameObject.Find(Path + "mesh_hatchet");
             ViewModelHatchet2 = GameObject.Find(Path + "mesh_Hatchet_improvised");
             ViewModelKnife = GameObject.Find(Path + "mesh_knife");
             ViewModelKnife2 = GameObject.Find(Path + "mesh_knife_improvised");
@@ -2270,7 +1543,7 @@ namespace SkyCoop
             ViewModelHammer = GameObject.Find(Path + "mesh_hammer");
             ViewModelStone = GameObject.Find(Path + "FPH_Stone(Clone)");
 
-            ViewModelDummy = GameObject.Find(Path+"FPH_Flare(Clone)");
+            ViewModelDummy = GameObject.Find(Path + "FPH_Flare(Clone)");
 
             if (ViewModelShovel == null)
             {
@@ -2311,7 +1584,7 @@ namespace SkyCoop
                 }
                 ViewModelShovel.transform.localEulerAngles = new Vector3(0, 0, 90);
             }
-            if(ViewModelFireAxe == null)
+            if (ViewModelFireAxe == null)
             {
                 GameObject reference = GetGearItemObject("GEAR_FireAxe");
 
@@ -2380,7 +1653,7 @@ namespace SkyCoop
                 ViewModelJeremiahKnife.GetComponent<MeshRenderer>().SetMaterial(reference.transform.GetChild(0).GetComponent<MeshRenderer>().materials[0]);
             }
 
-            if(ViewModelBolt == null)
+            if (ViewModelBolt == null)
             {
                 GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("Bolt");
                 ViewModelBolt = GameObject.Instantiate(LoadedAssets, RadioTransform.transform.position, RadioTransform.transform.rotation, RadioTransform.transform);
@@ -2390,319 +1663,281 @@ namespace SkyCoop
                 ViewModelBolt.transform.localScale = new Vector3(0.045f, 0.045f, 0.045f);
                 ViewModelBolt.SetActive(false);
             }
+            if (ViewModelHackSaw == null)
+            {
+                GameObject reference = GetGearItemObject("GEAR_Hacksaw");
+
+                if (reference == null)
+                {
+                    return;
+                }
+
+                ViewModelHackSaw = UnityEngine.Object.Instantiate<GameObject>(reference, RadioTransform.transform.position, RadioTransform.transform.rotation, RadioTransform.transform);
+                ViewModelHackSaw.name = "FPH_Hacksaw";
+                ViewModelHackSaw.SetActive(false);
+                if (ViewModelHackSaw.GetComponent<GearItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<GearItem>());
+                }
+                if (ViewModelHackSaw.GetComponent<ForageItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<ForageItem>());
+                }
+                if (ViewModelHackSaw.GetComponent<HoverIconsToShow>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<HoverIconsToShow>());
+                }
+                if (ViewModelHackSaw.GetComponent<Inspect>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<Inspect>());
+                }
+                if (ViewModelHackSaw.GetComponent<DegradeOnUse>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<DegradeOnUse>());
+                }
+                if (ViewModelHackSaw.GetComponent<Repairable>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<Repairable>());
+                }
+                if (ViewModelHackSaw.GetComponent<BodyHarvestItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<BodyHarvestItem>());
+                }
+                if (ViewModelHackSaw.GetComponent<Rigidbody>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<Rigidbody>());
+                }
+                if (ViewModelHackSaw.GetComponent<CanOpeningItem>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<CanOpeningItem>());
+                }
+                if (ViewModelHackSaw.GetComponent<LODGroup>() != null)
+                {
+                    UnityEngine.Object.Destroy(ViewModelHackSaw.GetComponent<LODGroup>());
+                }
+                ViewModelHackSaw.transform.localEulerAngles = new Vector3(0, 0, 90);
+                ViewModelHackSaw.transform.localPosition = new Vector3(0, 0.15f, 0.01f);
+            }
+            if (ViewModelPhoto == null)
+            {
+                GameObject reference = GetGearItemObject("GEAR_SCPhoto");
+
+                if (reference == null)
+                {
+                    return;
+                }
+
+                ViewModelPhoto = UnityEngine.Object.Instantiate<GameObject>(reference, RadioTransform.transform.position, RadioTransform.transform.rotation, RadioTransform.transform);
+                ViewModelPhoto.name = "FPH_Photo";
+                ViewModelPhoto.SetActive(false);
+
+                foreach (Component Com in ViewModelPhoto.GetComponents<Component>())
+                {
+                    string ComName = Com.GetIl2CppType().Name;
+                    if (ComName != PhysicMaterial.Il2CppType.Name
+                        && ComName != LODGroup.Il2CppType.Name
+                        && ComName != Transform.Il2CppType.Name
+                        && ComName != MeshRenderer.Il2CppType.Name
+                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    {
+                        UnityEngine.Object.Destroy(Com);
+                    }
+                }
+                ViewModelPhoto.transform.localEulerAngles = new Vector3(325, 300, 60);
+                ViewModelPhoto.transform.localPosition = new Vector3(0.045f, 0.085f, 0.007f);
+            }
+            if (ViewModelMap == null)
+            {
+                GameObject reference = GetGearItemObject("GEAR_SCMapPiece");
+
+                if (reference == null)
+                {
+                    return;
+                }
+
+                ViewModelMap = UnityEngine.Object.Instantiate<GameObject>(reference, RadioTransform.transform.position, RadioTransform.transform.rotation, RadioTransform.transform);
+                ViewModelMap.name = "FPH_Map";
+                ViewModelMap.SetActive(false);
+
+                foreach (Component Com in ViewModelMap.GetComponents<Component>())
+                {
+                    string ComName = Com.GetIl2CppType().Name;
+                    if (ComName != PhysicMaterial.Il2CppType.Name
+                        && ComName != LODGroup.Il2CppType.Name
+                        && ComName != Transform.Il2CppType.Name
+                        && ComName != MeshRenderer.Il2CppType.Name
+                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    {
+                        UnityEngine.Object.Destroy(Com);
+                    }
+                }
+                ViewModelMap.transform.localEulerAngles = new Vector3(325, 300, 60);
+                ViewModelMap.transform.localPosition = new Vector3(0.045f, 0.085f, 0.007f);
+                ViewModelBolt.transform.localScale = new Vector3(85, 85, 85);
+            }
+            if (ViewModelNote == null)
+            {
+                GameObject reference = GetGearItemObject("GEAR_SCNote");
+
+                if (reference == null)
+                {
+                    return;
+                }
+
+                ViewModelNote = UnityEngine.Object.Instantiate<GameObject>(reference, RadioTransform.transform.position, RadioTransform.transform.rotation, RadioTransform.transform);
+                ViewModelNote.name = "FPH_Note";
+                ViewModelNote.SetActive(false);
+
+                foreach (Component Com in ViewModelNote.GetComponents<Component>())
+                {
+                    string ComName = Com.GetIl2CppType().Name;
+                    if (ComName != PhysicMaterial.Il2CppType.Name
+                        && ComName != LODGroup.Il2CppType.Name
+                        && ComName != Transform.Il2CppType.Name
+                        && ComName != MeshRenderer.Il2CppType.Name
+                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    {
+                        UnityEngine.Object.Destroy(Com);
+                    }
+                }
+                ViewModelNote.transform.localEulerAngles = new Vector3(325, 300, 60);
+                ViewModelNote.transform.localPosition = new Vector3(0.03f, 0.067f, 0.01f);
+            }
         }
 
-        public static void AddDeployedRopes(Vector3 position, bool deployed, bool snapped, int lvl, string lvlguid, bool needSync)
+        public static void AddHarvastedPlant(string harvGUID)
         {
-            ClimbingRopeSync rope = new ClimbingRopeSync();
-            rope.m_Position = position;
-            rope.m_Deployed = deployed;
-            rope.m_Snapped = snapped;
-            rope.m_LevelID = lvl;
-            rope.m_LevelGUID = lvlguid;
+            GameObject obj = ObjectGuidManager.Lookup(harvGUID);
 
-            if (DeployedRopes.Contains(rope) == false)
+            if (obj)
             {
-                MelonLogger.Msg("Add Synced rope " + position.x + " Y " + position.y + " Z " + position.z + " LevelGuid " + lvlguid+" Deployed "+ deployed+ " Snapped "+ snapped);
-                DeployedRopes.Add(rope);
-            }else{
-                for (int n = 0; n < DeployedRopes.Count; n++)
+                Harvestable Plant = obj.GetComponent<Harvestable>();
+                if (Plant == null)
                 {
-                    ClimbingRopeSync currRope = DeployedRopes[n];
-                    if(currRope.m_Position == position && currRope.m_LevelID == lvl && currRope.m_LevelGUID == lvlguid)
+                    return;
+                }
+
+                Plant.gameObject.SetActive(true);
+                if (Plant.m_ActivateObjectPostHarvest != null)
+                {
+                    Plant.m_ActivateObjectPostHarvest.SetActive(false);
+                }
+                Plant.m_Harvested = false;
+            }
+        }
+
+        public static void RemoveHarvastedPlant(string harvGUID)
+        {
+            GameObject obj = ObjectGuidManager.Lookup(harvGUID);
+
+            if (obj)
+            {
+                Harvestable Plant = obj.GetComponent<Harvestable>();
+                if(Plant == null)
+                {
+                    return;
+                }
+
+                if (Plant.m_DestroyObjectOnHarvest == true)
+                {
+                    UnityEngine.Object.Destroy(Plant.gameObject);
+                } else
+                {
+                    Plant.gameObject.SetActive(false);
+                    if (Plant.m_ActivateObjectPostHarvest != null)
                     {
-                        currRope.m_Deployed = deployed;
-                        currRope.m_Snapped = snapped;
-                        MelonLogger.Msg("Updated Synced rope " + position.x + " Y " + position.y + " Z " + position.z + " LevelGuid " + lvlguid + " Deployed " + deployed + " Snapped " + snapped);
-                        break;
+                        Plant.m_ActivateObjectPostHarvest.SetActive(true);
                     }
                 }
             }
-            if (needSync == true)
+        }
+        public static void RemoveLootFromContainer(GameObject obj, int State = 0)
+        {
+            if (obj)
             {
-                if (sendMyPosition == true)
+                string GUID = "";
+                if (obj.GetComponent<ObjectGuid>())
                 {
-                    using (Packet _packet = new Packet((int)ClientPackets.ROPE))
+                    GUID = obj.GetComponent<ObjectGuid>().Get();
+                }
+                //MelonLogger.Msg("RemoveLootFromContainer "+GUID+" State "+State);
+                
+                Container box = obj.GetComponent<Container>();
+                if (box)
+                {
+                    box.DestroyAllGear();
+                    box.m_Inspected = true;
+
+
+                    ContainersSync Con = obj.GetComponent<Comps.ContainersSync>();
+                    if (Con == null)
                     {
-                        _packet.Write(rope);
-                        SendTCPData(_packet);
+                        Con = obj.AddComponent<Comps.ContainersSync>();
+                        Con.m_Obj = obj;
                     }
-                }
-
-                if (iAmHost == true)
-                {
-                    ServerSend.ROPE(0, rope, true);
-                }
-            }
-            else
-            {
-                if (lvl == levelid && lvlguid == level_guid)
-                {
-                    UpdateDeployedRopes();
-                }
-            }
-        }
-
-        public static void AddRecentlyPickedGear(PickedGearSync data)
-        {
-            data.m_Recently = 3;
-            RecentlyPickedGears.Add(data);
-        }
-
-        public static void RemoveHarvastedPlants()
-        {
-            //MelonLogger.Msg("RemoveHarvastedPlants called");
-            if (HarvestableManager.m_Harvestables.Count == 0 || HarvestedPlants.Count == 0)
-            {
-                return;
-            }
-
-            for (int i = 0; i < HarvestableManager.m_Harvestables.Count; i++)
-            {
-                Harvestable currentPlant = HarvestableManager.m_Harvestables[i];
-                string harvGUID = "";
-
-                if(currentPlant.gameObject != null && currentPlant.gameObject.GetComponent<ObjectGuid>() != null)
-                {
-                    harvGUID = currentPlant.gameObject.GetComponent<ObjectGuid>().Get();
-                }
-
-                if (HarvestedPlants.Contains(harvGUID) == true)
-                {
-                    if(currentPlant.m_DestroyObjectOnHarvest == true)
+                    if (State == 0)
                     {
-                        UnityEngine.Object.Destroy(currentPlant.gameObject);
-                    }else{
-                        currentPlant.gameObject.SetActive(false);
-                        if (currentPlant.m_ActivateObjectPostHarvest != null)
-                        {
-                            currentPlant.m_ActivateObjectPostHarvest.SetActive(true);
-                        }
+                        Con.m_Empty = true;
+                    } else if (State == 1)
+                    {
+                        Con.m_Empty = false;
+                    } else if (State == 2 || State == -1)
+                    {
+                        Con.m_Empty = true;
+                        box.m_Inspected = false;
+                        box.PopulateWithRandomGear();
                     }
                 }
             }
         }
 
-        public static void AddHarvastedPlant(string plantGUID, int from)
+
+        public static void RemoveLootFromContainer(string GUID, int State = 0)
         {
-            if(HarvestedPlants.Contains(plantGUID) == false)
+            GameObject obj = ObjectGuidManager.Lookup(GUID);
+            if (obj)
             {
-                HarvestedPlants.Add(plantGUID);
-
-                if(iAmHost == true)
-                {
-                    ServerSend.LOOTEDHARVESTABLE(from, plantGUID, true);
-                }
-            }
-
-            if (from == instance.myId)
+                RemoveLootFromContainer(obj, State);
+            } else
             {
-                return;
-            }
-
-            if (playersData[from] != null)
-            {
-                if(playersData[from].m_Levelid == levelid && playersData[from].m_LevelGuid == level_guid)
-                {
-                    RemoveHarvastedPlants();
-                }
+               //MelonLogger.Msg(Red,"Can't find container " + GUID + " for State " + State);
             }
         }
 
-        public static void CanclePickOfOtherClient(PickedGearSync data)
+        public static void SendBrokeFurniture(string guid, string parentguid, int lvl, string lvlguid)
         {
-            if(data.m_PickerID == 0)
-            {
-                MelonLogger.Msg(ConsoleColor.Blue, "Other shokal has pickup item before me! I need to delete my picked gear with IID "+ data.m_MyInstanceID);
-                int _IID = data.m_MyInstanceID;
-
-                Il2CppSystem.Collections.Generic.List<GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
-                for (int i = 0; i < invItems.Count; i++)
-                {
-                    GearItemObject currGear = invItems[i];
-                    if (currGear != null)
-                    {
-                        if (currGear.m_GearItem.m_InstanceID == _IID)
-                        {
-                            HUDMessage.AddMessage("THIS ALREADY PICKED!");
-                            GameAudioManager.PlayGUIError();
-                            GameManager.GetInventoryComponent().DestroyGear(currGear.m_GearItem.gameObject);
-                            return;
-                        }
-                    }
-                }
-            }else{
-                ServerSend.CANCLEPICKUP(0, data, true);
-            }
-        }
-
-        public static void ApplyLootedContainers()
-        {
-            //MelonLogger.Msg("ApplyLootedContainers called");
-            if(ServerConfig.m_DuppedContainers == true)
-            {
-                return;
-            }
-            if (ContainerManager.m_Containers.Count == 0 || LootedContainers.Count == 0)
-            {
-                return;
-            }
-            for (int i = 0; i < ContainerManager.m_Containers.Count; i++)
-            {
-                if (ContainerManager.m_Containers[i] != null)
-                {
-                    Container currentBox = ContainerManager.m_Containers[i];
-
-                    if (currentBox.m_Inspected == false && currentBox.m_SearchInProgress == false)
-                    {
-                        ContainerOpenSync FindData = new ContainerOpenSync();
-                        FindData.m_LevelID = levelid;
-                        FindData.m_LevelGUID = level_guid;
-                        FindData.m_Guid = "";
-
-                        if (currentBox.gameObject != null && currentBox.gameObject.GetComponent<ObjectGuid>() != null)
-                        {
-                            FindData.m_Guid = currentBox.gameObject.GetComponent<ObjectGuid>().Get();
-                        }
-
-                        if (LootedContainers.Contains(FindData) == true)
-                        {
-                            currentBox.DestroyAllGear();
-                            currentBox.m_Inspected = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        public static void AddLootedContainer(ContainerOpenSync box, bool needSync, int Looter = 0)
-        {
-            if (LootedContainers.Contains(box) == false)
-            {
-                MelonLogger.Msg("Added looted container " + box.m_Guid + " Scene " + box.m_LevelGUID);
-                LootedContainers.Add(box);
-            }
-
-            if (needSync == true)
-            {
-                if (iAmHost == true)
-                {
-                    if(Looter == 0)
-                    {
-                        ServerSend.LOOTEDCONTAINER(0, box, true);
-                    }else{
-                        ServerSend.LOOTEDCONTAINER(Looter, box, false);
-                    }
-                }
-            }else{
-                if (box.m_LevelID == levelid && box.m_LevelGUID == level_guid)
-                {
-                    ApplyLootedContainers();
-                }
-            }
-        }
-
-        public static void AddPickedGear(Vector3 spawn, int lvl, string lvlguid, int pickerId, int isntID, bool needSync)
-        {
-            PickedGearSync picked = new PickedGearSync();
-            picked.m_Spawn = spawn;
-            picked.m_LevelID = lvl;
-            picked.m_LevelGUID = lvlguid;
-            picked.m_PickerID = pickerId;
-            picked.m_MyInstanceID = isntID;
-
-            if (PickedGears.Contains(picked) == false)
-            {
-                MelonLogger.Msg("Added picked gear from X " + spawn.x+" Y "+spawn.y+" Z "+spawn.z+" LevelGuid "+lvlguid);
-                PickedGears.Add(picked);
-            }
-            
-            if (iAmHost == true)
-            {
-                if (RecentlyPickedGears.Contains(picked) == false)
-                {
-                    AddRecentlyPickedGear(picked);
-                }else{
-                    MelonLogger.Msg(ConsoleColor.Blue,"Other shokal has pickup item later! Picker ID "+ picked.m_PickerID+" Should delete gear with IID "+picked.m_MyInstanceID);
-                    CanclePickOfOtherClient(picked);
-                }
-            }
-            if (needSync == true)
-            {
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.GEARPICKUP))
-                    {
-                        _packet.Write(picked);
-                        SendTCPData(_packet);
-                    }
-                }
-
-                if (iAmHost == true)
-                {
-                    ServerSend.GEARPICKUP(0, picked, true);
-                }
-            }else{
-                if (lvl == levelid && lvlguid == level_guid)
-                {
-                    DestoryPickedGears();
-                }
-            }
-        }
-
-        public static void OnFurnitureDestroyed(string guid, string parentguid, int lvl, string lvlguid, bool needSync)
-        {
-            BrokenFurnitureSync furn = new BrokenFurnitureSync();
+            DataStr.BrokenFurnitureSync furn = new DataStr.BrokenFurnitureSync();
             furn.m_Guid = guid;
             furn.m_ParentGuid = parentguid;
             furn.m_LevelID = lvl;
             furn.m_LevelGUID = lvlguid;
-           
-            if (BrokenFurniture.Contains(furn) == false)
-            {
-                MelonLogger.Msg("Added breakdown to list "+ guid);
-                MelonLogger.Msg("BreakDown GUID " + guid + " Parent GUID " + parentguid + " Scene ID " + lvl + " Scene GUID " + lvlguid);
-                BrokenFurniture.Add(furn);
-            }
 
-            if(InOnline() == false)
+            if (sendMyPosition == true)
             {
-                return;
-            }
-
-            if(lvl == levelid && lvlguid == level_guid)
-            {
-                DestoryBrokenFurniture();
-            }
-
-            if(needSync == true)
-            {
-                if (sendMyPosition == true)
+                using (Packet _packet = new Packet((int)ClientPackets.FURNBROKEN))
                 {
-                    using (Packet _packet = new Packet((int)ClientPackets.FURNBROKEN))
-                    {
-                        _packet.Write(furn);
-                        SendTCPData(_packet);
-                    }
+                    _packet.Write(furn);
+                    SendUDPData(_packet);
                 }
+            }
 
-                if (iAmHost == true)
-                {
-                    ServerSend.FURNBROKEN(0, furn, true);
-                }
+            if (iAmHost == true)
+            {
+                ServerSend.FURNBROKEN(0, furn, true);
+                MPSaveManager.AddBrokenFurn(furn);
             }
         }
 
         public static List<GameObject> SpawnedByOtherShelters = new List<GameObject>();
 
-        public static void SpawnSnowShelterByOther(ShowShelterByOther shelterData)
+        public static void SpawnSnowShelterByOther(DataStr.ShowShelterByOther shelterData)
         {
             for (int i = 0; i < SpawnedByOtherShelters.Count; i++)
             {
                 GameObject checking = SpawnedByOtherShelters[i];
                 if (checking != null)
                 {
-                    if(checking.transform.position == shelterData.m_Position)
+                    if (checking.transform.position == shelterData.m_Position)
                     {
                         return;
                     }
@@ -2712,11 +1947,11 @@ namespace SkyCoop
             shelter.name = GameManager.GetSnowShelterManager().m_SnowShelterPrefab.name;
             shelter.transform.position = shelterData.m_Position;
             shelter.transform.rotation = shelterData.m_Rotation;
-            shelter.AddComponent<DoNotSerializeThis>();
+            shelter.AddComponent<Comps.DoNotSerializeThis>();
             SpawnedByOtherShelters.Add(shelter);
         }
 
-        public static void RemoveSnowShelterByOther(ShowShelterByOther shelterData)
+        public static void RemoveSnowShelterByOther(DataStr.ShowShelterByOther shelterData)
         {
             for (int i = 0; i < SpawnedByOtherShelters.Count; i++)
             {
@@ -2726,7 +1961,7 @@ namespace SkyCoop
                     if (shelter.transform.position == shelterData.m_Position)
                     {
                         SpawnedByOtherShelters.Remove(shelter);
-                        UnityEngine.Object.DestroyImmediate(shelter);
+                        UnityEngine.Object.Destroy(shelter);
                         return;
                     }
                 }
@@ -2739,7 +1974,7 @@ namespace SkyCoop
                     if (shelter.transform.position == shelterData.m_Position)
                     {
                         SnowShelterManager.m_SnowShelters.RemoveAt(i);
-                        UnityEngine.Object.DestroyImmediate(shelter);
+                        UnityEngine.Object.Destroy(shelter);
                         return;
                     }
                 }
@@ -2751,7 +1986,7 @@ namespace SkyCoop
             //MelonLogger.Msg("LoadAllSnowSheltersByOther called");
             for (int i = 0; i < ShowSheltersBuilded.Count; i++)
             {
-                ShowShelterByOther shelter = ShowSheltersBuilded[i];
+                DataStr.ShowShelterByOther shelter = ShowSheltersBuilded[i];
                 if (shelter != null)
                 {
                     SpawnSnowShelterByOther(shelter);
@@ -2759,1162 +1994,76 @@ namespace SkyCoop
             }
         }
 
-        public static void ShelterCreated(Vector3 spawn, Quaternion rot, int lvl, string lvlguid, bool needSync)
+        public static Animator RemoveAnimalComponents(GameObject animal)
         {
-            ShowShelterByOther shelter = new ShowShelterByOther();
-            shelter.m_Position = spawn;
-            shelter.m_Rotation = rot;
-            shelter.m_LevelID = lvl;
-            shelter.m_LevelGUID = lvlguid;
-
-            if (ShowSheltersBuilded.Contains(shelter) == false)
+            if (animal == null)
             {
-                MelonLogger.Msg("Added shelter X " + spawn.x + " Y " + spawn.y + " Z " + spawn.z + " LevelGuid " + lvlguid);
-                ShowSheltersBuilded.Add(shelter);
+                return null;
             }
-            if (needSync == true)
+            if (animal.transform.parent != null && animal.transform.parent.GetComponent<MoveAgent>() != null)
             {
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.ADDSHELTER))
-                    {
-                        _packet.Write(shelter);
-                        SendTCPData(_packet);
-                    }
-                }
-
-                if (iAmHost == true)
-                {
-                    ServerSend.ADDSHELTER(0, shelter, true);
-                }
-            }else{
-                if (lvl == levelid && lvlguid == level_guid)
-                {
-                    SpawnSnowShelterByOther(shelter);
-                }
+                UnityEngine.Object.Destroy(animal.transform.parent.GetComponent<MoveAgent>());
             }
+            if (animal.transform.parent != null && animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>());
+            }
+            if (animal.GetComponent<AiTarget>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<AiTarget>());
+            }
+            if (animal.GetComponent<AiWolf>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<AiWolf>());
+            }
+            if (animal.GetComponent<AiStag>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<AiStag>());
+            }
+            if (animal.GetComponent<AiRabbit>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<AiRabbit>());
+            }
+            //MelonLogger.Msg("AiRabbit yahooo");
+            if (animal.GetComponent<AiMoose>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<AiMoose>());
+            }
+
+            if (animal.GetComponent<AiBear>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<AiBear>());
+            }
+            if (animal.GetComponent<CharacterController>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<CharacterController>());
+            }
+            //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
+            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
+            }
+            //MelonLogger.Msg("Blackboard DA BECAUSE DA");
+            if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<TLDBehaviourTreeOwner>());
+            }
+            if (animal.GetComponent<Comps.AnimalUpdates>() != null)
+            {
+                UnityEngine.Object.Destroy(animal.GetComponent<Comps.AnimalUpdates>());
+            }
+            if (animal.GetComponent<BaseAi>() != null)
+            {
+                Animator anim = animal.GetComponent<BaseAi>().m_Animator;
+                UnityEngine.Object.Destroy(animal.GetComponent<BaseAi>());
+                return anim;
+            }
+            return null;
         }
 
-        public static void ShelterRemoved(Vector3 spawn, int lvl, string lvlguid, bool needSync)
+        public static void LongActionCancleCauseMoved(Comps.MultiplayerPlayer mP)
         {
-            ShowShelterByOther shelter = new ShowShelterByOther();
-            shelter.m_Position = spawn;
-            shelter.m_LevelID = lvl;
-            shelter.m_LevelGUID = lvlguid;
-
-            if (ShowSheltersBuilded.Contains(shelter) == true)
-            {
-                MelonLogger.Msg("Remove shelter X " + spawn.x + " Y " + spawn.y + " Z " + spawn.z + " LevelGuid " + lvlguid);
-                ShowSheltersBuilded.Remove(shelter);
-            }
-            if (needSync == true)
-            {
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.REMOVESHELTER))
-                    {
-                        _packet.Write(shelter);
-                        SendTCPData(_packet);
-                    }
-                }
-
-                if (iAmHost == true)
-                {
-                    ServerSend.REMOVESHELTER(0, shelter, true);
-                }
-            }else{
-                if (lvl == levelid && lvlguid == level_guid)
-                {
-                    RemoveSnowShelterByOther(shelter);
-                }
-            }
-        }
-        public class DroppedGearDummy : MonoBehaviour
-        {
-            public DroppedGearDummy(IntPtr ptr) : base(ptr) { }
-
-            public string m_LocalizedDisplayName;
-            public int m_SearchKey = 0;
-            public ExtraDataForDroppedGear m_Extra = new ExtraDataForDroppedGear();
-            void Update()
-            {
-            }
-        }
-        public class IgnoreDropOverride : MonoBehaviour
-        {
-            public IgnoreDropOverride(IntPtr ptr) : base(ptr) { }
-            void Update()
-            {
-
-            }
-        }
-        public class DropFakeOnLeave : MonoBehaviour
-        {
-            public DropFakeOnLeave(IntPtr ptr) : base(ptr) { }
-            public Vector3 m_OldPossition = new Vector3(0, 0, 0);
-            public Quaternion m_OldRotation = new Quaternion(0, 0, 0, 0);
-
-            void Update()
-            {
-
-            }
-        }
-        public class FakeBed : MonoBehaviour
-        {
-            public FakeBed(IntPtr ptr) : base(ptr) { }
-
-            void Update()
-            {
-
-            }
-            public void ProcessPickup()
-            {
-
-            }
-        }
-        public class FakeBedDummy : MonoBehaviour
-        {
-            public FakeBedDummy(IntPtr ptr) : base(ptr) { }
-            public GameObject m_LinkedFakeObject;
-
-            void Update()
-            {
-
-            }
-        }
-        
-
-        public class DestoryArrowOnHit : MonoBehaviour
-        {
-            public DestoryArrowOnHit(IntPtr ptr) : base(ptr) { }
-
-            void Update()
-            {
-
-            }
-        }
-        public class DestoryStoneOnStop : MonoBehaviour
-        {
-            public DestoryStoneOnStop(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Obj = null;
-            public Rigidbody m_RB = null;
-
-            void Update()
-            {
-                if(m_Obj != null && m_RB != null)
-                {
-                    if(m_RB.isKinematic == true)
-                    {
-                        UnityEngine.Object.Destroy(m_Obj);
-                    }
-                }
-            }
-        }
-
-        public class MultiplayerPlayerVoiceChatPlayer : MonoBehaviour
-        {
-            public MultiplayerPlayerVoiceChatPlayer(IntPtr ptr) : base(ptr) { }
-            public AudioSource aSource;
-            public AudioSource aSourceBgNoise;
-            public List<VoiceChatQueueElement> VoiceQueue = new List<VoiceChatQueueElement>();
-            public int m_ID = 0;
-            public bool m_RadioFilter = false;
-            public static float PlayNextIn = 0;
-            public static float Trim = 0.03f;
-            public bool PlayBgNoise = false;
-            public bool IsLastClip = false;
-            void Update()
-            {
-                if (aSource != null)
-                {
-                    if(Time.time > PlayNextIn)
-                    {
-                        if (IsLastClip)
-                        {
-                            IsLastClip = false;
-                            PlayBgNoise = false;
-                        }
-                        if (VoiceQueue.Count > 0)
-                        {
-                            PlayBgNoise = true;
-                            VoiceChatQueueElement Voice = VoiceQueue[0];
-                            PlayNextIn = Time.time + Voice.m_Length;
-                            PlayVoiceFromPlayerObject(aSource, Voice.m_VoiceData, m_RadioFilter);
-                            VoiceQueue.RemoveAt(0);
-                            if(VoiceQueue.Count == 0)
-                            {
-                                IsLastClip = true;
-                            }
-                        }
-                    }
-                }
-                if (aSourceBgNoise != null)
-                {
-                    aSourceBgNoise.enabled = PlayBgNoise;
-                }
-            }
-        }
-
-        public class MultiplayerPlayerAnimator : MonoBehaviour
-        {
-            public MultiplayerPlayerAnimator(IntPtr ptr) : base(ptr) { }
-            public Animator m_Animer = null;
-            public string m_AnimStateHands = "No";
-            public string m_PreAnimStateHands = "";
-            public string m_AnimStateFingers = "No";
-            public bool m_IsDrink = false;
-            public bool m_MyDoll = false;
-
-            void Update()
-            {
-                if (m_Animer != null)
-                {
-                    GameObject m_Player = m_Animer.gameObject;
-                    int m_ID = instance.myId;
-                    string HoldingItem;
-                    string m_AnimState;
-                    if (!m_MyDoll)
-                    {
-                        m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                        if (playersData[m_ID] != null && playersData[m_ID].m_Levelid != levelid)
-                        {
-                            return;
-                        }
-                        m_AnimState = playersData[m_ID].m_AnimState;
-                        HoldingItem = m_Player.GetComponent<MultiplayerPlayer>().m_HoldingItem;
-                    }else{
-                        m_AnimState = MyAnimState;
-                        HoldingItem = MyLightSourceName;
-                    }
-                    int currentTagHash = m_Animer.GetCurrentAnimatorStateInfo(0).tagHash; // This what tag is now
-                    int neededTagHash = Animator.StringToHash(m_AnimState); // This is what tag we need.
-                    m_Animer.cullingMode = AnimatorCullingMode.AlwaysAnimate;
-
-                    if (m_AnimState == "Fight")
-                    {
-                        neededTagHash = Animator.StringToHash("Knock");
-                    }
-
-                    // MAIN LAYER
-                    if (currentTagHash != neededTagHash || (currentTagHash == Animator.StringToHash("Idle") && HoldingItem == "Book"))
-                    {
-                        if (m_AnimState == "Walk")
-                        {
-                            m_Animer.Play("Walk", 0);
-                        }
-                        if (m_AnimState == "Idle")
-                        {
-                            //string current_anim = m_Animer.GetCurrentAnimatorClipInfo(0)[0].clip.name;
-                            //MelonLogger.Msg("Ctrl current animation " + current_anim);
-                            if (currentTagHash == Animator.StringToHash("Harvesting"))
-                            {
-                                m_Animer.Play("StopHarvesting", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("HarvestingStanding"))
-                            {
-                                m_Animer.Play("StopHarvestingStanding", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("Igniting"))
-                            {
-                                m_Animer.Play("StopIgniting", 0);
-                                m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
-                            }
-                            else if (currentTagHash == Animator.StringToHash("Ctrl"))
-                            {
-                                m_Animer.Play("Sit_To_Idle", 0);
-                            }else{ 
-                                if(HoldingItem != "Book")
-                                {
-                                    m_Animer.Play("Idle", 0);
-                                }else{
-                                    if(currentTagHash != Animator.StringToHash("ReadingBook"))
-                                    {
-                                        if(currentTagHash == Animator.StringToHash("Ctrl"))
-                                        {
-                                            m_Animer.Play("StartReadSit", 0);
-                                        }else{
-                                            m_Animer.Play("StartRead", 0);
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        if (m_AnimState == "Run")
-                        {
-                            m_Animer.Play("Run", 0);
-                        }
-                        if (m_AnimState == "Ctrl")
-                        {
-                            string current_anim = m_Animer.GetCurrentAnimatorClipInfo(0)[0].clip.name;
-                            //MelonLogger.Msg("Ctrl current animation " + current_anim);
-                            if (currentTagHash == Animator.StringToHash("Harvesting"))
-                            {
-                                m_Animer.Play("StopHarvestingSit", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("HarvestingStanding"))
-                            {
-                                m_Animer.Play("StopHarvestingStandingSit", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("Igniting"))
-                            {
-                                m_Animer.Play("StopIgnitingSit", 0);
-                                m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
-                            }
-                            else if (current_anim != "Male Crouch Pose" && current_anim != "Idle_To_Sit")
-                            {
-                                m_Animer.Play("Idle_To_Sit", 0);
-                            }else{
-                                m_Animer.Play("Ctrl", 0);
-                            }
-                        }
-                        if (m_AnimState == "Sit")
-                        {
-                            m_Animer.Play("Sitting Idle", 0);
-                        }
-                        if (m_AnimState == "Flex")
-                        {
-                            m_Animer.Play("Samba Dancing", 0);
-                        }
-                        if (m_AnimState == "Cringe2")
-                        {
-                            m_Animer.Play("Cringe2", 0);
-                        }
-                        if (m_AnimState == "Cringe1")
-                        {
-                            m_Animer.Play("Cringe1", 0);
-                        }
-                        if (m_AnimState == "Knock" || m_AnimState == "Fight")
-                        {
-                            m_Animer.Play("Knock", 0);
-                        }
-                        if (m_AnimState == "Map")
-                        {
-                            m_Animer.Play("Map", 0);
-                        }
-
-                        if (m_AnimState == "Sleep")
-                        {
-                            m_Animer.Play("Sleep", 0);
-                        }
-                        if (m_AnimState == "RopeIdle")
-                        {
-                            string current_anim = m_Animer.GetCurrentAnimatorClipInfo(0)[0].clip.name;
-
-                            if (current_anim == "RopeMove" && current_anim != "RopeStop")
-                            {
-                                m_Animer.Play("RopeStop", 0);
-                            }else{
-                                m_Animer.Play("RopeIdle", 0);
-                            }
-                        }
-                        if (m_AnimState == "RopeMoving")
-                        {
-                            string current_anim = m_Animer.GetCurrentAnimatorClipInfo(0)[0].clip.name;
-
-                            if (current_anim == "RopeIdle" && current_anim != "RopeStart")
-                            {
-                                m_Animer.Play("RopeStart", 0);
-                            }else{
-                                m_Animer.Play("RopeMoving", 0);
-                            }
-                        }
-                        if(m_AnimState == "Eating")
-                        {
-                            if(ServerConfig.m_FastConsumption == false)
-                            {
-                                m_Animer.Play("Eating", 0);
-                            }else{
-                                m_Animer.Play("EatingFast", 0);
-                            }
-                        }
-                        if (m_AnimState == "Drinking")
-                        {
-                            if (ServerConfig.m_FastConsumption == false)
-                            {
-                                m_Animer.Play("Drinking", 0);
-                            }else{
-                                m_Animer.Play("DrinkingFast", 0);
-                            }
-                        }
-                        if (m_AnimState == "Harvesting")
-                        {
-                            if(currentTagHash == Animator.StringToHash("Idle"))
-                            {
-                                m_Animer.Play("StartHarvesting", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("Ctrl"))
-                            {
-                                m_Animer.Play("StartHarvestingSit", 0);
-                            }else{
-                                m_Animer.Play("Harvesting", 0);
-                            }
-                        }
-                        if (m_AnimState == "HarvestingStanding")
-                        {
-                            if (currentTagHash == Animator.StringToHash("Idle"))
-                            {
-                                m_Animer.Play("StartHarvestingStanding", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("Ctrl"))
-                            {
-                                m_Animer.Play("StartHarvestingStandingSit", 0);
-                            }else{
-                                m_Animer.Play("HarvestingStanding", 0);
-                            }
-                        }
-                        if (m_AnimState == "Igniting")
-                        {
-                            m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
-                            if (currentTagHash == Animator.StringToHash("Idle"))
-                            {
-                                m_Animer.Play("StartIgniting", 0);
-                            }
-                            else if (currentTagHash == Animator.StringToHash("Ctrl"))
-                            {
-                                m_Animer.Play("StartIgnitingSit", 0);
-                            }else{
-                                m_Animer.Play("StartIgniting", 0);
-                            }
-                        }
-                    }
-
-                    // HANDS LAYER
-
-                    if(m_AnimStateHands == "UnAimGunDone")
-                    {
-                        m_AnimStateHands = "No";
-                    }
-
-                    if(m_AnimState == "Drinking" || m_AnimState == "Eating" || m_AnimState == "Harvesting" || m_AnimState == "HarvestingStanding" || m_AnimState == "Igniting")
-                    {
-                        m_PreAnimStateHands = "";
-                        m_AnimStateHands = "No";
-                    }else{
-                        if (HoldingItem == "GEAR_Rifle")
-                        {
-                            if (m_AnimState != "Ctrl")
-                            {
-                                if (m_AnimStateHands != "Rifle" && m_AnimStateHands != "Rifle_Sit" && m_AnimStateHands != "RifleAim")
-                                {
-                                    m_PreAnimStateHands = "Pick";
-                                }
-                                if((m_MyDoll && MyIsAiming) || (!m_MyDoll && playersData[m_ID].m_Aiming))
-                                {
-                                    m_AnimStateHands = "RifleAim";
-                                }else{
-                                    m_AnimStateHands = "Rifle";
-                                }
-                            }else{
-                                if (m_AnimStateHands != "Rifle" && m_AnimStateHands != "Rifle_Sit" && m_AnimStateHands != "RifleAim_Sit")
-                                {
-                                    m_PreAnimStateHands = "Pick_Sit";
-                                }
-                                if ((m_MyDoll && MyIsAiming) || (!m_MyDoll && playersData[m_ID].m_Aiming))
-                                {
-                                    m_AnimStateHands = "RifleAim_Sit";
-                                }else{
-                                    m_AnimStateHands = "Rifle_Sit";
-                                }
-                            }
-                        }
-                        else if (HoldingItem.StartsWith("GEAR_Revolver"))
-                        {
-                            if (m_AnimState == "HoldGun")
-                            {
-                                if (m_AnimStateHands != "HoldGun" && m_AnimStateHands != "HoldGun_Sit")
-                                {
-                                    m_PreAnimStateHands = "AimGun";
-                                }
-                                m_AnimStateHands = "HoldGun";
-                            }
-                            else if (m_AnimState == "HoldGun_Sit")
-                            {
-                                if (m_AnimStateHands != "HoldGun" && m_AnimStateHands != "HoldGun_Sit")
-                                {
-                                    m_PreAnimStateHands = "AimGun_Sit";
-                                }
-                                m_AnimStateHands = "HoldGun_Sit";
-                            }else{
-                                if (m_AnimStateHands == "HoldGun")
-                                {
-                                    m_PreAnimStateHands = "UnAimGun";
-                                    m_AnimStateHands = "No";
-                                }
-                                else
-                                {
-                                    m_AnimStateHands = "No";
-                                }
-                            }
-                        }
-                        else if (HoldingItem.StartsWith("GEAR_KeroseneLamp"))
-                        {
-                            m_PreAnimStateHands = "";
-                            m_AnimStateHands = "HoldLantern";
-                        }
-                        else if (HoldingItem == "GEAR_Bow")
-                        {
-                            m_AnimStateHands = "Bow";
-                        }else{
-                            m_PreAnimStateHands = "";
-                            m_AnimStateHands = "No";
-                        }
-                    }
-
-                    int handsTagHash = m_Animer.GetCurrentAnimatorStateInfo(1).tagHash; // This what tag is now
-                    int handsNeededTagHash = Animator.StringToHash(m_AnimStateHands); // This is what tag we need.
-
-                    if (handsTagHash != handsNeededTagHash)
-                    {
-                        if (m_PreAnimStateHands == "")
-                        {                        
-                            if(handsTagHash == Animator.StringToHash("Rifle") && m_AnimStateHands == "RifleAim")
-                            {
-                                m_Animer.Play("StartRifleAim", 1);
-                            }else if(handsTagHash == Animator.StringToHash("RifleAim") && m_AnimStateHands == "Rifle")
-                            {
-                                m_Animer.Play("EndRifleAim", 1);
-                            }else if(handsTagHash == Animator.StringToHash("Rifle_Sit") && m_AnimStateHands == "RifleAim_Sit")
-                            {
-                                m_Animer.Play("StartRifleAim_Sit", 1);
-                            }else if(handsTagHash == Animator.StringToHash("RifleAim_Sit") && m_AnimStateHands == "Rifle_Sit")
-                            {
-                                m_Animer.Play("EndRifleAim_Sit", 1);
-                            }else{
-                                m_Animer.Play(m_AnimStateHands, 1);
-                            }
-                        }else{
-                            m_Animer.Play(m_PreAnimStateHands, 1);
-                            m_PreAnimStateHands = "";
-                        }
-                    }
-                    // FINGERS LAYER
-
-                    if(m_AnimState == "Drinking" || m_AnimState == "Eating" || m_AnimState == "Harvesting" || m_AnimState == "HarvestingStanding" || m_AnimState == "Igniting")
-                    {
-                        m_AnimStateFingers = "No";
-                    }else{
-                        if (HoldingItem == "GEAR_Revolver" || HoldingItem == "GEAR_FlareGun")
-                        {
-                            m_AnimStateFingers = "HoldRevolver";
-                        }
-                        else if (HoldingItem == "GEAR_Stone" || HoldingItem == "GEAR_FlareA" || HoldingItem == "GEAR_BlueFlare" || HoldingItem == "GEAR_Torch" || HoldingItem == "GEAR_NoiseMaker")
-                        {
-                            m_AnimStateFingers = "Hold";
-                        }
-                        else if (HoldingItem.StartsWith("GEAR_SprayPaint"))
-                        {
-                            m_AnimStateFingers = "HoldCan";
-                        }
-                        else if (HoldingItem == "GEAR_PackMatches" || HoldingItem == "GEAR_WoodMatches")
-                        {
-                            m_AnimStateFingers = "HoldMatch";
-                        }else{
-                            m_AnimStateFingers = "No";
-                        }
-                    }
-
-                    int fingersTagHash = m_Animer.GetCurrentAnimatorStateInfo(2).tagHash; // This what tag is now
-                    int fingersNeededTagHash = Animator.StringToHash(m_AnimStateFingers); // This is what tag we need.
-
-                    if (fingersTagHash != fingersNeededTagHash)
-                    {
-                        m_Animer.Play(m_AnimStateFingers, 2);
-                    }
-
-                    if (!m_MyDoll && (m_AnimState == "Walk" || m_AnimState == "Run"))
-                    {
-                        GameObject foot_l = m_Player.transform.GetChild(3).GetChild(8).GetChild(1).GetChild(0).GetChild(0).GetChild(0).gameObject;
-                        GameObject foot_r = m_Player.transform.GetChild(3).GetChild(8).GetChild(2).GetChild(0).GetChild(0).GetChild(0).gameObject;
-
-                        float main_y = m_Player.transform.position.y; // Y of player object.
-                        float leg_y_r = foot_r.transform.position.y;
-                        float leg_y_l = foot_l.transform.position.y;
-                        float fixed_y_r = main_y - leg_y_r;
-                        float fixed_y_l = main_y - leg_y_l;
-
-                        double max = -0.05;
-                        double min = -0.057;
-
-                        if (fixed_y_r >= min && fixed_y_r <= max && StepState != 1)
-                        {
-                            StepState = 1;
-                            MaybeLeaveFootPrint(foot_r.transform.position, m_Player, false, 0.0f, false);
-                            string ground_Tag = Utils.GetMaterialTagForObjectAtPosition(m_Player, foot_r.transform.position);
-                            GameAudioManager.Play3DSound(AK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
-                        }
-                        if (fixed_y_l >= min && fixed_y_l <= max && StepState != 2)
-                        {
-                            StepState = 2;
-                            MaybeLeaveFootPrint(foot_l.transform.position, m_Player, false, 0.0f, true);
-                            string ground_Tag = Utils.GetMaterialTagForObjectAtPosition(m_Player, foot_l.transform.position);
-                            GameAudioManager.Play3DSound(AK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
-                        }
-                    }else{
-                        StepState = 0;
-                    }
-                }
-            }
-            public void Pickup()
-            {
-                GameObject m_Player = m_Animer.gameObject;
-                int m_ID = instance.myId;
-                string m_AnimState = MyAnimState;
-                int armTagHash = m_Animer.GetCurrentAnimatorStateInfo(3).tagHash;
-                int armNeededTagHash = Animator.StringToHash("Pickup");
-
-                if (!m_MyDoll)
-                {
-                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
-                    {
-                        return;
-                    }
-                    m_AnimState = playersData[m_ID].m_AnimState;
-                }
-
-
-                //MelonLogger.Msg("Current state of  " + m_ID + " is "+ m_AnimState);
-                //MelonLogger.Msg("ArmTagHash  " + armTagHash + " TagHash we need " + armNeededTagHash);
-                if (armTagHash != armNeededTagHash)
-                {
-                    if (m_AnimState != "Ctrl")
-                    {
-                        m_Animer.Play("DoPickup", 3);
-                        //MelonLogger.Msg("Playing DoPickup");
-                    }else{
-                        m_Animer.Play("DoSitPickup", 3);
-                        //MelonLogger.Msg("Playing DoSitPickup");
-                    }
-                }
-            }
-            public void MeleeAttack()
-            {
-                GameObject m_Player = m_Animer.gameObject;
-                int m_ID = instance.myId;
-                string m_AnimState = MyAnimState;
-                if (!m_MyDoll)
-                {
-                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
-                    {
-                        return;
-                    }
-                    m_AnimState = playersData[m_ID].m_AnimState;
-                }
-
-                int armTagHash = m_Animer.GetCurrentAnimatorStateInfo(4).tagHash;
-                int armNeededTagHash = Animator.StringToHash("Melee");
-                if (armTagHash != armNeededTagHash)
-                {
-                    m_Animer.Play("Melee", 4);
-                }
-            }
-            public void Consumption()
-            {
-                GameObject m_Player = m_Animer.gameObject;
-                int m_ID = instance.myId;
-
-                if (!m_MyDoll)
-                {
-                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
-                    {
-                        return;
-                    }
-                }
-
-                if(m_IsDrink == true)
-                {
-                    playersData[m_ID].m_AnimState = "Drinking";
-                    m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood = "Water";
-                }else{
-                    playersData[m_ID].m_AnimState = "Eating";
-                    m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood = "Food";
-                }
-
-                if (!m_MyDoll)
-                {
-                    m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
-                }
-            }
-            public void StopConsumption()
-            {
-                GameObject m_Player = m_Animer.gameObject;
-                int m_ID = instance.myId;
-
-                if (!m_MyDoll)
-                {
-                    m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    if (playersData[m_ID] == null || playersData[m_ID].m_Levelid != levelid || playersData[m_ID].m_LevelGuid != level_guid)
-                    {
-                        return;
-                    }
-                    if (m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood != "")
-                    {
-                        m_Player.GetComponent<MultiplayerPlayer>().m_HoldingFood = "";
-                        m_Player.GetComponent<MultiplayerPlayer>().UpdateHeldItem();
-                    }
-                }
-            }
-        }
-
-        public static void SaveGearSpawn(GameObject obj)
-        {
-            if(obj.GetComponent<GearSpawnPointSave>() == null)
-            {
-                GearSpawnPointSave sv = obj.AddComponent<GearSpawnPointSave>();
-                sv.m_Obj = obj;
-                sv.SaveMe();
-            }
-        }
-
-        public class GearSpawnPointSave : MonoBehaviour
-        {
-            public GearSpawnPointSave(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Obj = null;
-            public Vector3 m_SpawnPoint = new Vector3(0, 0, 0);
-
-            public void SaveMe()
-            {
-                if(m_Obj != null)
-                {
-                    m_SpawnPoint = m_Obj.transform.position;
-                }
-            }
-
-            void Update()
-            {
-
-            }
-        }
-
-        public class MultiplayerPlayerClothingManager : MonoBehaviour
-        {
-            public MultiplayerPlayerClothingManager(IntPtr ptr) : base(ptr) { }
-
-            public string m_Hat = "";
-            public string m_Top = "";
-            public string m_Bottom = "";
-            public string m_Boots = "";
-            public string m_Scarf = "";
-            public string m_Balaclava = "";
-            public int m_DebugB = 0;
-            public int m_DebugT = 0;
-            public bool m_Debug = false;
-
-            public GameObject m_Player = null;
-            public GameObject clothing = null;
-            public GameObject arms_middle = null;
-            public GameObject arms_short = null;
-            public GameObject arms_tiny = null;
-            public GameObject arms_long = null;
-
-            void Update()
-            {
-                if(m_Player != null)
-                {
-                    bool firstUpdate = false;
-                    if(clothing == null)
-                    {
-                        int clothingChild = 0;
-                        clothing = m_Player.transform.GetChild(clothingChild).gameObject;
-
-                        arms_middle = m_Player.transform.GetChild(1).GetChild(0).GetChild(0).gameObject;
-                        arms_short = m_Player.transform.GetChild(1).GetChild(0).GetChild(1).gameObject;
-                        arms_tiny = m_Player.transform.GetChild(1).GetChild(0).GetChild(2).gameObject;
-                        arms_long = m_Player.transform.GetChild(1).GetChild(0).GetChild(3).gameObject;
-                        firstUpdate = true;
-                    }
-                    int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    PlayerClothingData Cdata = playersData[m_ID].m_PlayerClothingData;
-                    if ((Cdata.m_Hat != m_Hat) || (Cdata.m_Top != m_Top) || (Cdata.m_Bottom != m_Bottom) || (Cdata.m_Boots != m_Boots) || (Cdata.m_Scarf != m_Scarf) || (Cdata.m_Balaclava != m_Balaclava) || firstUpdate == true)
-                    {
-                        m_Hat = Cdata.m_Hat;
-                        m_Top = Cdata.m_Top;
-                        m_Bottom = Cdata.m_Bottom;
-                        m_Boots = Cdata.m_Boots;
-                        m_Scarf = Cdata.m_Scarf;
-                        m_Balaclava = Cdata.m_Balaclava;
-
-                        //MelonLogger.Msg("[Clothing] Updating model of client " + m_ID);
-                        //MelonLogger.Msg("[Clothing] Client Model " + m_ID + " Hat " + m_Hat);
-                        //MelonLogger.Msg("[Clothing] Client Model " + m_ID + " Torso " + m_Top);
-                        //MelonLogger.Msg("[Clothing] Client Model " + m_ID + " Legs " + m_Bottom);
-                        //MelonLogger.Msg("[Clothing] Client Model " + m_ID + " Feets " + m_Boots);
-                        UpdateClothing();
-                    }
-                }
-            }
-            public void UpdateClothing()
-            {
-                if (clothing != null)
-                {
-                    int m_ID = m_Player.GetComponent<MultiplayerPlayer>().m_ID;
-                    int hatsCount = clothing.transform.GetChild(0).childCount;
-                    int topsCount = clothing.transform.GetChild(1).childCount;
-                    int pantsCount = clothing.transform.GetChild(2).childCount;
-                    int bootsCount = clothing.transform.GetChild(3).childCount;
-                    int Hat = -1;
-                    int Top = 0;
-                    int Pants = 0;
-                    int Boots = 0;
-                    int Scarf = 0;
-                    string ArmsType = "";
-                    string HairVariant = "Full";
-                    bool nakedBodyAtBottom = false;
-                    int HeadVariant = playersData[m_ID].m_Character;
-
-                    GameObject HairShort = null;
-                    GameObject HairLong = null;
-
-                    if(m_Balaclava != "")
-                    {
-                        if(HeadVariant == 0)
-                        {
-                            HeadVariant = 2;
-                        }
-                        else if (HeadVariant == 1)
-                        {
-                            HeadVariant = 3;
-                        }
-                    }
-
-                    for (int i = 0; i < m_Player.transform.GetChild(1).GetChild(1).childCount; i++)
-                    {
-                        m_Player.transform.GetChild(1).GetChild(1).GetChild(i).gameObject.SetActive(false);
-                    }
-                    m_Player.transform.GetChild(1).GetChild(1).GetChild(HeadVariant).gameObject.SetActive(true);
-
-                    if (HeadVariant == 0)
-                    {
-                        HairLong = m_Player.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(2).gameObject;
-                        HairShort = m_Player.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(3).gameObject;
-                    }
-
-                    for (int i = 0; i < hatsCount; i++)
-                    {
-                        clothing.transform.GetChild(0).transform.GetChild(i).gameObject.SetActive(false);
-                    }
-                    for (int i = 0; i < topsCount; i++)
-                    {
-                        clothing.transform.GetChild(1).transform.GetChild(i).gameObject.SetActive(false);
-                    }
-                    for (int i = 0; i < pantsCount; i++)
-                    {
-                        clothing.transform.GetChild(2).transform.GetChild(i).gameObject.SetActive(false);
-                    }
-                    for (int i = 0; i < bootsCount; i++)
-                    {
-                        clothing.transform.GetChild(3).transform.GetChild(i).gameObject.SetActive(false);
-                    }
-
-                    //Hats
-                    if (m_Hat == "")
-                    {
-                        Hat = -1;
-                    }
-                    else if (m_Hat.Contains("BaseballCap"))
-                    {
-                        Hat = 0;
-                        if (HeadVariant == 0)
-                        {
-                            HairVariant = "Short";
-                        }
-                    }
-                    else if (m_Hat.Contains("BasicWoolHat") || m_Hat.Contains("GEAR_WillToque"))
-                    {
-                        Hat = 1;
-                    }
-                    else if (m_Hat.Contains("Toque"))
-                    {
-                        Hat = 4;
-                    }
-                    else if (m_Hat.Contains("RabbitskinHat"))
-                    {
-                        Hat = 5;
-                    }
-                    else if (m_Hat.Contains("ImprovisedHat"))
-                    {
-                        Hat = 6;
-                    }
-                    else if (m_Hat.Contains("WoolWrapCap"))
-                    {
-                        Hat = 7;
-                        if (HeadVariant == 0) // Is Makenzy
-                        {
-                            HairVariant = "Short";
-                        }
-                    }else{
-                        Hat = 1;
-                    }
-
-                    //Torso
-                    if (m_Top == "")
-                    {
-                        Top = 0;
-                        ArmsType = "None";
-                    }
-                    else if (m_Top.Contains("CottonShirt"))
-                    {
-                        Top = 1;
-                        ArmsType = "Middle";
-                    }
-                    else if (m_Top.Contains("AstridSweater") || m_Top.Contains("FleeceSweater"))
-                    {
-                        Top = 2;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("WillSweater"))
-                    {
-                        Top = 3;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("FishermanSweater"))
-                    {
-                        Top = 4;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("HeavyWoolSweater"))
-                    {
-                        Top = 5;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("PlaidShirt") || m_Top.Contains("MackinawJacket"))
-                    {
-                        Top = 6;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("CottonHoodie"))
-                    {
-                        Top = 7;
-                        ArmsType = "Tiny";
-                    }
-                    else if (m_Top.Contains("CowichanSweater"))
-                    {
-                        Top = 8;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("WillShirt"))
-                    {
-                        Top = 9;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("WoolShirt"))
-                    {
-                        Top = 10;
-                        ArmsType = "Short";
-                    }
-                    else if ((m_Top.Contains("WoolSweater") && m_Top.Contains("HeavyWoolSweater") == false))
-                    {
-                        Top = 11;
-                        ArmsType = "Short";
-                    }
-                    else if (m_Top.Contains("DownVest") || m_Top.Contains("InsulatedVest"))
-                    {
-                        Top = 12;
-                        ArmsType = "Long";
-                    }
-                    else if (m_Top.Contains("LightParka"))
-                    {
-                        Top = 13;
-                        ArmsType = "Tiny";
-                    }
-                    else if ((m_Top.Contains("SkiJacket") && m_Top.Contains("Down") == false) || m_Top.Contains("PremiumWinterCoat"))
-                    {
-                        Top = 14;
-                        ArmsType = "Tiny";
-                    }
-                    else if (m_Top.Contains("DownSkiJacket"))
-                    {
-                        Top = 15;
-                        ArmsType = "Tiny";
-                    }
-                    else if (m_Top.Contains("BearSkinCoat"))
-                    {
-                        Top = 16;
-                        ArmsType = "Tiny";
-                    }
-                    else if (m_Top.Contains("MooseHideCloak"))
-                    {
-                        Top = 17;
-                        ArmsType = "Tiny";
-                    }
-                    else if (m_Top.Contains("WolfSkinCape"))
-                    {
-                        Top = 18;
-                        ArmsType = "Tiny";
-                    }
-                    else // If missing clotching
-                    {
-                        Top = 7;
-                        ArmsType = "Tiny";
-                    }
-                    arms_middle.SetActive(false);
-                    arms_short.SetActive(false);
-                    arms_tiny.SetActive(false);
-                    arms_long.SetActive(false);
-
-                    if(ArmsType != "None")
-                    {
-                        if (ArmsType == "Tiny")
-                        {
-                            arms_tiny.SetActive(true);
-                        }
-                        else if (ArmsType == "Short")
-                        {
-                            arms_short.SetActive(true);
-                        }
-                        else if(ArmsType == "Middle")
-                        {
-                            arms_middle.SetActive(true);
-                        }
-                        else if (ArmsType == "Long")
-                        {
-                            arms_long.SetActive(true);
-                        }
-                    }
-
-                    //Pants
-                    if (m_Bottom == "")
-                    {
-                        Pants = 0;
-                    }
-                    else if (m_Bottom.Contains("LongUnderwear"))
-                    {
-                        if (m_Bottom.Contains("Wool"))
-                        {
-                            Pants = 2;
-                        }else{
-                            Pants = 1;
-                        }
-                    }
-                    else if (m_Bottom.Contains("Jeans") || m_Bottom.Contains("GEAR_WillPants"))
-                    {
-                        Pants = 3;
-                    }
-                    else if (m_Bottom.Contains("CombatPants"))
-                    {
-                        Pants = 4;
-                    }
-                    else if (m_Bottom.Contains("InsulatedPants"))
-                    {
-                        Pants = 5;
-                    }
-                    else if (m_Bottom.Contains("CargoPants"))
-                    {
-                        Pants = 6;
-                    }
-                    else if (m_Bottom.Contains("WorkPants"))
-                    {
-                        Pants = 7;
-                    }
-                    else if (m_Bottom.Contains("DeerSkinPants"))
-                    {
-                        Pants = 8;
-                    }
-                    else // If missing clotching
-                    {
-                        Pants = 3;
-                    }
-
-                    //Boots
-                    if (m_Boots == "")
-                    {
-                        Boots = 0;
-                    }
-                    else if(m_Boots.Contains("LeatherShoes"))
-                    {
-                        Boots = 1;
-                    }
-                    else if (m_Boots.Contains("CombatBoots"))
-                    {
-                        Boots = 2;
-                    }
-                    else if (m_Boots.Contains("WorkBoots") || m_Boots.Contains("GEAR_BasicBoots") || m_Boots.Contains("GreyMotherBoots") || m_Boots.Contains("WillBoots") || m_Boots.Contains("AstridBoots") || m_Boots.Contains("MuklukBoots") || m_Boots.Contains("DeerSkinBoots"))
-                    {
-                        Boots = 3;
-                    }
-                    else if (m_Boots.Contains("InsulatedBoots"))
-                    {
-                        Boots = 4;
-                    }
-                    else if (m_Boots.Contains("CottonSocks"))
-                    {
-                        Boots = 5;
-                    }
-                    else if (m_Boots.Contains("WoolSocks"))
-                    {
-                        Boots = 6;
-                    }
-                    else if (m_Boots.Contains("ClimbingSocks"))
-                    {
-                        Boots = 7;
-                    }
-                    else if (m_Boots.Contains("BasicShoes"))
-                    {
-                        Boots = 8;
-                    }
-                    else // If missing clotching
-                    {
-                        Boots = 3;
-                    }
-
-                    if (m_Debug == true)
-                    {
-                        Top = m_DebugT;
-                        Pants = m_DebugB;
-                        arms_tiny.SetActive(true);
-                    }
-
-                    if (m_Scarf != "")
-                    {
-                        if(Top == 0)
-                        {
-                            Scarf = 2;
-                        }else{
-                            Scarf = 3;
-                        }
-                    }else{
-                        Scarf = -1;
-                    }
-
-                    if (Hat != -1)
-                    {
-                        clothing.transform.GetChild(0).transform.GetChild(Hat).gameObject.SetActive(true);
-                    }
-                    if(Scarf != -1)
-                    {
-                        clothing.transform.GetChild(0).transform.GetChild(Scarf).gameObject.SetActive(true);
-                    }
-
-
-                    if(nakedBodyAtBottom == true)
-                    {
-                        clothing.transform.GetChild(1).transform.GetChild(0).gameObject.SetActive(true);
-                    }
-
-                    if (HairShort != null && HairLong != null)
-                    {
-                        if (HairVariant == "Full")
-                        {
-                            HairShort.SetActive(false);
-                            HairLong.SetActive(true);
-                        }else if(HairVariant == "Short") {
-                            HairShort.SetActive(true);
-                            HairLong.SetActive(false);
-                        }
-                    }
-
-                    clothing.transform.GetChild(1).transform.GetChild(Top).gameObject.SetActive(true);
-                    clothing.transform.GetChild(2).transform.GetChild(Pants).gameObject.SetActive(true);
-                    clothing.transform.GetChild(3).transform.GetChild(Boots).gameObject.SetActive(true);
-                }
-            }
-        }
-
-        public static void LongActionCancleCauseMoved(MultiplayerPlayer mP)
-        {
-            if(mP.m_InteractTimer < 2 && mP.m_IsBeingInteractedWith == true && PlayerInteractionWith == mP && GetActionForOtherPlayer(mP.m_ActionType).m_CancleOnMove == true)
+            if (mP.m_InteractTimer < 2 && mP.m_IsBeingInteractedWith == true && PlayerInteractionWith == mP && GetActionForOtherPlayer(mP.m_ActionType).m_CancleOnMove == true)
             {
                 if (MyMod.playersData[mP.m_ID] != null)
                 {
@@ -3925,25 +2074,48 @@ namespace SkyCoop
         }
         public static void DoLongAction(GameObject Obj, string actionString, string actionType)
         {
-            float Duration = GetActionForOtherPlayer(actionType).m_ActionDuration;
+            float Duration = GetCustomAction(actionType).m_ActionDuration;
             ObjectInteractWith = Obj;
+            InteractHold = GetCustomAction(actionType).m_Hold;
             InteractionType = actionType;
             InteractTimer = Duration;
             PreviousControlModeBeforeAction = GameManager.GetPlayerManagerComponent().GetControlMode();
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-            InterfaceManager.m_Panel_HUD.StartItemProgressBar(Duration, actionString, (GearItem)null, new System.Action(EmptyFn));
-
-            if(actionType == "Excision")
+            InteractionInprocess = true;
+            Panel_Inventory_Examine Exa;
+            if(!InterfaceManager.TryGetPanel<Panel_Inventory_Examine>(out Exa))
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine && Obj && Obj.GetComponent<GearItem>() && Obj.GetComponent<GearItem>().m_Sharpenable)
+                return;
+            }
+            Panel_HUD HUD;
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            HUD.StartItemProgressBar(Duration, actionString, null, new System.Action(EmptyFn));
+
+            if (actionType == "Excision")
+            {
+                if (Obj && Obj.GetComponent<GearItem>() && Obj.GetComponent<GearItem>().m_Sharpenable)
                 {
-                    InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound(Obj.GetComponent<GearItem>().m_Sharpenable.m_SharpenAudio, InterfaceManager.GetSoundEmitter());
+                    Exa.m_ProgressBarAudio = GameAudioManager.PlaySound(Obj.GetComponent<GearItem>().m_Sharpenable.m_SharpenAudio, InterfaceManager.GetSoundEmitter());
                 }
+            } else if (actionType == "Lockpick")
+            {
+                Exa.m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_CRAFTINGGENERIC", InterfaceManager.GetSoundEmitter());
+            }
+            else if (actionType == "Locksmith0")
+            {
+                Exa.m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_HARVESTINGMETALSAW", InterfaceManager.GetSoundEmitter());
+            }
+            else if (actionType == "Locksmith1")
+            {
+                Exa.m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_CRAFTINGARROWS", InterfaceManager.GetSoundEmitter());
             }
         }
 
 
-        public static void DoLongAction(MultiplayerPlayer mP, string actionString, string actionType)
+        public static void DoLongAction(Comps.MultiplayerPlayer mP, string actionString, string actionType)
         {
             mP.m_ActionType = actionType;
             mP.m_IsBeingInteractedWith = true;
@@ -3953,7 +2125,7 @@ namespace SkyCoop
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
             InterfaceManager.m_Panel_HUD.StartItemProgressBar(mP.m_InteractTimer, actionString, (GearItem)null, new System.Action(EmptyFn));
 
-            if(actionType != "Revive")
+            if (actionType != "Revive")
             {
                 if (sendMyPosition == true) // CLIENT
                 {
@@ -3961,7 +2133,7 @@ namespace SkyCoop
                     {
                         _packet.Write(true);
                         _packet.Write(mP.m_ID);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true) // HOST
@@ -3974,7 +2146,7 @@ namespace SkyCoop
             }
         }
 
-        public static void LongActionCanceled(MultiplayerPlayer mP)
+        public static void LongActionCanceled(Comps.MultiplayerPlayer mP)
         {
             if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.Locked)
                 GameManager.GetPlayerManagerComponent().SetControlMode(PreviousControlModeBeforeAction);
@@ -3998,16 +2170,17 @@ namespace SkyCoop
                 GameManager.GetPlayerManagerComponent().SetControlMode(PreviousControlModeBeforeAction);
             }
             ObjectInteractWith = null;
+            InteractionInprocess = false;
             InteractTimer = 0.0f;
+            InteractHold = false;
             InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
-            if(InteractionType == "Excision")
+            if (InteractionType == "Excision" || InteractionType == "Lockpick" || InteractionType == "Locksmith0" || InteractionType == "Locksmith1")
             {
                 if (InterfaceManager.m_Panel_Inventory_Examine)
                 {
                     InterfaceManager.m_Panel_Inventory_Examine.StopProgressBarAudio();
                 }
             }
-            InteractionType = "";
         }
         public static void LongActionFinished(GameObject obj, string ActionType)
         {
@@ -4020,10 +2193,68 @@ namespace SkyCoop
                 new_gear.ManualStart();
                 GameManager.GetPlayerManagerComponent().EquipItem(new_gear, false);
                 GameManager.GetInventoryComponent().RemoveGear(obj);
+            } else if (ActionType == "Lockpick")
+            {
+                if (SwearOnLockpickingDone)
+                {
+                    GameAudioManager.PlaySound("Play_SndInvCrowbarPrybar", InterfaceManager.GetSoundEmitter());
+                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIREFAIL", Voice.Priority.Critical);
+                } else {
+                    GameAudioManager.PlaySound("PLAY_SNDMECHSAFETUMBLERFALL", InterfaceManager.GetSoundEmitter());
+                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIRESUCCESS", Voice.Priority.Critical);
+                }
+            }else if(ActionType == "Locksmith0" || ActionType == "Locksmith1")
+            {
+                if(obj && obj.GetComponent<Comps.DroppedGearDummy>())
+                {
+                    int Hash = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
+                    int tool = 0;
+                    if (ActionType == "Locksmith0")
+                    {
+                        tool = 0;
+                    }
+                    else if (ActionType == "Locksmith1")
+                    {
+                        tool = 1;
+                    }
+
+                    if (iAmHost)
+                    {
+                        if (PendingRegisterKey)
+                        {
+                            MPSaveManager.ApplyToolOnBlank(Hash, tool, PendingKeyName, PendingKeySeed);
+                        }else{
+                            MPSaveManager.ApplyToolOnBlank(Hash, tool);
+                        }
+                    }
+                    if(sendMyPosition)
+                    {
+                        if (PendingRegisterKey)
+                        {
+                            using (Packet _packet = new Packet((int)ClientPackets.APPLYTOOLONBLANK))
+                            {
+                                _packet.Write(Hash);
+                                _packet.Write(tool);
+                                _packet.Write(true);
+                                _packet.Write(PendingKeyName);
+                                _packet.Write(PendingKeySeed);
+                                SendUDPData(_packet);
+                            }
+                        }else{
+                            using (Packet _packet = new Packet((int)ClientPackets.APPLYTOOLONBLANK))
+                            {
+                                _packet.Write(Hash);
+                                _packet.Write(tool);
+                                _packet.Write(false);
+                                SendUDPData(_packet);
+                            }
+                        }
+                    }
+                }
             }
         }
 
-        public static void LongActionFinished(MultiplayerPlayer mP, string ActionType)
+        public static void LongActionFinished(Comps.MultiplayerPlayer mP, string ActionType)
         {
             if (sendMyPosition == true) // CLIENT
             {
@@ -4031,7 +2262,7 @@ namespace SkyCoop
                 {
                     _packet.Write(ActionType);
                     _packet.Write(mP.m_ID);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
             if (iAmHost == true) // HOST
@@ -4042,7 +2273,7 @@ namespace SkyCoop
                 }
             }
 
-            if(ActionType == "Bandage")
+            if (ActionType == "Bandage")
             {
                 GameManager.GetInventoryComponent().RemoveGearFromInventory("GEAR_HeavyBandage", 1);
             }
@@ -4051,7 +2282,7 @@ namespace SkyCoop
                 GearItem antiseptic = GameManager.GetInventoryComponent().GetBestGearItemWithName("GEAR_BottleHydrogenPeroxide");
                 antiseptic.m_LiquidItem.m_LiquidLiters = antiseptic.m_LiquidItem.m_LiquidLiters - 0.1f;
 
-                if(antiseptic.m_LiquidItem.m_LiquidLiters < 0.1f)
+                if (antiseptic.m_LiquidItem.m_LiquidLiters < 0.1f)
                 {
                     GameManager.GetInventoryComponent().DestroyGear(antiseptic.gameObject);
                 }
@@ -4060,7 +2291,7 @@ namespace SkyCoop
             {
                 GameManager.GetInventoryComponent().RemoveGearFromInventory("GEAR_MedicalSupplies_hangar", 1);
             }
-            else if(ActionType == "Stim")
+            else if (ActionType == "Stim")
             {
                 if (GameManager.m_PlayerManager != null && GameManager.m_PlayerManager.m_ItemInHands != null && GameManager.m_PlayerManager.m_ItemInHands.m_EmergencyStim != null)
                 {
@@ -4073,19 +2304,15 @@ namespace SkyCoop
             {
                 TryToCheckPlayer(mP.m_ID);
             }
-            else if(ActionType == "Borrow")
-            {
-                TryToBorrowThing(mP.m_ID);
-            }
         }
 
         public static void OtherPlayerApplyActionOnMe(string ActionType, int FromId)
         {
-            if(ActionType == "Bandage")
+            if (ActionType == "Bandage")
             {
                 BloodLoss bloodL = GameManager.GetBloodLossComponent();
 
-                if(bloodL.m_ElapsedHoursList.Count > 0)
+                if (bloodL.m_ElapsedHoursList.Count > 0)
                 {
                     bloodL.ApplyBandage(bloodL.m_ElapsedHoursList.Count - 1);
                 }
@@ -4100,11 +2327,11 @@ namespace SkyCoop
                     Infect.TakeAntiseptic(Infect.m_ElapsedHoursList.Count - 1);
                 }
             }
-            else if(ActionType == "Revive")
+            else if (ActionType == "Revive")
             {
                 SimRevive();
             }
-            else if(ActionType == "Stim")
+            else if (ActionType == "Stim")
             {
                 GearItem EmergencySt = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_EmergencyStim", 1);
                 EmergencySt.m_EmergencyStim.OnInject();
@@ -4113,15 +2340,7 @@ namespace SkyCoop
 
         public static void EmptyFn()
         {
-            
-        }
 
-        public static void TogglePlayerInstance(GameObject plObj, bool enable)
-        {
-            if (plObj != null)
-            {
-                plObj.SetActive(enable);
-            }
         }
 
         public static void PlayersUpdateManager()
@@ -4130,785 +2349,24 @@ namespace SkyCoop
             {
                 for (int i = 0; i < MaxPlayers; i++)
                 {
-                    if (playersData[i] != null)
+                    if(playersData[i] == null || players[i] == null)
                     {
-                        if(players[i] != null)
-                        {
-                            GameObject plObj = players[i];
-                            MultiPlayerClientData plDat = playersData[i];
-                            if (levelid == plDat.m_Levelid && level_guid == plDat.m_LevelGuid) // Player locates on same scene with you.
-                            {
-                                TogglePlayerInstance(plObj, true);
-                            }else{
-                                TogglePlayerInstance(plObj, false);
-                            }
-                        }
+                        continue;
+                    }
+                    GameObject plObj = players[i];
+                    DataStr.MultiPlayerClientData plDat = playersData[i];
+                    if (levelid == plDat.m_Levelid && level_guid == plDat.m_LevelGuid && !plDat.m_IsLoading) // Player locates on same scene with you.
+                    {
+                        plObj.SetActive(true);
+                    } else
+                    {
+                        plObj.SetActive(false);
                     }
                 }
             }
         }
 
-        public static void MakeBorrowble(GameObject obj, string GearName, int ID, MultiplayerPlayer mP)
-        {
-            Borrowable Bor = obj.AddComponent<Borrowable>();
-            Bor.m_PlayerID = ID;
-            Bor.m_mP = mP;
-            Bor.m_GearName = GearName;
-            Bor.m_Obj = obj;
-            obj.layer = vp_Layer.Gear;
-        }
-
-        public class MultiplayerPlayer : MonoBehaviour
-        {
-            public MultiplayerPlayer(IntPtr ptr) : base(ptr) { }
-
-            public int m_ID = 0;
-            public List<GameObject> m_DamageColiders = new List<GameObject>();
-
-            //Equipment
-            public string m_HoldingItem = "";
-            public string m_HoldingFood = "";
-            public bool m_LightSourceOn = false;
-            public bool m_HasAxe = false;
-            public bool m_HasRifle = false;
-            public bool m_HasRevolver = false;
-            public bool m_HasMedkit = false;
-            public int m_Arrows = 0;
-            public int m_Flares = 0;
-            public int m_BlueFlares = 0;
-            public GameObject m_Player = null;
-            public string m_BreakingSound = "";
-            public uint m_BreakingSoundReference = 0U;
-            public int m_BloodLosts = 0;
-            public bool m_NeedAntiseptic = false;
-            public uint m_HeavyBreathSoundReference = 0U;
-            public int m_Character = -1;
-            public GameObject m_TorchIgniter = null;
-
-            //Shortcuts for optimized  
-            public GameObject hand_r = null;
-            public GameObject hand_l = null;
-            public GameObject rifle = null;
-            public GameObject revolver = null;
-            public GameObject quiver = null;
-            public GameObject axe = null;
-            public GameObject medkit = null;
-            public GameObject flares = null;
-            public GameObject body = null;
-            public GameObject clothing = null;
-            public GameObject hip = null;
-            public GameObject root = null;
-            public GameObject extras = null;
-            public GameObject MakenzyHead = null;
-            public GameObject AstridHead = null;
-            public GameObject bookOpen = null;
-            public GameObject bookClosed = null;
-            public GameObject meleeDummy = null;
-
-            //Timers
-            public float nextActionBloodDrop = 0.0f;
-            public float blooddrop_period = 1.3f;
-
-            //Actions
-            public bool m_IsBeingInteractedWith = false;
-            public float m_InteractTimer = 0.0f;
-            public string m_ActionType = "";
-
-            void Start()
-            {
-                nextActionBloodDrop = Time.time;
-            }
-
-            public void UpdateVisualItems()
-            {
-                if (m_HasRifle == true && m_HoldingItem != "GEAR_Rifle")
-                {
-                    rifle.SetActive(true);
-                }else{
-                    rifle.SetActive(false);
-                }
-                if (m_HasRevolver == true && m_HoldingItem != "GEAR_Revolver")
-                {
-                    revolver.SetActive(true);
-                }else{
-                    revolver.SetActive(false);
-                }
-
-                extras.transform.GetChild(2).gameObject.SetActive(m_HasRevolver);
-                axe.SetActive(m_HasAxe);
-                medkit.SetActive(m_HasMedkit);
-
-                if (m_Arrows > 0)
-                {
-                    quiver.SetActive(true);
-                    quiver.transform.GetChild(0).gameObject.SetActive(false);
-                    quiver.transform.GetChild(1).gameObject.SetActive(false);
-                    quiver.transform.GetChild(2).gameObject.SetActive(false);
-                    quiver.transform.GetChild(3).gameObject.SetActive(false);
-                    quiver.transform.GetChild(4).gameObject.SetActive(false);
-                    for (int i = 0; i < 4; i++)
-                    {
-                        quiver.transform.GetChild(i).gameObject.SetActive(true);
-                    }
-                }
-                else
-                {
-                    quiver.SetActive(false);
-                }
-
-                if(m_Flares == 0 && m_BlueFlares == 0)
-                {
-                    flares.SetActive(false);
-                }else{
-                    flares.SetActive(true);
-                    GameObject redFlares = flares.transform.GetChild(1).gameObject;
-                    GameObject blueFlares = flares.transform.GetChild(2).gameObject;
-
-                    int HaveR = m_Flares;
-                    int HaveB = m_BlueFlares;
-
-                    //If we hold flare remove 1 from how many do we have.
-                    if(m_HoldingItem == "GEAR_FlareA")
-                    {
-                        HaveR = HaveR - 1;
-                    }
-                    if(m_HoldingItem == "GEAR_BlueFlare")
-                    {
-                        HaveB = HaveB - 1;
-                    }
-
-                    if(HaveR == 0)
-                    {
-                        redFlares.SetActive(false);
-                    }else{
-                        redFlares.SetActive(true);
-                    }
-                    if (HaveB == 0)
-                    {
-                        blueFlares.SetActive(false);
-                    }else{
-                        blueFlares.SetActive(true);
-                    }
-
-                    redFlares.transform.GetChild(0).gameObject.SetActive(false);
-                    redFlares.transform.GetChild(1).gameObject.SetActive(false);
-                    blueFlares.transform.GetChild(0).gameObject.SetActive(false);
-                    blueFlares.transform.GetChild(1).gameObject.SetActive(false);
-
-                    if (HaveR > 0 && HaveB > 0)
-                    {
-                        redFlares.transform.GetChild(0).gameObject.SetActive(true);
-                        blueFlares.transform.GetChild(1).gameObject.SetActive(true);
-                    }else{
-                        if(HaveR > 0)
-                        {
-                            if(HaveR == 1)
-                            {
-                                redFlares.transform.GetChild(0).gameObject.SetActive(true);
-                            }
-                            else if (HaveR > 1)
-                            {
-                                redFlares.transform.GetChild(0).gameObject.SetActive(true);
-                                redFlares.transform.GetChild(1).gameObject.SetActive(true);
-                            }
-                        }
-                        if (HaveB > 0)
-                        {
-                            if (HaveB == 1)
-                            {
-                                blueFlares.transform.GetChild(0).gameObject.SetActive(true);
-                            }
-                            else if (HaveB > 1)
-                            {
-                                blueFlares.transform.GetChild(0).gameObject.SetActive(true);
-                                blueFlares.transform.GetChild(1).gameObject.SetActive(true);
-                            }
-                        }
-                    }
-                }
-            }
-
-            public void SetupMapMarker()
-            {
-                int Markers = hand_l.transform.GetChild(2).GetChild(0).childCount;
-                Transform MakersRoot = hand_l.transform.GetChild(2).GetChild(0);
-                for (int i = 0; i < Markers; i++)
-                {
-                    MakersRoot.GetChild(i).gameObject.SetActive(false);
-                }
-                GameRegion Reg = RegionManager.GetCurrentRegion();
-                if(Reg == GameRegion.LakeRegion)
-                {
-                    MakersRoot.GetChild(0).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.RuralRegion)
-                {
-                    MakersRoot.GetChild(1).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.RiverValleyRegion)
-                {
-                    MakersRoot.GetChild(3).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.CoastalRegion)
-                {
-                    MakersRoot.GetChild(4).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.WhalingStationRegion)
-                {
-                    MakersRoot.GetChild(6).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.TracksRegion)
-                {
-                    MakersRoot.GetChild(7).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.MarshRegion)
-                {
-                    MakersRoot.GetChild(8).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.MountainTownRegion)
-                {
-                    MakersRoot.GetChild(9).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.MarshRegion)
-                {
-                    MakersRoot.GetChild(10).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.CrashMountainRegion)
-                {
-                    MakersRoot.GetChild(11).gameObject.SetActive(true);
-                }
-                if (Reg == GameRegion.AshCanyonRegion)
-                {
-                    MakersRoot.GetChild(12).gameObject.SetActive(true);
-                }
-            }
-
-            public void UpdateHeldItem()
-            {
-                //Flare
-                hand_r.transform.GetChild(0).gameObject.SetActive(false);
-                //Matches
-                hand_r.transform.GetChild(1).gameObject.SetActive(false); hand_l.transform.GetChild(0).gameObject.SetActive(false);
-                //Flare blue
-                hand_r.transform.GetChild(2).gameObject.SetActive(false);
-                //Rifle
-                hand_r.transform.GetChild(3).gameObject.SetActive(false);
-                //Revolver
-                hand_r.transform.GetChild(4).gameObject.SetActive(false);
-                //SprayCan
-                hand_r.transform.GetChild(5).gameObject.SetActive(false);
-                //Stone 
-                hand_r.transform.GetChild(6).gameObject.SetActive(false);
-                // Lamp
-                hand_r.transform.GetChild(7).gameObject.SetActive(false);
-                //Tourch
-                hand_r.transform.GetChild(8).gameObject.SetActive(false);
-                //Flaregun
-                hand_r.transform.GetChild(9).gameObject.SetActive(false);
-                //NoiseMaker
-                hand_r.transform.GetChild(10).gameObject.SetActive(false);
-                //Melee Dummy
-                //hand_r.transform.GetChild(11).gameObject.SetActive(false);
-                //Map
-                hand_l.transform.GetChild(2).gameObject.SetActive(false);
-                //Bow
-                hand_l.transform.GetChild(3).gameObject.SetActive(false);
-                //Bottle
-                hand_l.transform.GetChild(4).gameObject.SetActive(false);
-                //Food can
-                hand_l.transform.GetChild(5).gameObject.SetActive(false);
-
-                string m_AnimState = playersData[m_ID].m_AnimState;
-
-                if (m_HoldingFood == "" && m_AnimState != "Igniting")
-                {
-                    if (m_HoldingItem.StartsWith("GEAR_Flare") != m_HoldingItem.Contains("Gun")) // By some reason, it called GEAR_FlareA, i not know exist FlareB but better check it.
-                    {
-                        hand_r.transform.GetChild(0).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_WoodMatches" || m_HoldingItem == "GEAR_PackMatches")
-                    {
-                        hand_r.transform.GetChild(1).gameObject.SetActive(true); hand_l.transform.GetChild(0).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_BlueFlare")
-                    {
-                        hand_r.transform.GetChild(2).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_Rifle")
-                    {
-                        hand_r.transform.GetChild(3).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_Revolver")
-                    {
-                        hand_r.transform.GetChild(4).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem.StartsWith("GEAR_SprayPaintCan")) // By some reason, it called GEAR_SprayPaintCanGlyphA, i not know exist GEAR_SprayPaintCanGlyphB but better check it.
-                    {
-                        hand_r.transform.GetChild(5).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_Stone")
-                    {
-                        hand_r.transform.GetChild(6).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem.StartsWith("GEAR_KeroseneLamp"))
-                    {
-                        hand_r.transform.GetChild(7).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_Torch")
-                    {
-                        hand_r.transform.GetChild(8).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_Bow")
-                    {
-                        hand_l.transform.GetChild(3).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "Map")
-                    {
-                        hand_l.transform.GetChild(2).gameObject.SetActive(true);
-                        //SetupMapMarker();
-                    }
-                    if (m_HoldingItem == "GEAR_FlareGun")
-                    {
-                        hand_r.transform.GetChild(9).gameObject.SetActive(true);
-                    }
-                    if (m_HoldingItem == "GEAR_NoiseMaker")
-                    {
-                        hand_r.transform.GetChild(10).gameObject.SetActive(true);
-                    }
-                }else{
-                    
-                    if(m_HoldingFood != "")
-                    {
-                        if (m_HoldingFood == "Water")
-                        {
-                            hand_l.transform.GetChild(4).gameObject.SetActive(true);
-                        }else{
-                            hand_l.transform.GetChild(5).gameObject.SetActive(true);
-                        }
-                    }
-                    if(m_AnimState == "Igniting")
-                    {
-                        hand_r.transform.GetChild(1).gameObject.SetActive(true); hand_l.transform.GetChild(0).gameObject.SetActive(true);
-                    }
-                }
-
-                //Additionals
-                if (m_LightSourceOn == true)
-                {
-                    hand_r.transform.GetChild(0).GetChild(1).gameObject.SetActive(false); //Flare cap
-                    hand_r.transform.GetChild(0).GetChild(2).gameObject.SetActive(true); //Flare fx
-                    hand_r.transform.GetChild(1).GetChild(0).gameObject.SetActive(false); // Matche cap normal
-                    hand_r.transform.GetChild(1).GetChild(1).gameObject.SetActive(true); // Matche cap burt
-                    hand_r.transform.GetChild(1).GetChild(3).gameObject.SetActive(true); // Matche fire
-                    hand_r.transform.GetChild(2).GetChild(1).gameObject.SetActive(false); //Blue Flare cap
-                    hand_r.transform.GetChild(2).GetChild(2).gameObject.SetActive(true); //Blue Flare fx
-                    hand_r.transform.GetChild(7).GetChild(0).gameObject.SetActive(true); //Lamp Fire
-                    hand_r.transform.GetChild(8).GetChild(1).gameObject.SetActive(true); //Tourch Fire
-                }else{
-                    hand_r.transform.GetChild(0).GetChild(1).gameObject.SetActive(true); //Flare cap
-                    hand_r.transform.GetChild(0).GetChild(2).gameObject.SetActive(false); //Flare fx
-                    hand_r.transform.GetChild(1).GetChild(0).gameObject.SetActive(true); // Matche cap normal
-                    hand_r.transform.GetChild(1).GetChild(1).gameObject.SetActive(false); // Matche cap burt
-                    hand_r.transform.GetChild(1).GetChild(3).gameObject.SetActive(false); // Matche fire
-                    hand_r.transform.GetChild(2).GetChild(1).gameObject.SetActive(true); //Blue Flare cap
-                    hand_r.transform.GetChild(2).GetChild(2).gameObject.SetActive(false); //Blue Flare fx
-                    hand_r.transform.GetChild(7).GetChild(0).gameObject.SetActive(false); //Lamp Fire
-                    hand_r.transform.GetChild(8).GetChild(1).gameObject.SetActive(false); //Tourch Fire
-                }
-                //Lights
-                hand_r.transform.GetChild(0).GetChild(3).gameObject.SetActive(m_LightSourceOn); //Flare Red Light
-                hand_r.transform.GetChild(1).GetChild(4).gameObject.SetActive(m_LightSourceOn); //Matche Light
-                hand_r.transform.GetChild(2).GetChild(3).gameObject.SetActive(m_LightSourceOn); //Flare Blue Light
-                hand_r.transform.GetChild(7).GetChild(3).gameObject.SetActive(m_LightSourceOn); //Lamp Light
-                hand_r.transform.GetChild(8).GetChild(0).gameObject.SetActive(m_LightSourceOn); //Tourch Light
-            }
-
-            void UpdateOtherAffictions()
-            {
-                MultiPlayerClientData pD = playersData[m_ID];
-                m_NeedAntiseptic = pD.m_NeedAntiseptic;
-            }
-
-            void BloodLostUpdate()
-            {
-                MultiPlayerClientData pD = playersData[m_ID];
-                m_BloodLosts = pD.m_BloodLosts;
-
-                if (m_BloodLosts <= 1)
-                {
-                    blooddrop_period = 1.3f;
-                }
-                else if (m_BloodLosts == 2)
-                {
-                    blooddrop_period = 1f;
-                }
-                else if (m_BloodLosts == 3)
-                {
-                    blooddrop_period = 0.7f;
-                }
-                else if (m_BloodLosts >= 4)
-                {
-                    blooddrop_period = 0.5f;
-                }
-
-                if (Time.time > nextActionBloodDrop)
-                {
-                    nextActionBloodDrop += blooddrop_period;
-                    int m_LevelId = pD.m_Levelid;
-                    string m_LevelGUID = pD.m_LevelGuid;
-                    if (m_BloodLosts > 0 && levelid == m_LevelId && level_guid == m_LevelGUID)
-                    {
-                        PlayMultiplayer3dAduio("PLAY_BLOODDROPS_3D", m_ID);
-                        Vector3 pos = root.transform.position;
-                        ++pos.y;
-                        Vector2 insideUnitCircle = UnityEngine.Random.insideUnitCircle;
-                        insideUnitCircle.Normalize();
-                        Vector2 vector2 = insideUnitCircle * UnityEngine.Random.Range(0.0f, 0.75f);
-                        pos.x += vector2.x;
-                        pos.z += vector2.y;
-                        pos -= root.transform.forward * 0.5f;
-                        RaycastHit hitInfo;
-                        if (!Physics.Raycast(pos, Vector3.down, out hitInfo, float.PositiveInfinity, Utils.m_PhysicalCollisionLayerMask) || (UnityEngine.Object)hitInfo.collider == (UnityEngine.Object)null)
-                            return;
-                        Vector3 scale = new Vector3(0.05f, 2f, 0.05f) * UnityEngine.Random.Range(0.5f, 2f);
-                        int uvRectangleIndex = 7;
-                        if (Utils.RollChance(50f))
-                            uvRectangleIndex = 6;
-                        DecalProjectorInstance decalCreated = GameManager.GetDynamicDecalsManager().CreateDecal(hitInfo.point, m_Player.transform.rotation.eulerAngles.y, hitInfo.normal, uvRectangleIndex, scale, DecalProjectorType.PlayerBlood, GameManager.GetWeatherComponent().IsIndoorEnvironment());
-                    }
-                }
-            }
-
-            void DoneAction()
-            {
-                LongActionFinished(this, m_ActionType);
-                LongActionCanceled(this);
-            }
-
-            void UpdateHead()
-            {
-                MultiPlayerClientData pD = playersData[m_ID];
-
-                if(m_Character != pD.m_Character)
-                {
-                    MakenzyHead.SetActive(false);
-                    AstridHead.SetActive(false);
-                    if (pD.m_Character == 0)
-                    {
-                        MakenzyHead.SetActive(true);
-                    }
-                    if (pD.m_Character == 1)
-                    {
-                        AstridHead.SetActive(true);
-                    }
-                }
-            }
-            void Update()
-            {
-                if(m_Player != null)
-                {
-                    // If hand_r is null, this means all other objects shortcuts null too need write them down.
-                    if (hand_r == null)
-                    {
-                        int clothingChild = 0;
-                        int bodyChild = 1;
-                        int extrasChild = 2;
-                        int hipsChild = 3;
-                        int rootChild = 8;
-                        clothing = m_Player.transform.GetChild(clothingChild).gameObject;
-                        body = m_Player.transform.GetChild(bodyChild).gameObject;
-                        extras = m_Player.transform.GetChild(extrasChild).gameObject;
-                        hip = m_Player.transform.GetChild(hipsChild).gameObject;
-                        root = hip.transform.GetChild(rootChild).gameObject;
-                        hand_r = root.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).gameObject;
-                        hand_l = root.transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).gameObject;
-                        rifle = root.transform.GetChild(0).GetChild(1).gameObject;
-                        revolver = root.transform.GetChild(2).GetChild(1).gameObject;
-                        quiver = root.transform.GetChild(0).GetChild(2).gameObject;
-                        axe = root.transform.GetChild(0).GetChild(3).gameObject;
-                        medkit = root.transform.GetChild(0).GetChild(4).gameObject;
-                        flares = root.transform.GetChild(0).GetChild(5).gameObject;
-
-                        for (int i = 0; i <= 1; i++)
-                        {
-                            GameObject Fla = flares.transform.GetChild(1).GetChild(i).gameObject;
-                            MakeBorrowble(Fla, "GEAR_FlareA", m_ID, m_Player.GetComponent<MultiplayerPlayer>());
-                        }
-                        for (int i = 0; i <= 1; i++)
-                        {
-                            GameObject Fla = flares.transform.GetChild(2).GetChild(i).gameObject;
-                            MakeBorrowble(Fla, "GEAR_BlueFlare", m_ID, m_Player.GetComponent<MultiplayerPlayer>());
-                        }
-
-                        MakeBorrowble(medkit, "GEAR_MedicalSupplies_hangar", m_ID, m_Player.GetComponent<MultiplayerPlayer>());
-                        MakeBorrowble(axe, "GEAR_Hatchet", m_ID, m_Player.GetComponent<MultiplayerPlayer>());
-                        MakeBorrowble(rifle, "GEAR_Rifle", m_ID, m_Player.GetComponent<MultiplayerPlayer>());
-                        MakeBorrowble(revolver, "GEAR_Revolver", m_ID, m_Player.GetComponent<MultiplayerPlayer>());
-
-                        bookOpen = hand_l.transform.GetChild(6).gameObject;
-                        bookClosed = hand_l.transform.GetChild(7).gameObject;
-                        meleeDummy = hand_r.transform.GetChild(11).gameObject;
-
-                        MakenzyHead = body.transform.GetChild(1).GetChild(0).gameObject;
-                        AstridHead = body.transform.GetChild(1).GetChild(1).gameObject;
-
-                        //GameObject reference = GetGearItemObject("GEAR_PryBar");
-
-                        //if (reference == null)
-                        //{
-                        //    return;
-                        //}
-                        //UnityEngine.Object.Instantiate<GameObject>(reference, meleeDummy.transform.position, meleeDummy.transform.rotation, meleeDummy.transform);
-                        //meleeDummy.transform.localScale = new Vector3(0.007f, 0.007f, 0.007f);
-                    }
-
-                    MultiPlayerClientData pD = playersData[m_ID];
-
-                    BloodLostUpdate();
-                    UpdateOtherAffictions();
-                    //UpdateHead();
-
-                    if (m_IsBeingInteractedWith == true)
-                    {
-                        m_InteractTimer -= Time.deltaTime;
-
-                        if(m_InteractTimer <= 0.0)
-                        {
-                            DoneAction();
-                        }
-                    }
-
-                    PlayerEquipmentData Edata = pD.m_PlayerEquipmentData;
-                    if((Edata.m_HoldingItem != m_HoldingItem) || (Edata.m_LightSourceOn != m_LightSourceOn))
-                    {
-                        m_HoldingItem = Edata.m_HoldingItem;
-                        m_LightSourceOn = Edata.m_LightSourceOn;
-                        UpdateHeldItem();
-                        UpdateVisualItems();
-                    }
-                    if((Edata.m_HasAxe != m_HasAxe) || (Edata.m_HasMedkit != m_HasMedkit) || (Edata.m_HasRifle != m_HasRifle) || (Edata.m_HasRevolver != m_HasRevolver) || (Edata.m_Arrows != m_Arrows) || (Edata.m_Flares != m_Flares) || (Edata.m_BlueFlares != m_BlueFlares))
-                    {
-                        m_HasMedkit = Edata.m_HasMedkit;
-                        m_HasRifle = Edata.m_HasRifle;
-                        m_HasRevolver = Edata.m_HasRevolver;
-                        m_Arrows = Edata.m_Arrows;
-                        m_Flares = Edata.m_Flares;
-                        m_BlueFlares = Edata.m_BlueFlares;
-                        UpdateVisualItems();
-                    }
-                    Vector3 m_XYZ = pD.m_Position;
-                    Quaternion m_XYZW = pD.m_Rotation;
-                    if (pD.m_Female == false)
-                    {
-                        m_XYZ = pD.m_Position;
-                        m_Player.transform.localScale = new Vector3(1, 1, 1);
-                    }else{
-                        m_XYZ = new Vector3(pD.m_Position.x, pD.m_Position.y - 0.194f, pD.m_Position.z);
-                        m_Player.transform.localScale = new Vector3(0.867f, 1, 0.867f);
-                    }
-                    if(m_HoldingItem == "Book")
-                    {
-                        if(pD.m_AnimState == "Idle")
-                        {
-                            bookOpen.SetActive(true);
-                            bookClosed.SetActive(false);
-                        }else{
-                            bookOpen.SetActive(false);
-                            bookClosed.SetActive(true);
-                        }
-                    }else{
-                        bookOpen.SetActive(false);
-                        bookClosed.SetActive(false);
-                    }
-                    
-                    Vector3 togo = Vector3.Lerp(m_Player.transform.position, m_XYZ, Time.deltaTime * 20);
-                    Quaternion toRot = Quaternion.Lerp(m_Player.transform.rotation, m_XYZW, Time.deltaTime * 20);
-                    m_Player.transform.position = togo;
-                    m_Player.transform.rotation = toRot;
-
-                    string BreakingAudioData = pD.m_BrakingSounds;
-
-                    if (m_BreakingSound != BreakingAudioData)
-                    {
-                        m_BreakingSound = BreakingAudioData;
-
-                        if (m_BreakingSoundReference != 0U)
-                        {
-                            AkSoundEngine.StopPlayingID(m_BreakingSoundReference, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                            m_BreakingSoundReference = 0U;
-                        }
-
-                        if (m_BreakingSound != "")
-                        {
-                            m_BreakingSoundReference = GameAudioManager.PlaySound(BreakingAudioData, m_Player);
-                        }
-                    }
-
-                    bool m_HeavyBreath = pD.m_HeavyBreath;
-
-                    if (m_HeavyBreath == true)
-                    {
-                        if (m_HeavyBreathSoundReference == 0U)
-                        {
-                            m_HeavyBreathSoundReference = GameAudioManager.PlaySound("PLAY_BREATH_3D", m_Player);
-                        }
-                    }else{
-                        if (m_HeavyBreathSoundReference != 0U)
-                        {
-                            AkSoundEngine.StopPlayingID(m_HeavyBreathSoundReference, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                            m_HeavyBreathSoundReference = 0U;
-                        }
-                    }
-                }
-            }
-        }
-
-        public class ClientProjectile : MonoBehaviour
-        {
-            public ClientProjectile(IntPtr ptr) : base(ptr) { }
-            public int m_ClientID = 0;
-        }
-        public class UiButtonPressHook : MonoBehaviour
-        {
-            public UiButtonPressHook(IntPtr ptr) : base(ptr) { }
-            public int m_CustomId = 0;
-        }
-        public class UiButtonKeyboardPressSkip : MonoBehaviour
-        {
-            public UiButtonKeyboardPressSkip(IntPtr ptr) : base(ptr) { }
-            public IL2CPP.List<EventDelegate> m_Click;
-        }
-        public class LeftHandHelper: MonoBehaviour
-        {
-            public LeftHandHelper(IntPtr ptr) : base(ptr) { }
-            public GameObject MirrorThis;
-            void LateUpdate()
-            {
-                if (MirrorThis)
-                {
-                    MirrorThis.transform.localScale = new Vector3(-1, 1, 1);
-                }
-            }
-        }
-        public class DeathDropContainer : MonoBehaviour
-        {
-            public DeathDropContainer(IntPtr ptr) : base(ptr) { }
-            public string m_Owner = "UNKNOWN";
-        }
-        
-
-        public class ContainersSync : MonoBehaviour
-        {
-            public ContainersSync(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Obj = null;
-            public Container m_Cont = null;
-            public string m_Guid = "";
-            public string m_LastAnim = "";
-
-
-            void Update()
-            {
-                if(m_Obj != null)
-                {
-                    if(m_Cont == null && m_Obj.GetComponent<Container>() != null)
-                    {
-                        m_Cont = m_Obj.GetComponent<Container>();
-                    }
-                    if (m_Guid == "" && m_Obj.GetComponent<ObjectGuid>() != null)
-                    {
-                        m_Guid = m_Obj.GetComponent<ObjectGuid>().Get();
-                    }
-
-                    if(m_Guid != "" && m_Cont != null)
-                    {
-                        if(m_Cont.m_IsCorpse == true)
-                        {
-                            UnityEngine.Object.Destroy(m_Obj.GetComponent<ContainersSync>());
-                        }
-                    }
-                }
-            }
-
-            public void CallSync()
-            {
-                ContainerOpenSync sync = new ContainerOpenSync();
-                sync.m_Guid = m_Guid;
-
-                if (m_LastAnim == "close")
-                {
-                    sync.m_State = false;
-                }else{
-                    sync.m_State = true;
-                }
-
-                if (iAmHost == true)
-                {
-                    using (Packet _packet = new Packet((int)ServerPackets.CONTAINEROPEN))
-                    {
-                        ServerSend.CONTAINEROPEN(0, sync, true);
-                    }
-                }
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.CONTAINEROPEN))
-                    {
-                        _packet.Write(sync);
-                        SendTCPData(_packet);
-                    }
-                }
-            }
-
-            public void Open()
-            {
-                if (m_Cont != null && m_Cont.m_ObjectAnims != null && m_LastAnim != "open")
-                {
-                    if (m_Cont.m_PendingClose)
-                        return;
-                    for (int index = 0; index < m_Cont.m_ObjectAnims.Length; ++index)
-                    {
-                        ObjectAnim objectAnim = m_Cont.m_ObjectAnims[index];
-                        if ((bool)(UnityEngine.Object)objectAnim && !objectAnim.Play("open"))
-                            return;
-                    }
-
-                    if(m_Cont.gameObject != null && GameManager.GetPlayerObject() != null)
-                    {
-                        float dist = Vector3.Distance(GameManager.GetPlayerObject().transform.position, m_Cont.gameObject.transform.position);
-                        if(dist < 30)
-                        {
-                            m_Cont.PlayContainerOpenSound();
-                        }
-                    }
-                }
-            }
-            public void Close()
-            {
-                if (m_Cont != null && m_Cont.m_ObjectAnims != null && m_LastAnim != "close")
-                {
-                    for (int index = 0; index < m_Cont.m_ObjectAnims.Length; ++index)
-                    {
-                        ObjectAnim objectAnim = m_Cont.m_ObjectAnims[index];
-                        if ((bool)(UnityEngine.Object)objectAnim && !objectAnim.Play("close"))
-                        {
-                            m_Cont.m_PendingClose = true;
-                            return;
-                        }
-                    }
-                    if (m_Cont.gameObject != null && GameManager.GetPlayerObject() != null)
-                    {
-                        float dist = Vector3.Distance(GameManager.GetPlayerObject().transform.position, m_Cont.gameObject.transform.position);
-                        if (dist < 30)
-                        {
-                            m_Cont.PlayContainerCloseSound();
-                        }
-                    }
-                    m_Cont.m_PendingClose = false;
-                    return;
-                }
-            }
-        }
-
-        public static void ApplyDamageZones(GameObject p, MultiplayerPlayer mP)
+        public static void ApplyDamageZones(GameObject p, Comps.MultiplayerPlayer mP)
         {
             if (p != null)
             {
@@ -4922,47 +2380,47 @@ namespace SkyCoop
                 GameObject leg_l = root.GetChild(2).gameObject;
                 GameObject leg_r = root.GetChild(1).gameObject;
 
-                chest.AddComponent<PlayerBulletDamage>();
-                arm_r1.AddComponent<PlayerBulletDamage>();
-                arm_r2.AddComponent<PlayerBulletDamage>();
-                arm_l1.AddComponent<PlayerBulletDamage>();
-                arm_l2.AddComponent<PlayerBulletDamage>();
-                head.AddComponent<PlayerBulletDamage>();
-                leg_r.AddComponent<PlayerBulletDamage>();
-                leg_l.AddComponent<PlayerBulletDamage>();
+                chest.AddComponent<Comps.PlayerBulletDamage>();
+                arm_r1.AddComponent<Comps.PlayerBulletDamage>();
+                arm_r2.AddComponent<Comps.PlayerBulletDamage>();
+                arm_l1.AddComponent<Comps.PlayerBulletDamage>();
+                arm_l2.AddComponent<Comps.PlayerBulletDamage>();
+                head.AddComponent<Comps.PlayerBulletDamage>();
+                leg_r.AddComponent<Comps.PlayerBulletDamage>();
+                leg_l.AddComponent<Comps.PlayerBulletDamage>();
                 // 0 - Head, 1 - Chest, 2 - Rigth Arm, 3 - Left Arm, 4 - Right Leg, 5 - Left Leg
-                chest.GetComponent<PlayerBulletDamage>().SetLocaZone(chest, mP, 1);
-                arm_r1.GetComponent<PlayerBulletDamage>().SetLocaZone(arm_r1, mP, 2);
-                arm_r2.GetComponent<PlayerBulletDamage>().SetLocaZone(arm_r2, mP, 2);
-                arm_l1.GetComponent<PlayerBulletDamage>().SetLocaZone(arm_l1, mP, 3);
-                arm_l2.GetComponent<PlayerBulletDamage>().SetLocaZone(arm_l2, mP, 3);
-                head.GetComponent<PlayerBulletDamage>().SetLocaZone(head, mP, 0);
-                leg_r.GetComponent<PlayerBulletDamage>().SetLocaZone(leg_r, mP, 4);
-                leg_l.GetComponent<PlayerBulletDamage>().SetLocaZone(leg_l, mP, 5);
+                chest.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(chest, mP, 1);
+                arm_r1.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(arm_r1, mP, 2);
+                arm_r2.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(arm_r2, mP, 2);
+                arm_l1.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(arm_l1, mP, 3);
+                arm_l2.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(arm_l2, mP, 3);
+                head.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(head, mP, 0);
+                leg_r.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(leg_r, mP, 4);
+                leg_l.GetComponent<Comps.PlayerBulletDamage>().SetLocaZone(leg_l, mP, 5);
             }
         }
 
         public static void AddLocalizedSprain(AfflictionBodyArea location, string causeID)
         {
             bool Legs = false;
-            if(location == AfflictionBodyArea.LegLeft)
+            if (location == AfflictionBodyArea.LegLeft)
             {
                 location = AfflictionBodyArea.FootLeft;
                 Legs = true;
             }
-            else if(location == AfflictionBodyArea.LegRight)
+            else if (location == AfflictionBodyArea.LegRight)
             {
                 location = AfflictionBodyArea.FootRight;
                 Legs = true;
-            }else if(location == AfflictionBodyArea.ArmLeft)
+            } else if (location == AfflictionBodyArea.ArmLeft)
             {
                 location = AfflictionBodyArea.HandLeft;
-            }else if(location == AfflictionBodyArea.ArmRight)
+            } else if (location == AfflictionBodyArea.ArmRight)
             {
                 location = AfflictionBodyArea.HandRight;
             }
 
-            if(Legs)
+            if (Legs)
             {
                 SprainedAnkle Spr = GameManager.GetSprainedAnkleComponent();
 
@@ -4976,10 +2434,10 @@ namespace SkyCoop
                 PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedAnkle", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.m_Panel_HUD.m_DamageEventDisplaySeconds, InterfaceManager.m_Panel_HUD.m_DamageEventFadeOutSeconds);
                 GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleVO, Voice.Priority.Critical);
                 GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFX, Spr.gameObject);
-                
+
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedAnkle, causeID);
                 StatsManager.IncrementValue(StatID.Sprains_Ankle);
-            }else{
+            } else {
                 SprainedWrist Spr = GameManager.GetSprainedWristComponent();
 
                 Spr.m_CausesLocIDs.Add(causeID);
@@ -4999,27 +2457,27 @@ namespace SkyCoop
 
         public static void DamageByBullet(float damage, int from, int bodypart, bool Meele, string MeleeWeapon)
         {
-            if(damage <= 0)
+            if (damage <= 0)
             {
                 return;
             }
 
-            MeleeDescripter DmgInfo;
+            DataStr.MeleeDescripter DmgInfo;
 
             if (Meele)
             {
                 DmgInfo = GetMeelePlayerInfo(MeleeWeapon);
-            }else{
-                DmgInfo = new MeleeDescripter();
+            } else {
+                DmgInfo = new DataStr.MeleeDescripter();
                 DmgInfo.m_PlayerDamage = damage;
                 DmgInfo.m_AnimalDamage = 0;
                 DmgInfo.m_BloodLoss = true;
                 DmgInfo.m_ClothingTearing = true;
                 DmgInfo.m_Pain = false;
             }
-            
+
             string DamageCase = "Other player";
-            if(playersData[from] != null)
+            if (playersData[from] != null)
             {
                 DamageCase = playersData[from].m_Name;
                 string Extra = " shoot you";
@@ -5033,7 +2491,7 @@ namespace SkyCoop
             bool HasArmor = false;
             bool HasHelemet = false;
 
-            if(bodypart == 1) // If Chest
+            if (bodypart == 1) // If Chest
             {
                 HasArmor = GameManager.GetDamageProtection().HasBallisticVest();
                 if (HasArmor)
@@ -5042,9 +2500,9 @@ namespace SkyCoop
                 }
             }
 
-            if(bodypart == 0) // If Head
+            if (bodypart == 0) // If Head
             {
-                if(GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid) == "GEAR_CookingPot")
+                if (GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid) == "GEAR_CookingPot")
                 {
                     damage = (20 * damage) / 100;
                     HasHelemet = true;
@@ -5087,11 +2545,11 @@ namespace SkyCoop
                 }
                 if (DmgInfo.m_Pain)
                 {
-                    if(BodyArea == AfflictionBodyArea.Head)
+                    if (BodyArea == AfflictionBodyArea.Head)
                     {
                         GameManager.GetHeadacheComponent().ApplyHeadache(0.5f, 5, 0.3f);
                     }
-                    else if(BodyArea == AfflictionBodyArea.ArmRight 
+                    else if (BodyArea == AfflictionBodyArea.ArmRight
                         || BodyArea == AfflictionBodyArea.ArmLeft
                         || BodyArea == AfflictionBodyArea.LegLeft
                         || BodyArea == AfflictionBodyArea.LegRight)
@@ -5123,14 +2581,14 @@ namespace SkyCoop
                         Region = ClothingRegion.Legs;
                         break;
                 }
-                if(DmgInfo.m_ClothingTearing)
+                if (DmgInfo.m_ClothingTearing)
                 {
                     var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
                     GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothingRegion(Region, clothingRNG);
                 }
-            }else{
+            } else {
                 var RNG = new System.Random(); int ribBroke = RNG.Next(0, 100);
-                if(!Meele && ribBroke <= 5)
+                if (!Meele && ribBroke <= 5)
                 {
                     GameManager.GetBrokenRibComponent().BrokenRibStart(DamageCase, true, false, true, false);
                 }
@@ -5166,9 +2624,9 @@ namespace SkyCoop
             }
             for (int i = 0; i < MaxPlayers; i++)
             {
-                if (players[i] != null && players[i].GetComponent<MultiplayerPlayer>() != null)
+                if (players[i] != null && players[i].GetComponent<Comps.MultiplayerPlayer>() != null)
                 {
-                    List<GameObject> PlayerColiders = players[i].GetComponent<MultiplayerPlayer>().m_DamageColiders;
+                    List<GameObject> PlayerColiders = players[i].GetComponent<Comps.MultiplayerPlayer>().m_DamageColiders;
 
                     for (int index = 0; index < PlayerColiders.Count; ++index)
                     {
@@ -5181,76 +2639,9 @@ namespace SkyCoop
             }
         }
 
-        public class PlayerBulletDamage : MonoBehaviour
-        {
-            public PlayerBulletDamage(IntPtr ptr) : base(ptr) { }
-            public int m_Damage = 0;
-            public GameObject m_Obj = null;
-            public int m_ClientId = 0;
-            public GameObject m_Player = null;
-            public int m_Type = 0; // 0 - Head, 1 - Chest, 2 - Rigth Arm, 3 - Left Arm, 4 - Right Leg, 5 - Left Leg
-
-            public void OnCollisionEnter(Collision col)
-            {
-                if (col.gameObject.GetComponent<ArrowItem>() != null)
-                {
-                    ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
-                    if (col.gameObject.GetComponent<DestoryArrowOnHit>() == null)
-                    {
-                        ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
-                        MelonLogger.Msg("Arrow colided other player, and dealing damage " + m_Damage);
-                        if (sendMyPosition == true)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.BULLETDAMAGE))
-                            {
-                                _packet.Write((float)m_Damage);
-                                _packet.Write(m_Type);
-                                _packet.Write(m_ClientId);
-                                _packet.Write(false);
-                                SendTCPData(_packet);
-                            }
-                        }
-                        if (iAmHost == true)
-                        {
-                            using (Packet _packet = new Packet((int)ServerPackets.BULLETDAMAGE))
-                            {
-                                ServerSend.BULLETDAMAGE(m_ClientId, (float)m_Damage, m_Type, 0);
-                            }
-                        }
-                    }
-                }
-            }
-
-            public void SetLocaZone(GameObject t, MultiplayerPlayer pl, int bodyPart)
-            {
-                m_Obj = t;
-                m_Obj.tag = "Flesh";
-                m_Obj.layer = vp_Layer.Container;
-                m_Type = bodyPart;
-
-                if (m_Obj.name == "Chest")
-                {
-                    m_Damage = 50;
-                } else if (m_Obj.name.StartsWith("arm"))
-                {
-                    m_Damage = 30;
-                } else if (m_Obj.name.StartsWith("Head"))
-                {
-                    m_Damage = 70;
-                } else if (m_Obj.name.StartsWith("Thigh"))
-                {
-                    m_Damage = 20;
-                }
-                m_Player = pl.m_Player;
-                pl.m_DamageColiders.Add(m_Obj);
-                m_ClientId = pl.m_ID;
-                //MelonLogger.Msg(m_Obj.name + " = "+ m_Damage);
-            }
-        }
-
         public static void DisableOriginalAnimalSpawns(bool host = false)
         {
-            if(GameManager.m_SpawnRegionManager == null)
+            if (GameManager.m_SpawnRegionManager == null)
             {
                 return;
             }
@@ -5279,7 +2670,7 @@ namespace SkyCoop
         }
         public static void SimulateSpawnFromRegionSpawn(string GUID, SpawnRegion spRobj)
         {
-            if(spRobj != null && spRobj.GetComponent<SpawnRegion>() != null)
+            if (spRobj != null && spRobj.GetComponent<SpawnRegion>() != null)
             {
                 SpawnRegion spR = spRobj.GetComponent<SpawnRegion>();
                 Vector3 zero = Vector3.zero;
@@ -5288,12 +2679,12 @@ namespace SkyCoop
 
                 if (spR.TryGetSpawnPositionAndRotation(ref zero, ref identity) == true)
                 {
-                    if(spR.PositionValidForSpawn(zero) == true)
+                    if (spR.PositionValidForSpawn(zero) == true)
                     {
                         newAnimal = spR.InstantiateSpawnInternal(WildlifeMode.Normal, zero, identity);
                     }
                 }
-                if(newAnimal != null)
+                if (newAnimal != null)
                 {
                     GameObject animal = newAnimal.gameObject;
                     if (animal.GetComponent<ObjectGuid>() == null)
@@ -5302,16 +2693,16 @@ namespace SkyCoop
                     }
                     string animalGUID = ObjectGuidManager.GenerateNewGuidString();
                     animal.GetComponent<ObjectGuid>().Set(animalGUID);
-                    if(animal.GetComponent<AnimalUpdates>() != null)
+                    if (animal.GetComponent<Comps.AnimalUpdates>() != null)
                     {
-                        animal.GetComponent<AnimalUpdates>().m_RegionGUID = GUID;
-                    }else{
-                        AnimalUpdates au = animal.AddComponent<AnimalUpdates>();
+                        animal.GetComponent<Comps.AnimalUpdates>().m_RegionGUID = GUID;
+                    } else {
+                        Comps.AnimalUpdates au = animal.AddComponent<Comps.AnimalUpdates>();
                         au.m_RegionGUID = GUID;
                     }
-                    if (spRobj.GetComponent<SpawnRegionSimple>())
+                    if (spRobj.GetComponent<Comps.SpawnRegionSimple>())
                     {
-                        spRobj.GetComponent<SpawnRegionSimple>().m_Spawned++;
+                        spRobj.GetComponent<Comps.SpawnRegionSimple>().m_Spawned++;
                     }
                     //MelonLogger.Msg("Region " + GUID + " spawned animal " + animalGUID);
                     BaseAi Bai = animal.GetComponent<BaseAi>();
@@ -5323,7 +2714,7 @@ namespace SkyCoop
             }
         }
 
-        public static void SetAnimationDataForAnimal(Animator AN, AnimalAnimsSync obj)
+        public static void SetAnimationDataForAnimal(Animator AN, DataStr.AnimalAnimsSync obj)
         {
             int m_AnimParameter_TurnAngle = Animator.StringToHash("TurnAngle");
             int m_AnimParameter_TurnSpeed = Animator.StringToHash("TurnSpeed");
@@ -5358,38 +2749,17 @@ namespace SkyCoop
             AN.SetInteger(m_AnimParameter_AttackId, obj.AP_AttackId);
         }
 
-        public static Dictionary<string, AnimalKilled> AnimalsKilled = new Dictionary<string, AnimalKilled>();
-        public static Dictionary<string, int> StunnedRabbits = new Dictionary<string, int>();
-
-        public class AnimalKilled
-        {
-            public Vector3 m_Position = new Vector3(0, 0, 0);
-            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
-            public string m_PrefabName = "";
-            public string m_GUID = "";
-            public string m_LevelGUID = "";
-            public int m_CreatedTime = 0;
-
-            public float m_Meat = 0;
-            public int m_Guts = 0;
-            public int m_Hide = 0;
-
-            public bool m_Knocked = false;
-
-            public string m_RegionGUID = "";
-        }
-
         public static void LoadAniamlCorpsesForScene()
         {
             List<string> ToRemove = new List<string>();
 
-            foreach (var item in AnimalsKilled)
+            foreach (var item in Shared.AnimalsKilled)
             {
                 int DespawnTime = item.Value.m_CreatedTime + 14400;
                 if (DespawnTime < MinutesFromStartServer)
                 {
                     ToRemove.Add(item.Key);
-                }else{
+                } else {
                     if (item.Value.m_LevelGUID == level_guid)
                     {
                         ProcessAnimalCorpseSync(item.Value);
@@ -5398,93 +2768,17 @@ namespace SkyCoop
             }
             foreach (var item in ToRemove)
             {
-                AnimalsKilled.Remove(item);
-            }
-        }
-
-        public static void OnAnimalStunned(string GUID)
-        {
-            if (!StunnedRabbits.ContainsKey(GUID))
-            {
-                StunnedRabbits.Add(GUID, 5);
-            }
-        }
-        public static void ReviveRabbit(string GUID)
-        {
-            ServerSend.ANIMALDELETE(0, GUID);
-            GameObject Animal = ObjectGuidManager.Lookup(GUID);
-            Vector3 V3;
-            string LevelGUID;
-            if (AnimalsController == true)
-            {
-                if (Animal) // If I am is animal controller and I have this rabbit, this means I can revive it.
-                {
-                    V3 = Animal.transform.position;
-                    UnityEngine.Object.Destroy(Animal);
-                    AnimalsKilled.Remove(GUID);
-                    OnRabbitRevived(V3);
-                }else{ // Else this means I should send this to controller.
-                    AnimalKilled Body;
-                    if(AnimalsKilled.TryGetValue(GUID, out Body))
-                    {
-                        V3 = Body.m_Position;
-                        LevelGUID = Body.m_LevelGUID;
-                        AnimalsKilled.Remove(GUID);
-                        ServerSend.RABBITREVIVED(0, V3, LevelGUID);
-                    }
-                }
-            }else{
-                AnimalKilled Body;
-                if (AnimalsKilled.TryGetValue(GUID, out Body))
-                {
-                    V3 = Body.m_Position;
-                    LevelGUID = Body.m_LevelGUID;
-                    AnimalsKilled.Remove(GUID);
-                    ServerSend.RABBITREVIVED(0, V3, LevelGUID);
-                }
-            }
-        }
-        public class ElementToModfy
-        {
-            public string m_GUID;
-            public int m_Time;
-        }
-
-        public static void UpdateStunnedRabbits()
-        {
-            if(StunnedRabbits.Count > 0)
-            {
-                List<ElementToModfy> Modify = new List<ElementToModfy>();
-                foreach (var item in StunnedRabbits)
-                {
-                    ElementToModfy e = new ElementToModfy();
-                    e.m_GUID = item.Key;
-                    e.m_Time = item.Value;
-                    Modify.Add(e);
-                }
-                foreach (var item in Modify)
-                {
-                    int SecondsLeft = item.m_Time;
-                    SecondsLeft--;
-                    if (SecondsLeft == 0)
-                    {
-                        ReviveRabbit(item.m_GUID);
-                        StunnedRabbits.Remove(item.m_GUID);
-                    }else{
-                        StunnedRabbits.Remove(item.m_GUID);
-                        StunnedRabbits.Add(item.m_GUID, SecondsLeft);
-                    }
-                }
+                Shared.AnimalsKilled.Remove(item);
             }
         }
 
         public static void FinallyPickupRabbit(int result)
         {
             RemovePleaseWait();
-            if(result == 0)
+            if (result == 0)
             {
                 HUDMessage.AddMessage("Can't pick this up");
-            }else if(result == 1)
+            } else if (result == 1)
             {
                 GameObject reference = GetGearItemObject("gear_rabbitcarcass");
                 if (reference)
@@ -5493,27 +2787,27 @@ namespace SkyCoop
                     obj.name = reference.name;
                     if (obj && obj.GetComponent<GearItem>())
                     {
-                        DropFakeOnLeave DFL = obj.AddComponent<DropFakeOnLeave>();
+                        Comps.DropFakeOnLeave DFL = obj.AddComponent<Comps.DropFakeOnLeave>();
                         DFL.m_OldPossition = obj.transform.position;
                         DFL.m_OldRotation = obj.transform.rotation;
 
                         GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(obj.GetComponent<GearItem>());
                     }
                 }
-            }else if(result == 2)
+            } else if (result == 2)
             {
                 GameObject reference = GetGearItemObject("WILDLIFE_Rabbit");
                 if (reference)
                 {
                     GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, GameManager.GetPlayerTransform().transform.position, GameManager.GetPlayerTransform().transform.rotation);
-                    AnimalUpdates au = obj.GetComponent<AnimalUpdates>();
+                    Comps.AnimalUpdates au = obj.GetComponent<Comps.AnimalUpdates>();
                     if (au == null)
                     {
-                        obj.AddComponent<AnimalUpdates>();
-                        au = obj.GetComponent<AnimalUpdates>();
+                        obj.AddComponent<Comps.AnimalUpdates>();
+                        au = obj.GetComponent<Comps.AnimalUpdates>();
                         au.m_Animal = obj;
                         au.m_PickedUp = true;
-                    }else{
+                    } else {
                         au.m_PickedUp = true;
                     }
                     if (obj.GetComponent<WildlifeItem>())
@@ -5537,7 +2831,7 @@ namespace SkyCoop
         }
         public static void OnRabbitRevived(Vector3 v3)
         {
-            if(AnimalsController == true)
+            if (AnimalsController == true)
             {
                 GameObject reference = GetGearItemObject("WILDLIFE_Rabbit");
                 if (reference == null)
@@ -5550,7 +2844,7 @@ namespace SkyCoop
                 if (bai.CreateMoveAgent((Transform)null) && !bai.GetMoveAgent().Warp(v3, 1f, true, -1))
                 {
                     bai.Despawn();
-                }else{
+                } else {
                     bai.m_SpawnPos = v3;
                     Utils.SetGuidForGameObject(bai.gameObject, ObjectGuidManager.GenerateNewGuidString());
                 }
@@ -5560,7 +2854,7 @@ namespace SkyCoop
 
         public static void OnReleaseRabbit(int from)
         {
-            if(AnimalsController == true)
+            if (AnimalsController == true)
             {
                 GameObject reference = GetGearItemObject("WILDLIFE_Rabbit");
                 if (reference == null)
@@ -5574,9 +2868,9 @@ namespace SkyCoop
                 Vector3 Camera = GameManager.GetMainCamera().transform.position;
                 Vector3 CameraForward = GameManager.GetMainCamera().transform.forward;
 
-                if(from != instance.myId)
+                if (from != ClientUser.myId)
                 {
-                    if(players[from] != null)
+                    if (players[from] != null)
                     {
                         Transform root = players[from].transform.GetChild(3).GetChild(8);
                         Transform chest = root.GetChild(0).GetChild(0).GetChild(0);
@@ -5596,7 +2890,7 @@ namespace SkyCoop
                 if (bai.CreateMoveAgent((Transform)null) && !bai.GetMoveAgent().Warp(raycastHit.point, 1f, true, -1))
                 {
                     bai.Despawn();
-                }else{
+                } else {
                     bai.m_SpawnPos = raycastHit.point;
                     Utils.SetGuidForGameObject(bai.gameObject, ObjectGuidManager.GenerateNewGuidString());
                 }
@@ -5606,85 +2900,18 @@ namespace SkyCoop
 
         public static void AttemptToPickupRabbit(string GUID)
         {
-            if(sendMyPosition == true)
+            if (sendMyPosition == true)
             {
                 DoPleaseWait("Trying to pickup little thing", "Please wait...");
                 using (Packet _packet = new Packet((int)ClientPackets.PICKUPRABBIT))
                 {
                     _packet.Write(GUID);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
-            else if(iAmHost == true)
+            else if (iAmHost == true)
             {
-                FinallyPickupRabbit(PickUpRabbit(GUID));
-            }
-        }
-
-        public static int PickUpRabbit(string GUID)
-        {
-            if (StunnedRabbits.ContainsKey(GUID)) // 0 is Nothing. 1 is Dead. 2 is Alive
-            {
-                StunnedRabbits.Remove(GUID);
-                if (AnimalsKilled.ContainsKey(GUID))
-                {
-                    AnimalsKilled.Remove(GUID);
-                }
-                DeleteAnimal(GUID);
-                ServerSend.ANIMALDELETE(0, GUID);
-                return 2;
-            }else{
-                if (AnimalsKilled.ContainsKey(GUID))
-                {
-                    AnimalsKilled.Remove(GUID);
-                    DeleteAnimal(GUID);
-                    ServerSend.ANIMALDELETE(0, GUID);
-                    return 1;
-                }else{
-                    return 0;
-                }
-            }
-        }
-
-        public static void OnAnimalKilled(string prefab, Vector3 v3, Quaternion rot, string GUID, string LevelGUID, string RegionGUID, bool knocked = false)
-        {
-            if (!AnimalsKilled.ContainsKey(GUID))
-            {
-                AnimalKilled Animal = new AnimalKilled();
-                Animal.m_Position = v3;
-                Animal.m_Rotation = rot;
-                Animal.m_PrefabName = prefab;
-                Animal.m_GUID = GUID;
-                Animal.m_LevelGUID = LevelGUID;
-                Animal.m_CreatedTime = MinutesFromStartServer;
-                Animal.m_RegionGUID = RegionGUID;
-
-                BodyHarvestUnits bh = GetBodyHarvestUnits(prefab);
-
-                Animal.m_Meat = bh.m_Meat;
-                Animal.m_Guts = bh.m_Guts;
-                Animal.m_Hide = 1;
-                AnimalsKilled.Add(GUID, Animal);
-
-                if (LevelGUID == level_guid) // If I am on same scene
-                {
-                    ProcessAnimalCorpseSync(Animal);
-                }
-                if (knocked)
-                {
-                    OnAnimalStunned(GUID);
-                }else{
-                    BanSpawnRegion(RegionGUID);
-                }
-            }
-        }
-
-        public static void OnAnimalQuarted(string GUID)
-        {
-            AnimalKilled Animal;
-            if (AnimalsKilled.TryGetValue(GUID, out Animal))
-            {
-                AnimalsKilled.Remove(GUID);
+                FinallyPickupRabbit(Shared.PickUpRabbit(GUID));
             }
         }
 
@@ -5693,7 +2920,7 @@ namespace SkyCoop
             GameObject AnimalCorpse = ObjectGuidManager.Lookup(GUID);
             if (AnimalCorpse)
             {
-                if (AnimalCorpse.GetComponent<AnimalCorpseObject>() != null && AnimalCorpse.GetComponent<BodyHarvest>() != null)
+                if (AnimalCorpse.GetComponent<Comps.AnimalCorpseObject>() != null && AnimalCorpse.GetComponent<BodyHarvest>() != null)
                 {
                     BodyHarvest bh = AnimalCorpse.GetComponent<BodyHarvest>();
                     if (bh.CanSpawnCarcassSite())
@@ -5704,40 +2931,29 @@ namespace SkyCoop
                             bh.m_CarcassSite.SpawnQuarteringMess();
                         }
                     }
-                    UnityEngine.Object.DestroyImmediate(AnimalCorpse);
+                    UnityEngine.Object.Destroy(AnimalCorpse);
                 }
-            }
-        }
-
-        public static void OnAnimalCorpseChanged(string GUID, float MeatTaken, int GutsTaken, int HideTaken)
-        {
-            AnimalKilled Animal;
-            if (AnimalsKilled.TryGetValue(GUID, out Animal))
-            {
-                Animal.m_Meat = Animal.m_Meat - MeatTaken;
-                Animal.m_Guts = Animal.m_Guts - GutsTaken;
-                Animal.m_Hide = Animal.m_Hide - HideTaken;
-                AnimalsKilled.Remove(GUID);
-                AnimalsKilled.Add(GUID, Animal);
-            }
-        }
-
-        public static void ProcessAnimalCorpseSync(AnimalKilled Sync)
-        {
-            if(Sync.m_LevelGUID == level_guid)
-            {
-                SpawnAnimalCorpse(Sync.m_PrefabName, Sync.m_Position, Sync.m_Rotation, Sync.m_GUID, Sync.m_RegionGUID);
             }
         }
 
         public static void OpenBodyHarvest(BodyHarvest bh)
         {
             RemovePleaseWait();
-            if(GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.InSnowShelter)
+            if (GameManager.GetPlayerManagerComponent().GetControlMode() == PlayerControlMode.InSnowShelter)
             {
                 return;
             }
-            InterfaceManager.m_Panel_BodyHarvest.Enable(true, bh, false, ComingFromScreenCategory.NotUI);
+            Panel_HUD HUD;
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            Panel_BodyHarvest Harv;
+            if (!InterfaceManager.TryGetPanel<Panel_BodyHarvest>(out HUD))
+            {
+                return;
+            }
+            Harv.Enable(true, bh, false, ComingFromScreenCategory.NotUI);
         }
 
         public static BodyHarvest GoingToHarvest = null;
@@ -5748,125 +2964,39 @@ namespace SkyCoop
             {
                 string GUID = bh.gameObject.GetComponent<ObjectGuid>().Get();
 
-                if(iAmHost == true)
+                if (iAmHost == true)
                 {
-                    AnimalKilled Animal;
-                    if (AnimalsKilled.TryGetValue(GUID, out Animal))
+                    DataStr.AnimalKilled Animal;
+                    if (Shared.AnimalsKilled.TryGetValue(GUID, out Animal))
                     {
                         bh.m_MeatAvailableKG = Animal.m_Meat;
                         bh.m_GutAvailableUnits = Animal.m_Guts;
                         bh.m_HideAvailableUnits = Animal.m_Hide;
                         OpenBodyHarvest(bh);
-                    }else{
+                    } else {
                         HUDMessage.AddMessage("Can't interact with this");
                     }
-                }else if(sendMyPosition == true)
+                } else if (sendMyPosition == true)
                 {
                     DoPleaseWait("Downloading animal carcass", "Please wait...");
                     GoingToHarvest = bh;
                     using (Packet _packet = new Packet((int)ClientPackets.REQUESTANIMALCORPSE))
                     {
                         _packet.Write(GUID);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
-            }else{
+            } else {
                 HUDMessage.AddMessage("Can't interact with this");
             }
         }
 
-        public static void SpawnAnimalCorpse(string prefab, Vector3 v3, Quaternion rot, string GUID, string SpawnRegionGUID)
+        public static DataStr.AnimalCompactData GetCompactDataForAnimal(BaseAi AI, List<DataStr.AnimalArrow> Arrows)
         {
-            MelonLogger.Msg("Going to spawn animal corpse "+ GUID +" for Region "+ SpawnRegionGUID);
-            GameObject reference = GetGearItemObject(prefab);
-
-            if (reference == null)
-            {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't create animal body prefab name " + prefab);
-                return;
-            }
-
-            GameObject oldObj = ObjectGuidManager.Lookup(GUID);
-            if (oldObj)
-            {
-                if(oldObj.GetComponent<AnimalCorpseObject>() != null)
-                {
-                    MelonLogger.Msg("Corpse already exist, because been spawned myself");
-                    return;
-                }else{
-                    MelonLogger.Msg("Replace original animal with corpse " + GUID);
-
-                    if(oldObj.GetComponent<AnimalActor>() != null)
-                    {
-                        oldObj.GetComponent<AnimalActor>().m_MarkToDestroy = true;
-                    }
-                    else if (oldObj.GetComponent<AnimalUpdates>() != null)
-                    {
-                        oldObj.GetComponent<AnimalUpdates>().m_MarkToDestroy = true;
-                    }
-                }
-            }
-            
-            GameObject obj = UnityEngine.Object.Instantiate(reference, v3, rot); // Create new animal
-            obj.name = reference.name;
-            obj.layer = 19;
-            if (obj.GetComponent<BaseAi>())
-            {
-                obj.GetComponent<BaseAi>().ChangeCollisionCapsulesLayer(19);
-            }
-
-            Animator _AN = RemoveAnimalComponents(obj); // Remove all components
-
-            if (obj.name.Contains("Rabbit"))
-            {
-                if (obj.GetComponent<BodyHarvest>())
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<BodyHarvest>());
-                }
-            }
-
-            _AN.SetBool(Animator.StringToHash("Dead"), true);
-            _AN.SetInteger(Animator.StringToHash("DamageSide"), 1);
-            _AN.SetTrigger(Animator.StringToHash("DamageImpact"));
-            AnimalCorpseObject CorpseComp = obj.AddComponent<AnimalCorpseObject>();
-            CorpseComp.m_Animal = obj;
-            CorpseComp.m_RegionGUID = SpawnRegionGUID;
-            CorpseComp.Update();
-
-            if (obj.GetComponent<BodyHarvest>())
-            {
-                obj.GetComponent<BodyHarvest>().enabled = true;
-            }
-            
-            if (obj.GetComponent<ObjectGuid>() == null) // Override GUID with old GUID
-            {
-                obj.AddComponent<ObjectGuid>();
-                obj.GetComponent<ObjectGuid>().Set(GUID);
-            }else{
-                obj.GetComponent<ObjectGuid>().Set(GUID);
-            }
-            Light[] componentsInChildren2 = (Light[])obj.GetComponentsInChildren<Light>(true);
-            if (componentsInChildren2 != null)
-            {
-                for (int index = 0; index < componentsInChildren2.Length; ++index)
-                {
-                    componentsInChildren2[index].enabled = false;
-                }
-            }
-            MatchTransform.EnableCollidersForAllActive(true);
-            if (!AnimalCorplesList.ContainsKey(GUID))
-            {
-                AnimalCorplesList.Add(GUID, CorpseComp);
-            }
-            MelonLogger.Msg("Animal corpse spawned "+ GUID);
-        }
-
-        public static AnimalCompactData GetCompactDataForAnimal(BaseAi AI, List<AnimalArrow> Arrows)
-        {
-            if(AI != null && AI.gameObject != null && AI.gameObject.GetComponent<ObjectGuid>() != null)
+            if (AI != null && AI.gameObject != null && AI.gameObject.GetComponent<ObjectGuid>() != null)
             {
                 GameObject animal = AI.gameObject;
-                AnimalCompactData Dat = new AnimalCompactData();
+                DataStr.AnimalCompactData Dat = new DataStr.AnimalCompactData();
 
                 Dat.m_PrefabName = GetAnimalPrefabName(animal.name);
                 Dat.m_GUID = AI.gameObject.GetComponent<ObjectGuid>().Get();
@@ -5880,10 +3010,10 @@ namespace SkyCoop
                 Dat.m_ArrowsCount = Arrows.Count;
                 Dat.m_Arrows = Arrows;
 
-                if (animal.GetComponent<AnimalUpdates>() != null)
+                if (animal.GetComponent<Comps.AnimalUpdates>() != null)
                 {
-                    Dat.m_RegionGUID = animal.GetComponent<AnimalUpdates>().m_RegionGUID;
-                }else{
+                    Dat.m_RegionGUID = animal.GetComponent<Comps.AnimalUpdates>().m_RegionGUID;
+                } else {
                     Dat.m_RegionGUID = "";
                 }
                 return Dat;
@@ -5911,12 +3041,6 @@ namespace SkyCoop
             else { return 0; }
         }
 
-        public class AnimalTrigger : MonoBehaviour
-        {
-            public string m_Guid = "";
-            public int m_Trigger = 0;
-        }
-
         public static int GetClosestPlayerToAnimal(GameObject animal, int ReTakeChill, int CurrentController, Vector3 V3_Controller, int LevelID_Controller)
         {
             Vector3 V3 = animal.transform.position;
@@ -5939,7 +3063,7 @@ namespace SkyCoop
                 Vector3 otherPlayerV3;
                 int otherPlayerLevel;
 
-                if(i != CurrentController)
+                if (i != CurrentController)
                 {
                     if (playersData[i] != null)
                     {
@@ -5947,10 +3071,10 @@ namespace SkyCoop
                         {
                             otherPlayerV3 = GameManager.GetPlayerTransform().position;
                             otherPlayerLevel = levelid;
-                        }else if (i == instance.myId){
+                        } else if (i == ClientUser.myId) {
                             otherPlayerV3 = GameManager.GetPlayerTransform().position;
                             otherPlayerLevel = levelid;
-                        }else{
+                        } else {
                             otherPlayerV3 = playersData[i].m_Position;
                             otherPlayerLevel = playersData[i].m_Levelid;
                         }
@@ -5958,9 +3082,9 @@ namespace SkyCoop
                         float distanceToCurrentController = Vector3.Distance(V3_Controller, otherPlayerV3);
                         float distanceToAnimal = Vector3.Distance(V3, otherPlayerV3);
 
-                        if(distanceToCurrentController > MinimalDistance)
+                        if (distanceToCurrentController > MinimalDistance)
                         {
-                            if(playersData[i].m_AnimState != "Knock" && otherPlayerLevel == LevelID_Controller && otherPlayerV3 != new Vector3(0, 0, 0))
+                            if (playersData[i].m_AnimState != "Knock" && otherPlayerLevel == LevelID_Controller && otherPlayerV3 != new Vector3(0, 0, 0))
                             {
                                 if (distanceToAnimal < LastFoundDistance)
                                 {
@@ -5977,7 +3101,7 @@ namespace SkyCoop
             return LastFoundID;
         }
 
-        public static void SendAnimalForValidPlayers(AnimalCompactData data, AnimalAnimsSync anim)
+        public static void SendAnimalForValidPlayers(DataStr.AnimalCompactData data, DataStr.AnimalAnimsSync anim)
         {
             if (NoAnimalSync)
             {
@@ -5988,7 +3112,7 @@ namespace SkyCoop
             {
                 if (playersData[i] != null)
                 {
-                    if (i != instance.myId)
+                    if (i != ClientUser.myId)
                     {
                         if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid)
                         {
@@ -6004,7 +3128,7 @@ namespace SkyCoop
                                     _packet.Write(data);
                                     _packet.Write(anim);
                                     _packet.Write(i);
-                                    SendTCPData(_packet);
+                                    SendUDPData(_packet);
                                 }
                             }
                         }
@@ -6013,14 +3137,14 @@ namespace SkyCoop
             }
         }
 
-        public static AnimalAnimsSync GetAnimationDataFromAnimal(BaseAi _AI)
+        public static DataStr.AnimalAnimsSync GetAnimationDataFromAnimal(BaseAi _AI)
         {
             if (_AI)
             {
                 Animator AN = _AI.m_Animator;
                 if (AN)
                 {
-                    AnimalAnimsSync sync = new AnimalAnimsSync();
+                    DataStr.AnimalAnimsSync sync = new DataStr.AnimalAnimsSync();
                     sync.AP_TurnAngle = AN.GetFloat(_AI.m_AnimParameter_TurnAngle);
                     sync.AP_TurnSpeed = AN.GetFloat(_AI.m_AnimParameter_TurnSpeed);
                     sync.AP_Speed = AN.GetFloat(_AI.m_AnimParameter_Speed);
@@ -6038,17 +3162,17 @@ namespace SkyCoop
                     sync.AP_AttackId = AN.GetInteger(_AI.m_AnimParameter_AttackId);
                     sync.AP_Stunned = AN.GetBool(_AI.m_AnimParameter_Stunned);
                     return sync;
-                }else{
+                } else {
                     return null;
                 }
             }
             return null;
         }
 
-        public static void RecreateAnimalToActor(GameObject animal, List<AnimalArrow> Arrows)
+        public static void RecreateAnimalToActor(GameObject animal, List<DataStr.AnimalArrow> Arrows)
         {
             string prefabName = GetAnimalPrefabName(animal.name);
-            string RegionGUID = animal.GetComponent<AnimalUpdates>().m_RegionGUID;
+            string RegionGUID = animal.GetComponent<Comps.AnimalUpdates>().m_RegionGUID;
 
             Vector3 v3 = animal.transform.position;
             Quaternion rot = animal.transform.rotation;
@@ -6061,25 +3185,16 @@ namespace SkyCoop
             }
             ObjectGuidManager.UnRegisterGuid(GUID);
 
-            //MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to actor " + GUID);
+            //MelonLogger.Msg(Cyan, "Starting recrating animal to actor " + GUID);
 
             SpawnAnimalActor(prefabName, v3, rot, GUID, RegionGUID, Arrows);
         }
 
-        public class AnimalArrow
-        {
-            public float m_Condition = 100;
-            public Vector3 m_Position = new Vector3(0, 0, 0);
-            public Vector3 m_Angle = new Vector3(0, 0, 0);
-            public float m_Depth = 0;
-            public string m_LocaName = "";
-        }
-
-        public static void AddFakeArrowToAnimal(AnimalUpdates AU, int index)
+        public static void AddFakeArrowToAnimal(Comps.AnimalUpdates AU, int index)
         {
             if (AU != null && AU.m_Arrows[index] != null)
             {
-                AnimalArrow Arrow = AU.m_Arrows[index];
+                DataStr.AnimalArrow Arrow = AU.m_Arrows[index];
                 GameObject reference = GetGearItemObject("GEAR_Arrow");
 
                 if (reference != null)
@@ -6099,11 +3214,11 @@ namespace SkyCoop
                 }
             }
         }
-        public static void AddFakeArrowToAnimal(AnimalActor AU, int index)
+        public static void AddFakeArrowToAnimal(Comps.AnimalActor AU, int index)
         {
             if (AU != null && AU.m_Arrows[index] != null)
             {
-                AnimalArrow Arrow = AU.m_Arrows[index];
+                DataStr.AnimalArrow Arrow = AU.m_Arrows[index];
                 GameObject reference = GetGearItemObject("GEAR_Arrow");
 
                 if (reference != null)
@@ -6120,210 +3235,6 @@ namespace SkyCoop
                     }
                     UnityEngine.Object.Destroy(obj.GetComponent<ArrowItem>());
                     UnityEngine.Object.Destroy(obj.GetComponent<GearItem>());
-                }
-            }
-        }
-
-        public class AnimalUpdates : MonoBehaviour
-        {
-            public AnimalUpdates(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Animal = null;
-            public int NoResponce = 5;
-            public int ReTakeCoolDown = 5;
-            public float nextActionTimeNR = 0.0f;
-            public float noresponce_perioud = 1f;
-            public float nextActionSync = 0.0f;
-            public float actionSync_perioud = 0.3f;
-            public float nextActionBloodDrop = 0.0f;
-            public float blooddrop_period = 0.15f;
-            public float nextActionDampingOn = 0.0f;
-            public float dampingOn_perioud = 1.5f;
-            public Vector3 m_ToGo = new Vector3(0, 0, 0);
-            public Quaternion m_ToRotate = new Quaternion(0, 0, 0, 0);
-            public bool m_CanSync = false;
-            public float m_Hp = 100;
-            public bool m_Banned = false;
-            public bool m_DampingIgnore = false;
-            public int LastFoundPlayer = -1;
-            public bool m_MyControlled = false;
-            public bool m_PickedUp = false;
-            public string m_RegionGUID = "";
-            public bool m_AddedToRegion = false;
-            public bool m_MarkToDestroy = false;
-            public List<AnimalArrow> m_Arrows = new List<AnimalArrow>();
-
-            void Start()
-            {
-                nextActionTimeNR = Time.time;
-                nextActionSync = Time.time;
-                nextActionBloodDrop = Time.time;
-                nextActionDampingOn = Time.time + dampingOn_perioud;
-            }
-
-            public void ProcessArrows()
-            {
-                for (int i = 0; i < m_Arrows.Count; i++)
-                {
-                    AddFakeArrowToAnimal(this, i);
-                }
-            }
-
-            public void CallSync()
-            {
-                if (m_Animal != null && m_Banned == false && m_Animal.activeSelf == true && m_PickedUp == false)
-                {
-                    if (m_Animal.GetComponent<BaseAi>() != null)
-                    {
-                        BaseAi _AI = m_Animal.GetComponent<BaseAi>();
-
-                        AnimalCompactData Dat = GetCompactDataForAnimal(_AI, m_Arrows);
-                        AnimalAnimsSync AnimDat = GetAnimationDataFromAnimal(_AI);
-
-                        if(Dat.m_GUID == "")
-                        {
-                            return;
-                        }
-
-                        int newController = GetClosestPlayerToAnimal(m_Animal, ReTakeCoolDown, instance.myId, GameManager.GetPlayerTransform().position, levelid);
-                        Dat.m_LastController = newController;
-                        if (newController != instance.myId)
-                        {
-                            SendAnimalForValidPlayers(Dat, AnimDat);
-                            m_Banned = true;
-                            m_MarkToDestroy = true;
-                            RecreateAnimalToActor(m_Animal, m_Arrows);
-                        }else{
-                            SendAnimalForValidPlayers(Dat, AnimDat);
-                        }
-                    }
-                }
-            }
-            void OnDestroy()
-            {
-                if (m_Animal)
-                {
-                    if (m_Animal.GetComponent<ObjectGuid>() != null)
-                    {
-                        if(m_RegionGUID != "")
-                        {
-                            GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
-
-                            if (RegionSpawnObj != null)
-                            {
-                                RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                            }
-                        }
-                    }
-                }
-            }
-            void MaybeAddToSpawnRegion()
-            {
-                if (!m_AddedToRegion && m_RegionGUID != "")
-                {
-                    m_AddedToRegion = true;
-                    GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
-                    if (RegionSpawnObj)
-                    {
-                        if (m_Animal.GetComponent<ObjectGuid>() != null && RegionSpawnObj.GetComponent<SpawnRegionSimple>() != null)
-                        {
-                            RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                            RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(), m_Animal);
-                        }
-                    }
-                }
-            }
-
-            public void DropArrows()
-            {
-                for (int i = 0; i < m_Arrows.Count; i++)
-                {
-                    GameObject reference = GetGearItemObject("GEAR_Arrow");
-                    GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, Vector3.zero, Quaternion.identity);
-
-                    SendDropItem(obj.GetComponent<GearItem>(), 0, 0, false, 0, m_Animal);
-                }
-            }
-
-            void Update()
-            {
-                if(m_MarkToDestroy == true)
-                {
-                    UnityEngine.Object.Destroy(m_Animal);
-                    return;
-                }
-                
-                
-                if (m_Animal != null && m_PickedUp == false && m_Banned == false)
-                {
-                    MaybeAddToSpawnRegion();
-                    if (Time.time > nextActionSync)
-                    {
-                        nextActionSync += actionSync_perioud;
-                        if (level_name != "Empty" && level_name != "MainMenu")
-                        {
-                            if(AnimalsController == true || m_MyControlled == true)
-                            {
-                                CallSync();
-                            }
-                        }
-                    }
-                    if (Time.time > nextActionTimeNR)
-                    {
-                        nextActionTimeNR += noresponce_perioud;
-                        ReTakeCoolDown--;
-                        if (ReTakeCoolDown <= 0)
-                        {
-                            ReTakeCoolDown = 0;
-                        }
-                        if(AnimalsController == false && m_MyControlled == false)
-                        {
-                            m_MarkToDestroy = true;
-                        }
-                    }
-                    if (InOnline() && m_Animal.GetComponent<BaseAi>() && m_Animal.GetComponent<ObjectGuid>() && (AnimalsController == true || m_MyControlled == true))
-                    {
-                        BaseAi bai = m_Animal.GetComponent<BaseAi>();
-                        string RightName = GetAnimalPrefabName(m_Animal.name);
-                        if (bai.m_CurrentHP <= 0 || bai.m_CurrentMode == AiMode.Dead || bai.m_CurrentMode == AiMode.Stunned)
-                        {
-                            DropArrows();
-                            AnimalKilled Corpse = new AnimalKilled();
-                            Corpse.m_Position = m_Animal.transform.position;
-                            Corpse.m_Rotation = m_Animal.transform.rotation;
-                            Corpse.m_PrefabName = RightName;
-                            Corpse.m_GUID = m_Animal.GetComponent<ObjectGuid>().Get();
-                            Corpse.m_LevelGUID = level_guid;
-                            Corpse.m_CreatedTime = MinutesFromStartServer;
-                            Corpse.m_Knocked = bai.m_CurrentMode == AiMode.Stunned;
-                            Corpse.m_RegionGUID = m_RegionGUID;
-
-                            if (!Corpse.m_Knocked)
-                            {
-                                MelonLogger.Msg("Animal been killed SpawnRegion " + m_RegionGUID);
-                            }else{
-                                MelonLogger.Msg("Animal been knocked SpawnRegion " + m_RegionGUID);
-                            }
-                            m_Banned = true;
-
-                            if (iAmHost == true)
-                            {
-                                m_MarkToDestroy = true;
-                                ServerSend.ANIMALCORPSE(0, Corpse, true);
-                                ObjectGuidManager.UnRegisterGuid(m_Animal.GetComponent<ObjectGuid>().Get());
-                                OnAnimalKilled(RightName, m_Animal.transform.position, m_Animal.transform.rotation, m_Animal.GetComponent<ObjectGuid>().Get(), level_guid, m_RegionGUID, Corpse.m_Knocked);
-                            }else if (sendMyPosition == true)
-                            {
-                                using (Packet _packet = new Packet((int)ClientPackets.ANIMALKILLED))
-                                {
-                                    _packet.Write(Corpse);
-                                    SendTCPData(_packet);
-                                }
-                                m_MarkToDestroy = true;
-                                ObjectGuidManager.UnRegisterGuid(m_Animal.GetComponent<ObjectGuid>().Get());
-                                SpawnAnimalCorpse(RightName, m_Animal.transform.position, m_Animal.transform.rotation, m_Animal.GetComponent<ObjectGuid>().Get(), m_RegionGUID); // So we won't wait responce.
-                            }
-                        }
-                    }
                 }
             }
         }
@@ -6331,11 +3242,11 @@ namespace SkyCoop
         public static void SwitchToAnimalController()
         {
             Dictionary<string, int> AnimalsInRegions = new Dictionary<string, int>();
-            if(ActorsList.Count > 0)
+            if (ActorsList.Count > 0)
             {
                 foreach (var item in ActorsList)
                 {
-                    item.Value.m_ClientController = instance.myId;
+                    item.Value.m_ClientController = ClientUser.myId;
                     string RegionGUID = item.Value.m_RegionGUID;
                     if (RegionGUID != "")
                     {
@@ -6343,29 +3254,29 @@ namespace SkyCoop
                         if (!AnimalsInRegions.TryGetValue(RegionGUID, out val))
                         {
                             AnimalsInRegions.Add(RegionGUID, 1);
-                        }else{
+                        } else {
                             AnimalsInRegions.Remove(RegionGUID);
-                            AnimalsInRegions.Add(RegionGUID, val+1);
+                            AnimalsInRegions.Add(RegionGUID, val + 1);
                         }
                     }
                 }
             }
-            if(BaseAiManager.m_BaseAis.Count > 0)
+            if (BaseAiManager.m_BaseAis.Count > 0)
             {
                 foreach (var item in BaseAiManager.m_BaseAis)
                 {
-                    if(item != null && item.gameObject != null)
+                    if (item != null && item.gameObject != null)
                     {
-                        if (item.gameObject.GetComponent<AnimalUpdates>())
+                        if (item.gameObject.GetComponent<Comps.AnimalUpdates>())
                         {
-                            string RegionGUID = item.gameObject.GetComponent<AnimalUpdates>().m_RegionGUID;
+                            string RegionGUID = item.gameObject.GetComponent<Comps.AnimalUpdates>().m_RegionGUID;
                             if (RegionGUID != "")
                             {
                                 int val;
                                 if (!AnimalsInRegions.TryGetValue(RegionGUID, out val))
                                 {
                                     AnimalsInRegions.Add(RegionGUID, 1);
-                                }else{
+                                } else {
                                     AnimalsInRegions.Remove(RegionGUID);
                                     AnimalsInRegions.Add(RegionGUID, val + 1);
                                 }
@@ -6385,7 +3296,7 @@ namespace SkyCoop
                         if (!AnimalsInRegions.TryGetValue(RegionGUID, out val))
                         {
                             AnimalsInRegions.Add(RegionGUID, 1);
-                        }else{
+                        } else {
                             AnimalsInRegions.Remove(RegionGUID);
                             AnimalsInRegions.Add(RegionGUID, val + 1);
                         }
@@ -6393,33 +3304,33 @@ namespace SkyCoop
                 }
             }
             // Final
-            if(AnimalsInRegions.Count > 0)
+            if (AnimalsInRegions.Count > 0)
             {
                 foreach (var item in AnimalsInRegions)
                 {
                     GameObject Region = ObjectGuidManager.Lookup(item.Key);
-                    if (Region && Region.GetComponent<SpawnRegionSimple>() != null)
+                    if (Region && Region.GetComponent<Comps.SpawnRegionSimple>() != null)
                     {
-                        Region.GetComponent<SpawnRegionSimple>().m_Spawned = item.Value;
+                        Region.GetComponent<Comps.SpawnRegionSimple>().m_Spawned = item.Value;
                     }
                 }
             }
         }
 
-        public static void RecreateAnimalToSyncable(GameObject animal, string RegionGUID, float health, List<AnimalArrow> Arrows)
+        public static void RecreateAnimalToSyncable(GameObject animal, string RegionGUID, float health, List<DataStr.AnimalArrow> Arrows)
         {
-            
+
             string GUID = "";
             if (animal.GetComponent<ObjectGuid>() != null)
             {
                 GUID = animal.GetComponent<ObjectGuid>().Get();
             }
             ObjectGuidManager.UnRegisterGuid(GUID);
-            
+
             string prefabName = GetAnimalPrefabName(animal.name);
             Vector3 v3 = animal.transform.position;
             Quaternion rot = animal.transform.rotation;
-            //MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to syncable " + GUID+" with region GUID "+ RegionGUID);
+            //MelonLogger.Msg(Cyan, "Starting recrating animal to syncable " + GUID+" with region GUID "+ RegionGUID);
 
             if (!AiUtils.IsNavmeshPosValid(v3, 0.5f, 1f))
             {
@@ -6432,7 +3343,7 @@ namespace SkyCoop
 
             if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't re-create animal with prefab name " + prefabName);
+                MelonLogger.Msg(Red, "Can't re-create animal with prefab name " + prefabName);
                 return;
             }
 
@@ -6442,19 +3353,19 @@ namespace SkyCoop
             {
                 newAnimal.AddComponent<ObjectGuid>();
                 newAnimal.GetComponent<ObjectGuid>().Set(GUID);
-            }else{
+            } else {
                 newAnimal.GetComponent<ObjectGuid>().Set(GUID);
             }
             BaseAiManager.CreateMoveAgent(bai.transform, bai, v3);
 
 
-            AnimalUpdates au = newAnimal.GetComponent<AnimalUpdates>();
+            Comps.AnimalUpdates au = newAnimal.GetComponent<Comps.AnimalUpdates>();
 
             if (au == null)
             {
-                newAnimal.AddComponent<AnimalUpdates>();
+                newAnimal.AddComponent<Comps.AnimalUpdates>();
 
-                au = newAnimal.GetComponent<AnimalUpdates>();
+                au = newAnimal.GetComponent<Comps.AnimalUpdates>();
             }
             au.m_ToGo = v3;
             if (health != -1)
@@ -6470,642 +3381,8 @@ namespace SkyCoop
             newAnimal.transform.position = v3;
         }
 
-        public static Dictionary<string, AnimalActor> ActorsList = new Dictionary<string, AnimalActor>();
-        public static Dictionary<string, AnimalCorpseObject> AnimalCorplesList = new Dictionary<string, AnimalCorpseObject>();
-
-        public class AnimalActor : MonoBehaviour
-        {
-            public AnimalActor(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Animal = null;
-            public int NoResponce = 5;
-            public int ReTakeCoolDown = 5;
-
-            // Timers
-            public float nextActionTimeNR = 0.0f;
-            public float noresponce_perioud = 1f;
-            public float nextActionSync = 0.0f;
-            public float actionSync_perioud = 0.3f;
-            public float nextActionBloodDrop = 0.0f;
-            public float blooddrop_period = 0.15f;
-            public float nextActionDampingOn = 0.0f;
-            public float dampingOn_perioud = 1.5f;
-
-            public Vector3 m_ToGo = new Vector3(0, 0, 0);
-            public Quaternion m_ToRotate = new Quaternion(0, 0, 0, 0);
-
-            // Animation parameters
-            public float AP_TurnAngle; //0
-            public float AP_TurnSpeed; //1
-            public float AP_Speed; //2
-            public float AP_Wounded; //3
-            public float AP_Roll; //4
-            public float AP_Pitch; //5
-            public float AP_TargetHeading; //6
-            public float AP_TargetHeadingSmooth; //7
-            public float AP_TapMeter; //8
-            public int AP_AiState; //10
-            public bool AP_Corpse; //14
-            public bool AP_Dead; //15
-            public int AP_DeadSide; //16
-            public int AP_DamageBodyPart; //19
-            public int AP_AttackId; //23
-            public bool AP_Stunned;
-
-            public float m_Hp = 100;
-            public bool m_Bleeding = false;
-            public int m_ClientController = -1;
-            public bool m_Banned = false;
-            public bool m_MarkToDestroy = false;
-            public bool m_DampingIgnore = false;
-            public string m_RegionGUID = "";
-            public bool m_AddedToRegion = false;
-
-            int m_AnimParameter_TurnAngle;
-            int m_AnimParameter_TurnSpeed;
-            int m_AnimParameter_Speed;
-            int m_AnimParameter_Wounded;
-            int m_AnimParameter_Roll;
-            int m_AnimParameter_Pitch;
-            int m_AnimParameter_TargetHeading;
-            int m_AnimParameter_TargetHeadingSmooth;
-            int m_AnimParameter_TapMeter;
-            int m_AnimParameter_AiState;
-            int m_AnimParameter_Corpse;
-            int m_AnimParameter_Dead;
-            int m_AnimParameter_DamageSide;
-            int m_AnimParameter_DamageBodyPart;
-            int m_AnimParameter_AttackId;
-            int m_AnimParameter_Stunned;
-
-            public Dictionary<string, int> m_AnimalAnimatorHashes = new Dictionary<string, int>();
-            public bool m_AnimalAnimatorHashesReady = false;
-            public Animator m_Animator;
-            public List<AnimalArrow> m_Arrows = new List<AnimalArrow>();
-
-            void Start()
-            {
-                nextActionTimeNR = Time.time;
-                nextActionSync = Time.time;
-                nextActionBloodDrop = Time.time;
-                nextActionDampingOn = Time.time + dampingOn_perioud;
-            }
-            public void ProcessArrows()
-            {
-                for (int i = 0; i < m_Arrows.Count; i++)
-                {
-                    AddFakeArrowToAnimal(this, i);
-                }
-            }
-
-            public void AnimInit()
-            {
-                m_AnimParameter_TurnAngle = Animator.StringToHash("TurnAngle");
-                m_AnimParameter_TurnSpeed = Animator.StringToHash("TurnSpeed");
-                m_AnimParameter_Speed = Animator.StringToHash("Speed");
-                m_AnimParameter_Wounded = Animator.StringToHash("Wounded");
-                m_AnimParameter_Roll = Animator.StringToHash("Roll");
-                m_AnimParameter_Pitch = Animator.StringToHash("Pitch");
-                m_AnimParameter_TargetHeading = Animator.StringToHash("TargetHeading");
-                m_AnimParameter_TargetHeadingSmooth = Animator.StringToHash("TargetHeadingSmooth");
-                m_AnimParameter_TapMeter = Animator.StringToHash("TapMeter");
-                m_AnimParameter_AiState = Animator.StringToHash("AiState");
-                m_AnimParameter_Corpse = Animator.StringToHash("Corpse");
-                m_AnimParameter_Dead = Animator.StringToHash("Dead");
-                m_AnimParameter_DamageSide = Animator.StringToHash("DamageSide");
-                m_AnimParameter_DamageBodyPart = Animator.StringToHash("DamageBodyPart");
-                m_AnimParameter_AttackId = Animator.StringToHash("AttackId");
-                m_AnimParameter_Stunned = Animator.StringToHash("Stunned");
-                m_AnimalAnimatorHashesReady = true;
-            }
-
-            void SetAnimations()
-            {
-                Animator AN = m_Animator;
-                if (AN != null)
-                {
-                    if (!m_AnimalAnimatorHashesReady)
-                    {
-                        AnimInit();
-                    }
-
-                    AN.SetFloat(m_AnimParameter_TurnAngle, AP_TurnAngle);
-                    AN.SetFloat(m_AnimParameter_TurnSpeed, AP_TurnSpeed);
-                    AN.SetFloat(m_AnimParameter_Speed, AP_Speed);
-                    AN.SetFloat(m_AnimParameter_Wounded, AP_Wounded);
-                    AN.SetFloat(m_AnimParameter_Roll, AP_Roll);
-                    AN.SetFloat(m_AnimParameter_Pitch, AP_Pitch);
-                    AN.SetFloat(m_AnimParameter_TargetHeading, AP_TargetHeading);
-                    AN.SetFloat(m_AnimParameter_TargetHeadingSmooth, AP_TargetHeadingSmooth);
-                    AN.SetFloat(m_AnimParameter_TapMeter, AP_TapMeter);
-                    AN.SetInteger(m_AnimParameter_AiState, AP_AiState);
-                    AN.SetBool(m_AnimParameter_Corpse, AP_Corpse);
-                    AN.SetBool(m_AnimParameter_Dead, AP_Dead);
-                    AN.SetInteger(m_AnimParameter_DamageSide, AP_DeadSide);
-                    AN.SetInteger(m_AnimParameter_DamageBodyPart, AP_DamageBodyPart);
-                    AN.SetInteger(m_AnimParameter_AttackId, AP_AttackId);
-                    AN.SetBool(m_AnimParameter_Stunned, AP_Stunned);
-                }
-            }
-
-            void SetPosition()
-            {
-                if (m_DampingIgnore == true)
-                {
-                    m_Animal.transform.position = m_ToGo;
-                    m_Animal.transform.rotation = m_ToRotate;
-                } else {
-                    m_Animal.transform.position = Vector3.Lerp(m_Animal.transform.position, m_ToGo, Time.deltaTime * DeltaAnimalsMultiplayer);
-                    m_Animal.transform.rotation = Quaternion.Lerp(m_Animal.transform.rotation, m_ToRotate, Time.deltaTime * DeltaAnimalsMultiplayer);
-                }
-            }
-
-            void OnDestroy()
-            {
-                if (m_Animal)
-                {
-                    if (m_Animal.GetComponent<ObjectGuid>() != null)
-                    {
-                        ActorsList.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                        GameAudioManager.StopAllSoundsFromGameObject(m_Animal);
-                    }
-                    if (m_RegionGUID != "")
-                    {
-                        GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
-
-                        if (RegionSpawnObj != null)
-                        {
-                            RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                        }
-                    }
-                }
-            }
-            void MaybeAddToSpawnRegion()
-            {
-                if (!m_AddedToRegion && m_RegionGUID != "")
-                {
-                    m_AddedToRegion = true;
-                    GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
-
-                    if (m_Animal.GetComponent<ObjectGuid>() != null)
-                    {
-                        if (m_RegionGUID != "")
-                        {
-                            if (RegionSpawnObj != null)
-                            {
-                                RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                                RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(), m_Animal);
-                            }
-                        }
-                    }
-                }
-            }
-
-            public uint m_FeedingAudioID = 0U;
-            public uint m_FleeAudioId = 0U;
-            public uint m_HoldGroundAudioID = 0U;
-            public uint m_IdleAudioId = 0U;
-            public uint m_SleepingLoopAudioID = 0U;
-            public uint m_StalkingAudioID = 0U;
-            public uint m_StalkingLoopAudioID = 0U;
-            public uint m_StuggleAudioId = 0U;
-            public uint m_WanderAudioId = 0U;
-            public uint m_HideAndSeekAudioId = 0U;
-            public uint m_JoinPackAudioId = 0U;
-
-            void ExitFeeding()
-            {
-                if (m_FeedingAudioID == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_FeedingAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-            }
-            void ExitFlee()
-            {
-                if (m_FleeAudioId == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_FleeAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_FleeAudioId = 0U;
-            }
-            void ExitHoldGround()
-            {
-                if (m_HoldGroundAudioID == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_HoldGroundAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_HoldGroundAudioID = 0U;
-            }
-            void ExitIdle()
-            {
-                if (m_IdleAudioId == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_IdleAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_IdleAudioId = 0U;
-            }
-            void ExitInvestigateFood()
-            {
-                ExitFeeding();
-            }
-            void ExitSleep()
-            {
-                if (m_SleepingLoopAudioID == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_SleepingLoopAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_SleepingLoopAudioID = 0U;
-            }
-            void ExitStalking()
-            {
-                if (m_StalkingAudioID != 0U)
-                {
-                    AkSoundEngine.StopPlayingID(m_StalkingAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                    m_StalkingAudioID = 0U;
-                }
-                if (m_StalkingLoopAudioID == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_StalkingLoopAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_StalkingLoopAudioID = 0U;
-            }
-            void ExitStruggle()
-            {
-                if (m_StuggleAudioId == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_StuggleAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_StuggleAudioId = 0U;
-            }
-            void ExitWander()
-            {
-                if (m_WanderAudioId == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_WanderAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_WanderAudioId = 0U;
-            }
-            void ExitHideAndSeek()
-            {
-                if (m_HideAndSeekAudioId == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_HideAndSeekAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_HideAndSeekAudioId = 0U;
-            }
-            void ExitJoinPack()
-            {
-                if (m_JoinPackAudioId == 0U)
-                    return;
-                AkSoundEngine.StopPlayingID(m_JoinPackAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
-                m_JoinPackAudioId = 0U;
-            }
-
-            public AiMode m_CurrentMode = AiMode.Idle;
-            public AiMode m_NextMode = AiMode.Idle;
-
-            public string m_EnterAttackModeAudio = "";
-            public string m_EnterFleeModeAudio = "";
-            public string m_HoldGroundAudio = "";
-            public string m_IdleAudio = "";
-            public string m_SleepingAudio = "";
-            public string m_EnterStalkingAudio = "";
-            public string m_WanderAudio = "";
-            public string m_HideAndSeekAudio = "";
-            public string m_JoinPackAudio = "";
-            bool m_AudioReady = false;
-            void EnterAttack()
-            {
-                GameAudioManager.Play3DSound(m_EnterAttackModeAudio, m_Animal);
-            }
-            void EnterFlee()
-            {
-                if(m_EnterFleeModeAudio == "" || m_FleeAudioId != 0U)
-                {
-                    return;
-                }
-                m_FleeAudioId = GameAudioManager.Play3DSound(m_EnterFleeModeAudio, m_Animal);
-            }
-            void EnterHoldGround()
-            {
-                if(m_HoldGroundAudio == "")
-                {
-                    return;
-                }
-                
-                m_HoldGroundAudioID = GameAudioManager.Play3DSound(m_HoldGroundAudio, m_Animal);
-            }
-            void EnterIdle()
-            {
-                if (m_IdleAudio == "")
-                {
-                    return;
-                }
-                if (m_IdleAudioId == 0U)
-                {
-                    m_IdleAudioId = GameAudioManager.Play3DSound(m_IdleAudio, m_Animal);
-                }
-            }
-            void EnterSleep()
-            {
-                if (m_SleepingAudio == "")
-                {
-                    return;
-                }
-                m_SleepingLoopAudioID = GameAudioManager.Play3DSound(m_SleepingAudio, m_Animal);
-            }
-            void EnterStalking()
-            {
-                if (m_EnterStalkingAudio == "")
-                {
-                    return;
-                }
-                m_StalkingAudioID = GameAudioManager.Play3DSound(m_EnterStalkingAudio, m_Animal);
-                m_StalkingLoopAudioID = 0U;
-            }
-            void EnterWander()
-            {
-                if (m_WanderAudioId != 0U || m_WanderAudio == "")
-                    return;
-                m_WanderAudioId = GameAudioManager.Play3DSound(m_WanderAudio, m_Animal);
-            }
-            void EnterHideAndSeek()
-            {
-                if (m_HideAndSeekAudioId == 0U && m_HideAndSeekAudio != "")
-                {
-                    m_HideAndSeekAudioId = GameAudioManager.Play3DSound(m_HideAndSeekAudio, m_Animal);
-                }
-            }
-            void EnterJoinPack()
-            {
-                if(m_JoinPackAudioId == 0U && m_JoinPackAudio != "")
-                {
-                    m_JoinPackAudioId = GameAudioManager.Play3DSound(m_JoinPackAudio, m_Animal);
-                }
-            }
-
-            public void SetAiMode()
-            {
-                if(m_CurrentMode == m_NextMode)
-                {
-                    return;
-                }
-                
-                switch (m_CurrentMode) // Stop Audio Events from current animation
-                {
-                    case AiMode.Attack:
-                        break;
-                    case AiMode.Dead:
-                        break;
-                    case AiMode.Feeding:
-                        ExitFeeding();
-                        break;
-                    case AiMode.Flee:
-                        ExitFlee();
-                        break;
-                    case AiMode.FollowWaypoints:
-                        break;
-                    case AiMode.HoldGround:
-                        ExitHoldGround();
-                        break;
-                    case AiMode.Idle:
-                        ExitIdle();
-                        break;
-                    case AiMode.Investigate:
-                        break;
-                    case AiMode.InvestigateFood:
-                        ExitInvestigateFood();
-                        break;
-                    case AiMode.InvestigateSmell:
-                        break;
-                    case AiMode.Sleep:
-                        ExitSleep();
-                        break;
-                    case AiMode.Stalking:
-                        ExitStalking();
-                        break;
-                    case AiMode.Struggle:
-                        ExitStruggle();
-                        break;
-                    case AiMode.Wander:
-                        ExitWander();
-                        break;
-                    case AiMode.WanderPaused:
-                        break;
-                    case AiMode.GoToPoint:
-                        break;
-                    case AiMode.InteractWithProp:
-                        break;
-                    case AiMode.ScriptedSequence:
-                        break;
-                    case AiMode.Stunned:
-                        break;
-                    case AiMode.ScratchingAntlers:
-                        break;
-                    case AiMode.PatrolPointsOfInterest:
-                        break;
-                    case AiMode.HideAndSeek:
-                        ExitHideAndSeek();
-                        break;
-                    case AiMode.JoinPack:
-                        ExitJoinPack();
-                        break;
-                    case AiMode.PassingAttack:
-                        break;
-                    case AiMode.Howl:
-                        break;
-                }
-                switch (m_NextMode) // Play audio for this mode
-                {
-                    case AiMode.Attack:
-                        EnterAttack();
-                        break;
-                    case AiMode.Dead:;
-                        break;
-                    case AiMode.Feeding:
-                        break;
-                    case AiMode.Flee:
-                        EnterFlee();
-                        break;
-                    case AiMode.FollowWaypoints:
-                        break;
-                    case AiMode.HoldGround:
-                        EnterHoldGround();
-                        break;
-                    case AiMode.Idle:
-                        EnterIdle();
-                        break;
-                    case AiMode.Investigate:
-                        break;
-                    case AiMode.InvestigateFood:
-                        break;
-                    case AiMode.InvestigateSmell:
-                        break;
-                    case AiMode.Rooted:
-                        break;
-                    case AiMode.Sleep:
-                        this.EnterSleep();
-                        break;
-                    case AiMode.Stalking:
-                        this.EnterStalking();
-                        break;
-                    case AiMode.Struggle:
-                        break;
-                    case AiMode.Wander:
-                        this.EnterWander();
-                        break;
-                    case AiMode.WanderPaused:
-                        break;
-                    case AiMode.GoToPoint:
-                        break;
-                    case AiMode.InteractWithProp:
-                        break;
-                    case AiMode.ScriptedSequence:
-                        break;
-                    case AiMode.Stunned:
-                        break;
-                    case AiMode.ScratchingAntlers:
-                        break;
-                    case AiMode.PatrolPointsOfInterest:
-                        break;
-                    case AiMode.HideAndSeek:
-                        EnterHideAndSeek();
-                        break;
-                    case AiMode.JoinPack:
-                        EnterJoinPack();
-                        break;
-                    case AiMode.PassingAttack:
-                        break;
-                    case AiMode.Howl:
-                        break;
-                }
-                m_CurrentMode = m_NextMode;
-            }
-
-            void SetAudioNames()
-            {
-                string name = m_Animal.gameObject.name;
-                if (name.Contains("Bear"))
-                {
-                    m_EnterAttackModeAudio = "Play_BearDetect";
-                    m_EnterFleeModeAudio = "Play_BearFlee";
-                    m_HoldGroundAudio = "Play_BearHoldGround";
-                    m_IdleAudio = "Play_BearIdle";
-                    m_SleepingAudio = "Play_BearSleeping";
-                    m_EnterStalkingAudio = "Play_BearAttack";
-                    m_WanderAudio = "Play_BearIdle";
-                }else if (name.Contains("Wolf") && !name.Contains("gray"))
-                {
-                    m_EnterAttackModeAudio = "Play_WolfAttackEnter";
-                    m_EnterFleeModeAudio = "PLAY_WolfWhine";
-                    m_HoldGroundAudio = "Play_WolfGrowlLoop";
-                    m_SleepingAudio = "Play_WolfSleeping";
-                    m_EnterStalkingAudio = "Play_WolfWarn";
-                }else if (name.Contains("Wolf") && name.Contains("gray"))
-                {
-                    m_EnterAttackModeAudio = "Play_TimberwolfAttackEnter";
-                    m_EnterFleeModeAudio = "Play_TimberwolfWhine";
-                    m_HoldGroundAudio = "Play_TimberwolfGrowlLoop";
-                    m_IdleAudio = "Play_TimberwolfIdle";
-                    m_SleepingAudio = "Play_TimberwolfSleeping";
-                    m_EnterStalkingAudio = "Play_TimberwolfWarn";
-                    m_HideAndSeekAudio = "Play_TimberwolfGrowlLoop";
-                }
-                else if (name.Contains("Rabbit"))
-                {
-                    m_EnterFleeModeAudio = "Play_RabbitSqueal"; 
-                }
-                else if (name.Contains("Moose"))
-                {
-                    m_EnterAttackModeAudio = "Play_MooseAttack";
-                    m_HoldGroundAudio = "Play_MooseAngry";
-                    m_EnterStalkingAudio = "Play_MooseAlerted";
-                }
-                m_AudioReady = true;
-            }
-
-
-            void Update()
-            {
-                if(m_MarkToDestroy == true)
-                {
-                    UnityEngine.Object.Destroy(m_Animal);
-                    return;
-                }
-                
-                if (m_Animal != null && m_Banned == false)
-                {
-                    MaybeAddToSpawnRegion();
-                    if (AnimalsController == false || m_ClientController != instance.myId)
-                    {
-                        SetAnimations();
-                        SetPosition();
-                    }
-
-                    if (m_ClientController == instance.myId)
-                    {
-                        m_Banned = true;
-                        m_MarkToDestroy = true;
-                        RecreateAnimalToSyncable(m_Animal, m_RegionGUID, m_Hp, m_Arrows);
-                    }
-                    if(!m_AudioReady)
-                    {
-                        SetAudioNames();
-                    }
-
-                    if (Time.time > nextActionTimeNR)
-                    {
-                        nextActionTimeNR += noresponce_perioud;
-                        NoResponce--;
-                        if (NoResponce <= 0)
-                        {
-                            //MelonLogger.Msg(ConsoleColor.Yellow, "Found animal that we not need anymore " + m_Animal.GetComponent<ObjectGuid>().Get());
-                            GameAudioManager.StopAllSoundsFromGameObject(m_Animal);
-                            m_MarkToDestroy = true;
-                        }
-                    }
-                }
-            }
-        }
-
-        public class AnimalCorpseObject : MonoBehaviour
-        {
-            public AnimalCorpseObject(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Animal = null;
-            public string m_RegionGUID = "";
-            public bool m_AddedToRegion = false;
-            public void Update()
-            {
-                if (m_AddedToRegion == false)
-                {
-                    if(m_RegionGUID != "")
-                    {
-                        if (m_Animal.GetComponent<ObjectGuid>())
-                        {
-                            GameObject SpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
-                            if (SpawnObj)
-                            {
-                                if (SpawnObj.GetComponent<SpawnRegionSimple>())
-                                {
-                                    SpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                                    SpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(),m_Animal);
-                                    MelonLogger.Msg(ConsoleColor.Blue, "Animal corpse added to SpawnRegion " + m_RegionGUID);
-                                    m_AddedToRegion = true;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            void OnDestroy()
-            {
-                if(m_Animal.GetComponent<ObjectGuid>() != null)
-                {
-                    AnimalCorplesList.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                    if (m_RegionGUID != "")
-                    {
-                        GameObject SpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
-                        if (SpawnObj)
-                        {
-                            if (SpawnObj.GetComponent<SpawnRegionSimple>())
-                            {
-                                SpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                            }
-                        }
-                    }
-                }
-            }
-        }
+        public static Dictionary<string, Comps.AnimalActor> ActorsList = new Dictionary<string, Comps.AnimalActor>();
+        public static Dictionary<string, Comps.AnimalCorpseObject> AnimalCorplesList = new Dictionary<string, Comps.AnimalCorpseObject>();
 
         public static int CalculateTargetPopulation(SpawnRegion m_Region)
         {
@@ -7128,170 +3405,12 @@ namespace SkyCoop
             if (Blizzard)
             {
                 return m_Region.m_CanSpawnInBlizzard;
-            }else{
+            } else {
                 return true;
             }
         }
 
         public static Dictionary<string, int> BannedSpawnRegions = new Dictionary<string, int>();
-
-        public static bool CheckSpawnRegionBanned(string GUID)
-        {
-            int CanBeUnbannedIn;
-            if(BannedSpawnRegions.TryGetValue(GUID, out CanBeUnbannedIn))
-            {
-                if(MinutesFromStartServer > CanBeUnbannedIn)
-                {
-                    BannedSpawnRegions.Remove(GUID);
-                    return false;
-                }else{
-                    return true;
-                }
-            }
-            return false;
-        }
-        public static void BanSpawnRegion(string GUID)
-        {
-            int CanBeUnbannedIn = MinutesFromStartServer + 1440;
-            if (!BannedSpawnRegions.ContainsKey(GUID))
-            {
-                BannedSpawnRegions.Add(GUID, CanBeUnbannedIn);
-                ServerSend.SPAWNREGIONBANCHECK(GUID);
-            }
-        }
-
-
-        public class SpawnRegionSimple : MonoBehaviour
-        {
-            public SpawnRegionSimple(IntPtr ptr) : base(ptr) { }
-            public SpawnRegion m_Region;
-            public string m_GUID = "";
-            public bool m_RolledToBeDisabled = false;
-            public bool m_ChanceRolled = false;
-            public int m_Spawned = 0;
-            public bool m_Banned = false;
-            public bool m_CheckedForBan = false;
-            public bool m_PendingBanCheck = false;
-            public Dictionary<string, GameObject> m_Animals = new Dictionary<string, GameObject>();
-            public void SetBanned(bool Banned)
-            {
-                m_CheckedForBan = true;
-                m_PendingBanCheck = false;
-                m_Banned = Banned;
-                if (m_Banned)
-                {
-                    MelonLogger.Msg(ConsoleColor.Cyan, "SpawnRegion " + m_Region.GetComponent<ObjectGuid>().Get() + " is banned");
-                }
-            }
-            public void BanCheck()
-            {
-                m_PendingBanCheck = true;
-
-                if (iAmHost)
-                {
-                    SetBanned(CheckSpawnRegionBanned(m_Region.GetComponent<ObjectGuid>().Get()));
-                }
-                if (sendMyPosition)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.SPAWNREGIONBANCHECK))
-                    {
-                        _packet.Write(m_Region.GetComponent<ObjectGuid>().Get());
-                        SendTCPData(_packet);
-                    }
-                }
-            }
-            public void UpdateFromManager()
-            {                
-                if(m_ChanceRolled == false)
-                {
-                    float newProcent = m_Region.m_ChanceActive;
-                    if(m_Region.m_ChanceActive > 85)
-                    {
-                        newProcent = 85;
-                    }
-
-                    //float percent = m_Region.m_ChanceActive * GameManager.GetExperienceModeManagerComponent().GetSpawnRegionChanceActiveScale();
-                    int seed = GameManager.GetRandomSeed((int)m_Region.m_Center.x + (int)m_Region.m_Center.y + (int)m_Region.m_Center.z);
-                    System.Random RNG = new System.Random(seed);
-                    bool Active = RollChanceSeeded(newProcent, RNG);
-                    if (!Active)
-                    {
-                        m_RolledToBeDisabled = true;
-                    }
-                    m_ChanceRolled = true;
-                    //MelonLogger.Msg("[SpawnRegion] Procent "+ m_Region.m_ChanceActive);
-                    //MelonLogger.Msg("[SpawnRegion] Scaler " + GameManager.GetExperienceModeManagerComponent().GetSpawnRegionChanceActiveScale());
-                    //MelonLogger.Msg("[SpawnRegion] Roll " + percent);
-                }
-                if(!m_RolledToBeDisabled && !m_Region.SpawningSupppressedByExperienceMode())
-                {
-                    int WhoClose = AnyOneClose(m_Region.m_Radius + MinimalDistanceForSpawn, m_Region.m_Center);
-                    if (WhoClose != -1 && SpawnInBlizzard(m_Region) == true)
-                    {
-                        if (m_Region != null && AnimalsController == true)
-                        {
-                            if (m_Spawned < CalculateTargetPopulation(m_Region)) // If animals less than should be
-                            {
-                                //MelonLogger.Msg("Region "+ m_Region.GetComponent<ObjectGuid>().Get()+" going to spawn, for "+ WhoClose);
-
-                                if (m_CheckedForBan)
-                                {
-                                    if (!m_Banned)
-                                    {
-                                        SimulateSpawnFromRegionSpawn(m_Region.GetComponent<ObjectGuid>().Get(), m_Region); // Spawn new animals for this region
-                                    }
-                                }
-                                else if(!m_PendingBanCheck)
-                                {
-                                    BanCheck();
-                                }
-                            }
-                        }
-                    }else{
-                        if (m_Region != null)
-                        {
-                            if (m_Animals.Count > 0)
-                            {
-                                List<GameObject> ToDelete = new List<GameObject>();
-                                foreach (var item in m_Animals)
-                                {
-                                    GameObject animal = item.Value;
-                                    if (animal != null && animal.GetComponent<BaseAi>() != null)
-                                    {
-                                        BaseAi AI = animal.GetComponent<BaseAi>();
-                                        // If animal is valid to unload, unloading it.
-                                        if (AI.GetAiMode() != AiMode.Flee && AI.GetAiMode() != AiMode.Dead && AI.GetAiMode() != AiMode.Struggle && (AI.m_CurrentTarget == null || !AI.m_CurrentTarget.IsPlayer()))
-                                        {
-                                            ToDelete.Add(animal);
-                                        }
-                                    }
-                                }
-                                for (int i = 0; i < ToDelete.Count; i++)
-                                {
-                                    if (ToDelete[i].GetComponent<ObjectGuid>())
-                                    {
-                                        if (iAmHost == true)
-                                        {
-                                            ServerSend.ANIMALDELETE(0, ToDelete[i].GetComponent<ObjectGuid>().Get());
-                                        }else if(sendMyPosition == true)
-                                        {
-                                            using (Packet _packet = new Packet((int)ClientPackets.ANIMALDELETE))
-                                            {
-                                                _packet.Write(ToDelete[i].GetComponent<ObjectGuid>().Get());
-                                                SendTCPData(_packet);
-                                            }
-                                        }
-                                    }
-                                   // MelonLogger.Msg("Animal deleted from region " + m_Region.GetComponent<ObjectGuid>().Get()+" Anyone close "+WhoClose);
-                                    UnityEngine.Object.Destroy(ToDelete[i]);
-                                    m_Spawned--;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
 
         public static void ExitHarvesting()
         {
@@ -7300,927 +3419,85 @@ namespace SkyCoop
             if (PBH.m_CurrentHarvestAction != Panel_BodyHarvest.HarvestAction.None)
             {
                 PBH.OnCancel();
-            }else{
+            } else {
                 PBH.OnBack();
             }
-        }
-
-        public static void ExitHarvestingCareful()
-        {
-            Panel_BodyHarvest PBH = InterfaceManager.m_Panel_BodyHarvest;
-            PBH.InterruptHarvest();
-            PBH.CleanUpOnExit();
-            if (PBH.m_PlayBookEndAnimation)
-            {
-                GameManager.GetPlayerAnimationComponent().Trigger_AnimatedInteraction("Trigger_HarvestDeer_End", true, (PlayerAnimation.OnAnimationEvent)null, PlayerAnimation.AnimationLayerFlags.Hip);
-            }
-
-            PBH.m_ProgressBar_Harvest.value = 0.0f;
-            PBH.ResetErrorMessage();
-
-            GameManager.GetVpFPSCamera().m_PanViewCamera.ReattachToPlayer();
-            //PBH.DisableProgressBar();
-            //GameManager.GetPlayerManagerComponent().ItemInHandsDuringInteractionEnd();
-
-            PBH.enabled = false;
-
-            //Input.ResetInputAxes();
         }
 
         public static GearItem GetGearItemPrefab(string name) => Resources.Load(name).Cast<GameObject>().GetComponent<GearItem>();
         public static GameObject GetGearItemObject(string name)
         {
-            if(Resources.Load(name) == null)
+            if (Resources.Load(name) == null)
             {
                 return null;
             }
-            if(Resources.Load(name).Cast<GameObject>() != null)
+            if (Resources.Load(name).Cast<GameObject>() != null)
             {
                 return Resources.Load(name).Cast<GameObject>();
             }
             return null;
         }
 
-        //Part of code for working with Outlines.cs by Chris Nolet
-        public static List<Vector3> SmoothNormals(Mesh mesh)
-        {
-
-            // Group vertices by location
-            var groups = mesh.vertices.Select((vertex, index) => new KeyValuePair<Vector3, int>(vertex, index)).GroupBy(pair => pair.Key);
-
-            // Copy normals to a new list
-            var smoothNormals = new List<Vector3>(mesh.normals);
-
-            // Average normals for grouped vertices
-            foreach (var group in groups)
-            {
-
-                // Skip single vertices
-                if (group.Count() == 1)
-                {
-                    continue;
-                }
-
-                // Calculate the average normal
-                var smoothNormal = Vector3.zero;
-
-                foreach (var pair in group)
-                {
-                    smoothNormal += mesh.normals[pair.Value];
-                }
-
-                smoothNormal.Normalize();
-
-                // Assign smooth normal to each vertex
-                foreach (var pair in group)
-                {
-                    smoothNormals[pair.Value] = smoothNormal;
-                }
-            }
-
-            return smoothNormals;
-        }
-
-        public class Outline : MonoBehaviour
-        {
-            public Outline(IntPtr ptr) : base(ptr) { }
-            //
-            //  Outline.cs
-            //  QuickOutline
-            //
-            //  Created by Chris Nolet on 3/30/18.
-            //  Copyright © 2018 Chris Nolet. All rights reserved.
-            //
-            private static HashSet<Mesh> registeredMeshes = new HashSet<Mesh>();
-            private class ListVector3
-            {
-                public List<Vector3> data;
-            }
-            private bool precomputeOutline;
-            private List<Mesh> bakeKeys = new List<Mesh>();
-            private List<ListVector3> bakeValues = new List<ListVector3>();
-
-            private Renderer[] renderers;
-            public Material outlineMaskMaterial;
-            public Material outlineFillMaterial;
-
-            //On update this values need set
-            //needsUpdate = true;
-            public int m_RenderMode = 3;
-            public Color m_OutlineColor = Color.white;
-            public float m_OutlineWidth = 2f;
-
-            //OutlineAll, 0
-            //OutlineVisible, 1
-            //OutlineHidden, 2
-            //OutlineAndSilhouette, 3
-            //SilhouetteOnly 4
-
-            public bool needsUpdate;
-
-            void Awake()
-            {
-
-                // Cache renderers
-                renderers = GetComponentsInChildren<Renderer>();
-
-                // Instantiate outline materials
-                Material _Mask = LoadedBundle.LoadAsset<Material>("OutlineMask");
-                Material _Fill = LoadedBundle.LoadAsset<Material>("OutlineFill");
-
-                outlineMaskMaterial = Instantiate(_Mask);
-                outlineFillMaterial = Instantiate(_Fill);
-
-                outlineMaskMaterial.name = "OutlineMask (Instance)";
-                outlineFillMaterial.name = "OutlineFill (Instance)";
-
-                // Retrieve or generate smooth normals
-                LoadSmoothNormals();
-
-                // Apply material properties immediately
-                needsUpdate = true;
-            }
-
-            void OnEnable()
-            {
-                foreach (var renderer in renderers)
-                {
-                    if(renderer == null)
-                    {
-                        return;
-                    }
-
-                    // Append outline shaders
-                    var materials = renderer.sharedMaterials.ToList();
-
-                    materials.Add(outlineMaskMaterial);
-                    materials.Add(outlineFillMaterial);
-
-                    renderer.materials = materials.ToArray();
-                }
-            }
-
-            void OnValidate()
-            {
-
-                // Update material properties
-                needsUpdate = true;
-
-                // Clear cache when baking is disabled or corrupted
-                if (!precomputeOutline && bakeKeys.Count != 0 || bakeKeys.Count != bakeValues.Count)
-                {
-                    bakeKeys.Clear();
-                    bakeValues.Clear();
-                }
-
-                // Generate smooth normals when baking is enabled
-                if (precomputeOutline && bakeKeys.Count == 0)
-                {
-                    Bake();
-                }
-            }
-
-            public void Update()
-            {
-                if (needsUpdate)
-                {
-                    needsUpdate = false;
-
-                    UpdateMaterialProperties();
-                }
-            }
-
-            public void OnDisable()
-            {
-                foreach (var renderer in renderers)
-                {
-                    if (renderer == null)
-                    {
-                        return;
-                    }
-                    // Remove outline shaders
-                    var materials = renderer.sharedMaterials.ToList();
-
-                    materials.Remove(outlineMaskMaterial);
-                    materials.Remove(outlineFillMaterial);
-
-                    renderer.materials = materials.ToArray();
-                }
-            }
-
-            public void OnDestroy()
-            {
-                // Destroy material instances
-                UnityEngine.Object.Destroy(outlineMaskMaterial);
-                UnityEngine.Object.Destroy(outlineFillMaterial);
-            }
-
-            void Bake()
-            {
-
-                // Generate smooth normals for each mesh
-                var bakedMeshes = new HashSet<Mesh>();
-
-                foreach (var meshFilter in GetComponentsInChildren<MeshFilter>())
-                {
-
-                    // Skip duplicates
-                    if (!bakedMeshes.Add(meshFilter.sharedMesh))
-                    {
-                        continue;
-                    }
-
-                    // Serialize smooth normals
-                    var smoothNormals = MyMod.SmoothNormals(meshFilter.sharedMesh);
-
-                    bakeKeys.Add(meshFilter.sharedMesh);
-                    bakeValues.Add(new ListVector3() { data = smoothNormals });
-                }
-            }
-
-            void LoadSmoothNormals()
-            {
-
-                // Retrieve or generate smooth normals
-                foreach (var meshFilter in GetComponentsInChildren<MeshFilter>())
-                {
-
-                    // Skip if smooth normals have already been adopted
-                    if (!registeredMeshes.Add(meshFilter.sharedMesh))
-                    {
-                        continue;
-                    }
-
-                    // Retrieve or generate smooth normals
-                    var index = bakeKeys.IndexOf(meshFilter.sharedMesh);
-                    var smoothNormals = (index >= 0) ? bakeValues[index].data : MyMod.SmoothNormals(meshFilter.sharedMesh);
-
-                    Il2CppSystem.Collections.Generic.List<Vector2> Converted = new Il2CppSystem.Collections.Generic.List<Vector2>();
-
-                    for (int i = 0; i < smoothNormals.Count; i++)
-                    {
-                        Vector2 writeConverted = new Vector2(0, 0);
-
-                        writeConverted = smoothNormals[i];
-
-                        Converted.Add(writeConverted);
-                    }
-
-                    // Store smooth normals in UV3
-                    meshFilter.sharedMesh.SetUVs(3, Converted);
-                }
-
-                // Clear UV3 on skinned mesh renderers
-                foreach (var skinnedMeshRenderer in GetComponentsInChildren<SkinnedMeshRenderer>())
-                {
-                    if (registeredMeshes.Add(skinnedMeshRenderer.sharedMesh))
-                    {
-                        skinnedMeshRenderer.sharedMesh.uv4 = new Vector2[skinnedMeshRenderer.sharedMesh.vertexCount];
-                    }
-                }
-            }
-            void UpdateMaterialProperties()
-            {
-
-                // Apply properties according to mode
-                outlineFillMaterial.SetColor("_OutlineColor", m_OutlineColor);
-
-                //OutlineAll, 0
-                //OutlineVisible, 1
-                //OutlineHidden, 2
-                //OutlineAndSilhouette, 3
-                //SilhouetteOnly 4
-
-                if (m_RenderMode == 0)//OutlineAll
-                {
-                    outlineMaskMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
-                    outlineFillMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
-                    outlineFillMaterial.SetFloat("_OutlineWidth", m_OutlineWidth);
-                }
-                else if (m_RenderMode == 1)//OutlineVisible
-                {
-                    outlineMaskMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
-                    outlineFillMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.LessEqual);
-                    outlineFillMaterial.SetFloat("_OutlineWidth", m_OutlineWidth);
-                }
-                else if (m_RenderMode == 2)//OutlineHidden
-                {
-                    outlineMaskMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
-                    outlineFillMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Greater);
-                    outlineFillMaterial.SetFloat("_OutlineWidth", m_OutlineWidth);
-                }
-                else if (m_RenderMode == 3)//OutlineAndSilhouette, 3
-                {
-                    outlineMaskMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.LessEqual);
-                    outlineFillMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Always);
-                    outlineFillMaterial.SetFloat("_OutlineWidth", m_OutlineWidth);
-                }
-                else if (m_RenderMode == 4)//SilhouetteOnly
-                {
-                    outlineMaskMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.LessEqual);
-                    outlineFillMaterial.SetFloat("_ZTest", (float)UnityEngine.Rendering.CompareFunction.Greater);
-                    outlineFillMaterial.SetFloat("_OutlineWidth", 0);
-                }
-            }
-        }
-
-        public class FakeFire : MonoBehaviour
-        {
-            public FakeFire(IntPtr ptr) : base(ptr) { }
-            public GameObject m_Obj;
-
-            void Update()
-            {
-                if(m_Obj != null)
-                {
-                    if(m_Obj.GetComponent<EffectsControllerFire>() != null)
-                    {
-                        //m_Obj.GetComponent<EffectsControllerFire>().lighting.GetChild(0).gameObject.GetComponent<LightFadeFire>();
-
-                        if(m_Obj.GetComponent<EffectsControllerFire>().lighting.GetChild(0).gameObject.GetComponent<FakeFireLight>() == null)
-                        {
-                            m_Obj.GetComponent<EffectsControllerFire>().lighting.GetChild(0).gameObject.AddComponent<FakeFireLight>();
-                        }
-                    }
-                }
-            }
-        }
-
-        public class FakeFireLight : MonoBehaviour
-        {
-            public FakeFireLight(IntPtr ptr) : base(ptr) { }
-        }
-
-        public class DoNotSerializeThis : MonoBehaviour
-        {
-            public DoNotSerializeThis(IntPtr ptr) : base(ptr) { }
-        }
-
-
-        public void ConnectToServer()
-        {
-            MyMod.instance.myId = 0;
-
-            udp = new UDP();
-
-            if (ip != "")
-            {
-                MelonLogger.Msg("Trying connect to " + ip+":"+ instance.port);
-                InitializeClientData();
-                //tcp.Connect();
-
-                if(udp == null)
-                {
-                    MelonLogger.Msg("udp is null");
-                }
-
-                //udp.Connect(instance.port+1, ip);
-                udp.Connect(instance.port, ip);
-            }
-        }
         //PACKETS
-        public static void InitializeClientData()
-        {
-            packetHandlers = new Dictionary<int, PacketHandler>()
-        {
-            { (int)ServerPackets.welcome, ClientHandle.Welcome },
-            { (int)ServerPackets.XYZ, ClientHandle.XYZ},
-            { (int)ServerPackets.XYZW, ClientHandle.XYZW},
-            { (int)ServerPackets.BLOCK, ClientHandle.BLOCK},
-            { (int)ServerPackets.XYZDW, ClientHandle.XYZDW},
-            { (int)ServerPackets.LEVELID, ClientHandle.LEVELID},
-            { (int)ServerPackets.GOTITEM, ClientHandle.GOTITEM},
-            { (int)ServerPackets.GAMETIME, ClientHandle.GAMETIME},
-            { (int)ServerPackets.LIGHTSOURCENAME, ClientHandle.LIGHTSOURCENAME},
-            { (int)ServerPackets.LIGHTSOURCE, ClientHandle.LIGHTSOURCE},
-            { (int)ServerPackets.ANIMSTATE, ClientHandle.ANIMSTATE},
-            { (int)ServerPackets.SLEEPHOURS, ClientHandle.SLEEPHOURS},
-            { (int)ServerPackets.SYNCWEATHER, ClientHandle.SYNCWEATHER},
-            { (int)ServerPackets.REVIVE, ClientHandle.REVIVE},
-            { (int)ServerPackets.REVIVEDONE, ClientHandle.REVIVEDONE},
-            { (int)ServerPackets.ANIMALROLE, ClientHandle.ANIMALROLE},
-            { (int)ServerPackets.DARKWALKERREADY, ClientHandle.DARKWALKERREADY},
-            { (int)ServerPackets.HOSTISDARKWALKER, ClientHandle.HOSTISDARKWALKER},
-            { (int)ServerPackets.WARDISACTIVE, ClientHandle.WARDISACTIVE},
-            { (int)ServerPackets.DWCOUNTDOWN, ClientHandle.DWCOUNTDOWN},
-            { (int)ServerPackets.ANIMALSYNCTRIGG, ClientHandle.ANIMALSYNCTRIGG},
-            { (int)ServerPackets.SHOOTSYNC, ClientHandle.SHOOTSYNC},
-            { (int)ServerPackets.PIMPSKILL, ClientHandle.PIMPSKILL},
-            { (int)ServerPackets.HARVESTINGANIMAL, ClientHandle.HARVESTINGANIMAL},
-            { (int)ServerPackets.SAVEDATA, ClientHandle.SAVEDATA},
-            { (int)ServerPackets.BULLETDAMAGE, ClientHandle.BULLETDAMAGE},
-            { (int)ServerPackets.MULTISOUND, ClientHandle.MULTISOUND},
-            { (int)ServerPackets.CONTAINEROPEN, ClientHandle.CONTAINEROPEN},
-            { (int)ServerPackets.LUREPLACEMENT, ClientHandle.LUREPLACEMENT},
-            { (int)ServerPackets.LUREISACTIVE, ClientHandle.LUREISACTIVE},
-            { (int)ServerPackets.ALIGNANIMAL, ClientHandle.ALIGNANIMAL},
-            { (int)ServerPackets.ASKFORANIMALPROXY, ClientHandle.ASKFORANIMALPROXY},
-            { (int)ServerPackets.CARRYBODY, ClientHandle.CARRYBODY},
-            { (int)ServerPackets.BODYWARP, ClientHandle.BODYWARP},
-            { (int)ServerPackets.ANIMALDELETE, ClientHandle.ANIMALDELETE},
-            { (int)ServerPackets.KEEPITALIVE, ClientHandle.KEEPITALIVE},
-            { (int)ServerPackets.RQRECONNECT, ClientHandle.RQRECONNECT},
-            { (int)ServerPackets.EQUIPMENT, ClientHandle.EQUIPMENT},
-            { (int)ServerPackets.CHAT, ClientHandle.CHAT},
-            { (int)ServerPackets.PLAYERSSTATUS, ClientHandle.PLAYERSSTATUS},
-            { (int)ServerPackets.CHANGENAME, ClientHandle.CHANGENAME},
-            { (int)ServerPackets.CLOTH, ClientHandle.CLOTH},
-            { (int)ServerPackets.ASKSPAWNDATA, ClientHandle.ASKSPAWNDATA},
-            { (int)ServerPackets.LEVELGUID, ClientHandle.LEVELGUID},
-            { (int)ServerPackets.FURNBROKEN, ClientHandle.FURNBROKEN},
-            { (int)ServerPackets.FURNBROKENLIST, ClientHandle.FURNBROKENLIST},
-            { (int)ServerPackets.FURNBREAKINGGUID, ClientHandle.FURNBREAKINGGUID},
-            { (int)ServerPackets.FURNBREAKINSTOP, ClientHandle.FURNBREAKINSTOP},
-            { (int)ServerPackets.GEARPICKUP, ClientHandle.GEARPICKUP},
-            { (int)ServerPackets.GEARPICKUPLIST, ClientHandle.GEARPICKUPLIST},
-            { (int)ServerPackets.ROPE, ClientHandle.ROPE},
-            { (int)ServerPackets.ROPELIST, ClientHandle.ROPELIST},
-            { (int)ServerPackets.CONSUME, ClientHandle.CONSUME},
-            { (int)ServerPackets.SERVERCFG, ClientHandle.SERVERCFG},
-            { (int)ServerPackets.STOPCONSUME, ClientHandle.STOPCONSUME},
-            { (int)ServerPackets.HEAVYBREATH, ClientHandle.HEAVYBREATH},
-            { (int)ServerPackets.BLOODLOSTS, ClientHandle.BLOODLOSTS},
-            { (int)ServerPackets.APPLYACTIONONPLAYER, ClientHandle.APPLYACTIONONPLAYER},
-            { (int)ServerPackets.DONTMOVEWARNING, ClientHandle.DONTMOVEWARNING},
-            { (int)ServerPackets.INFECTIONSRISK, ClientHandle.INFECTIONSRISK},
-            { (int)ServerPackets.CANCLEPICKUP, ClientHandle.CANCLEPICKUP},
-            { (int)ServerPackets.CONTAINERINTERACT, ClientHandle.CONTAINERINTERACT},
-            { (int)ServerPackets.LOOTEDCONTAINER, ClientHandle.LOOTEDCONTAINER},
-            { (int)ServerPackets.LOOTEDCONTAINERLIST, ClientHandle.LOOTEDCONTAINERLIST},
-            { (int)ServerPackets.HARVESTPLANT, ClientHandle.HARVESTPLANT},
-            { (int)ServerPackets.LOOTEDHARVESTABLE, ClientHandle.LOOTEDHARVESTABLE},
-            { (int)ServerPackets.LOOTEDHARVESTABLEALL, ClientHandle.LOOTEDHARVESTABLEALL},
-            { (int)ServerPackets.SELECTEDCHARACTER, ClientHandle.SELECTEDCHARACTER},
-            { (int)ServerPackets.ADDSHELTER, ClientHandle.ADDSHELTER},
-            { (int)ServerPackets.REMOVESHELTER, ClientHandle.REMOVESHELTER},
-            { (int)ServerPackets.ALLSHELTERS, ClientHandle.ALLSHELTERS},
-            { (int)ServerPackets.USESHELTER, ClientHandle.USESHELTER},
-            { (int)ServerPackets.FIRE, ClientHandle.FIRE},
-            { (int)ServerPackets.CUSTOM, ClientHandle.CUSTOM},
-            { (int)ServerPackets.KICKMESSAGE, ClientHandle.KICKMESSAGE},
-            { (int)ServerPackets.GOTITEMSLICE, ClientHandle.GOTITEMSLICE},
-            { (int)ServerPackets.VOICECHAT, ClientHandle.VOICECHAT},
-            { (int)ServerPackets.SLICEDBYTES, ClientHandle.SLICEDBYTES},
-            { (int)ServerPackets.ANIMALDAMAGE, ClientHandle.ANIMALDAMAGE},
-            { (int)ServerPackets.FIREFUEL, ClientHandle.FIREFUEL},
-            { (int)ServerPackets.DROPITEM, ClientHandle.DROPITEM},
-            { (int)ServerPackets.PICKDROPPEDGEAR, ClientHandle.PICKDROPPEDGEAR},
-            { (int)ServerPackets.GETREQUESTEDITEMSLICE, ClientHandle.GETREQUESTEDITEMSLICE},
-            { (int)ServerPackets.GETREQUESTEDFORPLACESLICE, ClientHandle.GETREQUESTEDFORPLACESLICE},
-            { (int)ServerPackets.GOTCONTAINERSLICE, ClientHandle.GOTCONTAINERSLICE},
-            { (int)ServerPackets.OPENEMPTYCONTAINER, ClientHandle.OPENEMPTYCONTAINER},
-            { (int)ServerPackets.MARKSEARCHEDCONTAINERS, ClientHandle.MARKSEARCHEDCONTAINERS},
-            { (int)ServerPackets.READYSENDNEXTSLICE, ClientHandle.READYSENDNEXTSLICE},
-            { (int)ServerPackets.CHANGEAIM, ClientHandle.CHANGEAIM},
-            { (int)ServerPackets.LOADINGSCENEDROPSDONE, ClientHandle.LOADINGSCENEDROPSDONE},
-            { (int)ServerPackets.GEARNOTEXIST, ClientHandle.GEARNOTEXIST},
-            { (int)ServerPackets.USEOPENABLE, ClientHandle.USEOPENABLE},
-            { (int)ServerPackets.TRYDIAGNISISPLAYER, ClientHandle.TRYDIAGNISISPLAYER},
-            { (int)ServerPackets.SENDMYAFFLCTIONS, ClientHandle.SENDMYAFFLCTIONS},
-            { (int)ServerPackets.CUREAFFLICTION, ClientHandle.CUREAFFLICTION},
-            { (int)ServerPackets.ANIMALTEST, ClientHandle.ANIMALTEST},
-            { (int)ServerPackets.ANIMALCORPSE, ClientHandle.ANIMALCORPSE},
-            { (int)ServerPackets.REQUESTANIMALCORPSE, ClientHandle.REQUESTANIMALCORPSE},
-            { (int)ServerPackets.QUARTERANIMAL, ClientHandle.QUARTERANIMAL},
-            { (int)ServerPackets.ANIMALAUDIO, ClientHandle.ANIMALAUDIO},
-            { (int)ServerPackets.GOTRABBIT, ClientHandle.GOTRABBIT},
-            { (int)ServerPackets.RELEASERABBIT, ClientHandle.RELEASERABBIT},
-            { (int)ServerPackets.HITRABBIT, ClientHandle.HITRABBIT},
-            { (int)ServerPackets.RABBITREVIVED, ClientHandle.RABBITREVIVED},
-            { (int)ServerPackets.MELEESTART, ClientHandle.MELEESTART},
-            { (int)ServerPackets.TRYBORROWGEAR, ClientHandle.TRYBORROWGEAR},
-            { (int)ServerPackets.CHALLENGEINIT, ClientHandle.CHALLENGEINIT},
-            { (int)ServerPackets.CHALLENGEUPDATE, ClientHandle.CHALLENGEUPDATE},
-            { (int)ServerPackets.CHALLENGETRIGGER, ClientHandle.CHALLENGETRIGGER},
-            { (int)ServerPackets.ADDDEATHCONTAINER, ClientHandle.ADDDEATHCONTAINER},
-            { (int)ServerPackets.DEATHCREATEEMPTYNOW, ClientHandle.DEATHCREATEEMPTYNOW},
-            { (int)ServerPackets.SPAWNREGIONBANCHECK, ClientHandle.SPAWNREGIONBANCHECK},
-            { (int)ServerPackets.CAIRNS, ClientHandle.CAIRNS},
-            { (int)ServerPackets.BENEFITINIT, ClientHandle.BENEFITINIT},
-        };
-            MelonLogger.Msg("Initialized packets.");
-        }
-        public class TCP
-        {
-            public TcpClient socket;
-
-            private NetworkStream stream;
-            private Packet receivedData;
-            private byte[] receiveBuffer;
-
-            public void Connect()
-            {
-                socket = new TcpClient
-                {
-                    ReceiveBufferSize = dataBufferSize,
-                    SendBufferSize = dataBufferSize
-                };
-
-                receiveBuffer = new byte[dataBufferSize];
-
-                //socket.BeginConnect(instance.ip, instance.port, ConnectCallback, socket);
-
-                IAsyncResult result = socket.BeginConnect(instance.ip, instance.port, null, null);
-                bool success = result.AsyncWaitHandle.WaitOne(5000, true);
-                if (socket.Connected)
-                {
-                    socket.EndConnect(result);
-                    stream = socket.GetStream();
-                    receivedData = new Packet();
-                    stream.BeginRead(receiveBuffer, 0, dataBufferSize, ReceiveCallback, null);
-                }
-                else
-                {
-                    socket.Close();
-                    MelonLogger.Msg("Connection failed!!!");
-
-                    //if(TryingReconnect == true)
-                    //{
-                    //    TryingReconnect = false;
-                    //    AttempsToReconnect = AttempsToReconnect + 1;
-                    //} 
-                }
-            }
-            /*
-            private void ConnectCallback(IAsyncResult _result)
-            {
-                socket.EndConnect(_result);
-
-                if (!socket.Connected)
-                {
-                    return;
-                }
-
-                stream = socket.GetStream();
-
-                receivedData = new Packet();
-
-                stream.BeginRead(receiveBuffer, 0, dataBufferSize, ReceiveCallback, null);
-            }
-            */
-            public void SendData(Packet _packet)
-            {
-                try
-                {
-                    if (socket != null)
-                    {
-                        stream.BeginWrite(_packet.ToArray(), 0, _packet.Length(), null, null);
-                    }
-                }
-                catch (Exception _ex)
-                {
-                    Debug.Log($"Error sending data to server via TCP: {_ex}");
-                }
-            }
-
-            private void ReceiveCallback(IAsyncResult _result)
-            {
-                if (socket == null || stream == null)
-                {
-                    if (stream == null)
-                    {
-                        MelonLogger.Msg("ReceiveCallback has got null stream");
-                    }
-                    if (socket == null)
-                    {
-                        MelonLogger.Msg("ReceiveCallback has got null socket");
-                    }
-                    return;
-                }
-
-                try
-                {
-                    int _byteLength = stream.EndRead(_result);
-                    if (_byteLength <= 0)
-                    {
-                        MelonLogger.Msg("[CLIENT TCP SOCKET] Disconnect got no bytes in data stream");
-
-                        if (socket != null)
-                        {
-                            if (sendMyPosition == true)
-                            {
-                                MelonLogger.Msg("Killing data stream...");
-                                stream = null;
-                                MelonLogger.Msg("Wiping recevied data...");
-                                receivedData = null;
-                                MelonLogger.Msg("Reseting data buffer...");
-                                receiveBuffer = null;
-                                MelonLogger.Msg("Closing socket");
-                                socket.Close();
-                                socket = null;
-                                MelonLogger.Msg("Disconnected from server.");
-                                HUDMessage.AddMessage("DISCONNECTED FROM SERVER");
-                                sendMyPosition = false;
-                            }
-                        }
-                        return;
-                    } else {
-                        byte[] _data = new byte[_byteLength];
-                        Array.Copy(receiveBuffer, _data, _byteLength);
-
-                        receivedData.Reset(HandleData(_data));
-                        stream.BeginRead(receiveBuffer, 0, dataBufferSize, ReceiveCallback, null);
-                    }
-                }
-                catch
-                {
-                    /*
-                    if(socket != null)
-                    {
-                        MelonLogger.Msg("[CLIENT TCP SOCKET] Disconnect cause getting callback error");
-
-                        if (sendMyPosition == true)
-                        {
-                            MelonLogger.Msg("Killing data stream...");
-                            stream = null;
-                            MelonLogger.Msg("Wiping recevied data...");
-                            receivedData = null;
-                            MelonLogger.Msg("Reseting data buffer...");
-                            receiveBuffer = null;
-                            MelonLogger.Msg("Closing socket");
-                            socket.Close();
-                            socket = null;
-                            MelonLogger.Msg("Disconnected from server.");
-                            HUDMessage.AddMessage("DISCONNECTED FROM SERVER");
-                            sendMyPosition = false;
-                        }
-                    }
-                    */
-                    MelonLogger.Msg("[CLIENT TCP SOCKET] Disconnect cause getting callback error");
-                }
-            }
-
-            private bool HandleData(byte[] _data)
-            {
-                int _packetLength = 0;
-
-                if (receivedData == null || _data == null)
-                {
-                    return false;
-                }
-
-                receivedData.SetBytes(_data);
-
-                if (receivedData.UnreadLength() >= 4)
-                {
-                    _packetLength = receivedData.ReadInt();
-                    if (_packetLength <= 0)
-                    {
-                        return true;
-                    }
-                }
-
-                while (_packetLength > 0 && _packetLength <= receivedData.UnreadLength())
-                {
-                    byte[] _packetBytes = receivedData.ReadBytes(_packetLength);
-                    ThreadManager.ExecuteOnMainThread(() =>
-                    {
-                        using (Packet _packet = new Packet(_packetBytes))
-                        {
-                            int _packetId = _packet.ReadInt();
-                            if (DebugTrafficCheck == true)
-                            {
-                                MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
-                            }
-                            
-
-                            if(packetHandlers[_packetId] != null)
-                            {
-                                if (DebugTrafficCheck == true)
-                                {
-                                    MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet contains " + _packet.ReturnSize() + " bytes");
-                                }
-                                packetHandlers[_packetId](_packet);
-                            }else{
-                                MelonLogger.Msg("Got unregisted _packetId"+ _packetId);
-                            }
-                        }
-                    });
-
-                    _packetLength = 0;
-                    if (receivedData.UnreadLength() >= 4)
-                    {
-                        _packetLength = receivedData.ReadInt();
-                        if (_packetLength <= 0)
-                        {
-                            return true;
-                        }
-                    }
-                }
-
-                if (_packetLength <= 1)
-                {
-                    return true;
-                }
-
-                return false;
-            }
-        }
-
-        public class UDP
-        {
-            public UdpClient socket;
-            public IPEndPoint endPoint;
-
-            public UDP()
-            {
-                endPoint = new IPEndPoint(IPAddress.Parse(instance.ip), instance.port);
-            }
-
-            /// <summary>Attempts to connect to the server via UDP.</summary>
-            /// <param name="_localPort">The port number to bind the UDP socket to.</param>
-            public void Connect(int _localPort, string ip)
-            {
-                endPoint = new IPEndPoint(IPAddress.Parse(ip), instance.port);
-                socket = new UdpClient(_localPort);
-                socket.Connect(endPoint);
-                MelonLogger.Msg("Open socket for "+ endPoint.Address+":"+ endPoint.Port);
-                //IAsyncResult result = socket.BeginReceive(ReceiveCallback, null);
-                socket.BeginReceive(ReceiveCallback, null);
-                //bool success = result.AsyncWaitHandle.WaitOne(5000, true);
-                using (Packet _packet = new Packet())
-                {
-                    _packet.Write(MyMod.instance.myId);
-                    SendData(_packet);
-                }
-            }
-
-            /// <summary>Sends data to the client via UDP.</summary>
-            /// <param name="_packet">The packet to send.</param>
-            public void SendData(Packet _packet)
-            {
-                try
-                {
-                    _packet.InsertInt(instance.myId); // Insert the client's ID at the start of the packet
-                    if (socket != null)
-                    {
-                        socket.BeginSend(_packet.ToArray(), _packet.Length(), null, null);
-                    }
-                }
-                catch (Exception _ex)
-                {
-                    Debug.Log($"Error sending data to server via UDP: {_ex}");
-                }
-            }
-
-            /// <summary>Receives incoming UDP data.</summary>
-            private void ReceiveCallback(IAsyncResult _result)
-            {
-                try
-                {
-                    byte[] _data = socket.EndReceive(_result, ref endPoint);
-                    socket.BeginReceive(ReceiveCallback, null);
-                    if (_data.Length < 4)
-                    {
-                        endPoint = null;
-                        socket.Close();
-
-                        MyMod.Disconnect();
-                        MelonLogger.Msg("Connection failed");
-                        return;
-                    }
-                    HandleData(_data);
-                }
-                catch
-                {
-                    endPoint = null;
-                    socket.Close();
-                    MyMod.Disconnect();
-                    MelonLogger.Msg("Connection failed");
-                }
-            }
-
-            /// <summary>Prepares received data to be used by the appropriate packet handler methods.</summary>
-            /// <param name="_data">The recieved data.</param>
-            private void HandleData(byte[] _data)
-            {
-                using (Packet _packet = new Packet(_data))
-                {
-                    int _packetLength = _packet.ReadInt();
-                    _data = _packet.ReadBytes(_packetLength);
-                }
-
-                ThreadManager.ExecuteOnMainThread(() =>
-                {
-                    using (Packet _packet = new Packet(_data))
-                    {
-                        int _packetId = _packet.ReadInt();
-                        if (DebugTrafficCheck == true)
-                        {
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize()+" bytes");
-                        }
-                        packetHandlers[_packetId](_packet); // Call appropriate method to handle the packet
-                    }
-                });
-            }
-
-            /// <summary>Disconnects from the server and cleans up the UDP connection.</summary>
-            private void Disconnect()
-            {
-                Disconnect();
-
-                endPoint = null;
-                socket = null;
-            }
-        }
-
-        public static void AWait()
-        {
-            Thread.Sleep(5000);
-        }
 
         private static void DoneDisconnect(IAsyncResult _result)
         {
-            if (MyMod.instance.udp != null && MyMod.instance.udp.socket != null)
+            if (ClientUser.udp != null && ClientUser.udp.socket != null)
             {
-                MyMod.instance.udp.endPoint = null;
-                MyMod.instance.udp.socket.Client.Close();
-                //MyMod.instance.udp.socket = null;
+                ClientUser.udp.endPoint = null;
+                ClientUser.udp.socket.Client.Close();
             }
-            MelonLogger.Msg("[UDP] Disconnected from server");
         }
 
         public static void Disconnect()
         {
-            MelonLogger.Msg("[CLIENT] Trying disconnect");
             if (iAmHost == true || sendMyPosition == true)
             {
-                if(SteamServerWorks != "")
+                if (SteamServerWorks != "")
                 {
-                    if(SteamConnect.CanUseSteam == true)
+                    if (SteamConnect.CanUseSteam == true)
                     {
                         MelonLogger.Msg("[Steamworks.NET] Disconnecting...");
                         SteamConnect.Main.Disconnect(SteamServerWorks);
                         sendMyPosition = false;
-                        MyMod.instance.myId = 0;
+                        ClientUser.myId = 0;
                         return;
                     }
                 }
-                if (MyMod.instance == null)
-                {
-                    MelonLogger.Msg("TCP/UDP instance is dead.");
-                    return;
-                }
-                if (MyMod.instance.udp == null)
+                if (ClientUser.udp == null)
                 {
                     MelonLogger.Msg("UDP is already closed.");
                     return;
                 }
-                if (MyMod.instance.udp.socket == null)
+                if (ClientUser.udp.socket == null)
                 {
                     MelonLogger.Msg("Socket of udp is closed.");
                     return;
                 }
-                if (MyMod.instance.udp != null && MyMod.instance.udp.socket != null)
+                if (ClientUser.udp != null && ClientUser.udp.socket != null)
                 {
-                    MelonLogger.Msg("[UDP] Disconnecting...");
-                    //MyMod.instance.udp.endPoint = null;
-
-                    if(MyMod.instance.udp.socket.Client != null)
+                    if (ClientUser.udp.socket.Client != null)
                     {
-                        MyMod.instance.udp.socket.Client.BeginDisconnect(true, DoneDisconnect, null);
+                        ClientUser.udp.socket.Client.BeginDisconnect(true, DoneDisconnect, null);
                     }
                 }
                 HUDMessage.AddMessage("DISCONNECTED FROM SERVER");
+                MelonLogger.Msg("[UDP] Disconnected from server");
                 sendMyPosition = false;
-                MyMod.instance.myId = 0;
+                ClientUser.myId = 0;
             }
         }
 
-        public static void SendTCPData(Packet _packet)
-        {
-            //_packet.WriteLength();
-            //MyMod.instance.tcp.SendData(_packet);
-            SendUDPData(_packet);
-        }
-
-        public static void RepeatUDPData(Packet _packet)
+        public static void SendUDPData(Packet _packet, bool IgnoreQuit = false)
         {
             if (SteamConnect.CanUseSteam == true && ConnectedSteamWorks == true)
             {
-                _packet.InsertInt(instance.myId);
+                _packet.WriteLength();
+                _packet.InsertClientInfo(ClientUser.myId, ClientUser.SubNetworkClientGUID);
                 SteamConnect.Main.SendUDPData(_packet, SteamServerWorks);
-            }else{
-                instance.udp.SendData(_packet);
+            } else {
+                ClientUser.udp.SendData(_packet, IgnoreQuit);
             }
-        }
-
-        public static void SendUDPData(Packet _packet)
-        {
-            _packet.WriteLength();
-
-            //MelonLogger.Msg("SteamConnect.CanUseSteam " + SteamConnect.CanUseSteam);
-            //MelonLogger.Msg("ConnectedSteamWorks " + ConnectedSteamWorks);
-
-            if (SteamConnect.CanUseSteam == true && ConnectedSteamWorks == true)
-            {
-                _packet.InsertInt(instance.myId);
-                SteamConnect.Main.SendUDPData(_packet, SteamServerWorks);
-            }else{
-                MyMod.instance.udp.SendData(_packet);
-            }
-            //MyMod.instance.udp.SendData(_packet);
         }
 
         public static bool IsEquippable(GearItem gi)
@@ -8232,9 +3509,9 @@ namespace SkyCoop
             return false;
         }
 
-        public static void GiveRecivedItem(GearItemDataPacket gearData)
+        public static void GiveRecivedItem(DataStr.GearItemDataPacket gearData)
         {
-            //MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name ["+ gearData.m_GearName + "] DATA: "+ gearData.m_DataProxy);
+            //MelonLogger.Msg(Blue, "Got gear with name ["+ gearData.m_GearName + "] DATA: "+ gearData.m_DataProxy);
 
             GearItemSaveDataProxy itemSaveDataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(gearData.m_DataProxy);
             string dummy_name = gearData.m_GearName;
@@ -8248,7 +3525,7 @@ namespace SkyCoop
             {
                 int L = dummy_name.Length - 7;
                 give_name = dummy_name.Remove(L, 7);
-            }else{
+            } else {
                 give_name = dummy_name;
             }
 
@@ -8265,9 +3542,9 @@ namespace SkyCoop
             if (watermode == false) // If this is water we not give new item, but just add to supply.
             {
                 GearItem closestMatchStackable = GameManager.GetInventoryComponent().GetClosestMatchStackable(give_name, itemSaveDataProxy.m_NormalizedCondition);
-                if(closestMatchStackable == null)
+                if (closestMatchStackable == null)
                 {
-                    MelonLogger.Msg("Not stack for item "+ give_name + ", creating new item");
+                    MelonLogger.Msg("Not stack for item " + give_name + ", creating new item");
                     GearItem new_gear = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory(give_name);
                     DisableObjectForXPMode.RemoveDisabler(new_gear.gameObject);
                     GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(gearData.m_DataProxy);
@@ -8284,8 +3561,8 @@ namespace SkyCoop
 
                     PatchBookReadTime(new_gear.GetComponent<GearItem>());
 
-                }else{
-                    closestMatchStackable.m_StackableItem.m_Units+=1;
+                } else {
+                    closestMatchStackable.m_StackableItem.m_Units += 1;
                     MelonLogger.Msg("Found stack for " + give_name + ", now units " + closestMatchStackable.m_StackableItem.m_Units);
                     if (GameManager.GetPlayerManagerComponent().m_ItemInHands == null)
                     {
@@ -8295,14 +3572,14 @@ namespace SkyCoop
                         }
                     }
                 }
-            }else{
+            } else {
                 string bottlename = Resources.Load(give_name).Cast<GameObject>().GetComponent<GearItem>().m_LocalizedDisplayName.Text();
 
                 MelonLogger.Msg("Got water " + gearData.m_Water);
                 if (gearData.m_Water == 0.5f)
                 {
                     say = "half liter of " + bottlename;
-                }else{
+                } else {
                     say = gearData.m_Water + " of " + bottlename;
                 }
                 GameManager.GetInventoryComponent().AddToWaterSupply(gearData.m_Water, water_q);
@@ -8315,16 +3592,14 @@ namespace SkyCoop
 
         public static void SimRevive()
         {
-            InterfaceManager.m_Panel_Log.Enable(false);
-            SetRevivedStats();
-            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
+
         }
 
         public static void DeleteAnimal(string _guid)
         {
             GameObject animal = ObjectGuidManager.Lookup(_guid);
 
-            if(animal != null)
+            if (animal != null)
             {
                 UnityEngine.Object.Destroy(animal);
             }
@@ -8345,9 +3620,9 @@ namespace SkyCoop
             }
         }
 
-        public static void SetAnimationParams(GameObject animal, AnimalAnimsSync obj)
+        public static void SetAnimationParams(GameObject animal, DataStr.AnimalAnimsSync obj)
         {
-            AnimalActor au = animal.GetComponent<AnimalActor>();
+            Comps.AnimalActor au = animal.GetComponent<Comps.AnimalActor>();
             if (!au)
             {
                 return;
@@ -8373,7 +3648,7 @@ namespace SkyCoop
 
         public static void SetAnimalPosition(GameObject animal, Vector3 xyz, Quaternion xyzw)
         {
-            AnimalActor au = animal.GetComponent<AnimalActor>();
+            Comps.AnimalActor au = animal.GetComponent<Comps.AnimalActor>();
             if (!au)
             {
                 return;
@@ -8382,7 +3657,7 @@ namespace SkyCoop
             au.m_ToRotate = xyzw;
         }
 
-        public static void DoAnimalSync(AnimalCompactData dat, AnimalAnimsSync anim)
+        public static void DoAnimalSync(DataStr.AnimalCompactData dat, DataStr.AnimalAnimsSync anim)
         {
             if (NoAnimalSync)
             {
@@ -8391,10 +3666,10 @@ namespace SkyCoop
             GameObject animal = ObjectGuidManager.Lookup(dat.m_GUID);
             if (animal)
             {
-                if (animal.GetComponent<AnimalActor>() != null)
+                if (animal.GetComponent<Comps.AnimalActor>() != null)
                 {
-                    AnimalActor Actor = animal.GetComponent<AnimalActor>();
-                    if(Actor.m_MarkToDestroy == false)
+                    Comps.AnimalActor Actor = animal.GetComponent<Comps.AnimalActor>();
+                    if (Actor.m_MarkToDestroy == false)
                     {
                         Actor.NoResponce = 5;
                         Actor.m_Hp = dat.m_Health;
@@ -8407,7 +3682,7 @@ namespace SkyCoop
                         Actor.m_NextMode = (AiMode)dat.m_LastAiMode;
                         Actor.SetAiMode();
                         int OldAmount = Actor.m_Arrows.Count;
-                        if(OldAmount < dat.m_Arrows.Count)
+                        if (OldAmount < dat.m_Arrows.Count)
                         {
                             Actor.m_Arrows = dat.m_Arrows;
                             for (int i = OldAmount; i < Actor.m_Arrows.Count; i++)
@@ -8417,11 +3692,11 @@ namespace SkyCoop
                         }
                     }
                 }
-            }else{
+            } else {
                 animal = SpawnAnimalActor(dat.m_PrefabName, dat.m_Position, dat.m_Rotation, dat.m_GUID, dat.m_RegionGUID, dat.m_Arrows);
-                if (animal && animal.GetComponent<AnimalActor>())
+                if (animal && animal.GetComponent<Comps.AnimalActor>())
                 {
-                    AnimalActor Actor = animal.GetComponent<AnimalActor>();
+                    Comps.AnimalActor Actor = animal.GetComponent<Comps.AnimalActor>();
                     Actor.NoResponce = 5;
                     Actor.m_Hp = dat.m_Health;
                     Actor.m_RegionGUID = dat.m_RegionGUID;
@@ -8436,18 +3711,18 @@ namespace SkyCoop
             }
         }
 
-        public static void SetAnimalTriggers(AnimalTrigger obj)
+        public static void SetAnimalTriggers(DataStr.AnimalTrigger obj)
         {
             string _guid = obj.m_Guid;
             int trigg = obj.m_Trigger;
 
             GameObject animal = ObjectGuidManager.Lookup(_guid);
 
-            if(animal != null)
+            if (animal != null)
             {
-                if (animal.GetComponent<AnimalActor>() != null)
+                if (animal.GetComponent<Comps.AnimalActor>() != null)
                 {
-                    AnimalActor _AI = animal.GetComponent<AnimalActor>();
+                    Comps.AnimalActor _AI = animal.GetComponent<Comps.AnimalActor>();
                     Animator AN = _AI.m_Animator;
 
                     if (trigg == Animator.StringToHash("StruggleEnd"))
@@ -8474,28 +3749,23 @@ namespace SkyCoop
             LightComp.type = LightType.Point;
             LightComp.range = 5;
             LightComp.intensity = 5;
-            LightComp.color = new Color(1, 0.5623099f, 0.3268814f,1);
+            LightComp.color = new Color(1, 0.5623099f, 0.3268814f, 1);
             UnityEngine.Object.Destroy(LightFX, 0.1f);
         }
 
-        public static void DoShootSync(ShootSync shoot, int from)
+        public static void DoShootSync(DataStr.ShootSync shoot, int from)
         {
-            //MelonLogger.Msg("Shooting client "+ from + " on level  "+ playersData[from].m_Levelid);
-            if (playersData.Count > 0 && playersData[from].m_Levelid != levelid)
+            if (shoot.m_sceneguid != level_guid)
             {
                 return;
             }
-            //MelonLogger.Msg("Shoot: ");
-            //MelonLogger.Msg("X: " + shoot.m_position.x);
-            //MelonLogger.Msg("Y: " + shoot.m_position.y);
-            //MelonLogger.Msg("Z: " + shoot.m_position.z);
-            //MelonLogger.Msg("Rotation X: " + shoot.m_rotation.x);
-            //MelonLogger.Msg("Rotation Y: " + shoot.m_rotation.y);
-            //MelonLogger.Msg("Rotation Z: " + shoot.m_rotation.z);
-            //MelonLogger.Msg("Rotation W: " + shoot.m_rotation.w);
             if (shoot.m_projectilename == "GEAR_FlareGunAmmoSingle")
             {
                 FlareGunRoundItem.SpawnAndFire(GetGearItemObject("GEAR_FlareGunAmmoSingle"), shoot.m_position, shoot.m_rotation);
+                if (shoot.m_lookat)
+                {
+                    GameManager.GetPlayerAnimationComponent().LookAt(shoot.m_position);
+                }
             }
             else if (shoot.m_projectilename == "GEAR_Arrow")
             {
@@ -8505,10 +3775,10 @@ namespace SkyCoop
                 gameObject.transform.parent = (Transform)null;
                 component.m_InPlayerInventory = false;
                 component.m_StackableItem.m_Units = 1;
-                component.m_CurrentHP = 100;
+                component.CurrentHP = 100;
                 component.m_ArrowItem.SetPlacementHelperEnabled(true);
 
-                gameObject.AddComponent<DestoryArrowOnHit>();
+                gameObject.AddComponent<Comps.DestoryArrowOnHit>();
 
                 Utils.ChangeLayersForGearItem(gameObject, 17);
                 component.m_ArrowItem.Fire();
@@ -8533,9 +3803,10 @@ namespace SkyCoop
                 component2.angularVelocity = vector3 * num;
                 component2.angularDrag = 0.0f;
                 component2.drag = 0.0f;
-                gameObject.AddComponent<DestoryStoneOnStop>();
-                gameObject.GetComponent<DestoryStoneOnStop>().m_Obj = gameObject;
-                gameObject.GetComponent<DestoryStoneOnStop>().m_RB = component2;
+                Comps.DestoryStoneOnStop StoneComp = gameObject.AddComponent<Comps.DestoryStoneOnStop>();
+                StoneComp.m_Obj = gameObject;
+                StoneComp.m_RB = component2;
+                StoneComp.m_Gear = component;
             }
             else if (shoot.m_projectilename == "GEAR_NoiseMaker")
             {
@@ -8578,15 +3849,15 @@ namespace SkyCoop
                             component1.PerformDetonation((ContactPoint[])null);
                         }
                     } else {
-                        MelonLogger.Msg(ConsoleColor.Red, "GEAR_NoiseMaker NoiseMakerItem!!!");
+                        MelonLogger.Msg(Red, "GEAR_NoiseMaker NoiseMakerItem!!!");
                     }
                 } else {
-                    MelonLogger.Msg(ConsoleColor.Red, "GEAR_NoiseMaker Has not GearItem!!!");
+                    MelonLogger.Msg(Red, "GEAR_NoiseMaker Has not GearItem!!!");
                 }
-            }else if (shoot.m_projectilename == "Melee")
+            } else if (shoot.m_projectilename == "Melee")
             {
                 DoMeleeHitFX(shoot.m_position, shoot.m_camera_forward, shoot.m_rotation, players[from]);
-            }else{
+            } else {
                 //MelonLogger.Msg("Got remote shoot event " + shoot.m_projectilename);
 
                 GameObject gameObject = null;
@@ -8596,27 +3867,27 @@ namespace SkyCoop
                 {
                     itemInHands = GetGearItemPrefab("GEAR_Rifle");
                     gameObject = UnityEngine.Object.Instantiate<GameObject>(PistolBulletPrefab, shoot.m_position, shoot.m_rotation);
-                    gameObject.AddComponent<ClientProjectile>();
-                    ClientProjectile ClientP = gameObject.GetComponent<ClientProjectile>();
+                    gameObject.AddComponent<Comps.ClientProjectile>();
+                    Comps.ClientProjectile ClientP = gameObject.GetComponent<Comps.ClientProjectile>();
                     ClientP.m_ClientID = from;
                     PlayMultiplayer3dAduio("PLAY_RIFLE_SHOOT_3D", from);
                     DoShootFX(shoot.m_position);
-                    if (players[from] != null && players[from].GetComponent<MultiplayerPlayerAnimator>() != null)
+                    if (players[from] != null && players[from].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
                     {
                         string shootStrhing = "RifleShoot";
-                        if(playersData[from] != null && playersData[from].m_AnimState == "Ctrl")
+                        if (playersData[from] != null && playersData[from].m_AnimState == "Ctrl")
                         {
                             shootStrhing = "RifleShoot_Sit";
                         }
-                        players[from].GetComponent<MyMod.MultiplayerPlayerAnimator>().m_PreAnimStateHands = shootStrhing;
+                        players[from].GetComponent<Comps.MultiplayerPlayerAnimator >().m_PreAnimStateHands = shootStrhing;
                     }
                 }
                 else if (shoot.m_projectilename == "RevolverBullet")
                 {
                     itemInHands = GetGearItemPrefab("GEAR_Revolver");
                     gameObject = UnityEngine.Object.Instantiate<GameObject>(RevolverBulletPrefab, shoot.m_position, shoot.m_rotation);
-                    gameObject.AddComponent<ClientProjectile>();
-                    ClientProjectile ClientP = gameObject.GetComponent<ClientProjectile>();
+                    gameObject.AddComponent<Comps.ClientProjectile>();
+                    Comps.ClientProjectile ClientP = gameObject.GetComponent<Comps.ClientProjectile>();
                     ClientP.m_ClientID = from;
                     PlayMultiplayer3dAduio("PLAY_REVOLVER_SHOOT_3D", from);
                     DoShootFX(shoot.m_position);
@@ -8647,29 +3918,29 @@ namespace SkyCoop
                 //AkSoundEngine.PostEvent(AK.EVENTS.PLAY_RIFLEFIRE, emitterFromGameObject);
                 //GameAudioManager.SetAudioSourceTransform(emitterFromGameObject, emitterFromGameObject.transform);
 
-                if(players[from] != null)
+                if (players[from] != null)
                 {
                     GameAudioManager.NotifyAiAudioEvent(players[from], players[from].transform.position, GameAudioAiEvent.Gunshot);
                 }
             }
         }
 
-        public static void DoSyncContainer(ContainerOpenSync sync)
+        public static void DoSyncContainer(DataStr.ContainerOpenSync sync)
         {
             Il2CppSystem.Collections.Generic.List<Container> Boxes = ContainerManager.m_Containers;
 
             for (int i = 0; i < Boxes.Count; i++)
             {
                 Container box = Boxes[i];
-                if (box != null && box.GetComponent<ContainersSync>() != null && box.GetComponent<ContainersSync>().m_Guid == sync.m_Guid)
+                if (box != null && box.GetComponent<Comps.ContainersSync>() != null && box.GetComponent<Comps.ContainersSync>().m_Guid == sync.m_Guid)
                 {
                     if (sync.m_State == true)
                     {
-                        box.GetComponent<ContainersSync>().Open();
+                        box.GetComponent<Comps.ContainersSync>().Open();
                     }
                     else
                     {
-                        box.GetComponent<ContainersSync>().Close();
+                        box.GetComponent<Comps.ContainersSync>().Close();
                     }
                     break;
                 }
@@ -8680,10 +3951,6 @@ namespace SkyCoop
         {
 
         }
-
-        private static readonly List<Action> executeOnMainThread = new List<Action>();
-        private static readonly List<Action> executeCopiedOnMainThread = new List<Action>();
-        private static bool actionToExecuteOnMainThread = false;
 
         private static Vector3 previoustickpos;
         private static Quaternion previoustickrot;
@@ -8746,25 +4013,6 @@ namespace SkyCoop
             }
         }
 
-        public static void SkipRTTime(int h)
-        {
-            int totaltime = OverridedHourse + h;
-            PlayedHoursInOnline = PlayedHoursInOnline + h;
-            int leftovers;
-            if (totaltime > 24)
-            {
-                leftovers = totaltime - 24;
-                OverridedHourse = 0 + leftovers;
-            }else{
-                OverridedHourse = OverridedHourse + h;
-            }
-            int PrevMinutesFromStartServer = MinutesFromStartServer;
-            MinutesFromStartServer = MinutesFromStartServer + h*60;
-            MelonLogger.Msg("Skipping "+ h+" hour(s) now should be "+ OverridedHourse);
-            MelonLogger.Msg("MinutesFromStartServer "+ PrevMinutesFromStartServer + " now it "+ MinutesFromStartServer+" because "+ h * 60+" been added");
-            EveryInGameMinute();
-        }
-
         public static void SimpleSleepWithNoSleep(int hours)
         {
             Rest RestCon = GameManager.GetRestComponent();
@@ -8778,9 +4026,8 @@ namespace SkyCoop
             RestCon.m_SleepDurationHours = (float)hours;
             RestCon.m_SleepDurationSeconds = (float)((double)hours * 60.0 * 60.0);
             RestCon.m_ShouldInterruptWhenFreezing = false;
-            RestCon.RollForRestInterruption();
             GameManager.GetRestComponent().m_WakeUpAtFullRest = false;
-            //MelonLogger.Msg("Called fake sleep");
+            MelonLogger.Msg("Called fake sleep for "+ hours+ " hours");
         }
 
         public static void SendConsume(bool IsDrink)
@@ -8790,7 +4037,7 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.CONSUME))
                 {
                     _packet.Write(IsDrink);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
 
@@ -8802,7 +4049,7 @@ namespace SkyCoop
             if (IsDrink)
             {
                 PushActionToMyDoll("Drink");
-            }else{
+            } else {
                 PushActionToMyDoll("Eat");
             }
         }
@@ -8814,7 +4061,7 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.STOPCONSUME))
                 {
                     _packet.Write(MyAnimState);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
 
@@ -8827,7 +4074,7 @@ namespace SkyCoop
         public static void MakeFakeFire(Fire fire)
         {
             fire.m_StartedByPlayer = false;
-            if(fire.m_FireState != FireState.FullBurn)
+            if (fire.m_FireState != FireState.FullBurn)
             {
                 fire.FireStateSet(FireState.FullBurn);
             }
@@ -8838,8 +4085,8 @@ namespace SkyCoop
             fire.m_ElapsedOnTODSecondsUnmodified = 0.0f;
             fire.ForceBurnTimeInMinutes(5);
             fire.PlayFireLoop(100f);
-            
-            if(fire.m_Campfire != null)
+
+            if (fire.m_Campfire != null)
             {
                 Campfire campFire = fire.m_Campfire.GetComponent<Campfire>();
                 if (campFire.m_State != CampfireState.Lit)
@@ -8849,7 +4096,7 @@ namespace SkyCoop
             }
         }
 
-        public static void MakeFakeCampfire(FireSourcesSync SyncData)
+        public static void MakeFakeCampfire(DataStr.FireSourcesSync SyncData)
         {
             GameObject campfireObj = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetFireManagerComponent().m_CampFirePrefab);
             campfireObj.name = GameManager.GetFireManagerComponent().m_CampFirePrefab.name;
@@ -8858,28 +4105,28 @@ namespace SkyCoop
             Fire cfFire = campfireObj.GetComponent<Fire>();
             MakeFakeFire(cfFire);
             Campfire campFire = campfireObj.GetComponent<Campfire>();
-            if(campFire.m_State != CampfireState.Lit)
+            if (campFire.m_State != CampfireState.Lit)
             {
                 campFire.SetState(CampfireState.Lit);
             }
         }
 
-        public static bool IsSameFire(FireSourcesSync FindData, FireSourcesSync SyncData)
+        public static bool IsSameFire(DataStr.FireSourcesSync FindData, DataStr.FireSourcesSync SyncData)
         {
-            if(SyncData.m_IsCampfire == true)
+            if (SyncData.m_IsCampfire == true)
             {
                 if (SyncData.m_Position == FindData.m_Position)
                 {
                     return true;
                 }
-            }else{
+            } else {
                 if (FindData.m_Guid != "")
                 {
                     if (SyncData.m_Guid == FindData.m_Guid)
                     {
                         return true;
                     }
-                }else{
+                } else {
                     if (SyncData.m_Position == FindData.m_Position)
                     {
                         return true;
@@ -8889,7 +4136,7 @@ namespace SkyCoop
             return false;
         }
 
-        public static void ApplyOtherFireSource(FireSourcesSync SyncData)
+        public static void ApplyOtherFireSource(DataStr.FireSourcesSync SyncData)
         {
             //MelonLogger.Msg("[FireSourcesSync] ApplyOtherFireSource Should apply "+ ApplyOtherCampfires);
             if (ApplyOtherCampfires == true && ServerConfig.m_FireSync != 0)
@@ -8904,7 +4151,7 @@ namespace SkyCoop
                         if (curfire != null)
                         {
                             //MelonLogger.Msg("[FireSourcesSync] Object exist "+ curfire.gameObject.name);
-                            FireSourcesSync FindData = new FireSourcesSync();
+                            DataStr.FireSourcesSync FindData = new DataStr.FireSourcesSync();
                             FindData.m_LevelId = levelid;
                             FindData.m_LevelGUID = level_guid;
                             FindData.m_Position = curfire.gameObject.transform.position;
@@ -8920,27 +4167,27 @@ namespace SkyCoop
                             if (IsSameFire(FindData, SyncData) == true)
                             {
                                 //MelonLogger.Msg("Found same fire");
-                                if(curfire.m_FireState == FireState.Off || curfire.m_StartedByPlayer == false)
+                                if (curfire.m_FireState == FireState.Off || curfire.m_StartedByPlayer == false)
                                 {
                                     //MelonLogger.Msg("Apply fire on existen object");
                                     MakeFakeFire(curfire);
                                     FoundSource = true;
-                                }else{
+                                } else {
                                     //MelonLogger.Msg("Found object, but won't apply fire on it");
                                     FoundSource = true;
                                 }
                                 break;
-                            }else{
+                            } else {
                                 //MelonLogger.Msg("Object is not same");
                             }
-                        }else{
+                        } else {
                             //MelonLogger.Msg("[FireSourcesSync] Object in array not exist!");
                         }
                     }
-                    if(FoundSource == false)
+                    if (FoundSource == false)
                     {
                         //MelonLogger.Msg("Not found fire object");
-                        if(SyncData.m_IsCampfire == true)
+                        if (SyncData.m_IsCampfire == true)
                         {
                             //MelonLogger.Msg("But is campfire, so creating an new one");
                             MakeFakeCampfire(SyncData);
@@ -8992,14 +4239,14 @@ namespace SkyCoop
             fire.m_FX.TriggerFlareupLarge();
             fire.m_StartedByPlayer = true;
 
-            if(fuel != null && fuel.gameObject)
+            if (fuel != null && fuel.gameObject)
             {
-                UnityEngine.Object.DestroyImmediate(fuel.gameObject);
+                UnityEngine.Object.Destroy(fuel.gameObject);
             }
         }
 
 
-        public static void AddOtherFuel(FireSourcesSync SyncData, string fuelName)
+        public static void AddOtherFuel(DataStr.FireSourcesSync SyncData, string fuelName)
         {
             if (ApplyOtherCampfires == true)
             {
@@ -9010,7 +4257,7 @@ namespace SkyCoop
                         Fire curfire = FireManager.m_Fires[i];
                         if (curfire != null)
                         {
-                            FireSourcesSync FindData = new FireSourcesSync();
+                            DataStr.FireSourcesSync FindData = new DataStr.FireSourcesSync();
                             FindData.m_LevelId = levelid;
                             FindData.m_LevelGUID = level_guid;
                             FindData.m_Position = curfire.gameObject.transform.position;
@@ -9030,7 +4277,7 @@ namespace SkyCoop
                                     if (gear)
                                     {
                                         GearItem gearItem = gear.GetComponent<GearItem>();
-                                        if(gearItem)
+                                        if (gearItem)
                                         {
                                             AddFuelNoSync(curfire, gearItem);
                                         }
@@ -9044,11 +4291,11 @@ namespace SkyCoop
             }
         }
 
-        public static List<FireSourcesSync> FireSources = new List<FireSourcesSync>();
-        public static void MayAddFireSources(FireSourcesSync fire)
+        public static List<DataStr.FireSourcesSync> FireSources = new List<DataStr.FireSourcesSync>();
+        public static void MayAddFireSources(DataStr.FireSourcesSync fire)
         {
             //MelonLogger.Msg("[FireSourcesSync] MayAddFireSources "+ fire.m_LevelId+" "+ fire.m_LevelGUID);
-            if(fire.m_LevelId != levelid || fire.m_LevelGUID != level_guid)
+            if (fire.m_LevelId != levelid || fire.m_LevelGUID != level_guid)
             {
                 return;
             }
@@ -9057,25 +4304,25 @@ namespace SkyCoop
             fire.m_RemoveIn = 5;
             for (int i = 0; i < FireSources.Count; i++)
             {
-                FireSourcesSync currFire = FireSources[i];
+                DataStr.FireSourcesSync currFire = FireSources[i];
                 //MelonLogger.Msg("FireSources["+i+ "] m_LevelId" + currFire.m_LevelId + " m_LevelGUID "+ currFire.m_LevelGUID + " m_Position" + currFire.m_Position.x+" "+ currFire.m_Position.y+" "+ currFire.m_Position.z);
                 bool UpdateCurr = false;
                 if (currFire.m_LevelId == fire.m_LevelId && currFire.m_LevelGUID == fire.m_LevelGUID)
                 {
-                    if(currFire.m_Guid != "")
+                    if (currFire.m_Guid != "")
                     {
-                        if(currFire.m_Guid == fire.m_Guid)
+                        if (currFire.m_Guid == fire.m_Guid)
                         {
                             UpdateCurr = true;
                         }
-                    }else{
-                        if(currFire.m_Position == fire.m_Position)
+                    } else {
+                        if (currFire.m_Position == fire.m_Position)
                         {
                             UpdateCurr = true;
                         }
                     }
                 }
-                if(UpdateCurr == true)
+                if (UpdateCurr == true)
                 {
                     FireSources[i].m_Fuel = fire.m_Fuel;
                     FireSources[i].m_RemoveIn = fire.m_RemoveIn;
@@ -9087,7 +4334,7 @@ namespace SkyCoop
 
         public static void SendMyFire(Fire fireTosend, string fuel = "")
         {
-            if(ServerConfig.m_FireSync == 0)
+            if (ServerConfig.m_FireSync == 0)
             {
                 return;
             }
@@ -9098,10 +4345,10 @@ namespace SkyCoop
 
 
             //MelonLogger.Msg("SendMyFire");
-            FireSourcesSync SendData = new FireSourcesSync();
+            DataStr.FireSourcesSync SendData = new DataStr.FireSourcesSync();
             SendData.m_Fuel = fireTosend.GetRemainingLifeTimeSeconds();
             SendData.m_Guid = "";
-            if(fireTosend.gameObject.GetComponent<ObjectGuid>() != null)
+            if (fireTosend.gameObject.GetComponent<ObjectGuid>() != null)
             {
                 SendData.m_Guid = fireTosend.gameObject.GetComponent<ObjectGuid>().Get();
             }
@@ -9110,22 +4357,22 @@ namespace SkyCoop
             SendData.m_Position = fireTosend.gameObject.transform.position;
             SendData.m_Rotation = fireTosend.gameObject.transform.rotation;
 
-            if(fireTosend.m_Campfire == null)
+            if (fireTosend.m_Campfire == null)
             {
                 SendData.m_IsCampfire = false;
-            }else{
+            } else {
                 SendData.m_IsCampfire = true;
                 SendData.m_Guid = "";
             }
 
-            if(fuel == "")
+            if (fuel == "")
             {
                 if (sendMyPosition == true)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.FIRE))
                     {
                         _packet.Write(SendData);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
 
@@ -9133,14 +4380,14 @@ namespace SkyCoop
                 {
                     ServerSend.FIRE(0, SendData, true);
                 }
-            }else{
+            } else {
                 SendData.m_FuelName = fuel;
                 if (sendMyPosition == true)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.FIREFUEL))
                     {
                         _packet.Write(SendData);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
 
@@ -9153,6 +4400,7 @@ namespace SkyCoop
 
         public static bool DsServerIsUp = false;
         public static int SecondsWithoutSaving = 0;
+        public static int SecondsWithoutRestart = 0;
         public static bool NeedApplyAutoCMDs = false;
         public static bool AutoHostWhenLoaded = false;
         public static int ApplyAutoThingsAfterLoaed = 0;
@@ -9164,11 +4412,11 @@ namespace SkyCoop
         {
             // First checking if I am myself close to this point, if so end up this very quick, without even checking other.
             float MyDis = Vector3.Distance(GameManager.GetPlayerTransform().position, point);
-            if(MyDis <= minimalDistance)
+            if (MyDis <= minimalDistance)
             {
-                return instance.myId;
+                return ClientUser.myId;
             }
-            
+
             for (int i = 0; i < playersData.Count; i++)
             {
                 if (playersData[i] != null)
@@ -9202,7 +4450,7 @@ namespace SkyCoop
                     if (playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid)
                     {
                         float plDis = Vector3.Distance(MyMod.playersData[i].m_Position, point);
-                        if(plDis < result)
+                        if (plDis < result)
                         {
                             result = plDis;
                         }
@@ -9212,242 +4460,6 @@ namespace SkyCoop
             return result;
         }
 
-        public class AnimalsSpawnsShort
-        {
-            public Vector3 m_Position = new Vector3(0,0,0);
-            public SpawnRegion m_SPR = null;
-            public string m_GUID = "";
-
-            public AnimalsSpawnsShort(SpawnRegion spR)
-            {
-                m_Position = spR.m_Center;
-                m_SPR = spR;
-                m_GUID = spR.GetComponent<ObjectGuid>().Get();
-            }
-        }
-
-        public static void ProcessSleep(int Sleepers, int SleepersNeed, int Deads, int FinalHours)
-        {
-            bool EveryOneIsSleeping = false;
-            string SleepersText = "Players sleep " + Sleepers + "/" + SleepersNeed;
-            if (WaitForSleepLable != null)
-            {
-                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP\n" + SleepersText;
-            }
-            if (Sleepers >= SleepersNeed && Deads < SleepersNeed)
-            {
-                EveryOneIsSleeping = true;
-            }
-
-            if (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true && EveryOneIsSleeping == true)
-            {
-                if (WaitForSleepLable != null)
-                {
-                    WaitForSleepLable.SetActive(false);
-                }
-                if (SleepingButtons != null)
-                {
-                    SleepingButtons.SetActive(true);
-                }
-                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Rest != null)
-                {
-                    InterfaceManager.m_Panel_Rest.OnRest();
-                }
-            }
-
-            if (iAmHost == true)
-            {
-                if (EveryOneIsSleeping == true)
-                {
-                    if ((GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true || IsDead == true) && IsCycleSkiping == false)
-                    {
-                        IsCycleSkiping = true;
-                        int Skip = FinalHours;
-
-                        for (int i = 0; i < playersData.Count; i++)
-                        {
-                            if (playersData[i] != null)
-                            {
-                                playersData[i].m_SleepHours = 0;
-                            }
-                        }
-                        if (Skip > 0)
-                        {
-                            if (IsDead == true)
-                            {
-                                SimpleSleepWithNoSleep(Skip);
-                            }
-                            SkipRTTime(Skip);
-                        }
-                    }
-                }else{
-                    IsCycleSkiping = false;
-                }
-            }
-        }
-
-
-        public static Dictionary<int, bool> LoadersList = new Dictionary<int, bool>();
-
-        public static void AddLoadingClient(int clientID)
-        {
-            if (!LoadersList.ContainsKey(clientID))
-            {
-                LoadersList.Add(clientID, true);
-                MelonLogger.Msg("Client "+ clientID+" loading scene...");
-            }
-        }
-        public static void RemoveLoadingClient(int clientID)
-        {
-            LoadersList.Remove(clientID);
-            MelonLogger.Msg("Client " + clientID + " finished loading scene");
-        }
-        public static bool ClientIsLoading(int clientID)
-        {
-            return LoadersList.ContainsKey(clientID);
-        }
-
-        public static List<MultiPlayerClientStatus> SleepTrackerAndTimeOutAndAnimalControllers()
-        {
-            List<MultiPlayerClientStatus> L = new List<MultiPlayerClientStatus>();
-            using (Packet _packet = new Packet((int)ServerPackets.PLAYERSSTATUS))
-            {
-                int ReadCount = 0;
-                int Sleepers = 0;
-                int Deads = 0;
-                List<int> SleepingHours = new List<int>();
-                SleepingHours.Add(MyCycleSkip);
-                if (Application.isBatchMode == false)
-                {
-                    ReadCount = ReadCount + 1;
-                    MultiPlayerClientStatus me = new MyMod.MultiPlayerClientStatus();
-                    me.m_ID = 0;
-                    me.m_Name = MyChatName;
-                    me.m_Sleep = IsSleeping;
-                    if (me.m_Sleep || me.m_Dead)
-                    {
-                        Sleepers = Sleepers + 1;
-                    }
-                    if (me.m_Dead)
-                    {
-                        Deads = Deads + 1;
-                    }
-                    me.m_Dead = IsDead;
-                    L.Add(me);
-                }
-
-                bool shouldBeControllerME = false;
-                if (IsDead == false)
-                {
-                    shouldBeControllerME = ShouldbeAnimalController(MyTicksOnScene, levelid, 0);
-                }else{
-                    shouldBeControllerME = false;
-                }
-
-                if (shouldBeControllerME != AnimalsController)
-                {
-                    AnimalsController = shouldBeControllerME;
-                    DisableOriginalAnimalSpawns();
-                    if (AnimalsController)
-                    {
-                        SwitchToAnimalController();
-                    }
-                }
-                for (int i = 1; i <= Server.MaxPlayers; i++)
-                {
-                    if (Server.clients[i] != null && Server.clients[i].IsBusy() == true)
-                    {
-                        ReadCount = ReadCount + 1;
-                        MultiPlayerClientStatus other = new MultiPlayerClientStatus();
-                        other.m_ID = i;
-                        other.m_Name = playersData[i].m_Name;
-                        if (playersData[i].m_SleepHours > 0)
-                        {
-                            other.m_Sleep = true;
-                        }else{
-                            other.m_Sleep = false;
-                        }
-                        if (playersData[i].m_AnimState == "Knock")
-                        {
-                            other.m_Dead = true;
-                        }else{
-                            other.m_Dead = false;
-                        }
-
-                        if(other.m_Sleep || other.m_Dead)
-                        {
-                            Sleepers = Sleepers + 1;
-                        }
-                        if (other.m_Dead)
-                        {
-                            Deads = Deads + 1;
-                        }
-                        if(iAmHost == true)
-                        {
-                            SleepingHours.Add(playersData[other.m_ID].m_SleepHours);
-                        }
-                        L.Add(other);
-
-
-                        int TimeOutForClient = TimeOutSeconds;
-                        if (ClientIsLoading(i))
-                        {
-                            TimeOutForClient = TimeOutSecondsForLoaders;
-                        }
-
-                        Server.clients[i].TimeOutTime = Server.clients[i].TimeOutTime + 1;
-                        if (Server.clients[i].TimeOutTime > 15)
-                        {
-                            MelonLogger.Msg("Client " + i + " no responce time " + Server.clients[i].TimeOutTime);
-                        }
-                        if (Server.clients[i].TimeOutTime > TimeOutForClient)
-                        {
-                            Server.clients[i].TimeOutTime = 0;
-                            MyMod.MultiplayerChatMessage DisconnectMessage = new MyMod.MultiplayerChatMessage();
-                            DisconnectMessage.m_Type = 0;
-                            DisconnectMessage.m_By = playersData[i].m_Name;
-                            DisconnectMessage.m_Message = playersData[i].m_Name + " disconnected!";
-                            SendMessageToChat(DisconnectMessage, true);
-                            ResetDataForSlot(i);
-                            MelonLogger.Msg("Client " + i + " processing disconnect");
-                            Server.clients[i].udp.Disconnect();
-                        }
-                        if (playersData[i] != null)
-                        {
-                            if (Server.clients[i].IsBusy() == true)
-                            {
-                                bool shouldBeController = false;
-                                if (playersData[i].m_AnimState != "Knock")
-                                {
-                                    shouldBeController = ShouldbeAnimalController(playersData[i].m_TicksOnScene, playersData[i].m_Levelid, i);
-                                }else{
-                                    shouldBeController = false;
-                                }
-                                ServerSend.ANIMALROLE(i, shouldBeController);
-                            }
-                        }
-                    }
-                }
-
-                _packet.Write(ReadCount);
-                for (int i = 0; i < L.Count; i++)
-                {
-                    _packet.Write(L[i]);
-                }
-                
-                ServerSend.SendUDPDataToAll(_packet);
-                PlayersOnServer = ReadCount;
-                SleepingHours.Sort();
-                int Skip = 0;
-                if (SleepingHours.Count > 0)
-                {
-                    Skip = SleepingHours[SleepingHours.Count - 1];
-                }
-                ProcessSleep(Sleepers, ReadCount, Deads, Skip);
-            }
-            return L;
-        }
-
         public static float LastResponceTime = 0;
 
         public static int GetAnimalCount()
@@ -9455,36 +4467,76 @@ namespace SkyCoop
             return BaseAiManager.m_BaseAis.Count + ActorsList.Count;
         }
 
+        public static bool RebootSceneAfterSave = false;
+        public static bool CloseGameOnNextDSSave = false;
+        public static bool NoDsSaves = false;
+
         public static void EverySecond()
         {
-            if(DsServerIsUp == true)
+            if (DsServerIsUp == true)
             {
-                SecondsWithoutSaving = SecondsWithoutSaving + 1;
-                if(SecondsWithoutSaving > 300)
+                SecondsWithoutSaving++;
+
+                if(RestartPerioud != -1)
+                {
+                    SecondsWithoutRestart++;
+                }
+                
+                if (SecondsWithoutSaving > DsSavePerioud)
                 {
                     SecondsWithoutSaving = 0;
-                    ConsoleManager.CONSOLE_save();
-                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save 5 minutes later!");
+
+                    if (!CloseGameOnNextDSSave)
+                    {
+                        if (RestartPerioud != -1 && SecondsWithoutRestart >= RestartPerioud)
+                        {
+                            CloseGameOnNextDSSave = true;
+                            DataStr.MultiplayerChatMessage MSG = new DataStr.MultiplayerChatMessage();
+                            MSG.m_Type = 0;
+                            MSG.m_By = "";
+                            MSG.m_Message = "[SERVER] Server reboot in 30 seconds!";
+                            Shared.SendMessageToChat(MSG, true);
+                            DataStr.MultiplayerChatMessage MSG2 = new DataStr.MultiplayerChatMessage();
+                            MSG2.m_Type = 0;
+                            MSG2.m_By = "";
+                            MSG2.m_Message = "[SERVER] You can stay on server to being auto-reconnect, once server is up again. Or you can quit to process auto-save.";
+                            Shared.SendMessageToChat(MSG, true);
+                            Shared.SendMessageToChat(MSG2, true);
+                            DsSavePerioud = 30;
+                        }
+
+                        if (!NoDsSaves)
+                        {
+                            GameManager.ForceSaveGame();
+                            MelonLogger.Msg(Magenta, "[Dedicated server] Server saved! Next save in " + DsSavePerioud + " seconds later!");
+                        }
+                    }else{
+                        MelonLogger.Msg(Magenta, "[Dedicated server] Restarting...");
+                        ServerSend.RESTART();
+                        QuitWithoutSaving = true;
+                        Application.Quit();
+                    }
                 }
             }
+            if (sendMyPosition == true)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.KEEPITALIVE))
+                {
+                    _packet.Write(true);
+                    SendUDPData(_packet);
+                }
+            }
+
             if (CurrentCustomChalleng.m_Started)
             {
                 CustomChallengeUpdate();
-            }
-            if (iAmHost)
-            {
-                UpdateStunnedRabbits();
-
-                if(CurrentCustomChalleng.m_Started)
+                if (iAmHost == true)
                 {
-                    if(iAmHost == true)
+                    if (CurrentCustomChalleng.m_Time > 0)
                     {
-                        if (CurrentCustomChalleng.m_Time > 0)
-                        {
-                            CurrentCustomChalleng.m_Time--;
-                        }
-                        ServerSend.CHALLENGEUPDATE(CurrentCustomChalleng);
+                        CurrentCustomChalleng.m_Time--;
                     }
+                    ServerSend.CHALLENGEUPDATE(CurrentCustomChalleng);
                 }
             }
             if (MyLobby != "")
@@ -9496,72 +4548,77 @@ namespace SkyCoop
             {
                 RegularUpdateSeconds = RegularUpdateSeconds - 1;
 
-                if(RegularUpdateSeconds == 0)
+                if (RegularUpdateSeconds == 0)
                 {
                     RegularUpdateSeconds = 7;
                     SendRegularAlignData();
                 }
             }
-            if(SendAfterLoadingFinished > 0)
+            if (SendAfterLoadingFinished > 0)
             {
                 SendAfterLoadingFinished = SendAfterLoadingFinished - 1;
-                if(SendAfterLoadingFinished == 0)
+                if (SendAfterLoadingFinished == 0)
                 {
                     FinishedLoading();
                 }
             }
-            if(SecondsLeftUntilWorryAboutPacket != -1)
+            if (SecondsLeftUntilWorryAboutPacket != -1)
             {
-                if(SecondsLeftUntilWorryAboutPacket > 0)
+                if (SecondsLeftUntilWorryAboutPacket > 0)
                 {
                     SecondsLeftUntilWorryAboutPacket = SecondsLeftUntilWorryAboutPacket - 1;
-                    if(SecondsLeftUntilWorryAboutPacket == 0)
+                    if (SecondsLeftUntilWorryAboutPacket == 0)
                     {
                         RepeatLastRequest();
                     }
                 }
             }
-            if(TryMakeLobbyAgain > 0)
+            if (TryMakeLobbyAgain > 0)
             {
                 TryMakeLobbyAgain = TryMakeLobbyAgain - 1;
-                if(TryMakeLobbyAgain == 0)
+                if (TryMakeLobbyAgain == 0 && MyLobby == "")
                 {
                     SteamConnect.Main.MakeLobby();
                 }
             }
-            PlayersUpdateManager();
-            for (int i = 0; i < FireSources.Count; i++)
-            {
-                if(FireSources[i] != null)
-                {
-                    if(FireSources[i].m_RemoveIn > 0)
-                    {
-                        FireSources[i].m_RemoveIn = FireSources[i].m_RemoveIn - 1;
 
-                        if(FireSources[i].m_LevelId == levelid && FireSources[i].m_LevelGUID == level_guid)
+            if (!DedicatedServerAppMode)
+            {
+                PlayersUpdateManager();
+                for (int i = 0; i < FireSources.Count; i++)
+                {
+                    if (FireSources[i] != null)
+                    {
+                        if (FireSources[i].m_RemoveIn > 0)
                         {
-                            ApplyOtherFireSource(FireSources[i]);
+                            FireSources[i].m_RemoveIn = FireSources[i].m_RemoveIn - 1;
+
+                            if (FireSources[i].m_LevelId == levelid && FireSources[i].m_LevelGUID == level_guid)
+                            {
+                                ApplyOtherFireSource(FireSources[i]);
+                            }
+                        }else{
+                            FireSources.RemoveAt(i);
                         }
-                    }else{
-                        FireSources.RemoveAt(i);
+                    }
+                }
+                if (FireManager.m_Fires.Count > 0)
+                {
+                    for (int i = 0; i < FireManager.m_Fires.Count; i++)
+                    {
+                        Fire fireCur = FireManager.m_Fires[i];
+                        if (fireCur != null)
+                        {
+                            if (fireCur.m_FireState == FireState.FullBurn && fireCur.m_StartedByPlayer == true)
+                            {
+                                SendMyFire(fireCur);
+                            }
+                        }
                     }
                 }
             }
 
-            if (FireManager.m_Fires.Count > 0)
-            {
-                for (int i = 0; i < FireManager.m_Fires.Count; i++)
-                {
-                    Fire fireCur = FireManager.m_Fires[i];
-                    if (fireCur != null)
-                    {
-                        if (fireCur.m_FireState == FireState.FullBurn && fireCur.m_StartedByPlayer == true)
-                        {
-                            SendMyFire(fireCur);
-                        }
-                    }
-                }
-            }
+           
             if (level_name == "MainMenu")
             {
                 if (NeedConnectAfterLoad > 0)
@@ -9576,19 +4633,19 @@ namespace SkyCoop
                         }
                     }
                 }
-                if(NeedLoadSaveAfterLoad > 0)
+                if (NeedLoadSaveAfterLoad > 0)
                 {
                     NeedLoadSaveAfterLoad = NeedLoadSaveAfterLoad - 1;
-                    if(NeedLoadSaveAfterLoad == 0)
+                    if (NeedLoadSaveAfterLoad == 0)
                     {
                         NeedLoadSaveAfterLoad = -1;
                         ForceLoadSlotForPlaying(AutoStartSlot);
                     }
                 }
-                if(StartDSAfterLoad > 0)
+                if (StartDSAfterLoad > 0)
                 {
                     StartDSAfterLoad = StartDSAfterLoad - 1;
-                    if(StartDSAfterLoad == 0)
+                    if (StartDSAfterLoad == 0)
                     {
                         StartDSAfterLoad = -1;
                         StartDedicatedServer();
@@ -9596,7 +4653,7 @@ namespace SkyCoop
                 }
             }
 
-            if (DsServerIsUp && Application.isBatchMode)
+            if (DsServerIsUp && DedicatedServerAppMode)
             {
                 levelid = 0;
                 level_guid = "null";
@@ -9604,45 +4661,56 @@ namespace SkyCoop
 
             if (level_name != "Empty" && level_name != "Boot" && level_name != "MainMenu")
             {
-                //MelonLogger.Msg("Trying call UpdateMyClothing");
-                UpdateMyClothing();
-                ApplyOpenables();
 
-                if (Application.isBatchMode && DsServerIsUp == false)
+                if (DedicatedServerAppMode)
                 {
-                    DsServerIsUp = true;
-
-                    if (SetP2PToLobbyForDSAfterLoad)
+                    if(DsServerIsUp == false)
                     {
-                        SetP2PToLobbyForDSAfterLoad = false;
-                        FinishStartingDsServer();
+                        DsServerIsUp = true;
+
+                        if (SetP2PToLobbyForDSAfterLoad)
+                        {
+                            SetP2PToLobbyForDSAfterLoad = false;
+                            if(MyLobby != "")
+                            {
+                                FinishStartingDsServer();
+                            }
+                        }
+                        if (HostUDDSAfterLoad)
+                        {
+                            HostUDDSAfterLoad = false;
+                            Shared.HostAServer(PortForDSLoad);
+                            MelonLogger.Msg(Magenta, "[Dedicated server] Server is ready! Have fun!");
+                        }
                     }
-                    MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server is ready! Have fun!");
+                }else{
+                    UpdateMyClothing();
+                    ApplyOpenables();
                 }
 
                 if (ApplyAutoThingsAfterLoaed == 0 && (NeedApplyAutoCMDs == true || AutoHostWhenLoaded == true))
                 {
-                    if(NeedApplyAutoCMDs == true || AutoHostWhenLoaded == true)
+                    if (NeedApplyAutoCMDs == true || AutoHostWhenLoaded == true)
                     {
-                        MelonLogger.Msg(ConsoleColor.Magenta, "[Start-ups] Going to apply some parameters after load save");
+                        MelonLogger.Msg(Magenta, "[Start-ups] Going to apply some parameters after load save");
                     }
-                    
+
                     ApplyAutoThingsAfterLoaed = 3;
                 }
                 if (ApplyAutoThingsAfterLoaed > 0)
                 {
                     ApplyAutoThingsAfterLoaed = ApplyAutoThingsAfterLoaed - 1;
-                    if(ApplyAutoThingsAfterLoaed == 0)
+                    if (ApplyAutoThingsAfterLoaed == 0)
                     {
                         if (NeedApplyAutoCMDs == true)
                         {
                             NeedApplyAutoCMDs = false;
                             if (AutoCMDs.Count > 0)
                             {
-                                MelonLogger.Msg(ConsoleColor.Magenta, "[-cmd] Going to apply auto commands...");
+                                MelonLogger.Msg(Magenta, "[-cmd] Going to apply auto commands...");
                                 for (int i = 0; i < AutoCMDs.Count; i++)
                                 {
-                                    MelonLogger.Msg(ConsoleColor.Magenta, "[-cmd] " + AutoCMDs[i]);
+                                    MelonLogger.Msg(Magenta, "[-cmd] " + AutoCMDs[i]);
                                     uConsole.RunCommandSilent(AutoCMDs[i]);
                                 }
                             }
@@ -9650,51 +4718,19 @@ namespace SkyCoop
                         if (AutoHostWhenLoaded == true)
                         {
                             AutoHostWhenLoaded = false;
-                            MelonLogger.Msg(ConsoleColor.Magenta, "[-host] Going to start server with using server.json");
+                            MelonLogger.Msg(Magenta, "[-host] Going to start server with using server.json");
                             StartDedicatedServer(false);
                         }
                     }
                 }
 
-                if(UpdateLootedContainers > 0)
-                {
-                    UpdateLootedContainers = UpdateLootedContainers - 1;
-                    if(UpdateLootedContainers == 0)
-                    {
-                        UpdateLootedContainers = -1;
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply looted containers");
-                        ApplyLootedContainers();
-                    }
-                }
-
-                if (UpdatePickedGears > 0)
-                {
-                    UpdatePickedGears = UpdatePickedGears - 1;
-                    if (UpdatePickedGears == 0)
-                    {
-                        UpdatePickedGears = -1;
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply picked gears");
-                        DestoryPickedGears();
-                    }
-                }
-
-                if(UpdatePickedPlants > 0)
-                {
-                    UpdatePickedPlants = UpdatePickedPlants - 1;
-                    if(UpdatePickedPlants == 0)
-                    {
-                        UpdatePickedPlants = -1;
-                        RemoveHarvastedPlants();
-                    }
-                }
-
-                if(UpdateSnowshelters > 0)
+                if (UpdateSnowshelters > 0)
                 {
                     UpdateSnowshelters = UpdateSnowshelters - 1;
-                    if(UpdateSnowshelters == 0)
+                    if (UpdateSnowshelters == 0)
                     {
                         UpdateSnowshelters = -1;
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply all showshelters");
+                        //MelonLogger.Msg(Blue, "Apply all showshelters");
                         LoadAllSnowSheltersByOther();
                     }
                 }
@@ -9702,13 +4738,12 @@ namespace SkyCoop
                 if (UpdateRopesAndFurns > 0)
                 {
                     UpdateRopesAndFurns = UpdateRopesAndFurns - 1;
-                    //MelonLogger.Msg(ConsoleColor.Blue, "Apply other campfires");
+                    //MelonLogger.Msg(Blue, "Apply other campfires");
                     ApplyOtherCampfires = true;
 
-                    if(UpdateRopesAndFurns == 0)
+                    if (UpdateRopesAndFurns == 0)
                     {
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply ropes and furns");
-                        DestoryBrokenFurniture();
+                        //MelonLogger.Msg(Blue, "Apply ropes and furns");
                         UpdateDeployedRopes();
                     }
                 }
@@ -9718,38 +4753,31 @@ namespace SkyCoop
 
                     if (UpdateCampfires == 0)
                     {
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply other campfires");
+                        //MelonLogger.Msg(Blue, "Apply other campfires");
                         ApplyOtherCampfires = true;
                     }
                 }
-                if(UpdateEverything > 0)
+                if (UpdateEverything > 0)
                 {
                     UpdateEverything = UpdateEverything - 1;
-                    if(UpdateEverything == 0)
+                    if (UpdateEverything == 0)
                     {
                         UpdateEverything = -1;
                         Pathes.LoadEverything();
                     }
                 }
-                if (RemoveAttachedObjectsAfterSecond == true)
+                if (RemoveAttachedGears > 0)
                 {
-                    DestoryPickedGears();
-                    RemoveAttachedObjectsAfterSecond = false;
-                }
-                for (int n = 0; n < RecentlyPickedGears.Count; n++)
-                {
-                    PickedGearSync currGear = RecentlyPickedGears[n];
-                    if (currGear != null)
+                    RemoveAttachedGears--;
+                    if (RemoveAttachedGears == 0)
                     {
-                        if (currGear.m_Recently > 0)
+                        BakePreSpawnedGearsList();
+                        foreach (DataStr.PickedGearSync gear in PickedGearsBackup)
                         {
-                            currGear.m_Recently = currGear.m_Recently - 1;
+                            Shared.AddPickedGear(gear.m_Spawn, gear.m_LevelID, gear.m_LevelGUID, -1, gear.m_MyInstanceID, gear.m_GearName, false);
                         }
-                        if (currGear.m_Recently <= 0)
-                        {
-                            RecentlyPickedGears.RemoveAt(n);
-                        }
-                    }
+                        PickedGearsBackup.Clear();
+                    }                    
                 }
 
                 if (GameManager.m_Thirst != null)
@@ -9758,7 +4786,7 @@ namespace SkyCoop
                     if (th.m_LitersLeftToDrink > 0)
                     {
                         IsDrinking = true;
-                    }else{
+                    } else {
                         IsDrinking = false;
                     }
                     if (PreviousIsDrinking != IsDrinking)
@@ -9768,7 +4796,7 @@ namespace SkyCoop
                         {
                             MelonLogger.Msg("Drinking");
                             SendConsume(true);
-                        }else{
+                        } else {
                             MelonLogger.Msg("Finished Drinking");
                             SendStopConsume();
                         }
@@ -9780,7 +4808,7 @@ namespace SkyCoop
                     if (hun.m_CaloriesLeftToAdd > 0)
                     {
                         IsEating = true;
-                    }else{
+                    } else {
                         IsEating = false;
                     }
                     if (PreviousIsEating != IsEating)
@@ -9788,12 +4816,12 @@ namespace SkyCoop
                         PreviousIsEating = IsEating;
                         if (IsEating == true)
                         {
-                            if(hun.m_FoodItemProvidingCalories != null)
+                            if (hun.m_FoodItemProvidingCalories != null)
                             {
                                 MelonLogger.Msg("Eating " + hun.m_FoodItemProvidingCalories.m_GearItem.m_GearName);
                                 SendConsume(hun.m_FoodItemProvidingCalories.m_IsDrink);
                             }
-                        }else{
+                        } else {
                             MelonLogger.Msg("Finished Eating");
                             SendStopConsume();
                         }
@@ -9809,26 +4837,20 @@ namespace SkyCoop
                 }
             }
 
-            if(chatInput != null && chatInput.gameObject.activeSelf == false && ChatObject != null && ChatObject.activeSelf == true)
+            if (chatInput != null && chatInput.gameObject.activeSelf == false && ChatObject != null && ChatObject.activeSelf == true)
             {
-                HideChatTimer = HideChatTimer-1;
-                if(HideChatTimer <= 0)
+                HideChatTimer = HideChatTimer - 1;
+                if (HideChatTimer <= 0)
                 {
                     ChatObject.SetActive(false);
                 }
             }
 
-            if (iAmHost == true)
-            {
-                List<MultiPlayerClientStatus> PlayersListDat = SleepTrackerAndTimeOutAndAnimalControllers();
-                UpdatePlayerStatusMenu(PlayersListDat);
-            }
-
-            if (LastConnectedIp != "" || iAmHost == true)
+            if (InOnline())
             {
                 int character = 0;
 
-                if(GameManager.m_PlayerManager  != null)
+                if (GameManager.m_PlayerManager != null)
                 {
                     character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
                 }
@@ -9840,71 +4862,63 @@ namespace SkyCoop
 
                 if (sendMyPosition == true)
                 {
-                    if(LastResponceTime == 0)
+                    if (LastResponceTime == 0)
                     {
                         LastResponceTime = Time.time;
-                    }else{
+                    } else {
                         //double Ping = Math.Round(Time.time - MyMod.LastResponceTime, 2) * 100;
                         //MelonLogger.Msg("Ping " + Ping + "ms");
                     }
                     using (Packet _packet = new Packet((int)ClientPackets.SELECTEDCHARACTER))
                     {
                         _packet.Write(character);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
-            }
-            if (iAmHost == true && ServerHandle.OverflowAnimalsOnConnectTimer > 0)
-            {
-                MaxAnimalsSyncNeed = MaxAnimalsSyncCountOnConnect;
-                ServerHandle.OverflowAnimalsOnConnectTimer = ServerHandle.OverflowAnimalsOnConnectTimer - 1;
-            }else{
-                MaxAnimalsSyncNeed = MaxAnimalsSyncCount;
             }
         }
 
         private static void EveryInGameMinute()
         {
-            OverridedMinutes = OverridedMinutes + 1;
-
-            if (iAmHost == true) 
+            if (iAmHost == true)
             {
-                MinutesFromStartServer = MinutesFromStartServer + 1;
-                MPSaveManager.SaveRecentStuff();
-            }
-
-            if (OverridedMinutes > 59)
-            {
-                OverridedMinutes = 0;
-                OverridedHourse = OverridedHourse + 1;
-                PlayedHoursInOnline = PlayedHoursInOnline + 1;
-            }
-            if (OverridedHourse > 23)
-            {
-                OverridedHourse = 0;
-            }
-
-            OveridedTime = OverridedHourse + ":" + OverridedMinutes;
-
-            ServerHandle.gametime = OveridedTime;
-
-            using (Packet _packet = new Packet((int)ServerPackets.GAMETIME))
-            {
-                ServerSend.GAMETIME(OveridedTime);
-            }
-
-            if (level_name != "Boot" && level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null)
-            {
-                using (Packet _packet = new Packet((int)ServerPackets.SYNCWEATHER))
+                if (IsCycleSkiping == true && GameManager.m_PlayerManager != null)
                 {
-                    WeatherProxies weather = new WeatherProxies();
-                    weather.m_WeatherProxy = GameManager.GetWeatherComponent().Serialize();
-                    weather.m_WeatherTransitionProxy = GameManager.GetWeatherTransitionComponent().Serialize();
-                    weather.m_WindProxy = GameManager.GetWindComponent().Serialize();
+                    if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == false || IsDead == true)
+                    {
+                        IsCycleSkiping = false;
+                    }
+                }
 
-                    ServerSend.SYNCWEATHER(1, weather);
+                //if (level_name != "Boot" && level_name != "Empty" && GameManager.m_Wind != null && GameManager.m_Wind.m_ActiveSettings != null && GameManager.m_Weather != null && GameManager.m_WeatherTransition != null)
+                //{
+                //    DataStr.WeatherProxies weather = new DataStr.WeatherProxies();
+                //    weather.m_WeatherProxy = GameManager.GetWeatherComponent().Serialize();
+                //    weather.m_WeatherTransitionProxy = GameManager.GetWeatherTransitionComponent().Serialize();
+                //    weather.m_WindProxy = GameManager.GetWindComponent().Serialize();
+                //    ServerSend.SYNCWEATHER(weather);
+
+                //    //MPSaveManager.SaveJsonSnapshot("Weather", weather.m_WeatherProxy);
+                //    //MPSaveManager.SaveJsonSnapshot("WeatherTransition", weather.m_WeatherTransitionProxy);
+                //    //MPSaveManager.SaveJsonSnapshot("Wind", weather.m_WindProxy);
+                //}
+            }
+            if (TrackableDroppedGearsObjs.Count > 0)
+            {
+                foreach (var item in TrackableDroppedGearsObjs)
+                {
+                    if (item.Value && item.Value.GetComponent<Comps.DroppedGearDummy>())
+                    {
+                        Comps.DroppedGearDummy DGD = item.Value.GetComponent<Comps.DroppedGearDummy>();
+                        int minutesLeft = DGD.m_Extra.m_GoalTime - MinutesFromStartServer;
+                        if (minutesLeft <= 0)
+                        {
+                            item.Value.transform.GetChild(0).gameObject.SetActive(false);
+                        }
+                    }
                 }
             }
+            MaySpawnRefMan();
         }
 
         public static float nextActionTime = 0.0f;
@@ -9913,24 +4927,6 @@ namespace SkyCoop
         public static float periodAniamls = 0.3f;
         public static float nextActionTimeSecond = 0.0f;
         public static float periodSecond = 1f;
-
-        public static bool IsShatalkerMode() // This is darlkwalker mode active.
-        {
-            if (IamShatalker == true || InDarkWalkerMode == true) // If you are darkwalker
-            {
-                return true;
-            } else
-            {
-                if (ShatalkerModeClient == false && ServerHandle.DarkShatalkerMode == false) // If other player host/client is darkwalker
-                {
-                    return false;
-                }
-                else
-                {
-                    return true;
-                }
-            }
-        }
 
         public static bool InOnline() // If you are host or client
         {
@@ -9964,15 +4960,15 @@ namespace SkyCoop
                 if (_name.StartsWith("WILDLIFE_Wolf_Aurora"))
                 {
                     return "WILDLIFE_Wolf_Aurora";
-                }else{
+                } else {
                     if (_name.StartsWith("WILDLIFE_Wolf_grey_aurora"))
                     {
                         return "WILDLIFE_Wolf_grey_aurora";
-                    }else{
+                    } else {
                         if (_name.StartsWith("WILDLIFE_Wolf_grey"))
                         {
                             return "WILDLIFE_Wolf_grey";
-                        }else{
+                        } else {
                             return "WILDLIFE_Wolf";
                         }
                     }
@@ -9984,7 +4980,7 @@ namespace SkyCoop
                 if (_name.StartsWith("WILDLIFE_Bear_Aurora"))
                 {
                     return "WILDLIFE_Bear_Aurora";
-                }else{
+                } else {
                     return "WILDLIFE_Bear";
                 }
             }
@@ -10001,76 +4997,9 @@ namespace SkyCoop
             {
                 return "WILDLIFE_Moose";
             }
-            else{
+            else {
                 return "WILDLIFE_Wolf";
             }
-        }
-
-        public static Animator RemoveAnimalComponents(GameObject animal)
-        {
-            if (animal == null)
-            {
-                return null;
-            }
-            if (animal.transform.parent != null && animal.transform.parent.GetComponent<MoveAgent>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.transform.parent.GetComponent<MoveAgent>());
-            }
-            if (animal.transform.parent != null && animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.transform.parent.GetComponent<UnityEngine.AI.NavMeshAgent>());
-            }
-            if (animal.GetComponent<AiTarget>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiTarget>());
-            }
-            if (animal.GetComponent<AiWolf>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiWolf>());
-            }
-            if (animal.GetComponent<AiStag>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiStag>());
-            }
-            if (animal.GetComponent<AiRabbit>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiRabbit>());
-            }
-            //MelonLogger.Msg("AiRabbit yahooo");
-            if (animal.GetComponent<AiMoose>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiMoose>());
-            }
-
-            if (animal.GetComponent<AiBear>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AiBear>());
-            }
-            if (animal.GetComponent<CharacterController>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<CharacterController>());
-            }
-            //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
-            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
-            }
-            //MelonLogger.Msg("Blackboard DA BECAUSE DA");
-            if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<TLDBehaviourTreeOwner>());
-            }
-            if(animal.GetComponent<AnimalUpdates>() != null)
-            {
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<AnimalUpdates>());
-            }
-            if (animal.GetComponent<BaseAi>() != null)
-            {
-                Animator anim = animal.GetComponent<BaseAi>().m_Animator;
-                UnityEngine.Object.DestroyImmediate(animal.GetComponent<BaseAi>());
-                return anim;
-            }
-            return null;
         }
 
         public static void MakeAnimalActive(GameObject animal, bool active)
@@ -10160,18 +5089,18 @@ namespace SkyCoop
                 animal.GetComponent<BaseAi>().enabled = active;
             }
         }
-        public static GameObject SpawnAnimalActor(string prefabName, Vector3 v3, Quaternion rot, string GUID, string RegionGUID, List<AnimalArrow> Arrows)
+        public static GameObject SpawnAnimalActor(string prefabName, Vector3 v3, Quaternion rot, string GUID, string RegionGUID, List<DataStr.AnimalArrow> Arrows)
         {
             GameObject reference = GetGearItemObject(prefabName);
 
             if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't create animal actor with prefab name "+ prefabName);
+                MelonLogger.Msg(Red, "Can't create animal actor with prefab name " + prefabName);
                 return null;
             }
 
             GameObject obj = UnityEngine.Object.Instantiate(reference, v3, rot);
-            AnimalActor act = obj.AddComponent<AnimalActor>();
+            Comps.AnimalActor act = obj.AddComponent<Comps.AnimalActor>();
             act.m_Animal = obj;
             act.m_Animator = RemoveAnimalComponents(obj);
             act.m_ToGo = v3;
@@ -10185,11 +5114,11 @@ namespace SkyCoop
                     componentsInChildren[index].enabled = false;
             }
 
-            if(obj.GetComponent<ObjectGuid>() == null)
+            if (obj.GetComponent<ObjectGuid>() == null)
             {
                 obj.AddComponent<ObjectGuid>();
                 obj.GetComponent<ObjectGuid>().Set(GUID);
-            }else{
+            } else {
                 obj.GetComponent<ObjectGuid>().Set(GUID);
             }
 
@@ -10197,82 +5126,98 @@ namespace SkyCoop
             {
                 ActorsList.Add(GUID, act);
             }
-            
+
             return obj;
         }
 
-        public static bool ShouldbeAnimalController(int _Ticks, int _Level, int _From)
+        public static void SpawnAnimalCorpse(string prefab, Vector3 v3, Quaternion rot, string GUID, string SpawnRegionGUID)
         {
-            if (playersData.Count < MaxPlayers)
+            MelonLogger.Msg("Going to spawn animal corpse " + GUID + " for Region " + SpawnRegionGUID);
+
+            GameObject reference = MyMod.GetGearItemObject(prefab);
+
+            if (reference == null)
             {
-                return false;
+                MelonLogger.Msg(Red, "Can't create animal body prefab name " + prefab);
+                return;
             }
-            int LastFoundTicks = 0;
-            int LastFoundID = -1;
-            for (int i = 0; i < MaxPlayers; i++)
+            GameObject oldObj = ObjectGuidManager.Lookup(GUID);
+            if (oldObj)
             {
-                if (_From != i)
+                if (oldObj.GetComponent<Comps.AnimalCorpseObject>() != null)
                 {
-                    int OtherPlayerLevel = 0;
-                    int OtherPlayerTicks = 0;
-                    bool ValidPlayer = false;
-                    
-                    if (i == 0)
-                    {
-                        OtherPlayerLevel = levelid;
-                        OtherPlayerTicks = MyTicksOnScene;
+                    MelonLogger.Msg("Corpse already exist, because been spawned myself");
+                    return;
+                } else
+                {
+                    MelonLogger.Msg("Replace original animal with corpse " + GUID);
 
-                        if(IsDead == false)
-                        {
-                            ValidPlayer = true;
-                        }else{
-                            ValidPlayer = false;
-                        }
-                    }else{
-                        OtherPlayerLevel = playersData[i].m_Levelid;
-                        OtherPlayerTicks = playersData[i].m_TicksOnScene;
-                        ValidPlayer = Server.clients[i].IsBusy();
-                        if (Server.clients[i].IsBusy() == true && playersData[i].m_AnimState != "Knock")
-                        {
-                            ValidPlayer = true;
-                        }else{
-                            ValidPlayer = false;
-                        }
-                    }
-
-                    if (ValidPlayer == true)
+                    if (oldObj.GetComponent<Comps.AnimalActor>() != null)
                     {
-                        if(_Level == OtherPlayerLevel)
-                        {
-                            if(LastFoundTicks == 0)
-                            {
-                                if (OtherPlayerTicks > _Ticks)
-                                {
-                                    //MelonLogger.Msg("[Animals] [Client " + _From + "] "+_Ticks+" less than [Client "+ i + "]" + OtherPlayerTicks);
-                                    LastFoundTicks = OtherPlayerTicks;
-                                    LastFoundID = i;
-                                }
-                            }else{
-                                if (LastFoundTicks < OtherPlayerTicks)
-                                {
-                                    //MelonLogger.Msg("[Animals] [Client " + _From + "] LastFoundTicks " + LastFoundTicks + " less than [Client " + i + "]" + OtherPlayerTicks);
-                                    LastFoundTicks = OtherPlayerTicks;
-                                    LastFoundID = i;
-                                }
-                            }
-                        }
+                        oldObj.GetComponent<Comps.AnimalActor>().m_MarkToDestroy = true;
+                    } else if (oldObj.GetComponent<Comps.AnimalUpdates>() != null)
+                    {
+                        oldObj.GetComponent<Comps.AnimalUpdates>().m_MarkToDestroy = true;
                     }
                 }
             }
-
-            if(LastFoundID == -1)
+            GameObject obj = UnityEngine.Object.Instantiate(reference, v3, rot); // Create new animal
+            obj.name = reference.name;
+            obj.layer = 19;
+            if (obj.GetComponent<BaseAi>())
             {
-                //MelonLogger.Msg("[Animals] Client "+_From+" Is controller");
-                return true;
-            }else{
-                //MelonLogger.Msg("[Animals] Client " + _From + " can't be controller cause of Client "+ LastFoundID);
-                //MelonLogger.Msg("[Animals] [Client "+ _From + "] Ticks "+ _Ticks + " [Client "+ LastFoundID + "] Ticks "+ LastFoundTicks);
-                return false;
+                obj.GetComponent<BaseAi>().ChangeCollisionCapsulesLayer(19);
+            }
+            Animator _AN = MyMod.RemoveAnimalComponents(obj); // Remove all components
+
+            if (obj.name.Contains("Rabbit"))
+            {
+                if (obj.GetComponent<BodyHarvest>())
+                {
+                    UnityEngine.Object.Destroy(obj.GetComponent<BodyHarvest>());
+                }
+            }
+
+            _AN.SetBool(Animator.StringToHash("Dead"), true);
+            _AN.SetInteger(Animator.StringToHash("DamageSide"), 1);
+            _AN.SetTrigger(Animator.StringToHash("DamageImpact"));
+            Comps.AnimalCorpseObject CorpseComp = obj.AddComponent<Comps.AnimalCorpseObject>();
+            CorpseComp.m_Animal = obj;
+            CorpseComp.m_RegionGUID = SpawnRegionGUID;
+            CorpseComp.Update();
+            if (obj.GetComponent<BodyHarvest>())
+            {
+                obj.GetComponent<BodyHarvest>().enabled = true;
+            }
+
+            if (obj.GetComponent<ObjectGuid>() == null) // Override GUID with old GUID
+            {
+                obj.AddComponent<ObjectGuid>();
+                obj.GetComponent<ObjectGuid>().Set(GUID);
+            } else
+            {
+                obj.GetComponent<ObjectGuid>().Set(GUID);
+            }
+            Light[] componentsInChildren2 = (Light[])obj.GetComponentsInChildren<Light>(true);
+            if (componentsInChildren2 != null)
+            {
+                for (int index = 0; index < componentsInChildren2.Length; ++index)
+                {
+                    componentsInChildren2[index].enabled = false;
+                }
+            }
+            MatchTransform.EnableCollidersForAllActive(true);
+            if (!MyMod.AnimalCorplesList.ContainsKey(GUID))
+            {
+                MyMod.AnimalCorplesList.Add(GUID, CorpseComp);
+            }
+            MelonLogger.Msg("Animal corpse spawned " + GUID);
+        }
+        public static void ProcessAnimalCorpseSync(DataStr.AnimalKilled Sync)
+        {
+            if (Sync.m_LevelGUID == MyMod.level_guid)
+            {
+                SpawnAnimalCorpse(Sync.m_PrefabName, Sync.m_Position, Sync.m_Rotation, Sync.m_GUID, Sync.m_RegionGUID);
             }
         }
 
@@ -10292,7 +5237,7 @@ namespace SkyCoop
                             {
                                 return false;
                             }
-                        }else{
+                        } else {
                             if (plDis < dis)
                             {
                                 return false;
@@ -10304,37 +5249,12 @@ namespace SkyCoop
             return true;
         }
 
-        public static SaveSlotSync PendingSave = null;
+        public static DataStr.SaveSlotSync PendingSave = null;
         public static bool ShouldCreateSaveForHost = false;
-
-        public static void SendSlotData(int _forClient)
-        {
-            MelonLogger.Msg("Sending savedata for "+_forClient);
-            SaveSlotSync SaveData = new SaveSlotSync();
-            SaveData.m_Episode = (int) SaveGameSystem.m_CurrentEpisode;
-            SaveData.m_SaveSlotType = (int) SaveGameSystem.m_CurrentGameMode;
-            SaveData.m_Seed = GameManager.m_SceneTransitionData.m_GameRandomSeed;
-            SaveData.m_ExperienceMode = (int) ExperienceModeManager.s_CurrentModeType;
-            SaveData.m_Location = (int) RegionManager.GetCurrentRegion();
-            SaveData.m_FixedSpawnScene = SavedSceneForSpawn;
-            SaveData.m_FixedSpawnPosition = SavedPositionForSpawn;
-
-            if(ExperienceModeManager.s_CurrentModeType == ExperienceModeType.Custom)
-            {
-                SaveData.m_CustomExperienceStr = GameManager.GetExperienceModeManagerComponent().GetCurrentCustomModeString();
-            }else{
-                SaveData.m_CustomExperienceStr = "";
-            }
-
-            using (Packet __packet = new Packet((int)ServerPackets.SAVEDATA))
-            {
-                ServerSend.SAVEDATA(_forClient, SaveData);
-            }
-        }
 
         public static void SelectNameForHostSaveFile()
         {
-            if(m_Panel_MainMenu != null)
+            if (m_Panel_MainMenu != null)
             {
                 m_Panel_MainMenu.ShowNameSaveSlotPopup();
                 InterfaceManager.m_Panel_Confirmation.m_CurrentGroup.m_InputField.SetText(DateTime.Now.ToString());
@@ -10349,11 +5269,11 @@ namespace SkyCoop
                 if (PendingSave.m_SaveSlotType == (int)SaveSlotType.SANDBOX && m_Panel_MainMenu.GetNumUnlockedFeats() > 0)
                 {
                     m_Panel_MainMenu.SelectWindow(m_Panel_MainMenu.m_SelectFeatWindow);
-                }else{
+                } else {
                     if (!ShouldCreateSaveForHost)
                     {
                         ForcedCreateSave(PendingSave);
-                    }else{
+                    } else {
                         SelectNameForHostSaveFile();
                     }
                 }
@@ -10362,14 +5282,57 @@ namespace SkyCoop
 
         public static void SelectGenderForConnection()
         {
-            if(m_Panel_SelectSurvivor != null)
+            if (m_Panel_SelectSurvivor != null)
             {
                 m_Panel_SelectSurvivor.Enable(true);
                 m_Panel_SelectSurvivor.m_BasicMenu.m_OnClickBackAction = null;
             }
         }
 
-        public static void CheckHaveSaveFileToJoin(SaveSlotSync Data)
+        public static void VerifiedSave(bool Valid)
+        {
+            if (Valid)
+            {
+                if(PendingSaveSlotInfo == null)
+                {
+                    LetChooseSpawnForClient(PendingSave);
+                }else{
+                    SaveSlotInfo SaveToLoad = PendingSaveSlotInfo;
+                    SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
+                    MelonLogger.Msg("Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
+                    MelonLogger.Msg("Save slot name " + SaveToLoad.m_SaveSlotName);
+                    MelonLogger.Msg("Save slot user defined name " + SaveGameSlots.GetUserDefinedSlotName(SaveToLoad.m_SaveSlotName));
+
+                    SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
+                    MelonLogger.Msg("Selecting slot " + SaveGameSystem.GetCurrentSaveName());
+                    GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
+                    PendingSaveSlotInfo = null;
+                }
+            }else{
+
+                if (PendingSaveSlotInfo != null)
+                {
+                    SaveGameSlotHelper.DeleteSaveSlotInfo(PendingSaveSlotInfo);
+                    PendingSaveSlotInfo = null;
+                }
+
+                LetChooseSpawnForClient(PendingSave);
+            }
+        }
+
+        public static void SendVerifySave(string UGUID, long Hash)
+        {
+            DoPleaseWait("Verifying...", " Host checking my save file...");
+            using (Packet _packet = new Packet((int)ClientPackets.VERIFYSAVE))
+            {
+                _packet.Write(UGUID);
+                _packet.Write(Hash);
+                SendUDPData(_packet);
+            }
+        }
+
+        public static SaveSlotInfo PendingSaveSlotInfo = null;
+        public static void CheckHaveSaveFileToJoin(DataStr.SaveSlotSync Data)
         {
             AnimalsController = false;
             bool HaveSaveFile = false;
@@ -10384,33 +5347,51 @@ namespace SkyCoop
             {
                 SaveSlotInfo Slot = Slots[i];
 
-                if (Slot.m_UserDefinedName == Seed+"")
+                if (Slot.m_UserDefinedName == Seed + "")
                 {
-                    MelonLogger.Msg("Found slot to load");
-                    MelonLogger.Msg("Loading save file with seed: " + Seed);
-                    HaveSaveFile = true;
-                    SaveToLoad = Slot;
-                    break;
+                    int GenVersion = MenuChange.GetRNGGen(Slot.m_SaveSlotName);
+                    if (GenVersion == BuildInfo.RandomGenVersion)
+                    {
+                        MelonLogger.Msg("Found slot to load");
+                        MelonLogger.Msg("Loading save file with seed: " + Seed);
+                        HaveSaveFile = true;
+                        SaveToLoad = Slot;
+                        break;
+                    } else
+                    {
+                        MelonLogger.Msg(DarkRed, "Found slot to load but it saved on outdated version of the game");
+                        MelonLogger.Msg(DarkRed, "Generation version of this slot " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
+                    }
                 }
             }
 
-            if(HaveSaveFile == true)
+            if (HaveSaveFile == true)
             {
-                KillConsole(); // Unregistering cheats if server not allow cheating for you
+                KillConsole();
                 MelonLogger.Msg("Trying loading save slot...");
-                SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg("Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
-                MelonLogger.Msg("Save slot name " + SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg("Save slot user defined name " + SaveGameSlots.GetUserDefinedSlotName(SaveToLoad.m_SaveSlotName));
-                SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg("Selecting slot " + SaveGameSystem.GetCurrentSaveName());
-                GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
-            }else{
-                LetChooseSpawnForClient(Data);
+                long Hash = Shared.GetDeterministicId(SaveGameSlots.LoadDataFromSlot(SaveToLoad.m_SaveSlotName, "global"));
+                MelonLogger.Msg("Save slot hash " + Hash);
+                string data = SaveGameSlots.LoadDataFromSlot(SaveToLoad.m_SaveSlotName, "UserGUID");
+                string UGUID = "";
+                if (data != null)
+                {
+                    string[] saveProxy = JSON.Load(data).Make<string[]>();
+                    UGUID = saveProxy[0];
+                }
+                MelonLogger.Msg("My UGUID " + UGUID);
+                PendingSaveSlotInfo = SaveToLoad;
+                if (string.IsNullOrEmpty(UGUID))
+                {
+                    SendVerifySave("", 0);
+                } else {
+                    SendVerifySave(UGUID, Hash);
+                }
+            } else {
+                SendVerifySave("", 0);
             }
         }
 
-        public static void LetChooseSpawnForClient(SaveSlotSync Data)
+        public static void LetChooseSpawnForClient(DataStr.SaveSlotSync Data)
         {
             MelonLogger.Msg("Prepare ui for creating save slot");
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
@@ -10438,7 +5419,7 @@ namespace SkyCoop
         }
 
 
-        public static void ForcedCreateSave(SaveSlotSync Data, string Name = "")
+        public static void ForcedCreateSave(DataStr.SaveSlotSync Data, string Name = "")
         {
             Episode Ep = (Episode)Data.m_Episode;
             SaveSlotType SST = (SaveSlotType)Data.m_SaveSlotType;
@@ -10446,38 +5427,42 @@ namespace SkyCoop
             ExperienceModeType ExpType = (ExperienceModeType)Data.m_ExperienceMode;
             GameRegion Region = (GameRegion)Data.m_Location;
 
+            KillConsole();
             MelonLogger.Msg("Creating save slot " + Seed);
-            GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
-            //SaveGameSystem.SetCurrentSaveInfo(Ep, SST, SaveGameSlots.GetUnusedGameId(), null);
 
-            KillConsole(); // Unregistering cheats if server not allow cheating for you
-
-            SaveGameSystem.m_CurrentEpisode = Ep;
-            SaveGameSystem.m_CurrentGameId = SaveGameSlots.GetUnusedGameId();
-            SaveGameSystem.m_CurrentGameMode = SST;
-            SaveGameSystem.m_CurrentSaveName = SaveGameSlots.BuildSlotName(SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameMode, SaveGameSystem.m_CurrentGameId);
-            if(Seed != 0)
-            {
-                SaveGameSlots.SetSlotDisplayName(SaveGameSystem.m_CurrentSaveName, Seed + "");
-            }else{
-                SaveGameSlots.SetSlotDisplayName(SaveGameSystem.m_CurrentSaveName, Name);
-            }
-            
             GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
-            if(ExpType == ExperienceModeType.Custom)
+            if (ExpType == ExperienceModeType.Custom)
             {
                 MelonLogger.Msg("Custom Experience Mode Key is " + Data.m_CustomExperienceStr);
                 bool ok = GameManager.GetExperienceModeManagerComponent().SetCurrentCustomModeString(Data.m_CustomExperienceStr);
                 if (ok)
                 {
                     MelonLogger.Msg("Custom Experience Mode recreated from string!");
-                }else{
-                    MelonLogger.Msg(ConsoleColor.Red, "Failed to recreate custom experience from string!");
+                } else
+                {
+                    MelonLogger.Msg(Red, "Failed to recreate custom experience from string!");
                 }
             }
+            
+            string UserDefinedName;
+            if(Seed != 0)
+            {
+                UserDefinedName = Seed.ToString();
+            } else
+            {
+                UserDefinedName = Name;
+            }
+            SaveGameSystem.SetCurrentSaveInfo(Ep, SST, SaveGameSlots.GetUnusedGameId(), null);
+
+
+            SaveGameSlots.SetSlotDisplayName(SaveGameSystem.GetCurrentSaveName(), UserDefinedName);
+            //SaveGameSlots.SetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName(), UserDefinedName);
+
 
             MelonLogger.Msg("Save slot created!");
             MelonLogger.Msg("Save slot current name " + SaveGameSystem.GetCurrentSaveName());
+            MelonLogger.Msg("Save slot userdefined name " + SaveGameSlots.GetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName()));
+
 
             GameManager.m_StartRegion = Region;
             InterloperHook = true;
@@ -10485,18 +5470,18 @@ namespace SkyCoop
             OverridedPositionForSpawn = Data.m_FixedSpawnPosition;
 
             GameManager.Instance().LaunchSandbox();
-            if(Seed != 0)
+            if (Seed != 0)
             {
                 GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
             }
-            
+
             PendingSave = null;
             ShouldCreateSaveForHost = false;
         }
 
         public static void PlayMultiplayer3dAduio(string sound, int from)
         {
-            if(playersData.Count > 0 && playersData[from] != null && playersData[from].m_Levelid == levelid && players[from] != null && playersData[from].m_LevelGuid == level_guid)
+            if (playersData.Count > 0 && playersData[from] != null && playersData[from].m_Levelid == levelid && players[from] != null && playersData[from].m_LevelGuid == level_guid)
             {
                 GameAudioManager.Play3DSound(sound, players[from]);
             }
@@ -10508,7 +5493,7 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.MULTISOUND))
                 {
                     _packet.Write(sound);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
             if (iAmHost == true)
@@ -10525,7 +5510,7 @@ namespace SkyCoop
 
         public static void StartGOLOSOVANIE()
         {
-            if(Golosovanie == null)
+            if (Golosovanie == null)
             {
                 GameObject obj = new GameObject("Golosovanie");
                 Golosovanie = obj;
@@ -10539,7 +5524,7 @@ namespace SkyCoop
         public static bool NotNeedToPauseUntilLoaded = false;
 
         public static Canvas UiCanvas = null;
-        public static List<MultiplayerChatMessage> ChatMessages = new List<MultiplayerChatMessage>();
+        public static List<DataStr.MultiplayerChatMessage> ChatMessages = new List<DataStr.MultiplayerChatMessage>();
         public static int MaxChatMessages = 50;
         public static string MyChatName = "Player";
 
@@ -10550,42 +5535,12 @@ namespace SkyCoop
         public static GameObject StatusObject = null;
         public static UnityEngine.UI.ScrollRect chatScroller = null;
         public static int HideChatTimer = 0;
-
-        public static void SaveNewName(string newname)
-        {
-            if (System.IO.File.Exists("Mods\\nickname.txt"))
-            {
-                System.IO.File.WriteAllText("Mods\\nickname.txt", newname);
-            }
-            else
-            {
-                using (System.IO.StreamWriter sw = System.IO.File.CreateText("Mods\\nickname.txt"))
-                {
-                    sw.Write(newname);
-                }
-            }
-            if (sendMyPosition == true) // CLIENT
-            {
-                using (Packet _packet = new Packet((int)ClientPackets.CHANGENAME))
-                {
-                    _packet.Write(newname);
-                    SendTCPData(_packet);
-                }
-            }
-            if (iAmHost == true) // HOST
-            {
-                using (Packet _packet = new Packet((int)ServerPackets.CHANGENAME))
-                {
-                    ServerSend.CHANGENAME(0, newname, true);
-                }
-            }
-        }
         public static bool ValidNickName(string name)
         {
-            if(name == "" || name == " " || name == "Player" || HasNonASCIIChars(name) == true)
+            if (name == "" || name == " " || name == "Player" || Shared.HasNonASCIIChars(name) == true)
             {
                 return false;
-            }else{
+            } else {
                 return true;
             }
         }
@@ -10601,7 +5556,7 @@ namespace SkyCoop
             if (GameManager.m_PlayerManager)
             {
                 GameManager.m_PlayerManager.SetControlMode(PlayerControlMode.Normal);
-            }else{
+            } else {
                 MelonLogger.Msg("m_PlayerManager is null");
             }
             InterfaceManager.m_Panel_Log.ExitInterface();
@@ -10630,7 +5585,7 @@ namespace SkyCoop
 
 
             ConsoleManager.CONSOLE_afflictions_cure();
-            
+
             GameManager.GetVpFPSCamera().enabled = true;
 
 
@@ -10639,11 +5594,10 @@ namespace SkyCoop
                 string OutDoorToLoad = GameManager.m_SceneTransitionData.m_LastOutdoorScene;
                 GameObject DummyLoader = new GameObject();
                 LoadScene Loader = DummyLoader.AddComponent<LoadScene>();
-                DummyLoader.AddComponent<LoadScene>();
 
                 Loader.m_SceneToLoad = OutDoorToLoad;
                 Loader.Activate();
-            }else{
+            } else {
                 GameObject sp = PlayerManager.PickRandomSpawnPoint();
                 if (sp)
                 {
@@ -10657,7 +5611,7 @@ namespace SkyCoop
 
         public static void FindPlayerToTrade()
         {
-            if(GameManager.m_PlayerObject == null)
+            if (GameManager.m_PlayerObject == null)
             {
                 //MelonLogger.Msg("Gaben trade is over player object is null, are all is gonna sus till the death");
                 GiveItemTo = -1;
@@ -10670,7 +5624,7 @@ namespace SkyCoop
             int LastPlayerFoundID = -1;
             for (int i = 0; i < playersData.Count; i++)
             {
-                if(playersData[i] != null && playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid && Vector3.Distance(myXYZ,playersData[i].m_Position) < 15 && i != instance.myId)
+                if (playersData[i] != null && playersData[i].m_Levelid == levelid && playersData[i].m_LevelGuid == level_guid && Vector3.Distance(myXYZ, playersData[i].m_Position) < 15 && i != ClientUser.myId)
                 {
                     float checkDis = Vector3.Distance(myXYZ, playersData[i].m_Position);
 
@@ -10685,74 +5639,16 @@ namespace SkyCoop
         }
 
         public static List<GameObject> StatusTexes = new List<GameObject>();
-        public static Dictionary<ulong,GameObject> LobbyElements = new Dictionary<ulong, GameObject>();
-
-        public class LobbyHoverNickname : MonoBehaviour
-        {
-            public LobbyHoverNickname(IntPtr ptr) : base(ptr) { }
-            public UnityEngine.UI.Button m_Btn;
-            public string m_Name = "???";
-
-            void Update()
-            {
-                if (m_Btn)
-                {
-                    if(m_Btn.currentSelectionState == UnityEngine.UI.Selectable.SelectionState.Highlighted)
-                    {
-                        if(LobbyUI != null)
-                        {
-                            LobbyUI.transform.GetChild(3).gameObject.SetActive(true);
-                            LobbyUI.transform.GetChild(3).GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>().text = m_Name;
-
-                            //Rect rect = LobbyUI.transform.GetChild(3).gameObject.GetComponent<RectTransform>().rect;
-                            //Rect btnRect = m_Btn.GetComponent<RectTransform>().rect;
-                            //Rect newRect = new Rect(btnRect.x, rect.y, rect.width, rect.height);
-
-
-                            LobbyUI.transform.GetChild(3).gameObject.transform.position = new Vector3(m_Btn.gameObject.transform.position.x, LobbyUI.transform.GetChild(3).gameObject.transform.position.y, LobbyUI.transform.GetChild(3).gameObject.transform.position.z);
-                        }
-                    }
-                }
-            }
-        }
-
-        public class CookpotHelmet : MonoBehaviour
-        {
-            public CookpotHelmet(IntPtr ptr) : base(ptr) { }
-            public GearItem m_GearItem;
-            public ClothingItem m_ClothingItem;
-
-            void Update()
-            {
-                if (m_GearItem && m_ClothingItem)
-                {
-                    if(InterfaceManager.m_Panel_Clothing != null && InterfaceManager.m_Panel_Clothing.isActiveAndEnabled)
-                    {
-                        m_GearItem.m_ClothingItem = null;
-                    }else{
-                        m_GearItem.m_ClothingItem = m_ClothingItem;
-                    }
-                }
-            }
-        }
-
-        public class Borrowable : MonoBehaviour
-        {
-            public Borrowable(IntPtr ptr) : base(ptr) { }
-            public string m_GearName = "";
-            public int m_PlayerID = 0;
-            public MultiplayerPlayer m_mP;
-            public GameObject m_Obj;
-            
-            void Update()
-            {
-
-            }
-        }
+        public static Dictionary<ulong, GameObject> LobbyElements = new Dictionary<ulong, GameObject>();
 
 
         public static void AddPersonToLobby(string name, ulong SteamID, Texture2D Avatar)
         {
+            if (DedicatedServerAppMode)
+            {
+                return;
+            }
+            
             if (!LobbyElements.ContainsKey(SteamID))
             {
                 GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MP_PlayerLobby");
@@ -10760,19 +5656,23 @@ namespace SkyCoop
                 Sprite sprite = Sprite.Create(Avatar, new Rect(0, 0, 64, -64), new Vector2(0, 0));
                 Element.transform.GetChild(1).gameObject.GetComponent<UnityEngine.UI.Image>().overrideSprite = sprite;
                 LobbyElements.Add(SteamID, Element);
-                Element.AddComponent<LobbyHoverNickname>();
-                LobbyHoverNickname LHN = Element.GetComponent<LobbyHoverNickname>();
+                Element.AddComponent<Comps.LobbyHoverNickname>();
+                Comps.LobbyHoverNickname LHN = Element.GetComponent<Comps.LobbyHoverNickname>();
                 LHN.m_Btn = Element.transform.GetChild(2).gameObject.GetComponent<UnityEngine.UI.Button>();
             }
         }
 
-       public static bool LobbyContains(ulong SteamID)
-       {
+        public static bool LobbyContains(ulong SteamID)
+        {
             return LobbyElements.ContainsKey(SteamID);
-       }
+        }
 
         public static void RemovePersonFromLobby(ulong SteamID)
         {
+            if (DedicatedServerAppMode)
+            {
+                return;
+            }
             GameObject Element;
             if (LobbyElements.TryGetValue(SteamID, out Element))
             {
@@ -10782,14 +5682,19 @@ namespace SkyCoop
         }
         public static void SetPersonNameFromLobby(ulong SteamID, string name)
         {
+            if (DedicatedServerAppMode)
+            {
+                return;
+            }
+            
             GameObject Element;
             if (LobbyElements.TryGetValue(SteamID, out Element))
             {
-                Element.GetComponent<LobbyHoverNickname>().m_Name = name;
+                Element.GetComponent<Comps.LobbyHoverNickname>().m_Name = name;
             }
         }
 
-        public static void UpdatePlayerStatusMenu(List<MultiPlayerClientStatus> MPs)
+        public static void UpdatePlayerStatusMenu(List<DataStr.MultiPlayerClientStatus> MPs)
         {
             if (StatusPanel != null && MPs.Count > 0)
             {
@@ -10815,191 +5720,12 @@ namespace SkyCoop
                         UnityEngine.UI.Text Comp = StatusTexes[i].GetComponent<UnityEngine.UI.Text>();
                         Comp.text = MPs[i].m_ID + ". " + MPs[i].m_Name;
 
+                        if (MPs[i].m_IsLoading)
+                        {
+                            Comp.text = Comp.text + "(Loading)";
+                        }
+
                         StatusTexes[i].SetActive(true);
-                    }
-                }
-            }
-        }
-
-        public static void SendMessageToChat(MultiplayerChatMessage message, bool needSync = true)
-        {
-            //if(HasNonASCIIChars(message.m_Message) == true)
-            //{
-            //    message.m_Type = 0;
-            //    message.m_By = MyChatName;
-            //    message.m_Message = "Please use only english! Other languages are not supported!";
-            //    needSync = false;
-            //}
-            if(message.m_By.Contains("Filigrani") || message.m_By.Contains("REDcat"))
-            {
-                if (message.m_Message == "!debug")
-                {
-                    if (DebugGUI == false)
-                    {
-                        DebugGUI = true;
-                        DebugBind = true;
-                    }else{
-                        DebugGUI = false;
-                        DebugBind = false;
-                    }
-                    return;
-                }
-            } 
-            if (message.m_Message == "!fasteat")
-            {
-                if(iAmHost == true)
-                {
-                    if(ServerConfig.m_FastConsumption == false)
-                    {
-                        ServerConfig.m_FastConsumption = true;
-                    }else{
-                        ServerConfig.m_FastConsumption = false;
-                    }
-                    message.m_Type = 0;
-                    message.m_By = MyChatName;
-                    message.m_Message = "Server configuration parameter ServerConfig.m_FastConsumption now is "+ServerConfig.m_FastConsumption;
-                    needSync = true;
-                    ServerSend.SERVERCFGUPDATED();
-                }else{
-                    message.m_Type = 0;
-                    message.m_By = MyChatName;
-                    message.m_Message = "You not a host to change this!";
-                    needSync = false;
-                }
-            }
-            if (message.m_Message == "!dupes")
-            {
-                if (iAmHost == true)
-                {
-                    if (ServerConfig.m_DuppedSpawns == false)
-                    {
-                        ServerConfig.m_DuppedSpawns = true;
-                    }else{
-                        ServerConfig.m_DuppedSpawns = false;
-                    }
-                    message.m_Type = 0;
-                    message.m_By = MyChatName;
-                    message.m_Message = "Server configuration parameter ServerConfig.m_DuppedSpawns now is " + ServerConfig.m_DuppedSpawns;
-                    needSync = true;
-                    ServerSend.SERVERCFGUPDATED();
-                }else{
-                    message.m_Type = 0;
-                    message.m_By = MyChatName;
-                    message.m_Message = "You not a host to change this!";
-                    needSync = false;
-                }
-            }
-            //if (message.m_Message == "!dupesboxes")
-            //{
-            //    if (iAmHost == true)
-            //    {
-            //        if (ServerConfig.m_DuppedContainers == false)
-            //        {
-            //            ServerConfig.m_DuppedContainers = true;
-            //        }else{
-            //            ServerConfig.m_DuppedContainers = false;
-            //        }
-            //        message.m_Type = 0;
-            //        message.m_By = MyChatName;
-            //        message.m_Message = "Server configuration parameter ServerConfig.m_DuppedContainers now is " + ServerConfig.m_DuppedContainers;
-            //        needSync = true;
-            //        ServerSend.SERVERCFGUPDATED();
-            //    }else{
-            //        message.m_Type = 0;
-            //        message.m_By = MyChatName;
-            //        message.m_Message = "You not a host to change this!";
-            //        needSync = false;
-            //    }
-            //}
-            if (message.m_Message.StartsWith("!fire ") == true)
-            {
-                if (iAmHost == true)
-                {
-                    string text = message.m_Message;
-                    int fire = Convert.ToInt32(text.Replace("!fire ", ""));
-                    message.m_Type = 0;
-                    message.m_By = MyChatName;
-
-                    if(fire == 0 || fire == 1 || fire == 2)
-                    {
-                        ServerConfig.m_FireSync = fire;
-                        message.m_Message = "Server configuration parameter ServerConfig.m_FireSync now is " + ServerConfig.m_FireSync;
-                        needSync = true;
-                        ServerSend.SERVERCFGUPDATED();
-                    }
-                    else{
-                        message.m_Message = "ServerConfig.m_FireSync can't be  " + fire+". It can be only 0 or 1 or 2.";
-                        needSync = false;
-                    }
-                }else{
-                    message.m_Type = 0;
-                    message.m_By = MyChatName;
-                    message.m_Message = "You not a host to change this!";
-                    needSync = false;
-                }
-            }
-            if (message.m_Message.StartsWith("!name ") == true)
-            {
-                string text = message.m_Message;
-                MyChatName = text.Replace("!name ", "");
-                message.m_Type = 0;
-                message.m_By = MyChatName;
-                message.m_Message = "Your new name "+ MyChatName;
-                needSync = false;
-                SaveNewName(MyChatName);
-            }
-            if (message.m_Message.StartsWith("!v ") == true)
-            {
-                string text = message.m_Message;
-                DeBugMenu.DebugVal = Convert.ToInt32(text.Replace("!v ", ""));
-                MultiplayerChatMessage NewMsg = new MultiplayerChatMessage();
-                message.m_Type = 0;
-                message.m_By = MyChatName;
-                message.m_Message = "New value is " + DeBugMenu.DebugVal;
-                
-                SendMessageToChat(NewMsg, false);
-            }
-
-            if (ChatMessages.Count > MaxChatMessages)
-            {
-                UnityEngine.Object.Destroy(ChatMessages[0].m_TextObj.gameObject);
-                ChatMessages.RemoveAt(0);
-            }
-            GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MP_ChatText");
-            GameObject newText = GameObject.Instantiate(LoadedAssets, chatPanel.transform);
-            UnityEngine.UI.Text Comp = newText.GetComponent<UnityEngine.UI.Text>();
-            message.m_TextObj = Comp;
-            if(message.m_Type == 1)
-            {
-                Comp.text = message.m_By + ": " + message.m_Message;
-            }else{
-                Comp.text = message.m_Message;
-            }
-
-            if(message.m_Type == 0)
-            {
-                Comp.color = Color.green;
-            }
-
-            ChatMessages.Add(message);
-            HideChatTimer = 5;
-            ChatObject.SetActive(true);
-
-            if(needSync == true)
-            {
-                if (sendMyPosition == true) // CLIENT
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.CHAT))
-                    {
-                        _packet.Write(message);
-                        SendTCPData(_packet);
-                    }
-                }
-                if (iAmHost == true) // HOST
-                {
-                    using (Packet _packet = new Packet((int)ServerPackets.CHAT))
-                    {
-                        ServerSend.CHAT(0, message, true);
                     }
                 }
             }
@@ -11011,7 +5737,7 @@ namespace SkyCoop
 
         public static void SendMyEQ()
         {
-            PlayerEquipmentData Edata = new PlayerEquipmentData();
+            DataStr.PlayerEquipmentData Edata = new DataStr.PlayerEquipmentData();
             Edata.m_HasAxe = MyHasAxe;
             Edata.m_HasMedkit = MyHasMedkit;
             Edata.m_HasRevolver = MyHasRevolver;
@@ -11025,7 +5751,7 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.EQUIPMENT))
                 {
                     _packet.Write(Edata);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
             if (iAmHost == true)
@@ -11034,118 +5760,6 @@ namespace SkyCoop
                 {
                     ServerSend.EQUIPMENT(0, Edata, true);
                 }
-            }
-        }
-
-        //public static void LinkEquipmentToRIG(GameObject m_Player)
-        //{
-        //    int hipsChild = 3;
-        //    int rootChild = 8;
-        //    Transform equipment = m_Player.transform.GetChild(4);
-        //    Transform hip = m_Player.transform.GetChild(hipsChild);
-        //    Transform root = hip.transform.GetChild(rootChild);
-        //    Transform Spine1 = root.transform.GetChild(0);
-        //    Transform Spine2 = Spine1.transform.GetChild(0);
-        //    Transform hand_r = Spine2.GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0);
-        //    Transform hand_l = Spine2.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0);
-
-        //    for (int i = 0; i < equipment.childCount; i++)
-        //    {
-        //        if(equipment.GetChild(i) != null)
-        //        {
-        //            GameObject EQ = equipment.GetChild(i).gameObject;
-        //        }
-        //    }
-        //}
-
-        
-
-        public static void InitAllPlayers()
-        {
-            for (int i = 0; i < MaxPlayers; i++)
-            {
-                if (playersData.Count < MaxPlayers)
-                {
-                    playersData.Add(null);
-                }
-                if (playersData[i] == null)
-                {
-                    playersData[i] = new MultiPlayerClientData();
-                }
-            }
-
-            if(MyRadioAudio == null)
-            {
-                GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MyRadio");
-                MyRadioAudio = GameObject.Instantiate(LoadedAssets);
-
-                GameObject RadioAudio = MyRadioAudio.transform.GetChild(1).gameObject;
-                GameObject RadioBg = MyRadioAudio.transform.GetChild(2).gameObject;
-                RadioAudio.AddComponent<MultiplayerPlayerVoiceChatPlayer>().aSource = RadioAudio.GetComponent<AudioSource>();
-                RadioAudio.GetComponent<MultiplayerPlayerVoiceChatPlayer>().aSourceBgNoise = RadioBg.GetComponent<AudioSource>();
-                RadioAudio.GetComponent<MultiplayerPlayerVoiceChatPlayer>().m_ID = -1;
-                RadioAudio.GetComponent<MultiplayerPlayerVoiceChatPlayer>().m_RadioFilter = true;
-            }
-
-            for (int i = 0; i < MaxPlayers; i++)
-            {
-                if (players.Count < MaxPlayers)
-                {
-                    players.Add(null);
-                }
-                if (players[i] == null)
-                {
-                    GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("multiplayerPlayer");
-                    GameObject m_Player = GameObject.Instantiate(LoadedAssets);
-                    m_Player.AddComponent<MultiplayerPlayerAnimator>().m_Animer = m_Player.GetComponent<Animator>();
-                    m_Player.AddComponent<MultiplayerPlayerClothingManager>().m_Player = m_Player;
-
-                    Transform Speakers = m_Player.transform.GetChild(4);
-                    GameObject Generic = Speakers.GetChild(0).gameObject;
-                    GameObject Voice = Speakers.GetChild(1).gameObject;
-                    GameObject Radio = Speakers.GetChild(2).gameObject;
-                    GameObject RadioBg = Speakers.GetChild(3).gameObject;
-
-                    Voice.AddComponent<MultiplayerPlayerVoiceChatPlayer>().aSource = Voice.GetComponent<AudioSource>();
-                    Voice.GetComponent<MultiplayerPlayerVoiceChatPlayer>().m_ID = i;
-
-                    Radio.AddComponent<MultiplayerPlayerVoiceChatPlayer>().aSource = Radio.GetComponent<AudioSource>();
-                    Radio.GetComponent<MultiplayerPlayerVoiceChatPlayer>().aSourceBgNoise = RadioBg.GetComponent<AudioSource>();
-                    Radio.GetComponent<MultiplayerPlayerVoiceChatPlayer>().m_ID = i;
-                    Radio.GetComponent<MultiplayerPlayerVoiceChatPlayer>().m_RadioFilter = true;
-                    
-
-                    MultiplayerPlayer mP = m_Player.AddComponent<MultiplayerPlayer>();
-                    mP.m_Player = m_Player;
-                    mP.m_ID = i;
-
-                    players[i] = m_Player;
-
-                    if (playersData.Count > 0 && playersData[i] != null)
-                    {
-                        m_Player.transform.position = playersData[i].m_Position;
-                        m_Player.transform.rotation = playersData[i].m_Rotation;
-                    }
-                    ApplyDamageZones(m_Player, mP);
-                    m_Player.SetActive(false);
-
-                    mP.m_TorchIgniter = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(1).GetChild(0).GetChild(0).GetChild(0).GetChild(8).GetChild(1).gameObject; //Tourch Fire
-                    Supporters.ApplyFlairsForModel(i, playersData[i].m_SupporterBenefits.m_Flairs);
-                }
-            }
-
-            if(MyPlayerDoll == null)
-            {
-                GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("multiplayerPlayer");
-                GameObject m_Player = GameObject.Instantiate(LoadedAssets);
-                m_Player.name = "MyPlayerDoll";
-                MyPlayerDoll = m_Player;
-                MyPlayerDoll.SetActive(false);
-                MultiplayerPlayerAnimator Anim = m_Player.AddComponent<MultiplayerPlayerAnimator>();
-                Anim.m_MyDoll = true;
-                Anim.m_Animer = m_Player.GetComponent<Animator>();
-                DollCameraDummy = m_Player.transform.GetChild(3).GetChild(8).GetChild(0).GetChild(0).GetChild(0).GetChild(2).GetChild(0).GetChild(0).gameObject;
-                Supporters.ApplyFlairsForModel(m_Player, Supporters.ConfiguratedBenefits.m_Flairs, "I am");
             }
         }
 
@@ -11177,11 +5791,11 @@ namespace SkyCoop
                     if (Steam)
                     {
                         Txt = "\nPlease wait a moment...";
-                    }else{
+                    } else {
                         if (DefaultIsRussian)
                         {
                             Txt = "\nЕсли вы используйте hamachi/radmin или другой эмулятор локалки, и у вас проблемы с подключением, не простите о помощи нас.";
-                        }else{
+                        } else {
                             Txt = "\nPlease wait, if you using hamachi/radmin or any other lan emulator and you have connection problems, please don't ask us for help.";
                         }
                     }
@@ -11198,41 +5812,134 @@ namespace SkyCoop
             None = 0,
             Scene = 1,
             Container = 2,
-            Gear = 3,
+            GearPlace = 3,
+            Examine = 4,
+            GearPickup = 5,
+            ServerRestart = 6,
+            ExpeditionInvites = 7,
         }
         public static ResendPacketType LastPacketForRepeat = ResendPacketType.None;
         public static int SecondsLeftUntilWorryAboutPacket = -1;
-        public static void SetRepeatPacket(ResendPacketType Pak)
+        public static int ResendAttempts = 0;
+        public static string ResendGearLvlKey = "";
+        public static int ResendGearSearchKey = 0;
+        public static void SetRepeatPacket(ResendPacketType Pak, int TimeOut = -1)
         {
             LastPacketForRepeat = Pak;
-            SecondsLeftUntilWorryAboutPacket = TimeToWorryAboutLastRequest;
+
+            if (TimeOut == -1)
+            {
+                TimeOut = TimeToWorryAboutLastRequest;
+            }
+
+            SecondsLeftUntilWorryAboutPacket = TimeOut;
         }
         public static void DiscardRepeatPacket()
         {
             SecondsLeftUntilWorryAboutPacket = -1;
             LastPacketForRepeat = ResendPacketType.None;
+            ResendGearLvlKey = "";
+            ResendGearSearchKey = 0;
+            ResendAttempts = 0;
         }
 
         public static void SimulateAnotherRequest(ResendPacketType request)
         {
-            if(request == ResendPacketType.Scene)
+            if (request == ResendPacketType.Scene)
             {
                 Pathes.RequestDropsForScene();
-            }else{
-                MelonLogger.Msg("Can't simulate request "+ request);
+            }
+            else if (request == ResendPacketType.Examine)
+            {
                 DiscardRepeatPacket();
-                DoPleaseWait("Request failed", "Something wrong with #"+request+" request, please reconnect to the server!");
+                RemovePleaseWait();
+                HUDMessage.AddMessage("Diagnosis failed!");
+            }
+            else if (request == ResendPacketType.GearPlace)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTPLACE))
+                {
+                    _packet.Write(ResendGearSearchKey);
+                    _packet.Write(ResendGearLvlKey);
+                    SetRepeatPacket(ResendPacketType.GearPlace);
+
+                    SendUDPData(_packet);
+                }
+            }
+            else if (request == ResendPacketType.GearPickup)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTPICKUP))
+                {
+                    _packet.Write(ResendGearSearchKey);
+                    _packet.Write(ResendGearLvlKey);
+                    SetRepeatPacket(ResendPacketType.GearPickup);
+                    SendUDPData(_packet);
+                }
+            } 
+            else if(request == ResendPacketType.ServerRestart)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.RESTART))
+                {
+                    SetRepeatPacket(ResendPacketType.ServerRestart);
+                    SendUDPData(_packet);
+                }
+            }
+            else if(request == ResendPacketType.ExpeditionInvites)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTEXPEDITIONINVITES))
+                {
+                    SetRepeatPacket(ResendPacketType.ExpeditionInvites);
+                    _packet.Write(true);
+                    SendUDPData(_packet);
+                }
+            }
+            else
+            {
+                MelonLogger.Msg("Can't simulate request " + request);
+                DiscardRepeatPacket();
+                DoPleaseWait("Request failed", "Something wrong with #" + request + " request, please reconnect to the server!");
             }
         }
 
         public static void RepeatLastRequest()
         {
+            GameManager.CancelPendingSave();
+            ResendAttempts++;
             RemovePleaseWait();
-            if(LastPacketForRepeat != ResendPacketType.None)
+
+            if (ResendAttempts >= 11)
+            {
+                QuitWithoutSaving = true;
+                GameManager.CancelPendingSave();
+                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                {
+                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECT TIMEOUT", "\n" + "Host did not responced after 10 Attempts, you can safly exit the game.\nGame won't be saves to keep save valid for host on reconnection!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                }
+                return;
+            }
+
+
+            if (LastPacketForRepeat != ResendPacketType.None)
             {
                 SlicedJsonDataBuffer.Clear();
                 SecondsLeftUntilWorryAboutPacket = TimeToWorryAboutLastRequest;
-                DoPleaseWait("Something wrong", "Timed out on response from host for last request. Trying to repeat request to correct the situation, please wait...");
+
+                string title;
+                string text;
+                
+                
+                if(LastPacketForRepeat != ResendPacketType.ServerRestart)
+                {
+                    title = "Something wrong";
+                    text = "Timed out on response from host for last request. Trying to repeat request to correct the situation, please wait...\nAttempt #" + ResendAttempts;
+                }
+                else
+                {
+                    title = "Waiting for server restart";
+                    text = "Please wait...\nPing Attempt #" + ResendAttempts;
+                }
+                DoPleaseWait(title, text);
+
                 SimulateAnotherRequest(LastPacketForRepeat);
             }
         }
@@ -11241,7 +5948,7 @@ namespace SkyCoop
         {
             if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n"+text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n" + text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
             }
         }
         public static void RemovePleaseWait()
@@ -11265,16 +5972,23 @@ namespace SkyCoop
             RemoveWaitForConnect();
             if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n"+ txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
             }
-            MelonLogger.Msg("Kicked by server, message from host: "+ txt);
-            MyMod.LastConnectedIp = "";
-            MyMod.Disconnect();
+
+            if(level_name != "MainMenu")
+            {
+                QuitWithoutSaving = true;
+                GameManager.CancelPendingSave();
+            }
+
+            MelonLogger.Msg("Kicked by server, message from host: " + txt);
+            ClientUser.LastConnectedIp = "";
+            Disconnect();
         }
 
         public static void CancleDismantling()
         {
-            ShowShelterByOther FindData = new ShowShelterByOther();
+            DataStr.ShowShelterByOther FindData = new DataStr.ShowShelterByOther();
 
             Panel_SnowShelterInteract panel = InterfaceManager.m_Panel_SnowShelterInteract;
             if (panel.m_SnowShelter != null && panel.m_SnowShelter.gameObject != null)
@@ -11290,7 +6004,7 @@ namespace SkyCoop
                     {
                         if (playersData[i] != null)
                         {
-                            ShowShelterByOther shelter = MyMod.playersData[i].m_Shelter;
+                            DataStr.ShowShelterByOther shelter = MyMod.playersData[i].m_Shelter;
                             if (level_guid == shelter.m_LevelGUID && levelid == shelter.m_LevelID && FindData.m_Position == shelter.m_Position)
                             {
                                 panel.OnCancel();
@@ -11302,7 +6016,7 @@ namespace SkyCoop
                 }
             }
         }
-        
+
         public static void PlayVoiceFromPlayerObject(AudioSource audioSource, byte[] voiceData, bool RadioEffect = false)
         {
             if (audioSource != null)
@@ -11326,8 +6040,8 @@ namespace SkyCoop
             {
                 if (MyRadioAudio != null)
                 {
-                    MultiplayerPlayerVoiceChatPlayer mPVoice = MyRadioAudio.transform.GetChild(1).gameObject.GetComponent<MultiplayerPlayerVoiceChatPlayer>();
-                    VoiceChatQueueElement DataForQueue = new VoiceChatQueueElement();
+                    Comps.MultiplayerPlayerVoiceChatPlayer mPVoice = MyRadioAudio.transform.GetChild(1).gameObject.GetComponent<Comps.MultiplayerPlayerVoiceChatPlayer>();
+                    DataStr.VoiceChatQueueElement DataForQueue = new DataStr.VoiceChatQueueElement();
                     DataForQueue.m_VoiceData = decompressedData;
                     DataForQueue.m_Length = RecordTime;
                     mPVoice.VoiceQueue.Add(DataForQueue);
@@ -11341,20 +6055,20 @@ namespace SkyCoop
 
             if (decompressedData != null)
             {
-                if (players[from] != null)
+                if (!MyMod.DedicatedServerAppMode && players[from] != null)
                 {
                     if (playersData[from].m_Levelid == levelid && playersData[from].m_LevelGuid == level_guid)
                     {
-                        MultiplayerPlayerVoiceChatPlayer mPVoice;
+                        Comps.MultiplayerPlayerVoiceChatPlayer mPVoice;
                         if (!Radio)
                         {
-                            mPVoice = players[from].transform.GetChild(4).GetChild(1).gameObject.GetComponent<MultiplayerPlayerVoiceChatPlayer>();
-                        }else{
-                            mPVoice = players[from].transform.GetChild(4).GetChild(2).gameObject.GetComponent<MultiplayerPlayerVoiceChatPlayer>();
+                            mPVoice = players[from].transform.GetChild(4).GetChild(1).gameObject.GetComponent<Comps.MultiplayerPlayerVoiceChatPlayer>();
+                        } else {
+                            mPVoice = players[from].transform.GetChild(4).GetChild(2).gameObject.GetComponent<Comps.MultiplayerPlayerVoiceChatPlayer>();
                         }
                         if (mPVoice)
                         {
-                            VoiceChatQueueElement DataForQueue = new VoiceChatQueueElement();
+                            DataStr.VoiceChatQueueElement DataForQueue = new DataStr.VoiceChatQueueElement();
                             DataForQueue.m_VoiceData = decompressedData;
                             DataForQueue.m_Length = RecordTime;
                             mPVoice.VoiceQueue.Add(DataForQueue);
@@ -11425,21 +6139,21 @@ namespace SkyCoop
             bool PreviousRecord = DoingRecord;
             DoingRecord = KeyboardUtilities.InputManager.GetKey(KeyCode.V);
 
-            if((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
+            if ((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
             {
                 DoingRecord = false;
             }
 
-            if(PreviousRecord != DoingRecord)
+            if (PreviousRecord != DoingRecord)
             {
-                if(DoingRecord == false)
+                if (DoingRecord == false)
                 {
                     RecordReleseButtonHold = Time.time + 0.5f;
-                    if(ViewModelRadio && ViewModelRadio.activeSelf)
+                    if (ViewModelRadio && ViewModelRadio.activeSelf)
                     {
                         //PlayRadioOver();
                     }
-                }else{
+                } else {
                     RecordStartTime = Time.time;
                 }
             }
@@ -11454,14 +6168,14 @@ namespace SkyCoop
                     float CurrA = Img.color.a;
                     SetA = Mathf.Lerp(CurrA, 0, 5 * Time.deltaTime);
                 }
-                else if(Radio)
+                else if (Radio)
                 {
                     SetA = 0;
                 }
                 Img.color = new Color(Img.color.r, Img.color.g, Img.color.b, SetA);
             }
 
-            if(RadioIdicator != null)
+            if (RadioIdicator != null)
             {
                 UnityEngine.UI.Image Img = RadioIdicator.GetComponent<UnityEngine.UI.Image>();
                 float SetA = 1f;
@@ -11470,7 +6184,7 @@ namespace SkyCoop
                     float CurrA = Img.color.a;
                     SetA = Mathf.Lerp(CurrA, 0, 5 * Time.deltaTime);
                 }
-                else if(!Radio)
+                else if (!Radio)
                 {
                     SetA = 0;
                 }
@@ -11494,7 +6208,7 @@ namespace SkyCoop
                         _packet.Write(CompressedArray);
                         _packet.Write(RecordTime);
                         _packet.Write(Sender);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
             }
@@ -11519,8 +6233,8 @@ namespace SkyCoop
                         _packet.Write(CompressedArray.Length);
                         _packet.Write(CompressedArray);
                         _packet.Write(RecordTime);
-                        _packet.Write(instance.myId);
-                        SendTCPData(_packet);
+                        _packet.Write(ClientUser.myId);
+                        SendUDPData(_packet);
                     }
                 }
             }
@@ -11537,38 +6251,34 @@ namespace SkyCoop
             if (StartServerAfterSelectSave)
             {
                 StartServerAfterSelectSave = false;
-                HostAServer(PortsToHostOn);
+                Shared.HostAServer(PortsToHostOn);
             }
         }
 
 
         public static void DedicatedServerUpdate()
         {
-            if(GameManager.m_PlayerManager != null)
+            if(InterfaceManager.m_Panel_Loading != null)
+            {
+                Panel_Loading Panel = InterfaceManager.m_Panel_Loading;
+
+                Panel.m_HoldScreenAfterLoad = false;
+                Panel.m_ContinueToGame = true;
+                Panel.m_ShowQuoteAfterLoad = false;
+            }
+            
+            
+            if (GameManager.m_PlayerManager != null)
             {
                 GameManager.m_PlayerManager.m_God = true;
                 GameManager.m_PlayerManager.m_Ghost = true;
-                if(GameManager.m_PlayerVoice == true)
-                {
-                    GameManager.m_PlayerVoice.enabled = false;
-                }
                 GameManager.m_PlayerObject.transform.position = new Vector3(0, -300, 0);
                 IsDead = true;
                 GameAudioManager.SetRTPCValue(AK.GAME_PARAMETERS.GLOBALVOLUME, 0 * 100f, (GameObject)null);
-
-                int onServer = 0;
-
-                for (int i = 1; i <= Server.MaxPlayers; i++)
-                {
-                    if (Server.clients[i].IsBusy() == true)
-                    {
-                        onServer = onServer + 1;
-                    }
-                }
             }
         }
 
-        public static FireSourcesSync DebugFireSource = null;
+        public static DataStr.FireSourcesSync DebugFireSource = null;
 
         public static string CloneTrimer(string name)
         {
@@ -11589,7 +6299,7 @@ namespace SkyCoop
 
         public static bool SnareCanTrap(Vector3 pos, string prefabname)
         {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Snare looking for region with "+ prefabname + "...");
+            //MelonLogger.Msg(Yellow, "Snare looking for region with "+ prefabname + "...");
             SpawnRegionManager SRM = GameManager.GetSpawnRegionManager();
             for (int index = 0; index < SRM.m_SpawnRegions.Count; ++index)
             {
@@ -11599,48 +6309,35 @@ namespace SkyCoop
                 //MelonLogger.Msg(index + ". Distance to snare " + dis + " maximal allowed distance " + mindis+" animal prefab "+ spPrefab);
                 if (dis <= mindis && prefabname == spPrefab)
                 {
-                    //MelonLogger.Msg(ConsoleColor.Yellow, "Snare inside spawnregion " + SRM.m_SpawnRegions[index].gameObject.name);
+                    //MelonLogger.Msg(Yellow, "Snare inside spawnregion " + SRM.m_SpawnRegions[index].gameObject.name);
                     return true;
                 }
             }
-            //MelonLogger.Msg(ConsoleColor.Red, "Snare cannot catch here! ");
+            //MelonLogger.Msg(Red, "Snare cannot catch here! ");
             return false;
         }
-        public static void FakeDropItem(DroppedGearItemDataPacket GearData, bool JustLoad = false)
+
+
+        public static void FakeDropItem(int GearID, Vector3 v3, Quaternion rot, int Hash, DataStr.ExtraDataForDroppedGear extra)
         {
-            if(iAmHost == true && !JustLoad)
+            if (DedicatedServerAppMode)
             {
-                MPSaveManager.AddGearVisual(GearData.m_LevelGUID, GearData);
+                return;
             }
+            
+            string gearName = extra.m_GearName;
 
-            if(GearData.m_LevelGUID == level_guid)
+            if (DroppedGearsObjs.ContainsKey(Hash) == true)
             {
-                FakeDropItem(GearData.m_GearID, GearData.m_Position, GearData.m_Rotation, GearData.m_Hash, GearData.m_Extra);
-            }
-        }
-
-
-        public static void FakeDropItem(int GearID, Vector3 v3, Quaternion rot, int Hash, ExtraDataForDroppedGear extra)
-        {
-            string gearName = "";
-            if (GearID == -1)
-            {
-                gearName = extra.m_GearName;
-            }else{
-                gearName = GetGearNameByID(GearID);
-            }
-
-            if(DroppedGearsObjs.ContainsKey(Hash) == true)
-            {
-                MelonLogger.Msg(ConsoleColor.Red,"Gear with hash " + Hash + " already exist!");
+                MelonLogger.Msg(Red, "Gear with hash " + Hash + " already exist!");
                 return;
             }
 
             GameObject reference = GetGearItemObject(gearName);
 
-            if(reference == null)
+            if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                 return;
             }
 
@@ -11661,27 +6358,25 @@ namespace SkyCoop
                     {
                         if (extra.m_Variant == 1)
                         {
-                            if(obj.GetComponent<MeshSwapItem>() != null)
+                            if (obj.GetComponent<MeshSwapItem>() != null)
                             {
                                 obj.GetComponent<MeshSwapItem>().m_MeshObjOpened.SetActive(true);
                                 obj.GetComponent<MeshSwapItem>().m_MeshObjUnopened.SetActive(false);
-                                UnityEngine.Object.Destroy(obj.GetComponent<MeshSwapItem>());
                             }
                         }
                     }
                     _DisName = GI.m_LocalizedDisplayName.Text();
-                    UnityEngine.Object.Destroy(obj.GetComponent<GearItem>());
                 }
+
                 if (obj.GetComponent<Bed>() != null)
                 {
-                    if(extra.m_Variant == 1)
+                    if (extra.m_Variant == 1)
                     {
                         obj.GetComponent<Bed>().SetState(BedRollState.Placed);
                         _FakeBed = true;
                     }
-                    UnityEngine.Object.Destroy(obj.GetComponent<Bed>());
                 }
-                if(obj.GetComponent<KeroseneLampItem>() != null)
+                if (obj.GetComponent<KeroseneLampItem>() != null)
                 {
                     if (extra.m_Variant == 1)
                     {
@@ -11692,7 +6387,7 @@ namespace SkyCoop
                             Lamp.m_LightOutdoor.enabled = true;
                             Lamp.m_LightIndoor.enabled = false;
                             Lamp.m_LightIndoorCore.enabled = false;
-                        }else{
+                        } else {
                             Lamp.m_LightIndoor.enabled = true;
                             Lamp.m_LightIndoorCore.enabled = true;
                             Lamp.m_LightOutdoor.enabled = false;
@@ -11702,127 +6397,102 @@ namespace SkyCoop
                         if (minutesLeft <= 0)
                         {
                             obj.transform.GetChild(0).gameObject.SetActive(false);
-                        }else{
+                        } else {
                             obj.transform.GetChild(0).gameObject.SetActive(true);
                         }
 
                         TrackableDroppedGearsObjs.Add(Hash, obj);
                     }
                 }
-
-                //foreach (var comp in obj.GetComponents<Component>())
-                //{
-                //    if (!(comp is Transform) && !(comp is DroppedGearDummy))
-                //    {
-                //        UnityEngine.Object.Destroy(comp);
-                //    }
-                //}
-                if (obj.GetComponent<CookingPotItem>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<CookingPotItem>());
-                }
-                if (obj.GetComponent<EvolveItem>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<EvolveItem>());
-                }
-                if (obj.GetComponent<FlareGunRoundItem>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<FlareGunRoundItem>());
-                }
                 if (obj.GetComponent<SnareItem>() != null)
                 {
                     int stateToSent = 0;
-                    if(extra.m_Variant == 4)
+                    if (extra.m_Variant == 4)
                     {
                         stateToSent = 1;
-                    }else{
+                    } else {
                         stateToSent = extra.m_Variant;
                     }
-                    
+
                     obj.GetComponent<SnareItem>().SetState((SnareState)stateToSent);
-                    UnityEngine.Object.Destroy(obj.GetComponent<SnareItem>());
                 }
-                if (obj.GetComponent<Inspect>() != null)
+
+                foreach (Component Com in obj.GetComponents<Component>())
                 {
-                    UnityEngine.Object.Destroy(obj.GetComponent<Inspect>());
+                    string ComName = Com.GetIl2CppType().Name;
+                    if (ComName != BoxCollider.Il2CppType.Name
+                        && ComName != SphereCollider.Il2CppType.Name
+                        && ComName != CapsuleCollider.Il2CppType.Name
+                        && ComName != MeshCollider.Il2CppType.Name
+                        && ComName != PhysicMaterial.Il2CppType.Name
+                        && ComName != MeshFilter.Il2CppType.Name
+                        && ComName != LODGroup.Il2CppType.Name
+                        && ComName != Transform.Il2CppType.Name
+                        && ComName != Rigidbody.Il2CppType.Name
+                        && ComName != MeshRenderer.Il2CppType.Name
+                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    {
+                        UnityEngine.Object.Destroy(Com);
+                    }
                 }
-                if (obj.GetComponent<PlaceableItem>() != null)
+
+                if (!string.IsNullOrEmpty(extra.m_PhotoGUID))
                 {
-                    UnityEngine.Object.Destroy(obj.GetComponent<PlaceableItem>());
+                    MelonLogger.Msg("Photo "+ extra.m_PhotoGUID);
+                    Texture2D tex = MPSaveManager.GetPhotoTexture(extra.m_PhotoGUID, extra.m_GearName);
+                    if (tex)
+                    {
+                        obj.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                    } else
+                    {
+                        Shared.RequestPhoto(extra.m_PhotoGUID);
+                        MelonLogger.Msg("Don't have texture for it, request from host");
+                    }
                 }
-                if (obj.GetComponent<Harvest>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<Harvest>());
-                }
-                if (obj.GetComponent<BodyHarvest>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<BodyHarvest>());
-                }
-                if (obj.GetComponent<KeroseneLampItem>() != null)
-                {
-                    UnityEngine.Object.Destroy(obj.GetComponent<KeroseneLampItem>());
-                }
-                
-                DroppedGearDummy DGD = obj.AddComponent<DroppedGearDummy>();
+
+                Comps.DroppedGearDummy DGD = obj.AddComponent<Comps.DroppedGearDummy>();
                 DGD.m_SearchKey = Hash;
                 DGD.m_Extra = extra;
                 DGD.m_LocalizedDisplayName = _DisName;
                 if (_FakeBed)
                 {
-                    obj.AddComponent<MyMod.FakeBed>();
+                    obj.AddComponent<Comps.FakeBed>();
                 }
                 obj.SetActive(true);
                 DroppedGearsObjs.Add(Hash, obj);
             }
             else
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
             }
-        }
-
-        public static void AddDroppedGear(int GearID, int Hash, string DataProxy, string Scene, ExtraDataForDroppedGear extra)
-        {
-            SlicedJsonDroppedGear element = new SlicedJsonDroppedGear();
-            if (GearID == -1)
-            {
-                element.m_GearName = extra.m_GearName;
-            }else{
-                element.m_GearName = GetGearNameByID(GearID);
-            }
-            element.m_Json = DataProxy;
-            element.m_Extra = extra;
-            MPSaveManager.AddGearData(Scene, Hash, element);
         }
 
         public static void PlaceDroppedGear(GameObject obj)
         {
             string OriginalName = obj.name;
             string GearName = CloneTrimer(OriginalName).ToLower();
-            int GearID = GetGearIDByName(GearName);
-            string GiveGear = "";
-            if(GearID == -1)
-            {
-                GiveGear = CloneTrimer(OriginalName);
-            }
-
+            string GiveGear = CloneTrimer(OriginalName);
 
             Vector3 v3 = obj.transform.position;
             Quaternion rot = obj.transform.rotation;
             int SearchKey = 0;
             string lvlKey = level_guid;
 
-            if (obj.GetComponent<DroppedGearDummy>() != null)
+            LastPickedVisualPosition = obj.transform.position;
+            LastPickedVisualRotation = obj.transform.rotation;
+
+            if (obj.GetComponent<Comps.DroppedGearDummy>() != null)
             {
-                SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
-            }else{
-                //MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy is not exist by somereason...");
+                SearchKey = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
+            } else {
+                //MelonLogger.Msg(Red, "DroppedGearDummy is not exist by somereason...");
 
 
                 GearItem GI = obj.GetComponent<GearItem>();
 
                 if (GI != null && !GI.m_BeenInPlayerInventory && !ServerConfig.m_DuppedSpawns)
                 {
-                    DropFakeOnLeave DFL = obj.AddComponent<DropFakeOnLeave>();
+                    Comps.DropFakeOnLeave DFL = obj.AddComponent<Comps.DropFakeOnLeave>();
                     DFL.m_OldPossition = obj.transform.position;
                     DFL.m_OldRotation = obj.transform.rotation;
                     MelonLogger.Msg("Trying place pre-spawned gear, so dropping fake on cancle");
@@ -11831,7 +6501,7 @@ namespace SkyCoop
                 return;
             }
 
-            MelonLogger.Msg("Searching for "+ GearName +" with hash "+ SearchKey +" ID "+ GearID);
+            MelonLogger.Msg("Searching for " + GearName + " with hash " + SearchKey);
 
             if (sendMyPosition == true)
             {
@@ -11840,25 +6510,21 @@ namespace SkyCoop
                 {
                     _packet.Write(SearchKey);
                     _packet.Write(lvlKey);
-                    SetRepeatPacket(ResendPacketType.Gear);
-                    SendTCPData(_packet);
+                    ResendGearSearchKey = SearchKey;
+                    ResendGearLvlKey = lvlKey;
+                    SetRepeatPacket(ResendPacketType.GearPlace);
+
+                    SendUDPData(_packet);
                 }
                 return;
             }
 
-            SlicedJsonDroppedGear DataProxy = MPSaveManager.RequestSpecificGear(SearchKey, level_guid, true);
-            if(DataProxy != null)
+            DataStr.SlicedJsonDroppedGear DataProxy = MPSaveManager.RequestSpecificGear(SearchKey, level_guid, true);
+            if (DataProxy != null)
             {
                 MelonLogger.Msg("Found " + SearchKey);
 
-                string gearName = "";
-
-                if (GearID == -1)
-                {
-                    gearName = GiveGear;
-                }else{
-                    gearName = GetGearNameByID(GearID);
-                }
+                string gearName = GiveGear;
 
                 if (gearName == "gear_knife")
                 {
@@ -11872,42 +6538,64 @@ namespace SkyCoop
 
                 if (reference == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
                 GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
                 DisableObjectForXPMode.RemoveDisabler(newGear.gameObject);
 
-                ExtraDataForDroppedGear Extra = obj.GetComponent<DroppedGearDummy>().m_Extra;
+                DataStr.ExtraDataForDroppedGear Extra = obj.GetComponent<Comps.DroppedGearDummy>().m_Extra;
 
                 if (newGear.GetComponent<KeroseneLampItem>() != null && obj != null)
                 {
                     int minutesDroped = MinutesFromStartServer - Extra.m_DroppedTime;
                     OverrideLampReduceFuel = minutesDroped;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
+                    MelonLogger.Msg(Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                 }
 
                 if (newGear == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
                 newGear.name = CloneTrimer(newGear.name);
-                newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
+                if (!string.IsNullOrEmpty(DataProxy.m_Json))
+                {
+                    newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
+                }
+
+                if (!string.IsNullOrEmpty(Extra.m_PhotoGUID))
+                {
+                    GearItem gi = newGear.GetComponent<GearItem>();
+                    if (gi.m_ObjectGuid == null)
+                    {
+                        string GUID = Extra.m_PhotoGUID;
+                        ObjectGuid GUIDComp = newGear.AddComponent<ObjectGuid>();
+                        GUIDComp.m_Guid = GUID;
+                        gi.m_ObjectGuid = GUIDComp;
+                        MelonLogger.Msg("Going render photo " + GUID);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, gi.m_GearName);
+                        if (tex)
+                        {
+                            newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                        }
+                    }
+                }
+
                 newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
 
-                DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
+                Comps.DropFakeOnLeave DFL = newGear.AddComponent<Comps.DropFakeOnLeave>();
                 DFL.m_OldPossition = newGear.gameObject.transform.position;
                 DFL.m_OldRotation = newGear.gameObject.transform.rotation;
                 newGear.GetComponent<GearItem>().PlayPickUpClip();
                 GameManager.GetPlayerManagerComponent().StartPlaceMesh(newGear, PlaceMeshFlags.None);
                 DroppedGearsObjs.Remove(SearchKey);
                 TrackableDroppedGearsObjs.Remove(SearchKey);
-                UnityEngine.Object.DestroyImmediate(obj);
+                UnityEngine.Object.Destroy(obj);
                 ServerSend.PICKDROPPEDGEAR(0, SearchKey, true);
-            }else{
+            } else {
                 MelonLogger.Msg("Gear with hash " + SearchKey + " is missing!");
             }
         }
@@ -11916,50 +6604,37 @@ namespace SkyCoop
         {
             string OriginalName = obj.name;
             string GearName = CloneTrimer(OriginalName).ToLower();
-            int GearID = GetGearIDByName(GearName);
             Vector3 v3 = obj.transform.position;
             Quaternion rot = obj.transform.rotation;
             int SearchKey = 0;
             string lvlKey = level_guid;
 
-            if (obj.GetComponent<DroppedGearDummy>() != null)
+            if (obj.GetComponent<Comps.DroppedGearDummy>() != null)
             {
-                SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
-            }else{
-                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                SearchKey = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
+            } else {
+                MelonLogger.Msg(Red, "DroppedGearDummy by somereason...");
                 return;
             }
 
-            MelonLogger.Msg("Searching for " + GearName + " with hash " + SearchKey + " ID " + GearID);
+            MelonLogger.Msg("Searching for " + GearName + " with hash " + SearchKey);
 
-            string gearName;
-            if (GearID != -1)
-            {
-                gearName = GetGearNameByID(GearID);
-            }else{
-                gearName = GearName;
-            }
+            string gearName = GearName;
             GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject(gearName), v3, rot);
             newGear.name = CloneTrimer(newGear.name);
             newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
             newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Placed);
-            newGear.AddComponent<FakeBedDummy>().m_LinkedFakeObject = obj;
+            newGear.AddComponent<Comps.FakeBedDummy>().m_LinkedFakeObject = obj;
             GameManager.GetPlayerManagerComponent().ProcessBedInteraction(newGear.GetComponent<GearItem>().m_Bed);
         }
 
-        public static void PickupDroppedGear(GameObject obj)
+        public static void PickupDroppedGear(GameObject obj, bool SkipLocksmith = false)
         {
             string OriginalName = obj.name;
             string GearName = CloneTrimer(OriginalName).ToLower();
-            int GearID = GetGearIDByName(GearName);
-            string GearToGive = "";
+            string GearToGive = CloneTrimer(OriginalName);
 
-            if(GearID == -1)
-            {
-                GearToGive = CloneTrimer(OriginalName);
-            }
-
-            if(GearName == "gear_technicalbackpack" && GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_TechnicalBackpack"))
+            if (GearName == "gear_technicalbackpack" && GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_TechnicalBackpack"))
             {
                 HUDMessage.AddMessage("You already have technical backpack!");
                 return;
@@ -11969,16 +6644,23 @@ namespace SkyCoop
             Quaternion rot = obj.transform.rotation;
             int SearchKey = 0;
 
-            if (obj.GetComponent<DroppedGearDummy>() != null)
+            if (obj.GetComponent<Comps.DroppedGearDummy>() != null)
             {
-                SearchKey = obj.GetComponent<DroppedGearDummy>().m_SearchKey;
-            }else{
-                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                SearchKey = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
+            } else {
+                MelonLogger.Msg(Red, "DroppedGearDummy by somereason...");
                 return;
             }
 
-            MelonLogger.Msg("Searching for "+ GearName + " with hash " + SearchKey + " ID " + GearID);
+            if (!SkipLocksmith && Shared.IsLocksmithItem(GearName) && obj.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_Variant == 4)
+            {
+                ShowBlankworkingPicker(obj);
+                return;
+            }
 
+            MelonLogger.Msg("Searching for " + GearName + " with hash " + SearchKey);
+            LastPickedVisualPosition = obj.transform.position;
+            LastPickedVisualRotation = obj.transform.rotation;
             if (sendMyPosition == true)
             {
                 DoPleaseWait("Please wait...", "Downloading gear...");
@@ -11986,27 +6668,21 @@ namespace SkyCoop
                 {
                     _packet.Write(SearchKey);
                     _packet.Write(level_guid);
-                    SetRepeatPacket(ResendPacketType.Gear);
-                    SendTCPData(_packet);
+                    ResendGearSearchKey = SearchKey;
+                    ResendGearLvlKey = level_guid;
+                    SetRepeatPacket(ResendPacketType.GearPickup);
+                    SendUDPData(_packet);
                 }
                 return;
             }
 
-            SlicedJsonDroppedGear DataProxy = MPSaveManager.RequestSpecificGear(SearchKey, level_guid, true);
+            DataStr.SlicedJsonDroppedGear DataProxy = MPSaveManager.RequestSpecificGear(SearchKey, level_guid, true);
 
-            if(DataProxy != null)
+            if (DataProxy != null)
             {
                 MelonLogger.Msg("Found " + SearchKey);
-                string gearName = "";
-
-                if (GearID == -1)
-                {
-                    gearName = GearToGive;
-                }else{
-                    gearName = GetGearNameByID(GearID);
-                }
-
-                if(gearName == "gear_knife")
+                string gearName = GearToGive;
+                if (gearName == "gear_knife")
                 {
                     if (Supporters.ConfiguratedBenefits.m_Knife)
                     {
@@ -12018,7 +6694,7 @@ namespace SkyCoop
 
                 if (reference == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
@@ -12027,21 +6703,47 @@ namespace SkyCoop
 
                 if (newGear == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
                 newGear.name = CloneTrimer(newGear.name);
-                DroppedGearDummy DGD = obj.GetComponent<DroppedGearDummy>();
+                Comps.DroppedGearDummy DGD = obj.GetComponent<Comps.DroppedGearDummy>();
                 if (newGear.GetComponent<KeroseneLampItem>() != null)
                 {
                     int minutesDroped = MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
                     OverrideLampReduceFuel = minutesDroped;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
+                    MelonLogger.Msg(Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                 }
-                newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
+                if (!string.IsNullOrEmpty(DataProxy.m_Json))
+                {
+                    newGear.GetComponent<GearItem>().Deserialize(DataProxy.m_Json);
+                }
+
+                if (!string.IsNullOrEmpty(DGD.m_Extra.m_PhotoGUID))
+                {
+                    GearItem gi = newGear.GetComponent<GearItem>();
+                    if (gi.m_ObjectGuid == null)
+                    {
+                        string GUID = DGD.m_Extra.m_PhotoGUID;
+                        ObjectGuid GUIDComp = newGear.AddComponent<ObjectGuid>();
+                        GUIDComp.m_Guid = GUID;
+                        gi.m_ObjectGuid = GUIDComp;
+                        MelonLogger.Msg("Going render photo " + GUID);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, DGD.m_Extra.m_GearName);
+                        if (tex)
+                        {
+                            newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(DGD.m_Extra.m_ExpeditionNote))
+                {
+                    CreateCustomNote(DGD.m_Extra.m_ExpeditionNote, newGear.GetComponent<GearItem>());
+                }
+
                 newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
-                DropFakeOnLeave DFL = newGear.AddComponent<DropFakeOnLeave>();
+                Comps.DropFakeOnLeave DFL = newGear.AddComponent<Comps.DropFakeOnLeave>();
                 DFL.m_OldPossition = newGear.gameObject.transform.position;
                 DFL.m_OldRotation = newGear.gameObject.transform.rotation;
                 if (DGD != null)
@@ -12054,8 +6756,8 @@ namespace SkyCoop
                             int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
 
                             gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = (float)minutesOnDry / 60;
-                            MelonLogger.Msg(ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
-                            MelonLogger.Msg(ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                            MelonLogger.Msg(Blue, "Saving minutesOnDry " + minutesOnDry);
+                            MelonLogger.Msg(Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
                         }
                     }
                 }
@@ -12070,16 +6772,16 @@ namespace SkyCoop
                 if (SkipPickup == false)
                 {
                     GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
-                }else{
+                } else {
                     GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(newGear.GetComponent<GearItem>(), false, false);
                 }
                 PatchBookReadTime(newGear.GetComponent<GearItem>());
 
                 DroppedGearsObjs.Remove(SearchKey);
                 TrackableDroppedGearsObjs.Remove(SearchKey);
-                UnityEngine.Object.DestroyImmediate(obj);
+                UnityEngine.Object.Destroy(obj);
                 ServerSend.PICKDROPPEDGEAR(0, SearchKey, true);
-            }else{
+            } else {
                 MelonLogger.Msg("Gear with hash " + SearchKey + " is missing!");
             }
         }
@@ -12088,145 +6790,22 @@ namespace SkyCoop
         {
             GameObject gearObj;
             DroppedGearsObjs.TryGetValue(Hash, out gearObj);
-            if(gearObj != null)
-            {
-                DroppedGearsObjs.Remove(Hash);
-                TrackableDroppedGearsObjs.Remove(Hash);
-                UnityEngine.Object.DestroyImmediate(gearObj);
-            }
-            if (players[Picker] != null && players[Picker].GetComponent<MultiplayerPlayerAnimator>() != null)
-            {
-                players[Picker].GetComponent<MultiplayerPlayerAnimator>().Pickup();
-            }
-        }
-
-        public static void SendDroppedItemToPicker(string DataProxy, int GiveItemTo, int SearchKey, int GearID, bool place, ExtraDataForDroppedGear Extra)
-        {
-            byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
-            MelonLogger.Msg("Going to send gear "+ GearID + " to client "+ GiveItemTo +" bytes: "+ bytesToSlice.Length);
-            if (GearID == GetGearIDByName("gear_knife"))
-            {
-                if (playersData[GiveItemTo].m_SupporterBenefits.m_Knife)
-                {
-                    GearID = GetGearIDByName("gear_jeremiahknife");
-                }
-            }
-            else if (GearID == GetGearIDByName("gear_jeremiahknife"))
-            {
-                if (!playersData[GiveItemTo].m_SupporterBenefits.m_Knife)
-                {
-                    GearID = GetGearIDByName("gear_knife");
-                }
-            }
-
-            if (bytesToSlice.Length > 500)
-            {
-                List<byte> BytesBuffer = new List<byte>();
-                BytesBuffer.AddRange(bytesToSlice);
-
-                while (BytesBuffer.Count >= 500)
-                {
-                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
-                    BytesBuffer.RemoveRange(0, 499);
-
-                    string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
-                    SlicedJsonData SlicedPacket = new SlicedJsonData();
-                    SlicedPacket.m_GearName = level_guid;
-                    SlicedPacket.m_SendTo = GearID;
-                    SlicedPacket.m_Hash = SearchKey;
-                    SlicedPacket.m_Str = jsonStringSlice;
-
-                    if (BytesBuffer.Count != 0)
-                    {
-                        SlicedPacket.m_Last = false;
-                    }else{
-                        SlicedPacket.m_Last = true;
-                        SlicedPacket.m_Extra = Extra;
-                    }
-
-                    if(place == false)
-                    {
-                        ServerSend.GETREQUESTEDITEMSLICE(GiveItemTo, SlicedPacket);
-                    }else{
-                        ServerSend.GETREQUESTEDFORPLACESLICE(GiveItemTo, SlicedPacket);
-                    }
-                }
-
-                if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
-                {
-                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
-                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
-
-                    string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
-                    SlicedJsonData SlicedPacket = new SlicedJsonData();
-                    SlicedPacket.m_GearName = level_guid;
-                    SlicedPacket.m_SendTo = GearID;
-                    SlicedPacket.m_Hash = SearchKey;
-                    SlicedPacket.m_Str = jsonStringSlice;
-                    SlicedPacket.m_Last = true;
-                    SlicedPacket.m_Extra = Extra;
-                    if (place == false)
-                    {
-                        ServerSend.GETREQUESTEDITEMSLICE(GiveItemTo, SlicedPacket);
-                    }else{
-                        ServerSend.GETREQUESTEDFORPLACESLICE(GiveItemTo, SlicedPacket);
-                    }
-                }
-            }else{
-                SlicedJsonData SlicedPacket = new SlicedJsonData();
-                SlicedPacket.m_GearName = level_guid;
-                SlicedPacket.m_SendTo = GearID;
-                SlicedPacket.m_Hash = SearchKey;
-                SlicedPacket.m_Str = DataProxy;
-                SlicedPacket.m_Last = true;
-                SlicedPacket.m_Extra = Extra;
-                if (place == false)
-                {
-                    ServerSend.GETREQUESTEDITEMSLICE(GiveItemTo, SlicedPacket);
-                }else{
-                    ServerSend.GETREQUESTEDFORPLACESLICE(GiveItemTo, SlicedPacket);
-                }
-            }
-        }
-
-        public static void ClientTryPickupItem(int Hash, int sendTo, string Scene, bool place)
-        {
-            GameObject gearObj;
-            DroppedGearsObjs.TryGetValue(Hash, out gearObj);
             if (gearObj != null)
             {
                 DroppedGearsObjs.Remove(Hash);
                 TrackableDroppedGearsObjs.Remove(Hash);
-                UnityEngine.Object.DestroyImmediate(gearObj);
+                UnityEngine.Object.Destroy(gearObj);
             }
-            ServerSend.PICKDROPPEDGEAR(sendTo, Hash, true);
-            SlicedJsonDroppedGear DataProxy = MPSaveManager.RequestSpecificGear(Hash, Scene, true);
-            if(DataProxy != null)
+            if (!MyMod.DedicatedServerAppMode && players[Picker] != null && players[Picker].GetComponent<Comps.MultiplayerPlayerAnimator>() != null)
             {
-                MelonLogger.Msg("Found gear with hash " + Hash);
-                SendDroppedItemToPicker(DataProxy.m_Json, sendTo, Hash, GetGearIDByName(DataProxy.m_GearName), place, DataProxy.m_Extra);
-                if (players[sendTo] != null && players[sendTo].GetComponent<MultiplayerPlayerAnimator>() != null)
-                {
-                    players[sendTo].GetComponent<MultiplayerPlayerAnimator>().Pickup();
-                }
-            }else{
-                MelonLogger.Msg("Client requested gear we have not data for, so gear most likely is missing. Gear hash " + Hash);
-                ServerSend.GEARNOTEXIST(sendTo, true);
+                players[Picker].GetComponent<Comps.MultiplayerPlayerAnimator>().Pickup();
             }
         }
 
         public static GameObject DiagnosisDummy = null;
         public static int CurePlayerID = 0;
 
-        public class AffictionSync
-        {
-            public int m_Type = 0;
-            public int m_Location = 0;
-            public string m_Case = "";
-            public bool m_ShouldBeTreated = true;
-        }
-
-        public static List<AffictionSync> BuildMyAfflictionList()
+        public static List<DataStr.AffictionSync> BuildMyAfflictionList()
         {
             List<Affliction> Affs = new List<Affliction>();
 
@@ -12241,16 +6820,16 @@ namespace SkyCoop
                     //MelonLogger.Msg(currentAffliction.m_AfflictionType);
                 }
             }
-            List<AffictionSync> ToReturn = new List<AffictionSync>();
+            List<DataStr.AffictionSync> ToReturn = new List<DataStr.AffictionSync>();
             for (int index = 0; index < Affs.Count; ++index)
             {
-                AffictionSync AffSync = new AffictionSync();
+                DataStr.AffictionSync AffSync = new DataStr.AffictionSync();
                 AffSync.m_Type = (int)Affs[index].m_AfflictionType;
                 AffSync.m_Location = (int)Affs[index].m_Location;
-                if(Affs[index].m_Cause == null)
+                if (Affs[index].m_Cause == null)
                 {
                     AffSync.m_Case = "Unknown";
-                }else{
+                } else {
                     AffSync.m_Case = Affs[index].m_Cause;
                 }
 
@@ -12262,31 +6841,35 @@ namespace SkyCoop
             return ToReturn;
         }
 
-        public static void SendMyAffictions(int PlayerSendTo, float hp)
+        public static void SendMyAffictions(int PlayerSendTo, float hp, float hpmax, float thirst, float hunger, float hungermax)
         {
-            List<AffictionSync> Affs = BuildMyAfflictionList();
+            List<DataStr.AffictionSync> Affs = BuildMyAfflictionList();
 
-            if(iAmHost == true)
+            if (iAmHost == true)
             {
-                ServerSend.SENDMYAFFLCTIONS(PlayerSendTo, Affs, hp, 0);
+                ServerSend.SENDMYAFFLCTIONS(PlayerSendTo, Affs, hp, hpmax, thirst, hunger, hungermax, 0);
             }
-            if(sendMyPosition == true)
+            if (sendMyPosition == true)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.SENDMYAFFLCTIONS))
                 {
                     _packet.Write(PlayerSendTo);
                     _packet.Write(Affs.Count);
                     _packet.Write(hp);
+                    _packet.Write(hpmax);
+                    _packet.Write(thirst);
+                    _packet.Write(hunger);
+                    _packet.Write(hungermax);
                     for (int index = 0; index < Affs.Count; ++index)
                     {
                         _packet.Write(Affs[index]);
                     }
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
         }
 
-        public static void OtherPlayerCuredMyAffiction(AffictionSync Aff)
+        public static void OtherPlayerCuredMyAffiction(DataStr.AffictionSync Aff)
         {
             GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(10, 0.3f, 0.3f);
             if (Aff.m_Type == (int)AfflictionType.FoodPoisioning)
@@ -12304,7 +6887,7 @@ namespace SkyCoop
             {
                 for (int i = 0; i < GameManager.GetSprainedAnkleComponent().m_Locations.Count; i++)
                 {
-                    if(GameManager.GetSprainedAnkleComponent().m_Locations[i] == Aff.m_Location)
+                    if (GameManager.GetSprainedAnkleComponent().m_Locations[i] == Aff.m_Location)
                     {
                         GameManager.GetSprainedAnkleComponent().ApplyBandage(i);
                         return;
@@ -12326,7 +6909,7 @@ namespace SkyCoop
             {
                 for (int i = 0; i < GameManager.GetSprainPainComponent().m_ActiveInstances.Count; i++)
                 {
-                    if (GameManager.GetSprainPainComponent().m_ActiveInstances[i].m_Location == (AfflictionBodyArea) Aff.m_Location)
+                    if (GameManager.GetSprainPainComponent().m_ActiveInstances[i].m_Location == (AfflictionBodyArea)Aff.m_Location)
                     {
                         GameManager.GetSprainPainComponent().TakePainKillers(i);
                         return;
@@ -12389,12 +6972,12 @@ namespace SkyCoop
                 GameManager.GetIntestinalParasitesComponent().TakeAntibiotics();
             }
         }
-        public static void SendCureAffliction(AffictionSync Aff)
+        public static void SendCureAffliction(DataStr.AffictionSync Aff)
         {
-            if(DebugDiagnosis == true)
+            if (DebugDiagnosis == true)
             {
                 OtherPlayerCuredMyAffiction(Aff);
-            }else{
+            } else {
                 if (iAmHost == true)
                 {
                     ServerSend.CUREAFFLICTION(CurePlayerID, Aff);
@@ -12405,28 +6988,7 @@ namespace SkyCoop
                     {
                         _packet.Write(Aff);
                         _packet.Write(CurePlayerID);
-                        SendTCPData(_packet);
-                    }
-                }
-            }
-        }
-
-        public static void TryToBorrowThing(int PlayerID)
-        {
-            if (LastBorrowable && LastBorrowable.m_Obj)
-            {
-                LastBorrowable.m_Obj.SetActive(false);
-                if (iAmHost == true)
-                {
-                    ServerSend.TRYBORROWGEAR(PlayerID, 0, LastBorrowable.m_GearName);
-                }
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.TRYBORROWGEAR))
-                    {
-                        _packet.Write(PlayerID);
-                        _packet.Write(LastBorrowable.m_GearName);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
             }
@@ -12434,29 +6996,30 @@ namespace SkyCoop
 
         public static void TryToCheckPlayer(int PlayerID) //Examine
         {
+            SetRepeatPacket(ResendPacketType.Examine, 10);
             DoPleaseWait("Diagnosis player", "Please wait...");
-            MelonLogger.Msg("Trying diagnosis client "+ PlayerID);
-            if(iAmHost == true)
+            MelonLogger.Msg("Trying diagnosis client " + PlayerID);
+            if (iAmHost == true)
             {
-                ServerSend.TRYDIAGNISISPLAYER(PlayerID, instance.myId);
+                ServerSend.TRYDIAGNISISPLAYER(PlayerID, ClientUser.myId);
             }
             if (sendMyPosition == true)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.TRYDIAGNISISPLAYER))
                 {
                     _packet.Write(PlayerID);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
         }
 
         public static bool DebugDiagnosis = false;
 
-        public static void CheckOtherPlayer(List<AffictionSync> Affs, int PlayerID, float health)
+        public static void CheckOtherPlayer(List<DataStr.AffictionSync> Affs, int PlayerID, float health, float maxhealth, float thirst, float hunger, float hungermax)
         {
-            if(DiagnosisDummy != null)
+            if (DiagnosisDummy != null)
             {
-                UnityEngine.Object.DestroyImmediate(DiagnosisDummy);
+                UnityEngine.Object.Destroy(DiagnosisDummy);
             }
             CurePlayerID = PlayerID;
             DiagnosisDummy = new GameObject();
@@ -12492,7 +7055,7 @@ namespace SkyCoop
                 if (Affs[i].m_ShouldBeTreated == false)
                 {
                     npcAff.m_RestHours = 1;
-                }else{
+                } else {
                     HasAnyBadOnes = true;
                 }
                 npcAff.m_Definition = definitionByType;
@@ -12500,21 +7063,31 @@ namespace SkyCoop
                 npcAff.m_CauseLocId = Affs[i].m_Case;
 
                 m_NPCaff.m_Afflictions.Add(npcAff);
-                if(definitionByType.m_AfflictionType == AfflictionType.BloodLoss)
+                if (definitionByType.m_AfflictionType == AfflictionType.BloodLoss)
                 {
                     HasBloodLoss = true;
                 }
             }
 
             m_NPCcon.m_CurrentHP = health;
-            m_NPCcon.m_MaxHP = 100;
+            m_NPCcon.m_MaxHP = maxhealth;
+
+            m_Thirst.m_CurrentThirstPercentage = thirst;
+            m_Thirst.m_InitialThirstPercentage = thirst;
+            m_Thirst.m_ThirstIncreasePerHour = 0;
+            m_Cold.m_CurrentFreezing = 100 - Mathf.Clamp(0.5f + (100f * hunger) / hungermax, 0.0f, 100f);
+            m_Cold.m_MaxFreezing = hungermax;
             Panel_Diagnosis Panel = InterfaceManager.m_Panel_Diagnosis;
             RemovePleaseWait();
+            DiscardRepeatPacket();
+
             Panel.Enable(true, m_NPC);
             GameObject thirstBar = Panel.gameObject.transform.GetChild(2).gameObject;
             GameObject TemertureBar = Panel.gameObject.transform.GetChild(3).gameObject;
-            thirstBar.SetActive(false);
-            TemertureBar.SetActive(false);
+            thirstBar.SetActive(true);
+            TemertureBar.transform.GetChild(1).GetChild(0).GetChild(0).GetChild(6).gameObject.GetComponent<UISprite>().mSpriteName = "ico_status_hunger1";
+            TemertureBar.transform.GetChild(1).GetChild(0).GetChild(0).GetChild(7).gameObject.GetComponent<UISprite>().mSpriteName = "ico_status_hunger3";
+            TemertureBar.SetActive(true);
 
             string Speach = "PLAY_SURVIVORDIAGNOSIS"; // Astrid Default
             if (GameManager.GetPlayerManagerComponent().m_VoicePersona == VoicePersona.Male) // If Makenzy
@@ -12522,10 +7095,10 @@ namespace SkyCoop
                 if (!HasAnyBadOnes) // All is okay
                 {
                     Speach = "PLAY_SNDVOSMMAC1750"; // You ok?
-                }else if(HasBloodLoss) // Has blood loss
+                } else if (HasBloodLoss) // Has blood loss
                 {
                     Speach = "PLAY_SNDVOSMMAC1820"; // You’re losing blood. Just stay awake. We’ll get there
-                }else{ // Anything else
+                } else { // Anything else
                     List<string> MakenzyDiagnosis = new List<string>();
                     MakenzyDiagnosis.Add("PLAY_SNDVOSMMAC2150"); // Good to see you’re still breathing. I found some supplies that should help.
                     MakenzyDiagnosis.Add("PLAY_SNDVOSMMACE422950_01"); // That doesn't look good...
@@ -12536,205 +7109,6 @@ namespace SkyCoop
             }
             GameManager.GetPlayerVoiceComponent().Play(Speach, Voice.Priority.Critical);
         }
-
-        public class DictionaryElementToReNew
-        {
-            public int m_Key;
-            public SlicedJsonDroppedGear m_Val;
-            public DroppedGearItemDataPacket m_Val2;
-        }
-
-        public static void ModifyDynamicGears(string Scene)
-        {
-            Dictionary<int, DroppedGearItemDataPacket> LoadedVisual = MPSaveManager.LoadDropVisual(Scene);
-            Dictionary<int, SlicedJsonDroppedGear> LoadedData = MPSaveManager.LoadDropData(Scene);
-
-            if(LoadedVisual == null || LoadedData == null)
-            {
-                return;
-            }
-
-            // Here goes kinda crappy code!!!!!
-            List<DictionaryElementToReNew> Buff = new List<DictionaryElementToReNew>();
-            List<Vector3> RabbitsBuff = new List<Vector3>();
-
-            foreach (var cur in LoadedData) //Checking if we have any dynamic gears we need to modify!
-            {
-                int curKey = cur.Key;
-                SlicedJsonDroppedGear dat = cur.Value;
-                if (dat.m_GearName.Contains("gear_snare") == true && (dat.m_Extra.m_Variant == 1 || dat.m_Extra.m_Variant == 4)) // If is placed snare
-                {
-                    int minutesPlaced = MinutesFromStartServer - dat.m_Extra.m_DroppedTime;
-                    int NeedToBePlaced = 720;
-                    int minutesLeft = NeedToBePlaced - minutesPlaced + 1;
-                    float ChanceToCatch = 50;
-                    float ChanceToBreak = 15;
-                    if (minutesLeft <= 0) // If snare ready to roll random
-                    {
-                        if (dat.m_Extra.m_Variant == 4 || Utils.RollChance(ChanceToCatch))
-                        {
-                            dat.m_Extra.m_Variant = (int)SnareState.WithRabbit; // New visual state!
-                            dat.m_Extra.m_GoalTime = -1; // So it won't reload itself.
-
-                            GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(dat.m_Json);
-                            SnareItem DummySnare = Utils.DeserializeObject<SnareItem>(DummyGear.m_SnareItemSerialized);
-                            DummySnare.m_State = (SnareState)dat.m_Extra.m_Variant;
-                            DummyGear.m_SnareItemSerialized = DummySnare.Serialize();
-                            dat.m_Json = Utils.SerializeObject(DummyGear);
-
-                            RabbitsBuff.Add(DummyGear.m_Position); // Add request on rabbit on snare position
-                        }else{
-                            if (Utils.RollChance(ChanceToBreak))
-                            {
-                                dat.m_Extra.m_Variant = (int)SnareState.Broken; // New visual state!
-                                dat.m_Extra.m_GoalTime = -1; // So it won't reload itself.
-
-                                GearItemSaveDataProxy DummyGear = Utils.DeserializeObject<GearItemSaveDataProxy>(dat.m_Json);
-                                SnareItem DummySnare = Utils.DeserializeObject<SnareItem>(DummyGear.m_SnareItemSerialized);
-                                DummySnare.m_State = (SnareState)dat.m_Extra.m_Variant;
-                                DummyGear.m_SnareItemSerialized = DummySnare.Serialize();
-                                dat.m_Json = Utils.SerializeObject(DummyGear);
-                            }else{
-                                // No new visual state, but reseting time player should to wait for.
-                                dat.m_Extra.m_DroppedTime = MinutesFromStartServer;
-                                dat.m_Extra.m_GoalTime = MinutesFromStartServer + NeedToBePlaced;
-                            }
-                        }
-                        DictionaryElementToReNew newGear = new DictionaryElementToReNew();
-                        newGear.m_Key = curKey;
-                        newGear.m_Val = dat;
-
-                        DroppedGearItemDataPacket Visual;
-                        if(LoadedVisual.TryGetValue(curKey, out Visual))
-                        {
-                            Visual.m_Extra = dat.m_Extra;
-                            newGear.m_Val2 = Visual;
-                        }
-                        Buff.Add(newGear); //Adding to buffer snare to re-add them.
-                    }
-                }
-            }
-
-            if (Buff.Count > 0) //If buffer contains anything, we need to remove old gears and update them with modified ones
-            {
-                for (int i = 0; i < Buff.Count; i++)
-                {
-                    int Key = Buff[i].m_Key;
-                    LoadedData.Remove(Key);
-                    LoadedData.Add(Key, Buff[i].m_Val);
-
-                    if(Buff[i].m_Val2 != null)
-                    {
-                        LoadedVisual.Remove(Key);
-                        LoadedVisual.Add(Key, Buff[i].m_Val2);
-                    }
-                }
-            }
-            if (RabbitsBuff.Count > 0) //If buffer contains anything, we need to spawn rabbits
-            {
-                for (int i = 0; i < RabbitsBuff.Count; i++)
-                {
-                    SlicedJsonDroppedGear Rabbit = new SlicedJsonDroppedGear();
-                    Rabbit.m_GearName = "gear_rabbitcarcass";
-                    Rabbit.m_Extra.m_DroppedTime = MinutesFromStartServer;
-                    Rabbit.m_Extra.m_Dropper = "Nature";
-                    string RabbitJson = "";
-                    GameObject reference = GetGearItemObject("gear_rabbitcarcass");
-                    int SearchKey = 0;
-
-                    if (reference != null)
-                    {
-                        Vector3 v3 = RabbitsBuff[i];
-                        Quaternion rot = new Quaternion(0, 0, 0, 0);
-
-                        GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, v3, rot);
-                        GearItem gi = obj.GetComponent<GearItem>();
-                        gi.SkipSpawnChanceRollInitialDecayAndAutoEvolve();
-                        BodyHarvest bh = obj.GetComponent<BodyHarvest>();
-                        if (bh == null)
-                        {
-                            bh = obj.AddComponent<BodyHarvest>();
-                        }
-                        obj.name = "gear_rabbitcarcass";
-                        gi.m_CurrentHP = bh.GetCondition() / 100f * gi.m_MaxHP;
-
-                        RabbitJson = obj.GetComponent<GearItem>().Serialize();
-
-                        int GearID = GetGearIDByName("gear_rabbitcarcass");
-                        int hashGearID = GearID.GetHashCode();
-                        int hashV3 = v3.GetHashCode();
-                        int hashRot = rot.GetHashCode();
-                        int hashLevelKey = Scene.GetHashCode();
-                        SearchKey = hashGearID + hashV3 + hashRot + hashLevelKey;
-                        UnityEngine.Object.DestroyImmediate(obj);
-                    }
-
-                    DroppedGearItemDataPacket RabbitVisual = new DroppedGearItemDataPacket();
-                    RabbitVisual.m_Extra = Rabbit.m_Extra;
-                    RabbitVisual.m_GearID = GetGearIDByName("gear_rabbitcarcass");
-                    RabbitVisual.m_Hash = SearchKey;
-                    RabbitVisual.m_LevelGUID = Scene;
-                    RabbitVisual.m_Position = RabbitsBuff[i];
-                    RabbitVisual.m_Rotation = new Quaternion(0,0,0,0);
-                    Rabbit.m_Json = RabbitJson;
-                    LoadedData.Add(SearchKey, Rabbit);
-                    LoadedVisual.Add(SearchKey, RabbitVisual);
-                }
-            }
-            if (MPSaveManager.RecentData.ContainsKey(Scene))
-            {
-                MPSaveManager.RecentData.Remove(Scene);
-            }
-            MPSaveManager.RecentData.Add(Scene, LoadedData);
-            if (MPSaveManager.RecentVisual.ContainsKey(Scene))
-            {
-                MPSaveManager.RecentVisual.Remove(Scene);
-            }
-            MPSaveManager.RecentVisual.Add(Scene, LoadedVisual);
-        }
-
-        public class BodyHarvestUnits
-        {
-            public float m_Meat = 0;
-            public int m_Guts = 0;
-        }
-
-        public static BodyHarvestUnits GetBodyHarvestUnits(string name)
-        {
-            BodyHarvestUnits bh = new BodyHarvestUnits();
-            if (name == "WILDLIFE_Wolf")
-            {
-                bh.m_Meat = UnityEngine.Random.Range(3, 6);
-                bh.m_Guts = 2;
-            }
-            else if(name == "WILDLIFE_Wolf_grey")
-            {
-                bh.m_Meat = UnityEngine.Random.Range(4, 7);
-                bh.m_Guts = 2;
-            }
-            else if (name == "WILDLIFE_Bear")
-            {
-                bh.m_Meat = UnityEngine.Random.Range(25, 40);
-                bh.m_Guts = 10;
-            }
-            else if (name == "WILDLIFE_Stag")
-            {
-                bh.m_Meat = UnityEngine.Random.Range(8, 10);
-                bh.m_Guts = 2;
-            }
-            else if (name == "WILDLIFE_Rabbit")
-            {
-                bh.m_Meat = UnityEngine.Random.Range(0.75f, 1.5f);
-                bh.m_Guts = 1;
-            }
-            else if (name == "WILDLIFE_Moose")
-            {
-                bh.m_Meat = UnityEngine.Random.Range(30, 45);
-                bh.m_Guts = 12;
-            }
-            return bh;
-        }
-
 
         public static int TimeToDry(string gearName)
         {
@@ -12788,26 +7162,27 @@ namespace SkyCoop
         }
 
         public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0, GameObject Around = null)
-        {            
-            if(gear != null && gear.gameObject != null)
+        {
+            if (gear != null && gear.gameObject != null)
             {
                 GameObject obj = gear.gameObject;
+                string PhotoHash = "";
 
                 if (samepose == false)
                 {
-                    if(Around == null)
+                    if (Around == null)
                     {
                         gear.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
-                    }else{
+                    } else {
                         Vector3 pos = Around.transform.position;
                         float num = UnityEngine.Random.Range(0, 1.1f);
                         Vector3 vector3 = Quaternion.Euler(0.0f, UnityEngine.Random.Range(0, 359), 0.0f) * Vector3.forward;
                         gear.StickToGroundAndOrientOnSlope(pos + vector3 * num, NavMeshCheck.IgnoreNavMesh, 0.5f);
                     }
-                }else{
-                    if(obj.GetComponent<DropFakeOnLeave>() != null)
+                } else {
+                    if (obj.GetComponent<Comps.DropFakeOnLeave>() != null)
                     {
-                        DropFakeOnLeave DFL = obj.GetComponent<DropFakeOnLeave>();
+                        Comps.DropFakeOnLeave DFL = obj.GetComponent<Comps.DropFakeOnLeave>();
                         obj.transform.position = DFL.m_OldPossition;
                         obj.transform.rotation = DFL.m_OldRotation;
                     }
@@ -12816,22 +7191,41 @@ namespace SkyCoop
                 Vector3 v3 = gear.gameObject.transform.position;
                 Quaternion rot = gear.gameObject.transform.rotation;
 
-                string OriginalName = obj.name;
-                string GearName = CloneTrimer(OriginalName).ToLower();
-                int GearID = GetGearIDByName(GearName);
-
-                string GearGiveName = "";
-                if(GearID == -1)
+                if (Shared.IsLocksmithItem(gear.m_GearName.ToLower()))
                 {
-                    GearGiveName = CloneTrimer(OriginalName);
+                    RaycastHit hit;
+                    if (gear.m_GearName.ToLower().Contains("gear_scmetalblank"))
+                    {
+                        obj.transform.position = new Vector3(obj.transform.position.x, obj.transform.position.y + 0.15f, obj.transform.position.z);
+                    }
+                    variant = 0;
+                    if (Physics.Raycast(obj.transform.position, obj.transform.TransformDirection(Vector3.down), out hit, 8))
+                    {
+                        if (hit.collider)
+                        {
+                            if (hit.collider.gameObject.GetComponent<WorkBench>())
+                            {
+                                variant = 4;
+                            }
+                        }
+                    }
+                }
+                if(IsUserGeneratedHandItem(gear.m_GearName))
+                {
+                    if (gear.m_ObjectGuid != null && !string.IsNullOrEmpty(gear.m_ObjectGuid.m_Guid))
+                    {
+                        PhotoHash = gear.m_ObjectGuid.m_Guid;
+                        MelonLogger.Msg("Dropped photo " + PhotoHash);
+                    }
                 }
 
-                int hashGearID = GearID.GetHashCode();
-                int hashV3 = v3.GetHashCode();
-                int hashRot = rot.GetHashCode();
-                int hashLvlGUID = level_guid.GetHashCode();
-
-                int SearchKey = hashGearID + hashV3 + hashRot + hashLvlGUID;
+                string OriginalName = obj.name;
+                string GearName = CloneTrimer(OriginalName).ToLower();
+                string GearGiveName = CloneTrimer(OriginalName);
+                int hashV3 = Shared.GetVectorHash(v3);
+                int hashRot = Shared.GetQuaternionHash(rot);
+                int hashLevelKey = level_guid.GetHashCode();
+                int SearchKey = hashV3 + hashRot + hashLevelKey;
                 string LevelKey = level_guid;
 
                 //MelonLogger.Msg("hashGearID " + hashGearID);
@@ -12842,7 +7236,7 @@ namespace SkyCoop
                 string DataProxy;
                 if (nums > 0)
                 {
-                    if(gear.m_StackableItem != null)
+                    if (gear.m_StackableItem != null)
                     {
                         gear.m_StackableItem.m_Units = nums;
                     }
@@ -12853,9 +7247,9 @@ namespace SkyCoop
                 int NeedToDry = 0;
                 int MinuteToSkip = 0;
 
-                if(gear.m_EvolveItem != null)
+                if (gear.m_EvolveItem != null)
                 {
-                    if(gear.m_EvolveItem.CanEvolve() == true)
+                    if (gear.m_EvolveItem.CanEvolve() == true)
                     {
                         int days = Convert.ToInt32(gear.m_EvolveItem.m_TimeToEvolveGameDays);
                         int hours = days * 24;
@@ -12869,56 +7263,57 @@ namespace SkyCoop
                         MelonLogger.Msg("MinuteToSkip " + MinuteToSkip);
 
                         NeedToDry = minutes;
-                    }else{
+                    } else {
                         NeedToDry = -1;
                     }
                 }
 
-                if(gear.m_SnareItem != null)
+                if (gear.m_SnareItem != null)
                 {
                     variant = (int)gear.m_SnareItem.m_State;
 
-                    if(variant == 1)
-                    {                        
+                    if (variant == 1)
+                    {
                         if (SnareCanTrap(v3, gear.m_SnareItem.m_RabbitPrefab.name) == true)
                         {
                             NeedToDry = 720;
-                            if(GameManager.GetFeatExpertTrapper().IsUnlockedAndEnabled() == true)
+                            if (GameManager.GetFeatExpertTrapper().IsUnlockedAndEnabled() == true)
                             {
                                 variant = 4;
                             }
-                        }else{
+                        } else {
                             NeedToDry = -1;
                         }
                     }
                 }
 
-                MelonLogger.Msg("Dropping "+ GearName + " ID "+ GearID +" Hash "+ SearchKey+" variant "+ variant);
+                MelonLogger.Msg("Dropping " + GearName + " Hash " + SearchKey + " variant " + variant);
 
                 if (nums == 0)
                 {
                     UnityEngine.Object.Destroy(obj);
-                }else{
+                } else {
                     if (gear.m_StackableItem != null)
                     {
-                        gear.m_StackableItem.m_Units = total-nums;
+                        gear.m_StackableItem.m_Units = total - nums;
                         GameManager.GetInventoryComponent().AddGear(obj);
                     }
                 }
 
-                DroppedGearItemDataPacket SyncData = new DroppedGearItemDataPacket();
-                SyncData.m_GearID = GearID;
+                DataStr.DroppedGearItemDataPacket SyncData = new DataStr.DroppedGearItemDataPacket();
+                SyncData.m_GearID = -1;
                 SyncData.m_Position = v3;
                 SyncData.m_Rotation = rot;
                 SyncData.m_LevelID = levelid;
                 SyncData.m_LevelGUID = level_guid;
                 SyncData.m_Hash = SearchKey;
 
-                ExtraDataForDroppedGear Extra = new ExtraDataForDroppedGear();
+                DataStr.ExtraDataForDroppedGear Extra = new DataStr.ExtraDataForDroppedGear();
                 Extra.m_Dropper = MyChatName;
-                Extra.m_DroppedTime = MinutesFromStartServer-MinuteToSkip;
+                Extra.m_DroppedTime = MinutesFromStartServer - MinuteToSkip;
                 Extra.m_Variant = variant;
-                if(GearGiveName != "")
+                Extra.m_PhotoGUID = PhotoHash;
+                if (GearGiveName != "")
                 {
                     Extra.m_GearName = GearGiveName;
                 }
@@ -12926,20 +7321,20 @@ namespace SkyCoop
                 if (NeedToDry != 0 && NeedToDry != -1)
                 {
                     Extra.m_GoalTime = MinutesFromStartServer + NeedToDry;
-                }else{
+                } else {
                     Extra.m_GoalTime = NeedToDry;
                 }
 
                 if (gear.m_KeroseneLampItem != null)
                 {
-                    if(variant == 1)
+                    if (variant == 1)
                     {
                         float fuel = gear.m_KeroseneLampItem.m_CurrentFuelLiters;
-                        float fuelPerMinute = gear.m_KeroseneLampItem.m_FuelBurnLitersPerHour/60;
+                        float fuelPerMinute = gear.m_KeroseneLampItem.m_FuelBurnLitersPerHour / 60;
                         float minuteLeft = fuel / fuelPerMinute;
-                        
+
                         Extra.m_GoalTime = MinutesFromStartServer + (int)Math.Round(minuteLeft);
-                    }else{
+                    } else {
                         Extra.m_GoalTime = 0;
                     }
                 }
@@ -12951,7 +7346,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.DROPITEM))
                     {
                         _packet.Write(SyncData);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
 
                     byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
@@ -12967,23 +7362,19 @@ namespace SkyCoop
                             BytesBuffer.RemoveRange(0, 499);
 
                             string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
-                            SlicedJsonData SlicedPacket = new SlicedJsonData();
+                            DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
                             SlicedPacket.m_GearName = LevelKey;
-                            SlicedPacket.m_SendTo = GearID;
+                            SlicedPacket.m_SendTo = -1;
                             SlicedPacket.m_Hash = SearchKey;
                             SlicedPacket.m_Str = jsonStringSlice;
 
                             if (BytesBuffer.Count != 0)
                             {
                                 SlicedPacket.m_Last = false;
-                            }else{
+                            } else {
                                 SlicedPacket.m_Last = true;
                             }
-                            using (Packet _packet = new Packet((int)ClientPackets.GOTDROPSLICE))
-                            {
-                                _packet.Write(SlicedPacket);
-                                SendTCPData(_packet);
-                            }
+                            AddGearCarefulSlice(SlicedPacket);
                         }
 
                         if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
@@ -12992,28 +7383,25 @@ namespace SkyCoop
                             BytesBuffer.RemoveRange(0, BytesBuffer.Count);
 
                             string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
-                            SlicedJsonData SlicedPacket = new SlicedJsonData();
+                            DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
                             SlicedPacket.m_GearName = LevelKey;
-                            SlicedPacket.m_SendTo = GearID;
+                            SlicedPacket.m_SendTo = -1;
                             SlicedPacket.m_Hash = SearchKey;
                             SlicedPacket.m_Str = jsonStringSlice;
                             SlicedPacket.m_Last = true;
                             SlicedPacket.m_Extra = Extra;
 
-                            //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                            //MelonLogger.Msg(Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
                             if (sendMyPosition == true)
                             {
-                                using (Packet _packet = new Packet((int)ClientPackets.GOTDROPSLICE))
-                                {
-                                    _packet.Write(SlicedPacket);
-                                    SendTCPData(_packet);
-                                }
+                                AddGearCarefulSlice(SlicedPacket);
                             }
+                            SendNextGearCarefulSlice();
                         }
-                    }else{
-                        SlicedJsonData DropPacket = new SlicedJsonData();
+                    } else {
+                        DataStr.SlicedJsonData DropPacket = new DataStr.SlicedJsonData();
                         DropPacket.m_GearName = LevelKey;
-                        DropPacket.m_SendTo = GearID;
+                        DropPacket.m_SendTo = -1;
                         DropPacket.m_Hash = SearchKey;
                         DropPacket.m_Str = DataProxy;
                         DropPacket.m_Last = true;
@@ -13023,57 +7411,17 @@ namespace SkyCoop
                             using (Packet _packet = new Packet((int)ClientPackets.GOTDROPSLICE))
                             {
                                 _packet.Write(DropPacket);
-                                SendTCPData(_packet);
+                                SendUDPData(_packet);
                             }
                         }
                     }
                 }
-                if(iAmHost == true)
+                if (iAmHost == true)
                 {
-                    AddDroppedGear(GearID, SearchKey, DataProxy, LevelKey, Extra);
+                    Shared.AddDroppedGear(-1, SearchKey, DataProxy, LevelKey, Extra);
                     ServerSend.DROPITEM(0, SyncData, true);
-                    FakeDropItem(SyncData);
+                    Shared.FakeDropItem(SyncData);
                 }
-            }
-        }
-
-        public static string CompressString(string text)
-        {
-            byte[] buffer = Encoding.UTF8.GetBytes(text);
-            var memoryStream = new MemoryStream();
-            using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true))
-            {
-                gZipStream.Write(buffer, 0, buffer.Length);
-            }
-
-            memoryStream.Position = 0;
-
-            var compressedData = new byte[memoryStream.Length];
-            memoryStream.Read(compressedData, 0, compressedData.Length);
-
-            var gZipBuffer = new byte[compressedData.Length + 4];
-            Buffer.BlockCopy(compressedData, 0, gZipBuffer, 4, compressedData.Length);
-            Buffer.BlockCopy(BitConverter.GetBytes(buffer.Length), 0, gZipBuffer, 0, 4);
-            return Convert.ToBase64String(gZipBuffer);
-        }
-
-        public static string DecompressString(string compressedText)
-        {
-            byte[] gZipBuffer = Convert.FromBase64String(compressedText);
-            using (var memoryStream = new MemoryStream())
-            {
-                int dataLength = BitConverter.ToInt32(gZipBuffer, 0);
-                memoryStream.Write(gZipBuffer, 4, gZipBuffer.Length - 4);
-
-                var buffer = new byte[dataLength];
-
-                memoryStream.Position = 0;
-                using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
-                {
-                    gZipStream.Read(buffer, 0, buffer.Length);
-                }
-
-                return Encoding.UTF8.GetString(buffer);
             }
         }
 
@@ -13150,12 +7498,12 @@ namespace SkyCoop
                 }
 
                 bool sound = true;
-                if(OpCl.gameObject != null)
+                if (OpCl.gameObject != null)
                 {
                     Vector3 doorV3 = OpCl.gameObject.transform.position;
                     Vector3 playerV3 = GameManager.GetPlayerObject().transform.position;
                     float dis = Vector3.Distance(playerV3, doorV3);
-                    if(dis > 50)
+                    if (dis > 50)
                     {
                         sound = false;
                     }
@@ -13174,7 +7522,7 @@ namespace SkyCoop
         public static Dictionary<string, GameObject> OpenablesObjs = new Dictionary<string, GameObject>();
         public static void ApplyOpenables()
         {
-            if(OpenCloseManager.s_ActiveOpenClosers != null && OpenablesObjs.Count < OpenCloseManager.s_ActiveOpenClosers.Count)
+            if (OpenCloseManager.s_ActiveOpenClosers != null && OpenablesObjs.Count < OpenCloseManager.s_ActiveOpenClosers.Count)
             {
                 OpenablesObjs.Clear();
                 for (int i = 0; i < OpenCloseManager.s_ActiveOpenClosers.Count; i++)
@@ -13185,19 +7533,19 @@ namespace SkyCoop
                     if (OpCl != null && OpCl.gameObject != null)
                     {
                         curObj = OpCl.gameObject;
-                        if(curObj.GetComponent<ObjectGuid>() != null)
+                        if (curObj.GetComponent<ObjectGuid>() != null)
                         {
                             _Guid = curObj.GetComponent<ObjectGuid>().Get();
-                            
-                            if(OpenablesObjs.ContainsKey(_Guid) == false)
+
+                            if (OpenablesObjs.ContainsKey(_Guid) == false)
                             {
-                                //MelonLogger.Msg(ConsoleColor.Yellow, "[OpenableThingsUnloader] Added " + _Guid);
+                                //MelonLogger.Msg(Yellow, "[OpenableThingsUnloader] Added " + _Guid);
                                 OpenablesObjs.Add(_Guid, curObj);
                             }
                         }
                     }
                 }
-                //MelonLogger.Msg(ConsoleColor.Blue, "[OpenableThingsUnloader] Finished convert list to dictionary List("+ OpenCloseManager.s_ActiveOpenClosers.Count+ ") Dictionary(" + OpenablesObjs.Count+")");
+                //MelonLogger.Msg(Blue, "[OpenableThingsUnloader] Finished convert list to dictionary List("+ OpenCloseManager.s_ActiveOpenClosers.Count+ ") Dictionary(" + OpenablesObjs.Count+")");
             }
             foreach (var cur in OpenableThings)
             {
@@ -13212,7 +7560,7 @@ namespace SkyCoop
                             if (cur.Value == false)
                             {
                                 FakeClose(OpCl);
-                            }else{
+                            } else {
                                 FakeOpen(OpCl);
                             }
                         }
@@ -13229,35 +7577,31 @@ namespace SkyCoop
                 _packet.Write(GUID);
                 _packet.Write(state);
 
-                SendTCPData(_packet);
+                SendUDPData(_packet);
             }
         }
 
-        public static void ChangeOpenableThingState(string Scene, string GUID, bool state)
-        {
-            OpenableThings.Remove(GUID);
-            OpenableThings.Add(GUID, state);
-            MelonLogger.Msg(ConsoleColor.Blue, "Openable things "+ GUID + " changed state to OpenIs="+ state);
-
-            if(iAmHost == true)
-            {
-                ServerSend.USEOPENABLE(0, GUID, state, true);
-                MPSaveManager.ChangeOpenableThingState(Scene, GUID, state);
-            }
-        }
-
-        public static List<SlicedJsonData> CarefulSlicesBuffer = new List<SlicedJsonData>();
-
-        public static void AddCarefulSlice(SlicedJsonData slice)
+        public static List<DataStr.SlicedJsonData> CarefulSlicesBuffer = new List<DataStr.SlicedJsonData>();
+        public static List<DataStr.SlicedJsonData> CarefulSlicesGearBuffer = new List<DataStr.SlicedJsonData>();
+        public static List<DataStr.SlicedJsonData> CarefulSlicesPhotoBuffer = new List<DataStr.SlicedJsonData>();
+        public static void AddCarefulSlice(DataStr.SlicedJsonData slice)
         {
             CarefulSlicesBuffer.Add(slice);
+        }
+        public static void AddGearCarefulSlice(DataStr.SlicedJsonData slice)
+        {
+            CarefulSlicesGearBuffer.Add(slice);
+        }
+        public static void AddPhotoCarefulSlice(DataStr.SlicedJsonData slice)
+        {
+            CarefulSlicesPhotoBuffer.Add(slice);
         }
         public static int CarefulSlicesSent = 0;
         public static void SendNextCarefulSlice()
         {
-            if(CarefulSlicesBuffer.Count > 0)
+            if (CarefulSlicesBuffer.Count > 0)
             {
-                SlicedJsonData slice = CarefulSlicesBuffer[0];
+                DataStr.SlicedJsonData slice = CarefulSlicesBuffer[0];
                 using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
                 {
                     _packet.Write(slice);
@@ -13265,126 +7609,46 @@ namespace SkyCoop
                 }
                 CarefulSlicesBuffer.Remove(CarefulSlicesBuffer[0]);
                 CarefulSlicesSent++;
-            }else{
-                MelonLogger.Msg("Finished sending all "+ CarefulSlicesSent+" slices");
+            } else {
+                MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
                 CarefulSlicesSent = 0;
-                Container box = InterfaceManager.m_Panel_Container.m_Container;
-                if (box != null)
+            }
+        }
+        public static void SendNextGearCarefulSlice()
+        {
+            if (CarefulSlicesGearBuffer.Count > 0)
+            {
+                DataStr.SlicedJsonData slice = CarefulSlicesGearBuffer[0];
+                using (Packet _packet = new Packet((int)ClientPackets.GOTDROPSLICE))
                 {
-                    if (!box.Close())
-                        return;
-                    if (box.m_CloseAudio.Length == 0)
-                        GameAudioManager.PlayGUIButtonBack();
+                    _packet.Write(slice);
+                    SendUDPData(_packet);
                 }
-                RemovePleaseWait();
-                GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
-                InterfaceManager.m_Panel_Container.Enable(false);
+                CarefulSlicesGearBuffer.Remove(CarefulSlicesGearBuffer[0]);
+                CarefulSlicesSent++;
+            } else
+            {
+                MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
+                CarefulSlicesSent = 0;
             }
         }
 
-        public static void SendContainerData(string DataProxy, string LevelKey, string GUID, int SendTo = 0)
+        public static void SendNextPhotoCarefulSlice()
         {
-            byte[] bytesToSlice = Encoding.UTF8.GetBytes(DataProxy);
-            int Hash = GUID.GetHashCode();
-            MelonLogger.Msg("Going to sent " + bytesToSlice.Length+"bytes"); 
-
-            int CHUNK_SIZE = 1000;
-            int SlicesSent = 0;
-
-            if (bytesToSlice.Length > CHUNK_SIZE)
+            if (CarefulSlicesPhotoBuffer.Count > 0)
             {
-                List<byte> BytesBuffer = new List<byte>();
-                BytesBuffer.AddRange(bytesToSlice);
-
-                while (BytesBuffer.Count >= CHUNK_SIZE)
+                DataStr.SlicedJsonData slice = CarefulSlicesPhotoBuffer[0];
+                using (Packet _packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
                 {
-                    byte[] sliceOfBytes = BytesBuffer.GetRange(0, CHUNK_SIZE-1).ToArray();
-                    BytesBuffer.RemoveRange(0, CHUNK_SIZE-1);
-
-                    string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
-                    SlicedJsonData SlicedPacket = new SlicedJsonData();
-                    SlicedPacket.m_GearName = LevelKey+"|"+GUID;
-                    SlicedPacket.m_SendTo = 0;
-                    SlicedPacket.m_Hash = Hash;
-                    SlicedPacket.m_Str = jsonStringSlice;
-
-                    if (BytesBuffer.Count != 0)
-                    {
-                        SlicedPacket.m_Last = false;
-                    }else{
-                        SlicedPacket.m_Last = true;
-                    }
-
-                    if(SendTo == 0)
-                    {
-                        //using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
-                        //{
-                        //    _packet.Write(SlicedPacket);
-                        //    SendUDPData(_packet);
-                        //}
-                        AddCarefulSlice(SlicedPacket);
-                    }
-                    else{
-                        ServerSend.GOTCONTAINERSLICE(SendTo, SlicedPacket);
-                    }
-                    SlicesSent = SlicesSent + 1;
+                    _packet.Write(slice);
+                    SendUDPData(_packet);
                 }
-
-                if (BytesBuffer.Count < CHUNK_SIZE && BytesBuffer.Count != 0)
-                {
-                    byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
-                    BytesBuffer.RemoveRange(0, BytesBuffer.Count);
-
-                    string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
-                    SlicedJsonData SlicedPacket = new SlicedJsonData();
-                    SlicedPacket.m_GearName = LevelKey+"|"+GUID;
-                    SlicedPacket.m_SendTo = 0;
-                    SlicedPacket.m_Hash = Hash;
-                    SlicedPacket.m_Str = jsonStringSlice;
-                    SlicedPacket.m_Last = true;
-
-                    if (SendTo == 0)
-                    {
-                        //using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
-                        //{
-                        //    _packet.Write(SlicedPacket);
-                        //    SendUDPData(_packet);
-                        //} 
-                        AddCarefulSlice(SlicedPacket);
-                    }else{
-                        ServerSend.GOTCONTAINERSLICE(SendTo, SlicedPacket);
-                    }
-                    SlicesSent = SlicesSent + 1;
-                }
-            }else{
-                SlicedJsonData SlicedPacket = new SlicedJsonData();
-                SlicedPacket.m_GearName = LevelKey + "|" + GUID;
-                SlicedPacket.m_SendTo = 0;
-                SlicedPacket.m_Hash = Hash;
-                SlicedPacket.m_Str = DataProxy;
-                SlicedPacket.m_Last = true;
-
-                if (SendTo == 0)
-                {
-                    //using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
-                    //{
-                    //    _packet.Write(SlicedPacket);
-                    //    SendUDPData(_packet);
-                    //}
-                    AddCarefulSlice(SlicedPacket);
-                }else{
-                    ServerSend.GOTCONTAINERSLICE(SendTo, SlicedPacket);
-                }
-                SlicesSent = SlicesSent + 1;
-            }
-
-            if(iAmHost == true)
+                CarefulSlicesPhotoBuffer.Remove(CarefulSlicesPhotoBuffer[0]);
+                CarefulSlicesSent++;
+            } else
             {
-                MelonLogger.Msg("Slices sent " + SlicesSent);
-            }else{
-                MelonLogger.Msg("Prepared " + SlicesSent+ " slices to send");
-                MelonLogger.Msg("Starting send slices");
-                SendNextCarefulSlice();
+                MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
+                CarefulSlicesSent = 0;
             }
         }
 
@@ -13392,9 +7656,9 @@ namespace SkyCoop
         {
             MelonLogger.Msg("Finish Opening Fake Container");
             string Data = "";
-            if(CompressedData != "")
+            if (CompressedData != "")
             {
-                Data = DecompressString(CompressedData);
+                Data = Shared.DecompressString(CompressedData);
             }
 
             Container box = GoingToOpenContinaer;
@@ -13409,7 +7673,7 @@ namespace SkyCoop
             {
                 MelonLogger.Msg("Opening empty");
                 box.DestroyAllGear();
-            }else{
+            } else {
                 MelonLogger.Msg("Opening with loot, loading loot to the container");
                 Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
                 box.Deserialize(Data, loadedlist);
@@ -13429,6 +7693,7 @@ namespace SkyCoop
         public static void OpenFakeContainer(Container box)
         {
             string boxGUID = box.GetComponent<ObjectGuid>().Get();
+
             if (sendMyPosition == true)
             {
                 GoingToOpenContinaer = box;
@@ -13438,7 +7703,7 @@ namespace SkyCoop
                     _packet.Write(level_guid);
                     _packet.Write(boxGUID);
                     SetRepeatPacket(ResendPacketType.Container);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 return;
             }
@@ -13447,7 +7712,7 @@ namespace SkyCoop
             string Data = "";
             if (CompressedData != "")
             {
-                Data = DecompressString(CompressedData);
+                Data = Shared.DecompressString(CompressedData);
             }
 
             GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
@@ -13461,7 +7726,7 @@ namespace SkyCoop
             if (Data == "")
             {
                 box.DestroyAllGear();
-            }else{
+            } else {
                 Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
                 box.Deserialize(Data, loadedlist);
             }
@@ -13478,13 +7743,21 @@ namespace SkyCoop
             box.m_Inspected = true;
             box.m_StartInspected = true;
             string Data = box.Serialize();
-            string CompressedData = CompressString(Data);
-            bool IsEmpty = false;
-            if (box.gameObject.GetComponent<DeathDropContainer>() != null)
+            string CompressedData = Shared.CompressString(Data);
+
+            if (!string.IsNullOrEmpty(DeBugMenu.ContainerOverride))
             {
-                if(box.m_Items != null && box.m_Items.Count <= 2)
+                CompressedData = DeBugMenu.ContainerOverride;
+            }
+            bool IsEmpty;
+            bool IsDeathCreate = false;
+            int State = 0;
+
+            if (box.gameObject.GetComponent<Comps.DeathDropContainer>() != null)
+            {
+                if (box.m_Items != null && box.m_Items.Count <= 2)
                 {
-                    for (int i = box.m_Items.Count-1; i >= 0 ; i--)
+                    for (int i = box.m_Items.Count - 1; i >= 0; i--)
                     {
                         GearItemObject item = box.m_Items[i];
                         if (item.m_GearItem && item.m_GearItem.m_WaterSupply && item.m_GearItem.m_WaterSupply.m_VolumeInLiters == 0)
@@ -13493,18 +7766,22 @@ namespace SkyCoop
                         }
                     }
                 }
-
-                IsEmpty = box.IsEmpty();
+                IsDeathCreate = true;
             }
+            IsEmpty = box.IsEmpty();
             box.DestroyAllGear();
-            MelonLogger.Msg("[CloseFakeContainer] " + boxGUID + " Is Empty "+ IsEmpty);
+            if (!IsEmpty)
+            {
+                State = 1;
+            }
+            MelonLogger.Msg("[CloseFakeContainer] " + boxGUID + " Is Empty " + IsEmpty);
             int Bags = GameManager.GetInventoryComponent().GetNumGearWithName("GEAR_TechnicalBackpack");
-            if(Bags > 1)
-            {                
+            if (Bags > 1)
+            {
                 IL2CPP.List<GearItemObject> GI = GameManager.GetInventoryComponent().m_Items;
                 for (int i = 0; i < GI.Count; i++)
                 {
-                    if(GI[i].m_GearItemName == "GEAR_TechnicalBackpack")
+                    if (GI[i].m_GearItemName == "GEAR_TechnicalBackpack")
                     {
                         GI[i].m_GearItem.Drop(1);
                         break;
@@ -13512,28 +7789,48 @@ namespace SkyCoop
                 }
             }
 
+            DataStr.ContainerOpenSync BoxSync = new DataStr.ContainerOpenSync();
+            BoxSync.m_Guid = boxGUID;
+            BoxSync.m_LevelGUID = level_guid;
+            BoxSync.m_Inspected = true;
+
+            Shared.AddLootedContainer(BoxSync, true, ClientUser.myId, State);
+            if (box != null)
+            {
+                if (box.GetComponent<Comps.ContainersSync>() != null)
+                {
+                    box.GetComponent<Comps.ContainersSync>().m_Empty = IsEmpty;
+                }
+            }
+
             if (IsEmpty)
             {
                 MelonLogger.Msg("[CloseFakeContainer] Removing container");
-                RemoveDeathContainer(boxGUID, level_guid);
-                
+
+                if (IsDeathCreate)
+                {
+                    RemoveDeathContainer(boxGUID, level_guid);
+                }
                 if (sendMyPosition)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.DEATHCREATEEMPTYNOW))
                     {
                         _packet.Write(boxGUID);
                         _packet.Write(level_guid);
-                        SendTCPData(_packet);
+                        _packet.Write(IsDeathCreate);
+                        SendUDPData(_packet);
                     }
-                }else{
+                } else
+                {
                     MPSaveManager.RemoveContainer(level_guid, boxGUID);
-                }               
-            }else{
+                }
+            } else 
+            {
                 MelonLogger.Msg("[CloseFakeContainer] Saving container");
                 if (sendMyPosition == true)
                 {
                     DoPleaseWait("Please wait...", "Sending container data...");
-                    SendContainerData(CompressedData, level_guid, boxGUID);
+                    Shared.SendContainerData(CompressedData, level_guid, boxGUID, Data);
                     return;
                 }
                 MPSaveManager.SaveContainer(level_guid, boxGUID, CompressedData);
@@ -13545,6 +7842,10 @@ namespace SkyCoop
                 {
                     GameAudioManager.PlayGUIButtonBack();
                 }
+                if(box.GetComponent<Comps.ContainersSync>() != null)
+                {
+                    box.GetComponent<Comps.ContainersSync>().m_Empty = IsEmpty;
+                }
             }
             GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
             InterfaceManager.m_Panel_Container.Enable(false);
@@ -13554,13 +7855,11 @@ namespace SkyCoop
         {
             Camera Cam = GameManager.GetMainCamera();
 
-            if (Cam != null)
+            if (Cam)
             {
-                AudioListener pListener = Cam.GetComponent<AudioListener>();
-
-                if (pListener == null)
+                if (Cam.GetComponent<AudioListener>())
                 {
-                    pListener = Cam.gameObject.AddComponent<AudioListener>();
+                    Cam.gameObject.AddComponent<AudioListener>();
                 }
             }
         }
@@ -13574,10 +7873,19 @@ namespace SkyCoop
             else if (sendMyPosition == true)
             {
                 API.m_ClientState = API.SkyCoopClientState.CLIENT;
-            }else{
+            } else {
                 API.m_ClientState = API.SkyCoopClientState.NONE;
             }
-            API.m_MyClientID = instance.myId;
+            API.m_MyClientID = ClientUser.myId;
+
+            if (iAmHost)
+            {
+                API.IsP2PServer = Server.UsingSteamWorks;
+            }else if (sendMyPosition)
+            {
+                API.IsP2PServer = ConnectedSteamWorks;
+            }
+            API.Port = Server.Port;
         }
 
         public static void BuildSleepScreen()
@@ -13587,7 +7895,7 @@ namespace SkyCoop
                 SleepingButtons = InterfaceManager.m_Panel_Rest.gameObject.transform.GetChild(3).gameObject;
                 WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.m_Panel_Rest.gameObject.transform);
                 UnityEngine.Object.Destroy(WaitForSleepLable.GetComponent<UILocalize>());
-                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING OTHER PLAYERS TO SLEEP";
+                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP";
                 WaitForSleepLable.SetActive(false);
             }
 
@@ -13598,7 +7906,7 @@ namespace SkyCoop
                 if (new_button2 == null)
                 {
                     new_button.transform.position = new Vector3(0, -0.59f, 0);
-                }else{
+                } else {
                     new_button.transform.position = new Vector3(-0.2777778f, -0.59f, 0);
                 }
 
@@ -13643,7 +7951,7 @@ namespace SkyCoop
             Element.transform.GetChild(1).gameObject.GetComponent<UnityEngine.UI.Image>().overrideSprite = Sp;
             Action act = new Action(() => EquipFlair(ID));
             Element.transform.GetChild(2).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
-            MelonLogger.Msg("Add flair to the list "+ ID);
+            MelonLogger.Msg("Add flair to the list " + ID);
         }
 
         public static void CreateFlairsList()
@@ -13652,12 +7960,12 @@ namespace SkyCoop
 
             if (Content.childCount == 0)
             {
-                
+
                 AddFlairToList(-1, Content);
 
                 for (int i = 0; i < Supporters.FlairsIDs.Count; i++)
                 {
-                    if(Supporters.AvailableBenefits.m_Flairs.Contains(i) || Supporters.IsFlairForEveryone(i))
+                    if (Supporters.AvailableBenefits.m_Flairs.Contains(i) || Supporters.IsFlairForEveryone(i))
                     {
                         AddFlairToList(i, Content);
                     }
@@ -13667,7 +7975,7 @@ namespace SkyCoop
 
         public static void CustomizeUiPanel(string Panel)
         {
-            if(Panel == "Main")
+            if (Panel == "Main")
             {
                 TargetFlairSlot = -1;
                 CustomizeUi.SetActive(true);
@@ -13684,15 +7992,15 @@ namespace SkyCoop
                         CustomizeUi.transform.GetChild(1).GetChild(i).GetChild(1).gameObject.GetComponent<UnityEngine.UI.Image>().overrideSprite = Sp;
                     }
                 }
-            }else if(Panel == "Flairs")
+            } else if (Panel == "Flairs")
             {
                 CustomizeUi.SetActive(true);
-                CustomizeUiTabLable.text = "Flair Slot #"+ TargetFlairSlot;
+                CustomizeUiTabLable.text = "Flair Slot #" + TargetFlairSlot;
                 CustomizeUi.transform.GetChild(1).gameObject.SetActive(false); // Main
                 CustomizeUi.transform.GetChild(2).gameObject.SetActive(true); // Flairs Scroll
                 CreateFlairsList();
             }
-            else if(Panel == "Close")
+            else if (Panel == "Close")
             {
                 CustomizeUi.SetActive(false);
             }
@@ -13704,10 +8012,6 @@ namespace SkyCoop
             {
                 MelonLogger.Msg("[UI] Got Canvas");
                 UiCanvas = uConsole.m_Instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Canvas>();
-
-                GameObject LoadedAssets0 = LoadedBundle.LoadAsset<GameObject>("UI_GasMaskOverlay");
-                GasMaskOverlay = GameObject.Instantiate(LoadedAssets0, UiCanvas.transform);
-                GasMaskOverlay.SetActive(false);
                 GameObject LoadedAssets = LoadedBundle.LoadAsset<GameObject>("MP_Chat");
                 ChatObject = GameObject.Instantiate(LoadedAssets, UiCanvas.transform);
                 chatScroller = ChatObject.transform.GetChild(1).GetComponent<UnityEngine.UI.ScrollRect>();
@@ -13783,7 +8087,7 @@ namespace SkyCoop
 
                 GameObject LoadedAssets10 = LoadedBundle.LoadAsset<GameObject>("MP_EmoteWheel");
                 EmoteWheel = GameObject.Instantiate(LoadedAssets10, UiCanvas.transform);
-                if(EmoteWheel != null)
+                if (EmoteWheel != null)
                 {
                     EmoteWheel.SetActive(false);
 
@@ -13820,8 +8124,111 @@ namespace SkyCoop
                         Main.GetChild(i).GetChild(2).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
                     }
                 }
+                GameObject LoadedAssets13 = LoadedBundle.LoadAsset<GameObject>("MP_ExpeditionEditor");
+                ExpeditionEditorUI = GameObject.Instantiate(LoadedAssets13, UiCanvas.transform);
+                if (ExpeditionEditorUI != null)
+                {
+                    ExpeditionEditorUI.SetActive(false);
+
+                    Action act = new Action(() => ExpeditionEditor.AutoSelectRegion());
+                    ExpeditionEditorUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act);
+
+
+                    Action act2 = new Action(() => ExpeditionEditor.AutoSelectScene());
+                    ExpeditionEditorUI.transform.GetChild(5).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act2);
+
+                    Action act3 = new Action(() => ExpeditionEditor.AutoPositionSelect());
+                    ExpeditionEditorUI.transform.GetChild(8).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act3);
+
+                    Action act4 = new Action(() => ExpeditionEditor.ToggleContainersList());
+                    ExpeditionEditorUI.transform.GetChild(12).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act4);
+
+                    Action act5 = new Action(() => ExpeditionEditor.ToggleGearsList());
+                    ExpeditionEditorUI.transform.GetChild(11).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act5);
+
+                    Action act6 = new Action(() => ExpeditionEditor.RemoveGearVariant());
+                    ExpeditionEditorUI.transform.GetChild(14).GetChild(5).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act6);
+
+                    Action act7 = new Action(() => ExpeditionEditor.SaveExpeditionTemplate());
+                    ExpeditionEditorUI.transform.GetChild(15).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act7);
+
+                    Action act8 = new Action(() => ExpeditionEditor.BackToSelect(MyMod.ExpeditionEditorUI.transform.GetChild(1).GetComponent<UnityEngine.UI.Dropdown>().m_Value - Shared.GameRegionNegativeOffset));
+                    ExpeditionEditorUI.transform.GetChild(16).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act8);
+
+                    Action act9 = new Action(() => ExpeditionEditor.ToggleExtraPanel());
+                    ExpeditionEditorUI.transform.GetChild(14).GetChild(6).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act9);
+
+                    Action act10 = new Action(() => ExpeditionEditor.SetObjectiveGear());
+                    ExpeditionEditorUI.transform.GetChild(14).GetChild(7).GetChild(3).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act10);
+
+                    Action act11 = new Action(() => ExpeditionEditor.ToggleHarvestablesList());
+                    ExpeditionEditorUI.transform.GetChild(25).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act11);
+
+                    Action act12 = new Action(() => ExpeditionEditor.ToggleBreakdownsList());
+                    ExpeditionEditorUI.transform.GetChild(26).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act12);
+
+                    Action act13 = new Action(() => ExpeditionEditor.ToggleObjectsList());
+                    ExpeditionEditorUI.transform.GetChild(30).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act13);
+
+                    Action act14 = new Action(() => ExpeditionEditor.ToggleObjectSettingsPanel());
+                    ExpeditionEditorUI.transform.GetChild(31).GetChild(3).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act14);
+
+                    Action act15 = new Action(() => ExpeditionEditor.AddObject());
+                    ExpeditionEditorUI.transform.GetChild(31).GetChild(6).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act15);
+
+                    Action act16 = new Action(() => ExpeditionEditor.VisualizeObjects());
+                    ExpeditionEditorUI.transform.GetChild(31).GetChild(7).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act16);
+
+                    Action act17 = new Action(() => ExpeditionEditor.PlaceVisualizedObject());
+                    ExpeditionEditorUI.transform.GetChild(31).GetChild(8).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act17);
+
+                    Action act18 = new Action(() => ExpeditionEditor.SetContainerContent());
+                    ExpeditionEditorUI.transform.GetChild(31).GetChild(4).GetChild(2).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act18);
+
+                    UnityEngine.UI.Dropdown Drop = ExpeditionEditorUI.transform.GetChild(3).GetComponent<UnityEngine.UI.Dropdown>();
+                    Drop.ClearOptions();
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Scene"));
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Zone"));
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Collect"));
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Flaregun"));
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Charcoal"));
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Stay"));
+                    Drop.options.Add(new UnityEngine.UI.Dropdown.OptionData("Crashsit"));
+
+                    UnityEngine.UI.Dropdown Drop2 = ExpeditionEditorUI.transform.GetChild(1).GetComponent<UnityEngine.UI.Dropdown>();
+                    Drop2.ClearOptions();
+                    for (int i = -Shared.GameRegionNegativeOffset; i <= Shared.GameRegionPositiveOffset; i++)
+                    {
+                        Drop2.options.Add(new UnityEngine.UI.Dropdown.OptionData(ExpeditionBuilder.GetRegionString(i)));
+                    }
+                }
+
+                GameObject LoadedAssets14 = LoadedBundle.LoadAsset<GameObject>("MP_ExpeditionSelect");
+                ExpeditionEditorSelectUI = GameObject.Instantiate(LoadedAssets14, UiCanvas.transform);
+                if (ExpeditionEditorSelectUI != null)
+                {
+                    ExpeditionEditorSelectUI.SetActive(false);
+                    Action act1 = new Action(() => ExpeditionEditor.LoadExpedition(new ExpeditionBuilder.ExpeditionTaskTemplate()));
+                    ExpeditionEditorSelectUI.transform.GetChild(2).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act1);
+
+                    Action act2 = new Action(() => ExpeditionEditor.RefreshExpeditionsList());
+                    ExpeditionEditorSelectUI.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act2);
+
+                    Action act3 = new Action(() => ExpeditionEditor.BackToSelect(6));
+                    ExpeditionEditorSelectUI.transform.GetChild(4).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act3);
+                }
             }
         }
+
+        public static bool IsHoldingRadio()
+        {
+            if(GameManager.m_PlayerManager && GameManager.GetPlayerManagerComponent().m_ItemInHands && GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName == "GEAR_HandheldShortwave")
+            {
+                return true;
+            }
+            return false;
+        }
+
 
         public static void UpdateCanvasUis()
         {
@@ -13839,14 +8246,15 @@ namespace SkyCoop
                         {
                             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
                         }
-                    }else{
+                    } else {
                         if (chatInput.text != "")
                         {
-                            MultiplayerChatMessage message = new MultiplayerChatMessage();
+                            DataStr.MultiplayerChatMessage message = new DataStr.MultiplayerChatMessage();
                             message.m_By = MyChatName;
                             message.m_Type = 1;
                             message.m_Message = chatInput.text;
-                            SendMessageToChat(message);
+                            message.m_Global = IsHoldingRadio();
+                            Shared.SendMessageToChat(message, true);
                             chatInput.text = "";
                         }
                         chatInput.gameObject.SetActive(false);
@@ -13856,60 +8264,34 @@ namespace SkyCoop
                         }
                     }
                 }
-                //if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.Alpha7))
-                //{
-                //    Il2CppSystem.Collections.Generic.List<GearItem> GearList = new Il2CppSystem.Collections.Generic.List<GearItem>();
-                //    GearList = Panel_WeaponPicker.GetPrioritizedWeaponList();
-
-                //    for (int i = 0; i < GearList.Count; i++)
-                //    {
-                //        if (GearList[i].m_GearName == "GEAR_Revolver")
-                //        {
-                //            GearList.Remove(GearList[i]);
-                //        }
-                //    }
-                //    if (GearList.Count > 0)
-                //    {
-                //        InterfaceManager.m_Panel_WeaponPicker.Enable(true, GearList, 1000);
-                //    }else{
-                //        HUDMessage.AddMessage("YOU HAVE NOT ANY MELEE WEAPONS!");
-                //    }
-                //}
 
                 if (InterfaceManager.m_Panel_PauseMenu.isActiveAndEnabled && level_name != "MainMenu")
                 {
                     if (InOnline())
                     {
-                        if(MyLobby == "")
+                        if (MyLobby == "")
                         {
                             StatusObject.SetActive(true);
-                        }else{
+                        } else {
                             LobbyUI.SetActive(true);
                         }
-                    }else{
+                    } else {
                         StatusObject.SetActive(false);
                         LobbyUI.SetActive(false);
                     }
-                }else{
-                    if(level_name != "MainMenu")
+                } else {
+                    if (level_name != "MainMenu")
                     {
                         LobbyUI.SetActive(false);
                     }
                     StatusObject.SetActive(false);
                 }
-
-                if (UseGasMaskOverlay)
-                {
-                    if (GasMaskOverlay && m_InterfaceManager && InterfaceManager.m_Panel_HUD && InterfaceManager.m_Panel_HUD.isActiveAndEnabled)
-                    {
-                        GasMaskOverlay.SetActive(true);
-                    }else{
-                        GasMaskOverlay.SetActive(false);
-                    }
-                }else{
-                    GasMaskOverlay.SetActive(false);
-                }
             }
+            if (LobbyUI != null)
+            {
+                LobbyUI.transform.GetChild(3).gameObject.SetActive(false);
+            }
+
             if (UIHostMenu != null)
             {
                 GameObject IsSteamHost = UIHostMenu.transform.GetChild(4).gameObject;
@@ -13925,17 +8307,92 @@ namespace SkyCoop
                     //PublicSteamServer.SetActive(true);
                     PortsObject.SetActive(false);
                     SteamLobbyType.SetActive(true);
-                }else{
+                } else {
                     //PublicSteamServer.GetComponent<UnityEngine.UI.Toggle>().Set(false);
                     //PublicSteamServer.SetActive(false);
                     PortsObject.SetActive(true);
                     SteamLobbyType.SetActive(false);
                 }
             }
+            if(ExpeditionEditorUI != null)
+            {
+                int Type = ExpeditionEditorUI.transform.GetChild(3).GetComponent<UnityEngine.UI.Dropdown>().m_Value;
+                ExpeditionEditorUI.transform.GetChild(6).gameObject.SetActive(Type != (int)ExpeditionManager.ExpeditionTaskType.ENTERSCENE);
+                ExpeditionEditorUI.transform.GetChild(7).gameObject.SetActive(Type != (int)ExpeditionManager.ExpeditionTaskType.ENTERSCENE);
+                ExpeditionEditorUI.transform.GetChild(8).gameObject.SetActive(Type != (int)ExpeditionManager.ExpeditionTaskType.ENTERSCENE);
+                ExpeditionEditorUI.transform.GetChild(6).GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>().text = ExpeditionEditorUI.transform.GetChild(6).gameObject.GetComponent<UnityEngine.UI.Slider>().m_Value.ToString();
+                ExpeditionEditorUI.transform.GetChild(20).gameObject.SetActive(Type == (int)ExpeditionManager.ExpeditionTaskType.COLLECT);
+                ExpeditionEditorUI.transform.GetChild(7).gameObject.GetComponent<UnityEngine.UI.Text>().text = ExpeditionEditor.m_Center.x.ToString(CultureInfo.InvariantCulture) + ", " + ExpeditionEditor.m_Center.y.ToString(CultureInfo.InvariantCulture) + ", " + ExpeditionEditor.m_Center.z.ToString(CultureInfo.InvariantCulture);
+                ExpeditionEditorUI.transform.GetChild(14).GetChild(3).GetChild(0).gameObject.GetComponent<UnityEngine.UI.Text>().text = ExpeditionEditorUI.transform.GetChild(14).GetChild(3).gameObject.GetComponent<UnityEngine.UI.Slider>().m_Value * 100 + "%";
+
+                if(ExpeditionEditor.m_LastChance != ExpeditionEditorUI.transform.GetChild(14).GetChild(3).gameObject.GetComponent<UnityEngine.UI.Slider>().m_Value)
+                {
+                    ExpeditionEditor.m_LastChance = ExpeditionEditorUI.transform.GetChild(14).GetChild(3).gameObject.GetComponent<UnityEngine.UI.Slider>().m_Value;
+                    ExpeditionEditor.ChangeChance();
+                }
+                if (ExpeditionEditor.m_LastRadious != ExpeditionEditorUI.transform.GetChild(6).gameObject.GetComponent<UnityEngine.UI.Slider>().m_Value)
+                {
+                    ExpeditionEditor.m_LastRadious = ExpeditionEditorUI.transform.GetChild(6).gameObject.GetComponent<UnityEngine.UI.Slider>().m_Value;
+                    ExpeditionEditor.ExpeditionRadiousChanged();
+                }
+                ExpeditionEditorUI.transform.GetChild(14).GetChild(2).gameObject.GetComponent<UnityEngine.UI.Text>().text = "GUID: "+ExpeditionEditor.m_LastSpawnerGUID;
+
+                if (ExpeditionEditor.m_LastType != ExpeditionEditorUI.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Dropdown>().m_Value)
+                {
+                    ExpeditionEditor.m_LastType = ExpeditionEditorUI.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Dropdown>().m_Value;
+                    ExpeditionEditor.ExpeditionTypeChanged();
+                }
+
+                ExpeditionEditorUI.transform.GetChild(29).gameObject.SetActive(Type == (int)ExpeditionManager.ExpeditionTaskType.STAYINZONE);
+
+                if(ExpeditionEditor.LastOnlyShowFirstTasksState != ExpeditionEditorSelectUI.transform.GetChild(5).gameObject.GetComponent<UnityEngine.UI.Toggle>().isOn)
+                {
+                    ExpeditionEditor.LastOnlyShowFirstTasksState = ExpeditionEditorSelectUI.transform.GetChild(5).gameObject.GetComponent<UnityEngine.UI.Toggle>().isOn;
+                    ExpeditionEditor.RefreshExpeditionsList(ExpeditionEditor.LastSelectedRegion);
+                }
+            }
         }
 
         public static void DebugCrap()
         {
+            if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
+            {
+                if (ExpeditionEditorUI != null && ExpeditionEditorUI.activeSelf)
+                {
+                    if (GameManager.m_PlayerManager && GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair)
+                    {
+                        if (GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair.GetComponent<Comps.DroppedGearDummy>())
+                        {
+                            Comps.DroppedGearDummy Gear = GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair.GetComponent<Comps.DroppedGearDummy>();
+                            ExpeditionEditor.AddGear(Gear.m_Extra.m_GearName, Gear.gameObject.transform.position, Gear.gameObject.transform.rotation, Gear.m_Extra.m_PhotoGUID);
+                        }
+                    }
+                }
+            }
+            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.H))
+            {
+                if (ExpeditionEditorUI != null && ExpeditionEditorUI.activeSelf)
+                {
+                    if (GameManager.m_PlayerManager && GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair)
+                    {
+                        if (GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair.GetComponent<Comps.DroppedGearDummy>())
+                        {
+                            Comps.DroppedGearDummy Gear = GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair.GetComponent<Comps.DroppedGearDummy>();
+                            ExpeditionEditor.AddGearVariant(Gear.m_Extra.m_GearName);
+                        } else if(ExpeditionEditor.m_LastObjectGUID != "")
+                        {
+                            ExpeditionEditor.PlaceVisualizedObject();
+                        }
+                    } else if (ExpeditionEditor.m_LastObjectGUID != "")
+                    {
+                        ExpeditionEditor.PlaceVisualizedObject();
+                    }
+                }
+            }
+            if (!DebugGUI)
+            {
+                return;
+            }
             RaycastHit hit;
             Transform transform = GameManager.GetMainCamera().transform;
             if (Physics.Raycast(transform.position, transform.TransformDirection(Vector3.forward), out hit, 50))
@@ -13946,7 +8403,7 @@ namespace SkyCoop
                     DebugAnimalGUIDLast = DebugAnimalGUID;
                     DebugLastAnimal = hit.collider.gameObject;
                 }
-            }else{
+            } else {
                 DebugAnimalGUID = "";
             }
             if (ALWAYS_FUCKING_CURSOR_ON == true)
@@ -13966,13 +8423,13 @@ namespace SkyCoop
 
                         GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
                         cube.transform.position = instantiatePosition;
-                        cube.GetComponent<MeshRenderer>().SetMaterial(null);
+                        //cube.GetComponent<MeshRenderer>().SetMaterial(null);
                         if (sendMyPosition == true)
                         {
                             using (Packet _packet = new Packet((int)ClientPackets.BLOCK))
                             {
                                 _packet.Write(cube.transform.position);
-                                SendTCPData(_packet);
+                                SendUDPData(_packet);
                             }
                         }
                         if (iAmHost == true)
@@ -14017,12 +8474,12 @@ namespace SkyCoop
             if (axe == true || f_axe == true || h_axe)
             {
                 MyHasAxe = true;
-            }else{
+            } else {
                 MyHasAxe = false;
             }
 
             EQCheck = MyHasRifle.ToString() + MyArrows.ToString() + MyFlares.ToString() + MyBlueFlares.ToString() + MyHasRevolver.ToString() + MyHasMedkit.ToString() + MyHasAxe.ToString();
-            if(PreviousEquipmentCheck != EQCheck)
+            if (PreviousEquipmentCheck != EQCheck)
             {
                 PreviousEquipmentCheck = EQCheck;
                 SendMyEQ();
@@ -14030,10 +8487,10 @@ namespace SkyCoop
 
             if (MyLightSourceName != MyLastLightSourceName)
             {
-                if(SkipItemEvent > 0)
+                if (SkipItemEvent > 0)
                 {
                     SkipItemEvent--;
-                }else{
+                } else {
                     MyLastLightSourceName = MyLightSourceName;
                     if (playersData[0].m_Mimic == true && players[0] != null)
                     {
@@ -14045,7 +8502,7 @@ namespace SkyCoop
                         using (Packet _packet = new Packet((int)ClientPackets.LIGHTSOURCENAME))
                         {
                             _packet.Write(MyLightSourceName);
-                            SendTCPData(_packet);
+                            SendUDPData(_packet);
                         }
                     }
                     if (iAmHost == true)
@@ -14066,7 +8523,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.LIGHTSOURCE))
                     {
                         _packet.Write(MyLightSource);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true)
@@ -14082,21 +8539,21 @@ namespace SkyCoop
                 if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
                 {
                     MyLightSourceName = GameManager.GetPlayerManagerComponent().m_ItemInHands.name;
-                }else{
+                } else {
 
                     if (ModdedHandsBook == null)
                     {
                         MyLightSourceName = "";
-                    }else{
+                    } else {
                         if (!ModdedHandsBook.GetComponent<Animator>().GetCurrentAnimatorStateInfo(0).IsName("Offscreen"))
                         {
                             MyLightSourceName = "Book";
-                        }else{
+                        } else {
                             MyLightSourceName = "";
                         }
                     }
                 }
-            }else{
+            } else {
                 MyLightSourceName = "Map";
             }
         }
@@ -14120,7 +8577,7 @@ namespace SkyCoop
 
         public static void SendGivingItem(string saveProxyData, GearItem _gear, int GiveTo, bool Borrow)
         {
-            GearItemDataPacket GearDataPak = new GearItemDataPacket();
+            DataStr.GearItemDataPacket GearDataPak = new DataStr.GearItemDataPacket();
             GearDataPak.m_GearName = _gear.m_GearName;
             GearDataPak.m_SendedTo = GiveTo;
             bool waterMode = false;
@@ -14144,11 +8601,11 @@ namespace SkyCoop
                 if (Liters >= 0.5f)
                 {
                     waterGave = 0.5f;
-                }else{
+                } else {
                     waterGave = Liters;
                 }
                 GearDataPak.m_Water = waterGave;
-            }else{
+            } else {
                 GearDataPak.m_DataProxy = saveProxyData;
 
                 //MelonLogger.Msg("SaveProxy: " + saveProxyData);
@@ -14169,12 +8626,12 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.GOTITEM))
                     {
                         _packet.Write(GearDataPak);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
-            }else{
+            } else {
                 byte[] bytesToSlice = Encoding.UTF8.GetBytes(saveProxyData);
-                //MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
+                //MelonLogger.Msg(Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
                 if (bytesToSlice.Length > 500)
                 {
                     List<byte> BytesBuffer = new List<byte>();
@@ -14186,7 +8643,7 @@ namespace SkyCoop
                         BytesBuffer.RemoveRange(0, 499);
 
                         string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
-                        SlicedJsonData SlicedPacket = new SlicedJsonData();
+                        DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
                         SlicedPacket.m_GearName = _gear.m_GearName;
                         SlicedPacket.m_SendTo = GiveItemTo;
                         SlicedPacket.m_Hash = saveProxyData.GetHashCode();
@@ -14195,10 +8652,10 @@ namespace SkyCoop
                         if (BytesBuffer.Count != 0)
                         {
                             SlicedPacket.m_Last = false;
-                        }else{
+                        } else {
                             SlicedPacket.m_Last = true;
                         }
-                        //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                        //MelonLogger.Msg(Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
 
                         if (iAmHost == true)
                         {
@@ -14209,7 +8666,7 @@ namespace SkyCoop
                             using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
                             {
                                 _packet.Write(SlicedPacket);
-                                SendTCPData(_packet);
+                                SendUDPData(_packet);
                             }
                         }
                     }
@@ -14220,7 +8677,7 @@ namespace SkyCoop
                         BytesBuffer.RemoveRange(0, BytesBuffer.Count);
 
                         string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
-                        SlicedJsonData SlicedPacket = new SlicedJsonData();
+                        DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
                         SlicedPacket.m_GearName = _gear.m_GearName;
                         SlicedPacket.m_SendTo = GiveItemTo;
                         SlicedPacket.m_Hash = saveProxyData.GetHashCode();
@@ -14236,12 +8693,12 @@ namespace SkyCoop
                             using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
                             {
                                 _packet.Write(SlicedPacket);
-                                SendTCPData(_packet);
+                                SendUDPData(_packet);
                             }
                         }
                     }
-                }else{
-                    SlicedJsonData DropPacket = new SlicedJsonData();
+                } else {
+                    DataStr.SlicedJsonData DropPacket = new DataStr.SlicedJsonData();
                     DropPacket.m_GearName = _gear.m_GearName;
                     DropPacket.m_SendTo = GiveItemTo;
                     DropPacket.m_Hash = saveProxyData.GetHashCode();
@@ -14256,7 +8713,7 @@ namespace SkyCoop
                         using (Packet _packet = new Packet((int)ClientPackets.GOTITEMSLICE))
                         {
                             _packet.Write(DropPacket);
-                            SendTCPData(_packet);
+                            SendUDPData(_packet);
                         }
                     }
                 }
@@ -14279,7 +8736,7 @@ namespace SkyCoop
                 {
                     HUDMessage.AddMessage("You gave " + say + " to " + playersData[GiveItemTo].m_Name);
                 }
-            }else{
+            } else {
                 if (!Borrow)
                 {
                     HUDMessage.AddMessage("You gave " + _gear.m_LocalizedDisplayName.Text() + " to " + playersData[GiveItemTo].m_Name);
@@ -14291,14 +8748,14 @@ namespace SkyCoop
             {
                 MelonLogger.Msg("You gave " + LastSelectedGearName + " to " + playersData[GiveItemTo].m_Name);
             }
-            
+
             InterfaceManager.m_Panel_Inventory.m_IsDirty = true;
             InterfaceManager.m_Panel_Inventory.Update();
         }
 
-        public static void ProcessGivingItem()
+        public static void ProcessGivingItem(bool SelectOnly = false)
         {
-            if(m_InterfaceManager != null && InterfaceManager.m_Panel_Inventory != null && InterfaceManager.m_Panel_Inventory.IsEnabled())
+            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Inventory != null && InterfaceManager.m_Panel_Inventory.IsEnabled())
             {
                 Panel_Inventory Panel = InterfaceManager.m_Panel_Inventory;
                 if (Panel.m_SelectedItemIndex != -1)
@@ -14329,14 +8786,19 @@ namespace SkyCoop
                             {
                                 LastSelectedGear = gear;
                             }
-                        }else{
+                        } else {
                             LastSelectedGearName = "";
                         }
-                    }else{
+                    } else {
                         LastSelectedGearName = "";
                     }
                 }
-            }else{
+            } else {
+                return;
+            }
+
+            if (SelectOnly)
+            {
                 return;
             }
 
@@ -14401,12 +8863,12 @@ namespace SkyCoop
                         _gear.m_InPlayerInventory = wasInPlayerInv;
 
                         //GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(saveProxyData);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_CurrentHP " + cloneGear.m_CurrentHP);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_LastUpdatedTODHours " + cloneGear.m_LastUpdatedTODHours);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_HoursPlayed " + Proxy.m_HoursPlayed);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_DecayScalar " + cloneGear.m_DecayScalar);
+                        //MelonLogger.Msg(Green, "[GearItem] Sending gear with m_CurrentHP " + cloneGear.m_CurrentHP);
+                        //MelonLogger.Msg(Green, "[GearItem] Sending gear with m_LastUpdatedTODHours " + cloneGear.m_LastUpdatedTODHours);
+                        //MelonLogger.Msg(Green, "[GearItem] Sending gear with m_HoursPlayed " + Proxy.m_HoursPlayed);
+                        //MelonLogger.Msg(Green, "[GearItem] Sending gear with m_DecayScalar " + cloneGear.m_DecayScalar);
 
-                        //UnityEngine.Object.DestroyImmediate(cloneObj);
+                        //UnityEngine.Object.Destroy(cloneObj);
                         break;
                     }
                 }
@@ -14423,7 +8885,7 @@ namespace SkyCoop
             if (GameManager.GetFatigueComponent().GetHeavyBreathingState() == HeavyBreathingState.Heavy)
             {
                 NowHeavyBreath = true;
-            }else{
+            } else {
                 NowHeavyBreath = false;
             }
 
@@ -14437,7 +8899,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.BLOODLOSTS))
                     {
                         _packet.Write(BloodLosts);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true) // HOST
@@ -14458,7 +8920,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.HEAVYBREATH))
                     {
                         _packet.Write(NowHeavyBreath);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true) // HOST
@@ -14474,21 +8936,21 @@ namespace SkyCoop
         public static void SyncMovement(bool InFight, Transform target)
         {
             if (IsDead == false && InFight == false)
-            {          
+            {
                 if (GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
                 {
                     if (GameManager.GetPlayerManagerComponent().PlayerCanSprint() == true && GameManager.GetPlayerManagerComponent().PlayerIsSprinting())
                     {
                         MyAnimState = "Run";
-                    }else{
+                    } else {
                         if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
                         {
                             MyAnimState = "Ctrl";
-                        }else{
+                        } else {
                             MyAnimState = "Walk";
                         }
                     }
-                }else{
+                } else {
                     MyAnimState = "RopeMoving";
                 }
             }
@@ -14509,11 +8971,11 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.XYZ))
                 {
                     _packet.Write(v3);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
 
-            if(iAmHost == true)
+            if (iAmHost == true)
             {
                 ServerSend.XYZ(0, v3, true);
             }
@@ -14537,7 +8999,7 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.XYZW))
                 {
                     _packet.Write(rot);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
             if (iAmHost == true) // HOST
@@ -14556,17 +9018,17 @@ namespace SkyCoop
                 if (IsDead == true)
                 {
                     MyAnimState = "Knock";
-                }else{
+                } else {
                     MyAnimState = "Fight";
                 }
-            }else{
-                
-                if(MyEmote != null)
+            } else {
+
+                if (MyEmote != null)
                 {
                     MyAnimState = MyEmote.m_Animation;
                     return;
                 }
-                
+
                 if (GameManager.GetPlayerManagerComponent().PlayerIsClimbing() == false)
                 {
                     if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == true)
@@ -14622,8 +9084,10 @@ namespace SkyCoop
                                 else if ((InterfaceManager.m_Panel_SnowShelterBuild != null && InterfaceManager.m_Panel_SnowShelterBuild.m_IsBuilding == true) || (InterfaceManager.m_Panel_SnowShelterInteract != null && InterfaceManager.m_Panel_SnowShelterInteract.m_IsDismantling == true))
                                 {
                                     MyAnimState = "Harvesting";
-                                }
-                                else if (GameManager.GetPlayerManagerComponent().m_HarvestableInProgress != null)
+                                } else if (Pathes.FakeRockCacheCallback != null)
+                                {
+                                    MyAnimState = "Harvesting";
+                                } else if (GameManager.GetPlayerManagerComponent().m_HarvestableInProgress != null)
                                 {
                                     if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
                                     {
@@ -14635,17 +9099,17 @@ namespace SkyCoop
                                         if (bkObj.name.Contains("Cattail"))
                                         {
                                             MyAnimState = "HarvestingStanding";
-                                        }else{
+                                        } else {
                                             float CamY = GameManager.GetMainCamera().transform.position.y;
                                             if (bkObj.transform.position.y > CamY)
                                             {
                                                 MyAnimState = "HarvestingStanding";
-                                            }else{
+                                            } else {
                                                 MyAnimState = "Harvesting";
                                             }
                                         }
                                     }
-                                }else{
+                                } else {
                                     PlayerControlMode Plc = GameManager.GetPlayerManagerComponent().GetControlMode();
                                     if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
                                     {
@@ -14660,10 +9124,10 @@ namespace SkyCoop
                                         else if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
                                         {
                                             MyAnimState = "Harvesting";
-                                        }else{
+                                        } else {
                                             MyAnimState = "Ctrl";
                                         }
-                                    }else{
+                                    } else {
                                         if (Plc == PlayerControlMode.AimRevolver)
                                         {
                                             MyAnimState = "HoldGun";
@@ -14675,17 +9139,17 @@ namespace SkyCoop
                                         else if (Plc == PlayerControlMode.DeployRope || Plc == PlayerControlMode.TakeRope)
                                         {
                                             MyAnimState = "HarvestingStanding";
-                                        }else{
+                                        } else {
                                             MyAnimState = "Idle";
                                         }
                                     }
                                 }
-                            }else{
+                            } else {
                                 MyAnimState = "Map";
                             }
                         }
                     }
-                }else{
+                } else {
                     MyAnimState = "RopeIdle";
                 }
             }
@@ -14718,7 +9182,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.ANIMSTATE))
                     {
                         _packet.Write(MyAnimState);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true)
@@ -14747,7 +9211,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.CHANGEAIM))
                     {
                         _packet.Write(MyIsAiming);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true)
@@ -14757,56 +9221,29 @@ namespace SkyCoop
             }
         }
 
-        public static void UpdateTicksOnScenes()
-        {
-            for (int i = 0; i < MaxPlayers; i++)
-            {
-                if (i == 0)
-                {
-                    MyTicksOnScene = MyTicksOnScene + 1;
-                }else{
-                    if (playersData[i] != null)
-                    {
-                        if (Server.clients[i].IsBusy() == true && playersData[i].m_AnimState != "Knock")
-                        {
-                            if (playersData[i].m_Levelid != playersData[i].m_PreviousLevelId)
-                            {
-                                playersData[i].m_PreviousLevelId = playersData[i].m_Levelid;
-                                playersData[i].m_TicksOnScene = 0;
-                            }else{
-                                playersData[i].m_TicksOnScene = playersData[i].m_TicksOnScene + 1;
-                            }
-                        }else{
-                            playersData[i].m_TicksOnScene = 0;
-                        }
-                    }
-                }
-            }
-        }
-
         public static Quaternion GetBedRotation(Bed bed)
         {
             GameObject obj = bed.gameObject;
-            Quaternion rot = new Quaternion(0,0,0,0);
+            Quaternion rot = new Quaternion(0, 0, 0, 0);
             if (obj)
             {
-                if(obj.GetComponent<Bed>().m_Bedroll == null)
+                if (obj.GetComponent<Bed>().m_Bedroll == null)
                 {
                     rot = Quaternion.Inverse(obj.GetComponent<Bed>().m_BodyPlacementTransform.rotation);
-                }else{
+                } else {
                     rot = obj.transform.rotation;
                 }
             }
 
             return rot;
         }
-        
+
         public static void SyncSleeping()
         {
             if (WaitForSleepLable != null && WaitForSleepLable.activeSelf == true)
             {
                 IsSleeping = true;
-            }else{
+            } else {
                 IsSleeping = GameManager.GetPlayerManagerComponent().PlayerIsSleeping();
             }
             if (PreviousSleeping != IsSleeping)
@@ -14818,7 +9255,7 @@ namespace SkyCoop
                     MelonLogger.Msg("Skiping Cycle time " + MyCycleSkip);
 
                     Bed bed = GameManager.GetRestComponent().m_Bed;
-                    
+
                     if (bed != null)
                     {
                         if (bed.m_BodyPlacementTransform != null)
@@ -14827,7 +9264,7 @@ namespace SkyCoop
                             SyncMovement(false, GameManager.GetPlayerObject().transform);
                         }
                     }
-                }else{
+                } else {
                     MyCycleSkip = 0;
                     MelonLogger.Msg("Has wakeup or cancle sleep");
                     SyncRotation(GameManager.GetPlayerObject().transform);
@@ -14839,7 +9276,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.SLEEPHOURS))
                     {
                         _packet.Write(MyCycleSkip);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
             }
@@ -14855,7 +9292,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.HARVESTINGANIMAL))
                     {
                         _packet.Write(HarvestingAnimal);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true)
@@ -14878,7 +9315,7 @@ namespace SkyCoop
             bool NeedCheckBreakDown = false;
             //If I am looting box
             Container c = GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched;
-            if(c != null && c.gameObject != null && c.gameObject.GetComponent<ObjectGuid>() != null)
+            if (c != null && c.gameObject != null && c.gameObject.GetComponent<ObjectGuid>() != null)
             {
                 boxGUID = c.gameObject.GetComponent<ObjectGuid>().Get();
             }
@@ -14890,18 +9327,18 @@ namespace SkyCoop
             }
             //If I am harvest animal
             Panel_BodyHarvest PBH = InterfaceManager.m_Panel_BodyHarvest;
-            if (PBH !=  null && PBH.isActiveAndEnabled == true)
+            if (PBH != null && PBH.isActiveAndEnabled == true)
             {
-                if(PBH.m_BodyHarvest != null && PBH.m_BodyHarvest.gameObject != null && PBH.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
+                if (PBH.m_BodyHarvest != null && PBH.m_BodyHarvest.gameObject != null && PBH.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
                 {
                     harvestAnimalGUID = PBH.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
                 }
             }
             // If I am breakdown something
             Panel_BreakDown PBD = InterfaceManager.m_Panel_BreakDown;
-            if (PBD !=  null && PBD.isActiveAndEnabled == true && PBD.m_BreakDown != null && PBD.m_BreakDown.gameObject != null)
+            if (PBD != null && PBD.isActiveAndEnabled == true && PBD.m_BreakDown != null && PBD.m_BreakDown.gameObject != null)
             {
-                if(PBD.m_BreakDown.gameObject.activeSelf == true)
+                if (PBD.m_BreakDown.gameObject.activeSelf == true)
                 {
                     GameObject gameObject = PBD.m_BreakDown.gameObject;
                     ObjectGuid BreakGuidComp = gameObject.GetComponent<ObjectGuid>();
@@ -14918,7 +9355,7 @@ namespace SkyCoop
                         }
                     }
                     NeedCheckBreakDown = true;
-                }else{
+                } else {
                     if (PBD.m_IsBreakingDown == true)
                     {
                         PBD.m_IsBreakingDown = false;
@@ -14930,13 +9367,13 @@ namespace SkyCoop
 
             for (int i = 0; i < playersData.Count; i++)
             {
-                if (playersData[i] != null && i != instance.myId)
+                if (playersData[i] != null && i != ClientUser.myId)
                 {
-                    if(boxGUID != null || harvestGUID != null || harvestAnimalGUID != null || (breakGuid != null || breakParentGuid != null))
+                    if (boxGUID != null || harvestGUID != null || harvestAnimalGUID != null || (breakGuid != null || breakParentGuid != null))
                     {
                         if (playersData[i].m_Container != null)
                         {
-                            ContainerOpenSync otherBox = playersData[i].m_Container;
+                            DataStr.ContainerOpenSync otherBox = playersData[i].m_Container;
                             if (otherBox.m_Guid == boxGUID && otherBox.m_LevelID == levelid && otherBox.m_LevelGUID == level_guid)
                             {
                                 boxGUID = null;
@@ -14945,7 +9382,7 @@ namespace SkyCoop
                         }
                         string otherHarvestPlant = playersData[i].m_Plant;
 
-                        if(harvestGUID != null)
+                        if (harvestGUID != null)
                         {
                             if (otherHarvestPlant == harvestGUID)
                             {
@@ -14957,7 +9394,7 @@ namespace SkyCoop
 
                         string otherAnimlGuid = playersData[i].m_HarvestingAnimal;
 
-                        if(harvestAnimalGUID != null)
+                        if (harvestAnimalGUID != null)
                         {
                             if (otherAnimlGuid == harvestAnimalGUID)
                             {
@@ -14970,7 +9407,7 @@ namespace SkyCoop
                         }
                         if (NeedCheckBreakDown)
                         {
-                            BrokenFurnitureSync otherFurn = playersData[i].m_BrakingObject;
+                            DataStr.BrokenFurnitureSync otherFurn = playersData[i].m_BrakingObject;
                             if (otherFurn.m_Guid == breakGuid && otherFurn.m_ParentGuid == breakParentGuid && otherFurn.m_LevelID == levelid && otherFurn.m_LevelGUID == level_guid)
                             {
                                 NeedCheckBreakDown = false;
@@ -14984,7 +9421,7 @@ namespace SkyCoop
                                 PBD.OnCancel();
                             }
                         }
-                    }else{
+                    } else {
                         return;
                     }
                 }
@@ -14998,7 +9435,7 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.CHANGEDFREQUENCY))
                 {
                     _packet.Write(RadioFrequency);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
             //PlayRadioOver();
@@ -15006,7 +9443,7 @@ namespace SkyCoop
 
         public static string GetRadioFrequency(float ID)
         {
-            float Correct = 325+ID;
+            float Correct = 325 + ID;
             return Correct.ToString();
         }
         public static float nextLEDBlink = 0.0f;
@@ -15033,10 +9470,10 @@ namespace SkyCoop
         public static bool SearchModeActive = false;
         public static bool CairnsSearchActive()
         {
-            if(CurrentCustomChalleng.m_Started && CurrentChallengeRules.m_Name == "Lost in action" && CurrentCustomChalleng.m_CurrentTask == 0 && SearchModeActive)
+            if (CurrentCustomChalleng.m_Started && CurrentChallengeRules.m_Name == "Lost in action" && CurrentCustomChalleng.m_CurrentTask == 0 && SearchModeActive)
             {
                 return true;
-            }else{
+            } else {
                 return false;
             }
         }
@@ -15054,7 +9491,7 @@ namespace SkyCoop
 
             if (WheelScroll < 0 && RadioFrequency > -25)
             {
-                RadioFrequency -=0.1f;
+                RadioFrequency -= 0.1f;
                 RadioFrequency = Mathf.Round(RadioFrequency * 10.0f) * 0.1f;
 
                 HUDMessage.HUDMessageInfo msg = new HUDMessage.HUDMessageInfo();
@@ -15076,30 +9513,36 @@ namespace SkyCoop
 
             if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
             {
-                SearchModeActive = !SearchModeActive;
+                
+
+                Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+                if(Panel && !Panel.IsEnabled())
+                {
+                    //ShowRadioActionPicker(null);
+                }
             }
 
             if (LastSearchDistance != float.PositiveInfinity && CairnsSearchActive())
             {
                 float Rate = GetRadioBeepRate(LastSearchDistance);
-                if(nextLEDBlink == 0.0f)
+                if (nextLEDBlink == 0.0f)
                 {
                     nextLEDBlink = Time.time + Rate;
                 }
 
-                if(Time.time > nextLEDBlink)
+                if (Time.time > nextLEDBlink)
                 {
                     nextLEDBlink = Time.time + Rate;
 
-                    if(LEDState == false)
+                    if (LEDState == false)
                     {
                         DoRadioBeep();
                         LEDState = true;
-                    }else{
+                    } else {
                         LEDState = false;
                     }
                 }
-            }else{
+            } else {
                 LEDState = false;
             }
 
@@ -15108,16 +9551,25 @@ namespace SkyCoop
 
         public static bool IsCustomHandItem(string item)
         {
-            if(item == "GEAR_Hatchet" 
-                || item == "GEAR_HatchetImprovised" 
-                || item == "GEAR_Hammer" 
-                || item == "GEAR_Knife" 
-                || item == "GEAR_KnifeImprovised" 
-                || item == "GEAR_KnifeScrapMetal" 
+            if (item == "GEAR_Hatchet"
+                || item == "GEAR_HatchetImprovised"
+                || item == "GEAR_Hammer"
+                || item == "GEAR_Knife"
+                || item == "GEAR_KnifeImprovised"
+                || item == "GEAR_KnifeScrapMetal"
                 || item == "GEAR_JeremiahKnife"
                 || item == "GEAR_Prybar"
                 || item == "GEAR_FireAxe"
                 || item == "GEAR_Shovel")
+            {
+                return true;
+            }
+            return false;
+        }
+        public static bool IsUserGeneratedHandItem(string item)
+        {
+            if (item == "GEAR_SCPhoto"
+                || item == "GEAR_SCMapPiece")
             {
                 return true;
             }
@@ -15171,20 +9623,10 @@ namespace SkyCoop
                 return BulletImpactEffectType.BulletImpactEffect_Flesh;
             return tag == "Glass" ? BulletImpactEffectType.BulletImpactEffect_Glass : BulletImpactEffectType.BulletImpactEffect_Untagged;
         }
-        public class MeleeDescripter
-        {
-            public float m_PlayerDamage = 0;
-            public float m_AnimalDamage = 0;
-            public bool m_BloodLoss = false;
-            public bool m_Pain = false;
-            public bool m_ClothingTearing = false;
-            public float m_AttackSpeed = 1;
-            public float m_RetakeTime = 1;
-        }
 
-        public static MeleeDescripter GetMeelePlayerInfo(string weapon)
+        public static DataStr.MeleeDescripter GetMeelePlayerInfo(string weapon)
         {
-            MeleeDescripter Info = new MeleeDescripter();
+            DataStr.MeleeDescripter Info = new DataStr.MeleeDescripter();
 
             if (weapon == "GEAR_Hatchet" || weapon == "GEAR_HatchetImprovised")
             {
@@ -15241,7 +9683,7 @@ namespace SkyCoop
                 Info.m_RetakeTime = 8f;
                 return Info;
             }
-            if(weapon == "GEAR_Shovel")
+            if (weapon == "GEAR_Shovel")
             {
                 Info.m_PlayerDamage = 18;
                 Info.m_AnimalDamage = 48;
@@ -15257,12 +9699,12 @@ namespace SkyCoop
         public static bool MouseActionIsAllowed()
         {
             PlayerManager managerComponent = GameManager.GetPlayerManagerComponent();
-            if (InterfaceManager.IsOverlayActiveImmediate() 
-                || (InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI && InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI.IsManagingInput()) 
-                || (UICamera.currentScheme != UICamera.ControlScheme.Controller && managerComponent.m_InteractiveObjectUnderCrosshair && !managerComponent.PlayerIsZooming() && managerComponent.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>()) 
+            if (InterfaceManager.IsOverlayActiveImmediate()
+                || (InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI && InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI.IsManagingInput())
+                || (UICamera.currentScheme != UICamera.ControlScheme.Controller && managerComponent.m_InteractiveObjectUnderCrosshair && !managerComponent.PlayerIsZooming() && managerComponent.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>())
                 || managerComponent.IsInPlacementMode()
                 || InputManager.IsClickHoldActive()
-                || ObjectInteractWith != null)
+                || InteractionInprocess)
             {
                 return false;
             }
@@ -15294,9 +9736,17 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.MELEESTART))
                     {
                         _packet.Write(true);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
+            }
+        }
+
+        public static void ReadNoteInHands()
+        {
+            if (MouseActionIsAllowed() && InterfaceManager.m_Panel_HUD.m_CollectibleNoteObject.activeSelf == false)
+            {
+                Pathes.DisplayNote(GameManager.GetPlayerManagerComponent().m_ItemInHands);
             }
         }
 
@@ -15340,7 +9790,7 @@ namespace SkyCoop
             GearItem componentArrow = gameObject.GetComponent<GearItem>();
             componentArrow.m_ArrowItem.Fire();
             UnityEngine.Object.Destroy(gameObject);
-            ShootSync HitSync = new MyMod.ShootSync();
+            DataStr.ShootSync HitSync = new DataStr.ShootSync();
             HitSync.m_position = GameManager.GetVpFPSCamera().transform.position;
             HitSync.m_rotation = GameManager.GetVpFPSCamera().transform.rotation;
             HitSync.m_projectilename = "Melee";
@@ -15348,12 +9798,13 @@ namespace SkyCoop
             HitSync.m_camera_forward = GameManager.GetVpFPSCamera().transform.forward;
             HitSync.m_camera_right = GameManager.GetVpFPSCamera().transform.right;
             HitSync.m_camera_up = GameManager.GetVpFPSCamera().transform.up;
+            HitSync.m_sceneguid = level_guid;
             if (sendMyPosition == true)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.SHOOTSYNC))
                 {
                     _packet.Write(HitSync);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
             if (iAmHost == true)
@@ -15366,7 +9817,7 @@ namespace SkyCoop
 
             string Weapon = "";
 
-            if(GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
+            if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
             {
                 Weapon = GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName;
             }
@@ -15394,8 +9845,8 @@ namespace SkyCoop
                 GameObject Player = GameManager.GetPlayerObject();
                 int num = (int)AkSoundEngine.PostEvent(AK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
                 GameAudioManager.SetAudioSourceTransform(Player, V3);
-                PlayerBulletDamage PlayerDamage = hit.collider.gameObject.GetComponent<MyMod.PlayerBulletDamage>();
-                if(PlayerDamage != null)
+                Comps.PlayerBulletDamage PlayerDamage = hit.collider.gameObject.GetComponent<Comps.PlayerBulletDamage >();
+                if (PlayerDamage != null)
                 {
                     float Damage = PlayerDamage.m_Damage / 3 + GetMeelePlayerInfo(Weapon).m_PlayerDamage;
                     MelonLogger.Msg("You damaged other player on " + Damage);
@@ -15409,7 +9860,7 @@ namespace SkyCoop
                             _packet.Write(PlayerDamage.m_ClientId);
                             _packet.Write(true);
                             _packet.Write(Weapon);
-                            SendTCPData(_packet);
+                            SendUDPData(_packet);
                         }
                     }
                     if (iAmHost == true)
@@ -15422,19 +9873,19 @@ namespace SkyCoop
                     return;
                 }
                 BaseAi baseAiFromObject = AiUtils.GetBaseAiFromObject(hit.collider.gameObject);
-                AnimalActor ActorFromObject;
+                Comps.AnimalActor ActorFromObject;
                 if (!hit.collider.gameObject)
                 {
                     ActorFromObject = null;
                 }
                 else if (hit.collider.gameObject.layer == 16)
                 {
-                    ActorFromObject = hit.collider.gameObject.GetComponent<AnimalActor>();
-                }else{
+                    ActorFromObject = hit.collider.gameObject.GetComponent<Comps.AnimalActor>();
+                } else {
                     if (hit.collider.gameObject.layer == 27)
                     {
-                        ActorFromObject = hit.collider.gameObject.transform.GetComponentInParent<AnimalActor>();
-                    }else{
+                        ActorFromObject = hit.collider.gameObject.transform.GetComponentInParent<Comps.AnimalActor>();
+                    } else {
                         ActorFromObject = null;
                     }
                 }
@@ -15457,7 +9908,7 @@ namespace SkyCoop
                     }
                     return;
                 }
-                if(ActorFromObject != null)
+                if (ActorFromObject != null)
                 {
                     LocalizedDamage component = hit.collider.GetComponent<LocalizedDamage>();
                     float bleedOutMinutes = component.GetBleedOutMinutes(BodyDamage.Weapon.Rifle);
@@ -15477,7 +9928,7 @@ namespace SkyCoop
                         {
                             _packet.Write(ActorFromObject.gameObject.GetComponent<ObjectGuid>().Get());
                             _packet.Write(Damage);
-                            SendTCPData(_packet);
+                            SendUDPData(_packet);
                         }
                     }
                     return;
@@ -15486,19 +9937,9 @@ namespace SkyCoop
         }
         public static bool IgnoreEmoteKeyDownUntilReleased = false;
 
-        public class MultiplayerEmote
+        public static DataStr.MultiplayerEmote GetEmoteByID(int ID)
         {
-            public string m_Name = "Anim";
-            public string m_Animation = "Idle";
-            public bool m_ForceCrouch = false;
-            public bool m_ForceStandup = false;
-            public bool m_FollowDollCamera = false;
-            public bool m_NeedFreeHands = false;
-        }
-
-        public static MultiplayerEmote GetEmoteByID(int ID)
-        {
-            MultiplayerEmote Emote = new MultiplayerEmote();
+            DataStr.MultiplayerEmote Emote = new DataStr.MultiplayerEmote();
             if (ID == 0)
             {
                 Emote.m_Name = "Maraschino";
@@ -15516,11 +9957,34 @@ namespace SkyCoop
                 Emote.m_Name = "Samba";
                 Emote.m_Animation = "Flex";
                 Emote.m_ForceStandup = true;
-            }else{
+            } 
+            else if(ID == 3)
+            {
+                Emote.m_Name = "Thumbs Up";
+                Emote.m_Animation = "DoThumbsUp";
+                Emote.m_LeftHandEmote = true;
+            } else if (ID == 4)
+            {
+                Emote.m_Name = "Middle Finger";
+                Emote.m_Animation = "DoMiddleFinger";
+                Emote.m_LeftHandEmote = true;
+            } else if(ID == 5)
+            {
+                Emote.m_Name = "Point";
+                Emote.m_Animation = "DoPoint";
+                Emote.m_LeftHandEmote = true;
+            } else if(ID == 6)
+            {
+                Emote.m_Name = "Wave";
+                Emote.m_Animation = "DoWave";
+                Emote.m_LeftHandEmote = true;
+            } else
+            {
                 Emote.m_Name = "Maraschino";
                 Emote.m_Animation = "Cringe1";
                 Emote.m_ForceStandup = true;
             }
+
             return Emote;
         }
 
@@ -15531,7 +9995,29 @@ namespace SkyCoop
                 MyPlayerDoll.transform.rotation = GameManager.GetPlayerTransform().rotation;
             }
             IgnoreEmoteKeyDownUntilReleased = true;
-            MyEmote = GetEmoteByID(EmoteID);
+            DataStr.MultiplayerEmote Emote = GetEmoteByID(EmoteID);
+            if (!Emote.m_LeftHandEmote)
+            {
+                MyEmote = GetEmoteByID(EmoteID);
+            } else
+            {
+                if (MyPlayerDoll)
+                {
+                    MyPlayerDoll.GetComponent<Comps.MultiplayerPlayerAnimator>().DoLeftHandEmote(Emote.m_Animation);
+                }
+                if (iAmHost)
+                {
+                    ServerSend.TRIGGEREMOTE(0, EmoteID);
+                }
+                if (sendMyPosition)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.TRIGGEREMOTE))
+                    {
+                        _packet.Write(EmoteID);
+                        SendUDPData(_packet);
+                    }
+                }
+            }
         }
 
         public static void UpdateEmoteWheel()
@@ -15540,13 +10026,13 @@ namespace SkyCoop
             {
                 bool IsDown = KeyboardUtilities.InputManager.GetKey(KeyCode.T);
 
-                if((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
+                if ((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
                 {
                     IsDown = false;
                 }
 
 
-                if(IsDown && IgnoreEmoteKeyDownUntilReleased == false)
+                if (IsDown && IgnoreEmoteKeyDownUntilReleased == false)
                 {
                     EmoteWheel.SetActive(true);
                     InputManager.m_CursorState = InputManager.CursorState.Show;
@@ -15562,19 +10048,19 @@ namespace SkyCoop
                             break;
                         }
                     }
-                    if(Selected != -1)
+                    if (Selected != -1)
                     {
                         EmoteWheel.transform.GetChild(8).gameObject.SetActive(true);
                         EmoteWheel.transform.GetChild(8).GetChild(1).gameObject.GetComponent<UnityEngine.UI.Text>().text = GetEmoteByID(Selected).m_Name;
-                    }else{
+                    } else {
                         EmoteWheel.transform.GetChild(8).gameObject.SetActive(false);
                     }
                 }
-                else{
+                else {
                     EmoteWheel.SetActive(false);
                 }
 
-                if(IgnoreEmoteKeyDownUntilReleased && !IsDown)
+                if (IgnoreEmoteKeyDownUntilReleased && !IsDown)
                 {
                     IgnoreEmoteKeyDownUntilReleased = false;
                 }
@@ -15585,19 +10071,19 @@ namespace SkyCoop
         {
             if (MyPlayerDoll)
             {
-                MultiplayerPlayerAnimator Anim = MyPlayerDoll.GetComponent<MultiplayerPlayerAnimator>();
+                Comps.MultiplayerPlayerAnimator Anim = MyPlayerDoll.GetComponent<Comps.MultiplayerPlayerAnimator>();
                 if (Anim)
                 {
-                    if(Act == "Pickup")
+                    if (Act == "Pickup")
                     {
                         Anim.Pickup();
-                    }else if(Act == "Eat" || Act == "Drink")
+                    } else if (Act == "Eat" || Act == "Drink")
                     {
                         Anim.m_IsDrink = Act == "Drink";
                         Anim.Consumption();
-                    }else if(Act == "Shoot")
+                    } else if (Act == "Shoot")
                     {
-                        if(MyLightSourceName == "GEAR_Rifle")
+                        if (MyLightSourceName == "GEAR_Rifle")
                         {
                             string shootStrhing = "RifleShoot";
                             if (MyAnimState == "Ctrl")
@@ -15610,7 +10096,7 @@ namespace SkyCoop
                         {
                             DoShootFX(MyPlayerDoll.transform.position);
                         }
-                    }else if(Act == "Melee")
+                    } else if (Act == "Melee")
                     {
                         Anim.MeleeAttack();
                     }
@@ -15620,7 +10106,7 @@ namespace SkyCoop
 
         public static void UpdateDoll()
         {
-            if (MyPlayerDoll)
+            if (MyPlayerDoll && GameManager.m_PlayerObject != null)
             {
                 if (CustomizeUi && CustomizeUi.activeSelf)
                 {
@@ -15638,79 +10124,57 @@ namespace SkyCoop
             }
         }
 
-        public override void OnUpdate()
+        public static bool QuitWhenSaveOperationFinished = false;
+        public static long PendingSaveHashToSend = 0;
+
+
+        public static void SaveCheck()
         {
-            if(KillOnUpdate == true)
+            if (QuitWhenSaveOperationFinished)
             {
-                //DebugCrap(); // Debug for debuging and debuging debug.
-                return;
-            }
-            if(NpcDummy && GameManager.m_PlayerObject)
-            {
-                NpcDummy.transform.position = GameManager.GetPlayerTransform().position;
-            }
-
-            if (LobbyUI != null)
-            {
-                LobbyUI.transform.GetChild(3).gameObject.SetActive(false);
-            }
-
-            if (Application.runInBackground == false) { Application.runInBackground = true; } // Always running in bg, to not lost any sync packets
-            UpdateMain(); // Updating sync tread
-            GameLogic.Update(); // Updating sync tread for server
-            UpdateAPIStates(); // Updating ID and Client/Host state for API
-            InitAudio(); // Adding audio listener if needed
-            if (Application.isBatchMode) // If Dedicated mode, doing specific code for it
-            {
-                DedicatedServerUpdate(); // Updating dedicated settings
-            }else{
-                if (GameManager.m_Condition)
+                if (SaveGameData.m_PendingSaveGameOperations.Count == 0)
                 {
-                    IsDead = GameManager.m_Condition.m_CurrentHP <= 0;
+                    MelonLogger.Msg("Saving on disk done");
+                    if (sendMyPosition)
+                    {
+                        if (PendingSaveHashToSend != 0)
+                        {
+                            using (Packet _packet = new Packet((int)ClientPackets.SAVEHASH))
+                            {
+                                _packet.Write(MyUGUID);
+                                _packet.Write(PendingSaveHashToSend);
+                                _packet.Write(true);
+                                SendUDPData(_packet, true);
+                            }
+                        }
+                        MelonLogger.Msg("Done sending, now quit");
+                    }
+                    QuitWhenSaveOperationFinished = false;
+                    IReallyWantToQuit = true;
+                    Application.Quit();
                 }
             }
-            
+        }
+
+        public static void UIsWorking()
+        {
             if (UiCanvas == null)
             {
                 BuildCanvasUIs(); // Creating canvas based UI
             }else{
                 UpdateCanvasUis(); // Upating text and other UI
             }
-
-            if (Time.time > nextActionTimeSecond)
-            {
-                nextActionTimeSecond += periodSecond;
-
-                if (iAmHost == true)
-                {
-                    ServerSend.KEEPITALIVE(0, true);
-                }
-                if (sendMyPosition == true)
-                {
-                    using (Packet _packet = new Packet((int)ClientPackets.KEEPITALIVE))
-                    {
-                        _packet.Write(true);
-                        SendTCPData(_packet);
-                    }
-                }
-
-                if (KillEverySecond == false)
-                {
-                    EverySecond(); // Triggering this code very second
-                }
-            }
-
             if (m_InterfaceManager != null)
             {
-                if(NeedConnectAfterLoad != -1 && InterfaceManager.m_Panel_Confirmation != null)
+                if (NeedConnectAfterLoad != -1 && InterfaceManager.m_Panel_Confirmation != null)
                 {
                     DoWaitForConnect(true); // Showing connection message after startup connection
                 }
-                if(InterfaceManager.m_Panel_SnowShelterInteract != null)
+                if (InterfaceManager.m_Panel_SnowShelterInteract != null)
                 {
                     CancleDismantling(); // Cancle Break-down of snowshelter where any other player is inside
                 }
-                if(InterfaceManager.m_Panel_Rest != null && InterfaceManager.m_Panel_Rest.isActiveAndEnabled == true)
+                if (InterfaceManager.m_Panel_Rest != null && InterfaceManager.m_Panel_Rest.isActiveAndEnabled == true)
                 {
                     if (SleepingButtons == null)
                     {
@@ -15727,133 +10191,58 @@ namespace SkyCoop
                 }
                 SendHarvestingAnimal(); // Send harvesting animal if it changed 
 
-                if (CurrentCustomChalleng.m_Started)
+                if (GameManager.m_PlayerManager)
+                {
+                    if (InOnline())
+                    {
+                        CancleIfSomeoneDoSame(); // Stop actions if another player doing same with that object.
+                    }
+                }
+
+                if (CurrentCustomChalleng.m_Started || OnExpedition)
                 {
                     if (InterfaceManager.m_Panel_Actions != null && InterfaceManager.m_Panel_Actions.isActiveAndEnabled)
                     {
                         InterfaceManager.m_Panel_Actions.m_MissionObjectWithTimer.SetActive(true);
                         InterfaceManager.m_Panel_Actions.m_MissionObjectiveWithTimerLabel.gameObject.SetActive(true);
                     }
-                    PatchChallange();
+                    if (OnExpedition)
+                    {
+                        ExpeditionUI(ExpeditionLastName, ExpeditionLastTaskText, ExpeditionLastTime);
+                    } else if (CurrentCustomChalleng.m_Started)
+                    {
+                        PatchChallange();
+                    }
                 }
                 UpdateEmoteWheel();
             }
-            if (SteamServerWorks != "" || Server.UsingSteamWorks == true)
+            if (MyEmote != null)
             {
-                bool HoldRadio = false;
-                if(GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_ItemInHands && GameManager.m_PlayerManager.m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
+                if (MyEmote.m_FollowDollCamera)
                 {
-                    HoldRadio = true;
+                    vp_FPSCamera vpFpsCamera = GameManager.GetVpFPSCamera();
+                    Quaternion quaternion = DollCameraDummy.transform.rotation;
+                    float pitch = quaternion.eulerAngles.x + vpFpsCamera.m_BasePitch;
+                    float y = quaternion.eulerAngles.y;
+                    vpFpsCamera.SetAngle(y, pitch);
                 }
-
-                TrackWhenRecordOver(HoldRadio); // Processing voice chat
-            }
-
-            if (FirstBoot == false && SteamConnect.CanUseSteam == true)
-            {
-                SteamConnect.DoUpdate(); // Start tracking of incomming data from other players
-            }
-            if (Time.time > nextActionTime)
-            {
-                nextActionTime += period;
-                if (NeedSyncTime == true)
+                bool IsCrouched = GameManager.GetPlayerManagerComponent().PlayerIsCrouched();
+                if (MyEmote.m_ForceStandup)
                 {
-                    EveryInGameMinute(); // Trigger actions that happends every in game minute (5 seconds) and recalculate realtime cycle and resend weather.
-                }
-                if (iAmHost == true)
-                {
-                    if (IsCycleSkiping == true && GameManager.m_PlayerManager != null)
+                    if (IsCrouched)
                     {
-                        if (GameManager.GetPlayerManagerComponent().PlayerIsSleeping() == false || IsDead == true)
-                        {
-                            IsCycleSkiping = false;
-                        }
+                        GameManager.GetVpFPSPlayer().InputCrouch();
                     }
-                    UpdateTicksOnScenes(); // Calculate how long player on this scene
                 }
-                if (TrackableDroppedGearsObjs.Count > 0)
+                else if (MyEmote.m_ForceCrouch)
                 {
-                    foreach (var item in TrackableDroppedGearsObjs)
+                    if (!IsCrouched)
                     {
-                        if (item.Value && item.Value.GetComponent<DroppedGearDummy>())
-                        {
-                            DroppedGearDummy DGD = item.Value.GetComponent<DroppedGearDummy>();
-                            int minutesLeft = DGD.m_Extra.m_GoalTime - MinutesFromStartServer;
-                            if (minutesLeft <= 0)
-                            {
-                                item.Value.transform.GetChild(0).gameObject.SetActive(false);
-                            }
-                        }
+                        GameManager.GetVpFPSPlayer().InputCrouch();
                     }
                 }
             }
-
-            if (GameManager.m_PlayerManager != null && GameManager.GetPlayerManagerComponent().m_ItemInHands)
-            {
-                string InHandName = GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName;
-                if (GameManager.GetPlayerManagerComponent().m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
-                {
-                    ViewModelRadio.SetActive(true);
-                    if (!OriginalRadioSeaker)
-                    {
-                        UpdateRadio();
-                    }
-                }else{
-                    ViewModelRadio.SetActive(false);
-                    SearchModeActive = false;
-                }
-
-                if (IsCustomHandItem(InHandName))
-                {
-                    ViewModelDummy.SetActive(false);
-
-                    if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
-                    {
-                        bool ShouldAttack = true;
-                        if (ShouldReEquipFaster &&(InHandName == "GEAR_Knife" || InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal" || InHandName == "GEAR_JeremiahKnife"))
-                        {
-                            ShouldAttack = false;
-                        }
-                        if (ShouldAttack)
-                        {
-                            PerformMeleeAttack(InHandName);
-                        }
-                    }
-                }
-                ViewModelHatchet.SetActive(InHandName == "GEAR_Hatchet");
-                ViewModelHatchet2.SetActive(InHandName == "GEAR_HatchetImprovised");
-                ViewModelHammer.SetActive(InHandName == "GEAR_Hammer");
-                ViewModelKnife.SetActive(InHandName == "GEAR_Knife");
-                ViewModelJeremiahKnife.SetActive(InHandName == "GEAR_JeremiahKnife");
-                ViewModelKnife2.SetActive(InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal");
-                ViewModelPrybar.SetActive(InHandName == "GEAR_Prybar");
-                ViewModelShovel.SetActive(InHandName == "GEAR_Shovel");
-                ViewModelFireAxe.SetActive(InHandName == "GEAR_FireAxe");
-                if (UseBoltInsteadOfStone)
-                {
-                    ViewModelStone.SetActive(false);
-                    ViewModelBolt.SetActive(InHandName == "GEAR_Stone");
-                }
-            }
-
-            if (InOnline() == true)
-            {
-                if (RealTimeCycleSpeed == true)
-                {
-                    string todString = OveridedTime;
-                    float normalizedTOD = 0.0f;
-                    if (Utils.TryParseTOD(todString, out normalizedTOD))
-                    {
-                        GameManager.GetTimeOfDayComponent().SetNormalizedTime(normalizedTOD);
-                    }
-                }
-                if(GameManager.m_ExperienceModeManager != null)
-                {
-                    GameManager.m_ExperienceModeManager.GetCurrentExperienceMode().m_DecayScale = 0;
-                }
-            }
-
-            if(level_name == "MainMenu")
+            if (level_name == "MainMenu")
             {
                 if (NewFlairNotification)
                 {
@@ -15869,44 +10258,174 @@ namespace SkyCoop
                     }
                 }
             }
-
-            if(CustomizeUi && CustomizeUi.activeSelf)
+            if (CustomizeUi && CustomizeUi.activeSelf)
             {
-                if(level_name == "MainMenu")
+                if (level_name == "MainMenu")
                 {
                     UpdateDoll();
-                } 
-            }
-
-            if (level_name != "Empty" && level_name != "Boot" && level_name != "MainMenu" && GameManager.m_PlayerObject != null)
-            {
-                Transform transf = GameManager.GetPlayerTransform();
-                bool InFight = GameManager.GetPlayerStruggleComponent().InStruggle();
-                if (GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair != null)
-                {
-                    LastObjectUnderCrosshair = GameManager.GetPlayerManagerComponent().m_InteractiveObjectUnderCrosshair;
                 }
-                UpdateDoll();
+            }
+        }
 
-                if (GameManager.m_PlayerManager)
+        public static void CustomWeapons()
+        {
+            if (GameManager.m_PlayerManager != null && GameManager.GetPlayerManagerComponent().m_ItemInHands)
+            {
+                string InHandName = GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName;
+
+                if (ViewModelRadio)
                 {
-                    if(m_InterfaceManager && InOnline() == true)
+                    if (GameManager.GetPlayerManagerComponent().m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
                     {
-                        CancleIfSomeoneDoSame(); // Stop actions if another player doing same with that object.
+                        ViewModelRadio.SetActive(true);
+                        if (!OriginalRadioSeaker)
+                        {
+                            UpdateRadio();
+                        }
+                    } else
+                    {
+                        ViewModelRadio.SetActive(false);
+                        SearchModeActive = false;
+                    }
+                } else
+                {
+                    MelonLogger.Msg("No ViewModelRadio mesh");
+                }
+
+                if (IsCustomHandItem(InHandName))
+                {
+                    if (ViewModelDummy)
+                    {
+                        ViewModelDummy.SetActive(false);
+                    } else
+                    {
+                        MelonLogger.Msg("No ViewModelDummy mesh");
+                    }
+
+                    if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
+                    {
+                        bool ShouldAttack = true;
+                        if (ShouldReEquipFaster && (InHandName == "GEAR_Knife" || InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal" || InHandName == "GEAR_JeremiahKnife"))
+                        {
+                            ShouldAttack = false;
+                        }
+                        if (ShouldAttack)
+                        {
+                            PerformMeleeAttack(InHandName);
+                        }
+                    }
+                }else if(InHandName == "GEAR_SCNote")
+                {
+                    if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
+                    {
+                        ReadNoteInHands();
                     }
                 }
 
-                if(DebugGUI == true)
+                if (ViewModelHatchet)
                 {
-                    DebugCrap();
+                    ViewModelHatchet.SetActive(InHandName == "GEAR_Hatchet");
+                }
+                if (ViewModelHatchet2)
+                {
+                    ViewModelHatchet2.SetActive(InHandName == "GEAR_HatchetImprovised");
+                }
+                if (ViewModelHammer)
+                {
+                    ViewModelHammer.SetActive(InHandName == "GEAR_Hammer");
+                }
+                if (ViewModelKnife)
+                {
+                    ViewModelKnife.SetActive(InHandName == "GEAR_Knife");
+                }
+                if (ViewModelJeremiahKnife)
+                {
+                    ViewModelJeremiahKnife.SetActive(InHandName == "GEAR_JeremiahKnife");
+                }
+                if (ViewModelKnife2)
+                {
+                    ViewModelKnife2.SetActive(InHandName == "GEAR_KnifeImprovised" || InHandName == "GEAR_KnifeScrapMetal");
+                }
+                if (ViewModelPrybar)
+                {
+                    ViewModelPrybar.SetActive(InHandName == "GEAR_Prybar");
+                }
+                if (ViewModelShovel)
+                {
+                    ViewModelShovel.SetActive(InHandName == "GEAR_Shovel");
+                }
+                if (ViewModelFireAxe)
+                {
+                    ViewModelFireAxe.SetActive(InHandName == "GEAR_FireAxe");
+                }
+                if (ViewModelHackSaw)
+                {
+                    ViewModelHackSaw.SetActive(InHandName == "GEAR_Hacksaw");
+                }
+                if (ViewModelPhoto)
+                {
+                    ViewModelPhoto.SetActive(InHandName == "GEAR_SCPhoto");
+                }
+                if (ViewModelMap)
+                {
+                    ViewModelMap.SetActive(InHandName == "GEAR_SCMapPiece");
+                }
+                if (ViewModelStone)
+                {
+                    ViewModelStone.SetActive(InHandName == "GEAR_Stone");
+                }
+                if (ViewModelNote)
+                {
+                    ViewModelNote.SetActive(InHandName == "GEAR_SCNote");
                 }
 
+                if (UseBoltInsteadOfStone)
+                {
+                    if (ViewModelStone)
+                    {
+                        ViewModelStone.SetActive(false);
+                    }
+                    if (ViewModelBolt)
+                    {
+                        ViewModelBolt.SetActive(InHandName == "GEAR_Stone");
+                    }
+                }
+            }
+        }
+        public static void ProcessVoice()
+        {
+            if (SteamServerWorks != "" || Server.UsingSteamWorks == true)
+            {
+                bool HoldRadio = false;
+                if (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_ItemInHands && GameManager.m_PlayerManager.m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
+                {
+                    HoldRadio = true;
+                }
+
+                TrackWhenRecordOver(HoldRadio); // Processing voice chat
+            }
+        }
+
+        public void UpdateDeathFlag()
+        {
+            if (GameManager.m_Condition)
+            {
+                IsDead = GameManager.m_Condition.m_CurrentHP <= 0;
+            }
+        }
+
+        public void SendPlayerData()
+        {
+            if(GameManager.m_PlayerObject != null)
+            {
+                Transform transf = GameManager.GetPlayerTransform();
+                bool InFight = GameManager.GetPlayerStruggleComponent().InStruggle();
                 UpdateMyEquipment(); // Resend my current equipment if needed.
                 UpdateVisualSyncs(); // Resend some effects if needed. (Bloodloss, heavy breath).
 
                 if (transf)
                 {
-                    if(previoustickpos != transf.position) // If moving
+                    if (previoustickpos != transf.position) // If moving
                     {
                         MyEmote = null;
                         previoustickpos = GameManager.GetPlayerTransform().position;
@@ -15914,7 +10433,7 @@ namespace SkyCoop
                     }else{
                         SetCurrentAnimation(InFight); // Sets animations when not moving, actions and almost everything.
                     }
-                    if(previoustickrot != transf.rotation) // If rotating
+                    if (previoustickrot != transf.rotation) // If rotating
                     {
                         previoustickrot = GameManager.GetPlayerTransform().rotation;
                         SyncRotation(transf); // Send rotation of player model.
@@ -15929,39 +10448,22 @@ namespace SkyCoop
                     {
                         LongActionCanceled(PlayerInteractionWith);
                     }
-                    if (ObjectInteractWith != null)
+                    if (InteractionInprocess && InteractHold)
                     {
                         LongActionCanceled();
                     }
                 }
-
-                if(MyEmote != null)
-                {
-                    if (MyEmote.m_FollowDollCamera)
-                    {
-                        vp_FPSCamera vpFpsCamera = GameManager.GetVpFPSCamera();
-                        Quaternion quaternion = DollCameraDummy.transform.rotation;
-                        float pitch = quaternion.eulerAngles.x + vpFpsCamera.m_BasePitch;
-                        float y = quaternion.eulerAngles.y;
-                        vpFpsCamera.SetAngle(y, pitch);
-                    }
-                    bool IsCrouched = GameManager.GetPlayerManagerComponent().PlayerIsCrouched();
-                    if (MyEmote.m_ForceStandup)
-                    {
-                        if (IsCrouched)
-                        {
-                            GameManager.GetVpFPSPlayer().InputCrouch();
-                        }
-                    }
-                    else if(MyEmote.m_ForceCrouch)
-                    {
-                        if (!IsCrouched)
-                        {
-                            GameManager.GetVpFPSPlayer().InputCrouch();
-                        }
-                    }
-                }
             }
+        }
+
+        public static void InputActions()
+        {
+            if (GameManager.m_PlayerManager == null)
+            {
+                return;
+            }
+            PlayerManager __PM = GameManager.m_PlayerManager;
+
 
             if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.G))
             {
@@ -15970,81 +10472,227 @@ namespace SkyCoop
             }
             if (InputManager.GetPutBackPressed(InputManager.m_CurrentContext))
             {
-                if (GameManager.m_PlayerManager)
+                if (__PM.m_Gear != null && __PM.m_InspectModeActive == true)
                 {
-                    PlayerManager __PM = GameManager.m_PlayerManager;
-                    if (__PM.m_Gear != null && __PM.m_InspectModeActive == true)
+                    GearItem GI = __PM.m_Gear;
+                    GameObject GIobj = GI.gameObject;
+                    int variant = 0;
+                    if ((GIobj.GetComponent<FoodItem>() != null && GIobj.GetComponent<FoodItem>().m_Opened == true) ||
+                        (GIobj.GetComponent<SmashableItem>() != null && GIobj.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
                     {
-                        GearItem GI = __PM.m_Gear;
-                        GameObject GIobj = GI.gameObject;
-                        int variant = 0;
-                        if ((GIobj.GetComponent<FoodItem>() != null && GIobj.GetComponent<FoodItem>().m_Opened == true) ||
-                            (GIobj.GetComponent<SmashableItem>() != null && GIobj.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
+                        variant = 1;
+                    }
+
+                    if (__PM.m_Container != null)
+                    {
+                        MelonLogger.Msg("Refuse taking gear, from container, make it fake");
+
+                        SendDropItem(GI, 0, 0, false, variant);
+                    }else{
+                        if (GI.gameObject.GetComponent<Comps.DropFakeOnLeave>() != null)
                         {
-                            variant = 1;
+                            MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
+
+                            SendDropItem(GI, 0, 0, true, variant);
                         }
+                    }
+                }
+            }
+            if (InteractionInprocess)
+            {
+                InteractTimer -= Time.deltaTime;
 
-                        if (__PM.m_Container != null)
+                if (ObjectInteractWith == null)
+                {
+                    LongActionCanceled();
+                    return;
+                }
+
+                if (InteractTimer <= 0.0)
+                {
+                    if (ObjectInteractWith)
+                    {
+                        LongActionFinished(ObjectInteractWith, InteractionType);
+                    }
+                    LongActionCanceled();
+                }
+            }
+            if (Pathes.FakeRockCacheCallback != null)
+            {
+                for (int i = 0; i < playersData.Count; i++)
+                {
+                    if (playersData[i] != null)
+                    {
+                        if (playersData[i].m_BrakingObject != null)
                         {
-                            MelonLogger.Msg("Refuse taking gear, from container, make it fake");
-
-                            SendDropItem(GI, 0, 0, false, variant);
-                        }else{
-                            if (GI.gameObject.GetComponent<DropFakeOnLeave>() != null)
+                            if (Pathes.FakeRockCacheCallback.m_GUID == playersData[i].m_BrakingObject.m_Guid)
                             {
-                                MelonLogger.Msg("Refuse from picking fake gear, make it fake again");
-
-                                SendDropItem(GI, 0, 0, true, variant);
+                                HUDMessage.AddMessage(playersData[i].m_Name + " IS BREAKING THIS!");
+                                GameAudioManager.PlayGUIError();
+                                InterfaceManager.m_Panel_GenericProgressBar.Cancel();
+                                break;
+                            }
+                        }
+                        if (playersData[i].m_Container != null)
+                        {
+                            if (Pathes.FakeRockCacheCallback.m_GUID == playersData[i].m_Container.m_Guid)
+                            {
+                                HUDMessage.AddMessage(playersData[i].m_Name + " IS USING THIS!");
+                                GameAudioManager.PlayGUIError();
+                                InterfaceManager.m_Panel_GenericProgressBar.Cancel();
+                                break;
                             }
                         }
                     }
                 }
             }
-            if (ObjectInteractWith)
-            {
-                InteractTimer -= Time.deltaTime;
+        }
 
-                if (InteractTimer <= 0.0)
+        public static void SetTime()
+        {
+            string todString = OveridedTime;
+            float normalizedTOD;
+            if (Utils.TryParseTOD(todString, out normalizedTOD))
+            {
+                GameManager.GetTimeOfDayComponent().SetNormalizedTime(normalizedTOD);
+            }
+            if (GameManager.m_ExperienceModeManager != null)
+            {
+                GameManager.m_ExperienceModeManager.GetCurrentExperienceMode().m_DecayScale = 0;
+            }
+        }
+        public static void SetAppBackgroundMode()
+        {
+            if (Application.runInBackground == false) 
+            { 
+                Application.runInBackground = true; // Always running in bg, to not lost any sync packets
+            } 
+        }
+
+        public override void OnUpdate()
+        {
+            SetAppBackgroundMode();
+            if (!KillOnUpdate)
+            {
+                ModUpdate();
+                Shared.OnUpdate();
+            }
+
+            if (!KillEverySecond)
+            {
+                if (Time.time > nextActionTimeSecond)
                 {
-                    LongActionFinished(ObjectInteractWith, InteractionType);
-                    LongActionCanceled();
+                    nextActionTimeSecond += periodSecond;
+                    if (!KillEverySecond)
+                    {
+                        EverySecond(); // Triggering this code very second
+                        Shared.EverySecond();
+                    }
                 }
+            }
+            if (!KillEveryInGameMinute)
+            {
+                if (Time.time > nextActionTime)
+                {
+                    nextActionTime += period;
+                    if (NeedSyncTime == true)
+                    {
+                        EveryInGameMinute(); // Trigger actions that happends every in game minute (5 seconds) and recalculate realtime cycle and resend weather.
+                        if (iAmHost)
+                        {
+                            Shared.EveryInGameMinute();
+                        }
+                    }
+                }
+            }
+            CheckSeeingRefMan();
+        }
+
+        public static bool Flag1 = true;
+        public static bool Flag2 = true;
+        public static bool Flag3 = true;
+        public static bool Flag4 = true;
+        public static bool Flag5 = true;
+        public static bool Flag6 = true;
+        public static bool Flag7 = true;
+        public static bool Flag8 = true;
+        public static bool Flag9 = true;
+        public static bool Flag10 = true;
+        public static bool Flag11 = true;
+        public static bool Flag12 = true;
+        public static bool Flag13 = true;
+        public void ModUpdate()
+        {
+            SaveCheck();
+            if (!DedicatedServerAppMode) 
+            {
+                if (Flag1)
+                {
+                    UIsWorking();
+                }
+                if (Flag2)
+                {
+                    DebugCrap();
+                }
+                if (Flag3)
+                {
+                    CustomWeapons();
+                }
+                if (Flag4)
+                {
+                    InitAudio(); // Adding audio listener if needed
+                }
+                if (Flag5)
+                {
+                    ProcessVoice();
+                }
+                if (Flag6)
+                {
+                    UpdateDeathFlag();
+                }
+                if (level_name != "Empty" && level_name != "Boot" && level_name != "MainMenu")
+                {
+                    if (Flag7)
+                    {
+                        UpdateDoll();
+                    }
+                    if (Flag8)
+                    {
+                        SendPlayerData();
+                    }
+                    if (Flag9)
+                    {
+                        InputActions();
+                    }
+                }
+            }
+            else // If Dedicated mode, doing specific code for it
+            { 
+                DedicatedServerUpdate(); // Updating dedicated settings
+            }
+            if (InOnline())
+            {
+                if (Flag10)
+                {
+                    SetTime();
+                }
+            }
+            if (Flag11)
+            {
+                ThreadManager.UpdateMain(); // Updating sync tread
+            }
+            if (Flag12)
+            {
+                UpdateAPIStates(); // Updating ID and Client/Host state for API
+            }
+            if (Flag13)
+            {
+                SteamConnect.DoUpdate(); // Start tracking of incomming data from other players
             }
         }
 
         public static bool NoUI = false;
         public static bool ForcedUiOn = true;
-        public static bool PreReleaseUI = false;
-        public static string LastConnectedIp = "";
-        public static string PendingConnectionIp = "";
-
-        public static void DoConnectToIp(string _ip)
-        {
-            string newPort = "";
-            string newIP = "";
-            if (_ip.Contains(":"))
-            {
-                char seperator = Convert.ToChar(":");
-                
-                string[] sliced = _ip.Split(seperator);
-                newIP = sliced[0];
-                newPort = sliced[1];
-            }
-
-            if(newIP == "" && newPort == "")
-            {
-                PendingConnectionIp = _ip;
-                instance.ip = _ip;
-                MelonLogger.Msg("Going to connect to "+instance.ip+":"+instance.port);
-            }else{
-                PendingConnectionIp = newIP;
-                instance.ip = newIP;
-                instance.port = Convert.ToInt32(newPort);
-                MelonLogger.Msg("Going to connect to "+instance.ip+":"+instance.port);
-            }
-            instance.ConnectToServer();
-            DoWaitForConnect(false);
-        }
 
 
         public static bool AtHostMenu = false;
@@ -16052,7 +10700,7 @@ namespace SkyCoop
         public static void LoadAllOpenableThingsForScene()
         {
             string Scene = level_guid;
-            MelonLogger.Msg(ConsoleColor.Blue, "Trying to load openables for scene " + Scene);
+            MelonLogger.Msg(Blue, "Trying to load openables for scene " + Scene);
             Dictionary<string, bool> Opens = MPSaveManager.LoadOpenableThings(Scene);
             if (Opens != null)
             {
@@ -16070,86 +10718,58 @@ namespace SkyCoop
         public static void LoadAllDropsForScene()
         {
             string Scene = level_guid;
-            MelonLogger.Msg(ConsoleColor.Blue, "Trying to load drops for scene " + Scene);
-            ModifyDynamicGears(Scene);
-            Dictionary<int, DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
-            Dictionary<int, SlicedJsonDroppedGear> Drops = MPSaveManager.LoadDropData(Scene);
+            MelonLogger.Msg(Blue, "Trying to load drops for scene " + Scene);
+            Shared.ModifyDynamicGears(Scene);
+            Dictionary<int, DataStr.DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
+            Dictionary<int, DataStr.SlicedJsonDroppedGear> Drops = MPSaveManager.LoadDropData(Scene);
 
 
             if (Drops != null && Visuals != null)
             {
                 foreach (var item in Visuals)
                 {
-                    FakeDropItem(item.Value, true);
+                    Shared.FakeDropItem(item.Value, true);
                 }
             }
         }
 
         public static void SetFixedSpawn()
         {
-            if(ServerConfig.m_PlayersSpawnType != 3) // Fixed spawn only
+            if (ServerConfig.m_PlayersSpawnType != 3) // Fixed spawn only
             {
                 return;
             }
-            
+
             MelonLogger.Msg("[FixedPlaceSpawns] SetFixedSpawn()");
-            if(FixedPlaceLoaded == false)
+            if (FixedPlaceLoaded == false)
             {
                 SavedSceneForSpawn = level_name;
                 SavedPositionForSpawn = GameManager.GetPlayerTransform().position;
                 MelonLogger.Msg("[FixedPlaceSpawns] Isn't saved yet, set current position");
             }
-            MelonLogger.Msg("[FixedPlaceSpawns] Scene: "+ SavedSceneForSpawn+" position X "+ SavedPositionForSpawn.x+" Y "+ SavedPositionForSpawn.y+" Z "+ SavedPositionForSpawn.z);
-        }
-
-        public static void HostAServer(int port = 26950)
-        {
-            if (iAmHost != true)
-            {
-                isRuning = true;
-
-                Thread mainThread = new Thread(new ThreadStart(MainThread));
-                Server.Start(MaxPlayers, port);
-                nextActionTime = Time.time;
-                nextActionTimeAniamls = Time.time;
-                iAmHost = true;
-                InitAllPlayers(); // Prepare players objects based on amount of max players
-                MelonLogger.Msg("Server has been runned with InGame time: " + GameManager.GetTimeOfDayComponent().GetHour() + ":" + GameManager.GetTimeOfDayComponent().GetMinutes() + " seed "+ GameManager.m_SceneTransitionData.m_GameRandomSeed);
-                OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
-                OverridedMinutes = GameManager.GetTimeOfDayComponent().GetMinutes();
-                OveridedTime = OverridedHourse + ":" + OverridedMinutes;
-                NeedSyncTime = true;
-                RealTimeCycleSpeed = true;
-                DisableOriginalAnimalSpawns(true);
-                SetFixedSpawn();
-                KillConsole(); // Unregistering cheats if server not allow cheating for you
-            }else{
-                HUDMessage.AddMessage("YOU ALREADY HOSING!!!!!!");
-            }
+            MelonLogger.Msg("[FixedPlaceSpawns] Scene: " + SavedSceneForSpawn + " position X " + SavedPositionForSpawn.x + " Y " + SavedPositionForSpawn.y + " Z " + SavedPositionForSpawn.z);
         }
 
         public static void DoIPConnectWindow()
         {
             if (sendMyPosition != true)
             {
-                if(SteamServerWorks == "")
+                if (SteamServerWorks == "")
                 {
                     InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
-                else{
-                    if(SteamConnect.CanUseSteam == true)
+                else {
+                    if (SteamConnect.CanUseSteam == true)
                     {
                         SteamConnect.Main.JoinToLobby(SteamServerWorks);
                     }
                 }
-               
-                RealTimeCycleSpeed = true;
             }
             else
             {
                 HUDMessage.AddMessage("YOU ALREADY CONNECTED!!!!");
             }
-        } 
+        }
 
         public static bool AtDebug = false;
         public static string UIDebugType = "";
@@ -16174,7 +10794,7 @@ namespace SkyCoop
             GameManager.GetPlayerManagerComponent().m_Ghost = false;
             GameManager.GetFatigueComponent().m_CurrentFatigue = 25;
             GameManager.GetThirstComponent().m_CurrentThirst = 25;
-            GameManager.GetHungerComponent().m_CurrentReserveCalories = GameManager.GetHungerComponent().m_MaxReserveCalories/4;
+            GameManager.GetHungerComponent().m_CurrentReserveCalories = GameManager.GetHungerComponent().m_MaxReserveCalories / 4;
         }
 
         public static bool RollChanceSeeded(float percent, System.Random RNG) => !Utils.IsZero(percent, 0.0001f) && (Utils.Approximately(percent, 100f, 0.0001f) || (double)RNG.Next(0, 100) < (double)percent);
@@ -16203,21 +10823,147 @@ namespace SkyCoop
             return newGUID;
         }
 
-        public static void ResetDataForSlot(int _from)
+        public static void AddLocksToDoorsByGUID(string GUID)
         {
-            if(_from != 0)
+            foreach (LoadScene Door in LoadScene.m_LoadScenesList)
             {
-                if (playersData[_from] != null)
+                if (Door.m_GUID == GUID)
                 {
-                    playersData[_from] = new MultiPlayerClientData();
+                    AddLock(Door);
                 }
-                ServerSend.EQUIPMENT(_from, new PlayerEquipmentData(), false);
-                ServerSend.LIGHTSOURCE(_from, false, false);
-                ServerSend.LIGHTSOURCENAME(_from, "", false);
-                ServerSend.XYZ(_from, new Vector3(0, 0, 0), false);
-                ServerSend.XYZW(_from, new Quaternion(0, 0, 0, 0), false);
-                ServerSend.ANIMSTATE(_from, "Idle", false);
-                ServerSend.LEVELID(_from, 0, false);
+            }
+        }
+        public static void EnterDoorsByGUID(string GUID)
+        {
+            foreach (LoadScene Door in LoadScene.m_LoadScenesList)
+            {
+                if (Door.m_GUID == GUID)
+                {
+                    Door.Activate();
+                    break;
+                }
+            }
+        }
+        public static void EnterDoorsByScene(string Scene)
+        {
+            foreach (LoadScene Door in LoadScene.m_LoadScenesList)
+            {
+                if (Door.m_SceneToLoad + "_" + Door.m_GUID == Scene)
+                {
+                    Door.Activate();
+                    break;
+                }
+            }
+        }
+        public static void RemoveLocksFromDoorsByGUID(string GUID)
+        {
+            foreach (LoadScene Door in LoadScene.m_LoadScenesList)
+            {
+                if (Door.m_GUID == GUID)
+                {
+                    if (Door.m_Lock)
+                    {
+                        UnityEngine.Object.Destroy(Door.gameObject.GetComponent<Lock>());
+                    }
+                    if (Door.gameObject.GetComponent<HoverIconsToShow>())
+                    {
+                        UnityEngine.Object.Destroy(Door.gameObject.GetComponent<HoverIconsToShow>());
+                    }
+                    if (Door.gameObject.GetComponent<Comps.DoorLockedOnKey>())
+                    {
+                        UnityEngine.Object.Destroy(Door.gameObject.GetComponent<Comps.DoorLockedOnKey>());
+                    }
+                }
+            }
+        }
+
+        public static void TryLockDoor(LoadScene Door, string KeySeed)
+        {
+            if (Door)
+            {
+                if (Door.m_SceneCanBeInstanced && !string.IsNullOrEmpty(Door.m_GUID) && Door.m_Active)
+                {
+                    GameAudioManager.PlaySound("PLAY_SNDMECHSAFETUMBLERFALL", InterfaceManager.GetSoundEmitter());
+                    if (iAmHost)
+                    {
+                        TryingLockDoor(Door, KeySeed, level_guid);
+                    }
+                    else if (sendMyPosition)
+                    {
+                        DoPleaseWait("Please wait...", "Locking door...");
+                        using (Packet _packet = new Packet((int)ClientPackets.ADDDOORLOCK))
+                        {
+                            _packet.Write(Door.GetSceneToLoad() + "_" + Door.m_GUID);
+                            _packet.Write(KeySeed);
+                            _packet.Write(level_guid);
+                            SendUDPData(_packet);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static bool AddLock(LoadScene Door)
+        {
+            GameObject DoorOBJ = Door.gameObject;
+            if (DoorOBJ)
+            {
+                Lock L = DoorOBJ.AddComponent<Lock>();
+                Door.m_Lock = L;
+                L.m_LockStateRolled = true;
+                L.m_LockState = LockState.Locked;
+                L.m_BreakOnUse = false;
+                L.m_ModeFilter = GameModeFilter.All;
+                L.m_HideToolRequiredToForceOpenHintText = false;
+                L.m_GearPrefabToForceLock = null;
+                L.m_LockedAudio = "Play_SndMechDoorWoodLocked01";
+                Comps.DoorLockedOnKey DoorLock = DoorOBJ.AddComponent<Comps.DoorLockedOnKey>();
+                DoorLock.m_DoorKey = Door.GetSceneToLoad() + "_" + Door.m_GUID;
+                return true;
+            }
+            return false;
+        }
+        public static string PendingKeySeed = "";
+        public static string PendingKeyName = "";
+        public static GameObject PendingRegisterKey = null;
+        public static void BeginRegisterKey(GameObject key, bool Force = false)
+        {
+            if (key)
+            {
+                PendingRegisterKey = key;
+            }
+
+            if (!Force)
+            {
+                if (!GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_SharpeningStone"))
+                {
+                    HUDMessage.AddMessage("You need whetstone!");
+                    GameAudioManager.PlayGUIError();
+                    return;
+                }
+            }
+
+            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input secret seed for key", "", Panel_Confirmation.ButtonLayout.Button_2, "Next", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+        }
+        public static void CreateDebugKey()
+        {
+            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "DATA FOR DEBUG KEY", "", Panel_Confirmation.ButtonLayout.Button_2, "CRAFT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+        }
+
+        public static void TryingLockDoor(LoadScene Door, string KeySeed, string Scene)
+        {
+            string DoorKey = Door.GetSceneToLoad() + "_" + Door.m_GUID;
+            MPSaveManager.UseKeyStatus Status = MPSaveManager.AddLockedDoor(Scene, DoorKey, KeySeed);
+            if (Status == MPSaveManager.UseKeyStatus.Done)
+            {
+                ServerSend.ADDDOORLOCK(-1, Door.m_GUID, Scene);
+                AddLocksToDoorsByGUID(Door.m_GUID);
+            } else if (Status == MPSaveManager.UseKeyStatus.KeyUsed)
+            {
+                HUDMessage.AddMessage("This key already used for other door!");
+            } else if (Status == MPSaveManager.UseKeyStatus.DoorAlreadyLocked)
+            {
+                HUDMessage.AddMessage("This door is already locked!");
             }
         }
 
@@ -16251,53 +10997,53 @@ namespace SkyCoop
                 ServerSend.LEVELGUID(0, level_guid, true);
                 ServerSend.ANIMSTATE(0, MyAnimState, true);
             }
-            if(sendMyPosition == true)
+            if (sendMyPosition == true)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.XYZ))
                 {
                     _packet.Write(v3);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.XYZW))
                 {
                     _packet.Write(rot);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.LEVELID))
                 {
                     _packet.Write(levelid);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.LEVELGUID))
                 {
                     _packet.Write(level_guid);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.ANIMSTATE))
                 {
                     _packet.Write(MyAnimState);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
         }
 
         public static void SendSpawnData(bool AskResponce = false)
         {
-            if (Application.isBatchMode)
+            if (DedicatedServerAppMode)
             {
                 return;
             }
-            if(LoadingScreenIsOn == false)
+            if (LoadingScreenIsOn == false)
             {
                 return;
             }
-            if(AskResponce == false)
+            if (AskResponce == false)
             {
                 MelonLogger.Msg("Sending my spawn data to all players");
-            }else{
+            } else {
                 MelonLogger.Msg("Sending spawn data as responce");
             }
-            PlayerClothingData Cdata = new PlayerClothingData();
+            DataStr.PlayerClothingData Cdata = new DataStr.PlayerClothingData();
             Cdata.m_Hat = MyHat;
             Cdata.m_Top = MyTop;
             Cdata.m_Bottom = MyBottom;
@@ -16308,55 +11054,55 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.SELECTEDCHARACTER))
                 {
                     _packet.Write(character);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.LEVELID))
                 {
                     _packet.Write(levelid);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.LEVELGUID))
                 {
                     _packet.Write(level_guid);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 SendMyEQ();
                 using (Packet _packet = new Packet((int)ClientPackets.LIGHTSOURCE))
                 {
                     _packet.Write(MyLightSource);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.LIGHTSOURCENAME))
                 {
                     _packet.Write(MyLightSourceName);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.XYZ))
                 {
                     _packet.Write(GameManager.GetPlayerTransform().position);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.XYZW))
                 {
                     _packet.Write(GameManager.GetPlayerTransform().rotation);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.ANIMSTATE))
                 {
                     _packet.Write(MyAnimState);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
                 using (Packet _packet = new Packet((int)ClientPackets.CLOTH))
                 {
                     _packet.Write(Cdata);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
-                if(AskResponce == true)
+                if (AskResponce == true)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.ASKSPAWNDATA))
                     {
                         _packet.Write(levelid);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
             }
@@ -16379,49 +11125,13 @@ namespace SkyCoop
             }
         }
 
-        public static bool FirstBoot = true;
-
-        public static void ExecuteOnMainThread(Action _action)
-        {
-            if (_action == null)
-            {
-                MelonLogger.Msg("No action to execute on main thread!");
-                return;
-            }
-
-            lock (executeOnMainThread)
-            {
-                executeOnMainThread.Add(_action);
-                actionToExecuteOnMainThread = true;
-            }
-        }
-        /// <summary>Executes all code meant to run on the main thread. NOTE: Call this ONLY from the main thread.</summary>
-        public static void UpdateMain()
-        {
-            if (actionToExecuteOnMainThread)
-            {
-                executeCopiedOnMainThread.Clear();
-                lock (executeOnMainThread)
-                {
-                    executeCopiedOnMainThread.AddRange(executeOnMainThread);
-                    executeOnMainThread.Clear();
-                    actionToExecuteOnMainThread = false;
-                }
-
-                for (int i = 0; i < executeCopiedOnMainThread.Count; i++)
-                {
-                    executeCopiedOnMainThread[i]();
-                }
-            }
-        }
-
         public static void DoSteamWorksConnect(string sid)
         {
-            MyMod.PendingConnectionIp = SteamServerWorks;
+            ClientUser.PendingConnectionIp = SteamServerWorks;
             using (Packet _packet = new Packet((int)ClientPackets.CONNECTSTEAM))
             {
                 _packet.Write(sid);
-                SendTCPData(_packet);
+                SendUDPData(_packet);
             }
         }
 
@@ -16439,8 +11149,8 @@ namespace SkyCoop
                 if (string.IsNullOrEmpty(GameManager.m_BlockedRestLocID))
                 {
                     return false;
-                } 
-                if(domessage == true)
+                }
+                if (domessage == true)
                 {
                     GameAudioManager.PlayGUIError();
                     HUDMessage.AddMessage(Localization.Get(GameManager.m_BlockedRestLocID));
@@ -16482,13 +11192,13 @@ namespace SkyCoop
 
         public static string GetClothForSlot(ClothingRegion s, ClothingLayer l)
         {
-            if(GameManager.m_PlayerManager == null || GameManager.m_PlayerManager.m_Clothing == null)
+            if (GameManager.m_PlayerManager == null || GameManager.m_PlayerManager.m_Clothing == null)
             {
                 return "";
             }
 
             GearItem gi = GameManager.GetPlayerManagerComponent().GetClothingInSlot(s, l);
-            if(gi != null)
+            if (gi != null)
             {
                 string dummyN = gi.m_GearName;
                 string finalN = "";
@@ -16496,11 +11206,11 @@ namespace SkyCoop
                 {
                     int L = dummyN.Length - 7;
                     finalN = dummyN.Remove(L, 7);
-                }else{
+                } else {
                     finalN = dummyN;
                 }
                 return finalN;
-            }else{
+            } else {
                 return "";
             }
         }
@@ -16508,39 +11218,39 @@ namespace SkyCoop
         public static string GetClothToDisplay(string bottom, string mid, string top = "", string top2 = "")
         {
             //2 layers select
-            if(top == "" && top2 == "")
+            if (top == "" && top2 == "")
             {
-                if(mid == "")
+                if (mid == "")
                 {
                     return bottom;
-                }else{
+                } else {
                     return mid;
                 }
-            }else{
-                if(top2 != "")
+            } else {
+                if (top2 != "")
                 {
                     return top2;
-                }else if( top != "")
+                } else if (top != "")
                 {
                     return top;
-                }else if (mid != "")
+                } else if (mid != "")
                 {
                     return mid;
-                }else if (bottom != "")
+                } else if (bottom != "")
                 {
                     return bottom;
-                }else{
-                    return ""; 
+                } else {
+                    return "";
                 }
             }
         }
 
         public static bool IsScarf(string name)
         {
-            if(name.Contains("Scarf"))
+            if (name.Contains("Scarf"))
             {
                 return true;
-            }else{
+            } else {
                 return false;
             }
         }
@@ -16549,7 +11259,7 @@ namespace SkyCoop
             if (name.Contains("Balaclava"))
             {
                 return true;
-            }else{
+            } else {
                 return false;
             }
         }
@@ -16561,7 +11271,7 @@ namespace SkyCoop
                 UnityEngine.Object.Destroy(UIHostMenu);
                 HostMenuHints = new List<GameObject>();
             }
-            if(m_Panel_Sandbox && m_Panel_Sandbox.isActiveAndEnabled)
+            if (m_Panel_Sandbox && m_Panel_Sandbox.isActiveAndEnabled)
             {
                 MenuChange.MenuMode = "Multiplayer";
                 Transform Align = m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
@@ -16610,10 +11320,11 @@ namespace SkyCoop
                 ServerConfig.m_PlayersSpawnType = spawnStyle;
                 ServerConfig.m_FireSync = FireSyncMode;
                 ServerConfig.m_CheatsMode = CheatsMode;
+                ServerConfig.m_PVP = true;
                 MaxPlayers = slotsMax;
                 ApplyOtherCampfires = true;
 
-                InitAllPlayers();
+                Shared.InitAllPlayers();
                 Transform Align = m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
                 Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
                 Align.GetChild(2).gameObject.SetActive(true); //Grid
@@ -16625,8 +11336,8 @@ namespace SkyCoop
                     StartServerAfterSelectSave = true;
                     PortsToHostOn = PortToHost;
                     MenuChange.ChangeMenuItems("LobbySettings");
-                }else{
-                    SteamConnect.Main.MakeLobby(LobbyType, MaxPlayers);               
+                } else {
+                    SteamConnect.Main.MakeLobby(LobbyType, MaxPlayers);
                     MenuChange.ChangeMenuItems("Lobby");
                 }
 
@@ -16635,7 +11346,7 @@ namespace SkyCoop
                 GameManager.m_IsPaused = false;
 
 
-                ServerSettingsData SaveData = new ServerSettingsData();
+                DataStr.ServerSettingsData SaveData = new DataStr.ServerSettingsData();
                 SaveData.m_CFG = ServerConfig;
                 SaveData.m_MaxPlayers = MaxPlayers;
                 SaveData.m_P2P = ShouldUseSteam;
@@ -16650,12 +11361,12 @@ namespace SkyCoop
         {
             if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
             {
-                string Title = "YOU GOT NEW FLAIR!";
+                string Title = "YOU GOT A NEW FLAIR!";
                 if (int.Parse(NotificationString) > 1)
                 {
                     Title = "YOU GOT NEW FLAIRS!";
                 }
-                
+
                 InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + "Open flairs customization menu?", Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
             }
         }
@@ -16669,7 +11380,7 @@ namespace SkyCoop
                     HostMenuHints[i].SetActive(false);
                 }
                 obj.SetActive(true);
-            }else{
+            } else {
                 obj.SetActive(false);
             }
         }
@@ -16677,19 +11388,19 @@ namespace SkyCoop
         public static void AddHintScript(GameObject obj)
         {
             //MelonLogger.Msg("[AddHintScript] Started...");
-            if(obj == null)
+            if (obj == null)
             {
                 MelonLogger.Msg("[AddHintScript] Got null object. Why?");
                 return;
             }
             GameObject hintButn = obj.transform.GetChild(0).gameObject;
-            if(hintButn == null)
+            if (hintButn == null)
             {
-                MelonLogger.Msg("[AddHintScript] "+ obj.name + " have not hint button!");
+                MelonLogger.Msg("[AddHintScript] " + obj.name + " have not hint button!");
                 return;
             }
             GameObject hintObj = hintButn.transform.GetChild(0).gameObject;
-            if(hintObj == null)
+            if (hintObj == null)
             {
                 MelonLogger.Msg("[AddHintScript] " + obj.name + " have not hint panel!");
                 return;
@@ -16707,7 +11418,7 @@ namespace SkyCoop
             //if (CantBeUsedForMP == true || LastLoadedGenVersion != BuildInfo.RandomGenVersion || SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
             if (Ignore == false && (CantBeUsedForMP == true || LastLoadedGenVersion != BuildInfo.RandomGenVersion))
             {
-                MelonLogger.Msg("CantBeUsedForMP "+ CantBeUsedForMP+ " LastLoadedGenVersion "+ LastLoadedGenVersion+ " RandomGenVersion "+ BuildInfo.RandomGenVersion);
+                MelonLogger.Msg("CantBeUsedForMP " + CantBeUsedForMP + " LastLoadedGenVersion " + LastLoadedGenVersion + " RandomGenVersion " + BuildInfo.RandomGenVersion);
                 return;
             }
 
@@ -16715,12 +11426,12 @@ namespace SkyCoop
             {
                 UIHostMenu = MakeModObject("MP_HostSettings", UiCanvas.transform);
 
-                ServerSettingsData SavedSettings = MPSaveManager.RequestServerCFG();
+                DataStr.ServerSettingsData SavedSettings = MPSaveManager.RequestServerCFG();
                 if (SavedSettings != null)
                 {
                     ServerConfig = SavedSettings.m_CFG;
-                }else{
-                    SavedSettings = new ServerSettingsData();
+                } else {
+                    SavedSettings = new DataStr.ServerSettingsData();
                 }
 
                 GameObject CloseButton = UIHostMenu.transform.GetChild(6).gameObject;
@@ -16753,7 +11464,7 @@ namespace SkyCoop
                     IsSteamHost.SetActive(false);
                     SteamLobbyType.SetActive(false);
                     PortsObject.SetActive(true);
-                }else{
+                } else {
 
                     IsSteamHost.GetComponent<UnityEngine.UI.Toggle>().Set(SavedSettings.m_P2P);
 
@@ -16762,7 +11473,7 @@ namespace SkyCoop
                         SteamLobbyType.SetActive(true);
                         SteamLobbyType.GetComponent<UnityEngine.UI.Dropdown>().Set(SavedSettings.m_Accessibility);
                         PortsObject.SetActive(false);
-                    }else{
+                    } else {
                         SteamLobbyType.SetActive(false);
                         PortsObject.SetActive(true);
                         PortsObject.GetComponent<UnityEngine.UI.InputField>().SetText(SavedSettings.m_Port.ToString());
@@ -16794,7 +11505,7 @@ namespace SkyCoop
 
             //MelonLogger.Msg("UpdateMyClothing");
 
-            if(GameManager.m_PlayerManager == null || GameManager.m_Inventory == null)
+            if (GameManager.m_PlayerManager == null || GameManager.m_Inventory == null)
             {
                 //MelonLogger.Msg("UpdateMyClothing PlayerManager or Inventory is null");
                 return;
@@ -16813,14 +11524,14 @@ namespace SkyCoop
             else if (IsScarf(Hat1))
             {
                 m_Scarf = Hat1;
-            }else{
+            } else {
                 hatCandidat1 = Hat1;
             }
 
             if (IsScarf(Hat2))
             {
                 m_Scarf = Hat2;
-            }else{
+            } else {
                 hatCandidat2 = Hat2;
             }
 
@@ -16852,7 +11563,7 @@ namespace SkyCoop
             //    NeedUpdate = true;
             //}
 
-            if(NeedUpdate == true)
+            if (NeedUpdate == true)
             {
                 MyHat = m_Hat;
                 MyTop = m_Top;
@@ -16865,7 +11576,7 @@ namespace SkyCoop
                 //MelonLogger.Msg("[MyClothing] Legs " + m_Bottom);
                 //MelonLogger.Msg("[MyClothing] Feets " + m_Boots);
 
-                PlayerClothingData Cdata = new PlayerClothingData();
+                DataStr.PlayerClothingData Cdata = new DataStr.PlayerClothingData();
                 Cdata.m_Hat = MyHat;
                 Cdata.m_Top = MyTop;
                 Cdata.m_Bottom = MyBottom;
@@ -16878,7 +11589,7 @@ namespace SkyCoop
                     using (Packet _packet = new Packet((int)ClientPackets.CLOTH))
                     {
                         _packet.Write(Cdata);
-                        SendTCPData(_packet);
+                        SendUDPData(_packet);
                     }
                 }
                 if (iAmHost == true) // HOST
@@ -16912,12 +11623,12 @@ namespace SkyCoop
                 if (other == null)
                 {
                     return false;
-                }   
+                }
 
                 if (this.m_GUID == other.m_GUID)
                 {
                     return true;
-                }else{
+                } else {
                     return false;
                 }
             }
@@ -16933,7 +11644,7 @@ namespace SkyCoop
                     Deck[index] = temp;
                 }
                 return Deck;
-            } 
+            }
 
             public void InitDecks()
             {
@@ -16960,7 +11671,7 @@ namespace SkyCoop
                 {
                     m_Players.Add(ID);
                     return true;
-                }else{
+                } else {
                     return false;
                 }
             }
@@ -16979,7 +11690,7 @@ namespace SkyCoop
             {
                 m_Turn++;
                 m_CurrentPlayer++;
-                if(m_Players.Count-1 < m_CurrentPlayer)
+                if (m_Players.Count - 1 < m_CurrentPlayer)
                 {
                     m_CurrentPlayer = 0;
                 }
@@ -16998,9 +11709,9 @@ namespace SkyCoop
             {
                 if (BoardGamesSessions[i] != null)
                 {
-                    if(BoardGamesSessions[i].m_GUID == GUID)
+                    if (BoardGamesSessions[i].m_GUID == GUID)
                     {
-                        return BoardGamesSessions[i]; 
+                        return BoardGamesSessions[i];
                     }
                 }
             }
@@ -17010,11 +11721,11 @@ namespace SkyCoop
 
         public static void StartBoardGameSessions(string GameType, string GUID)
         {
-            if(GetBoardGameSession(GUID) == null)
+            if (GetBoardGameSession(GUID) == null)
             {
                 BoardGamesSessions.Add(new BoardGameSession(GUID, GameType));
-            }else{
-                MelonLogger.Msg("Boardgame session with GUID "+ GUID+" already exist");
+            } else {
+                MelonLogger.Msg("Boardgame session with GUID " + GUID + " already exist");
             }
         }
 
@@ -17052,7 +11763,7 @@ namespace SkyCoop
             foreach (var cairn in PossibleCairns)
             {
                 float Dist = Vector3.Distance(playerPos, cairn.Value);
-                if(Dist < MaxRadioSearchDistance)
+                if (Dist < MaxRadioSearchDistance)
                 {
                     if (LastFoundDistance > Dist)
                     {
@@ -17065,7 +11776,7 @@ namespace SkyCoop
         public static float GetRadioBeepRate(float Distance)
         {
             float BeepRate = Distance / BlinkRateConstant;
-            if(BeepRate < MinimalBlink)
+            if (BeepRate < MinimalBlink)
             {
                 BeepRate = MinimalBlink;
             }
@@ -17096,47 +11807,15 @@ namespace SkyCoop
             }
         }
 
-        public class CustomChallengeTaskData
+        public static DataStr.CustomChallengeRules GetCustomChallengeByID(int ID)
         {
-            public string m_Task = "";
-            public int m_Timer = 0;
-            public int m_GoalVal = 1;
-
-            public CustomChallengeTaskData(string Task, int Timer, int GoalVal)
-            {
-                m_Task = Task;
-                m_Timer = Timer;
-                m_GoalVal = GoalVal;
-            }
-        }
-
-        public class CustomChallengeRules
-        {
-            public string m_Name = "";
-            public string m_Description = "";
-            public List<CustomChallengeTaskData> m_Tasks = new List<CustomChallengeTaskData>();
-            public bool m_Lineal = true;
-            public bool m_CompetitiveMode = false;
-            public int m_ID = 0;
-        }
-
-        public class CustomChallengeData
-        {
-            public int m_CurrentTask = 0;
-            public int m_Time = 0;
-            public bool m_Started = false;
-            public List<int> m_Done = new List<int>();
-        }
-
-        public static CustomChallengeRules GetCustomChallengeByID(int ID)
-        {
-            CustomChallengeRules c = new CustomChallengeRules();
-            if(ID == 1)
+            DataStr.CustomChallengeRules c = new DataStr.CustomChallengeRules();
+            if (ID == 1)
             {
                 c.m_Name = "Cold Allergic";
                 c.m_Description = "This island is worst nightmare for you. Getting crash on frozen hell with having Cold urticaria, how ironic.";
-                c.m_Tasks.Add(new CustomChallengeTaskData("Get to the Desolation Point without getting risk of Hypothermia", 5400, 1));
-                c.m_Tasks.Add(new CustomChallengeTaskData("Enter any building", 600, 1));
+                c.m_Tasks.Add(new DataStr.CustomChallengeTaskData("Get to the Desolation Point without getting risk of Hypothermia", 5400, 1));
+                c.m_Tasks.Add(new DataStr.CustomChallengeTaskData("Enter any building", 600, 1));
                 c.m_Lineal = true;
                 c.m_CompetitiveMode = false;
                 c.m_ID = 1;
@@ -17145,8 +11824,8 @@ namespace SkyCoop
             {
                 c.m_Name = "Lost in action";
                 c.m_Description = "Find cairn of poor souls who had bad luck to end up here for forever.";
-                c.m_Tasks.Add(new CustomChallengeTaskData("Find cairns", 5400, 30));
-                c.m_Tasks.Add(new CustomChallengeTaskData("Meet with other survivors on Camp Office", 2200, 1));
+                c.m_Tasks.Add(new DataStr.CustomChallengeTaskData("Find cairns", 5400, 30));
+                c.m_Tasks.Add(new DataStr.CustomChallengeTaskData("Meet with other survivors on Camp Office", 2200, 1));
                 c.m_Lineal = true;
                 c.m_CompetitiveMode = false;
                 c.m_ID = 2;
@@ -17156,7 +11835,7 @@ namespace SkyCoop
 
         public static void LoadCustomChallenge(int ID, int CurrentTask)
         {
-            CustomChallengeRules rules = GetCustomChallengeByID(ID);
+            DataStr.CustomChallengeRules rules = GetCustomChallengeByID(ID);
             CurrentChallengeRules = rules;
             CurrentCustomChalleng.m_CurrentTask = CurrentTask;
             CurrentCustomChalleng.m_Time = rules.m_Tasks[CurrentTask].m_Timer;
@@ -17183,16 +11862,16 @@ namespace SkyCoop
         }
         public static void CustomChallengeUpdate()
         {
-            if(CurrentChallengeRules.m_Name == "Cold Allergic")
+            if (CurrentChallengeRules.m_Name == "Cold Allergic")
             {
-                if(CurrentCustomChalleng.m_CurrentTask == 0)
+                if (CurrentCustomChalleng.m_CurrentTask == 0)
                 {
-                    if(RegionManager.GetCurrentRegion() == GameRegion.WhalingStationRegion)
+                    if (RegionManager.GetCurrentRegion() == GameRegion.WhalingStationRegion)
                     {
                         NextCustomTask();
                     }
                 }
-                else if(CurrentCustomChalleng.m_CurrentTask == 1)
+                else if (CurrentCustomChalleng.m_CurrentTask == 1)
                 {
                     if (!GameManager.IsOutDoorsScene(level_name) && !level_name.Contains("Cave") && !level_name.Contains("Mine"))
                     {
@@ -17201,20 +11880,20 @@ namespace SkyCoop
                         SendCustomChallengeTrigger("Win");
                     }
                 }
-                if(level_name != "Boot" && level_name != "Empty" && level_name != "MainMenu")
+                if (level_name != "Boot" && level_name != "Empty" && level_name != "MainMenu")
                 {
-                    if(GameManager.GetFreezingComponent().m_CurrentFreezing >= 100)
+                    if (GameManager.GetFreezingComponent().m_CurrentFreezing >= 100)
                     {
                         CurrentCustomChalleng.m_Started = false;
                         ProcessCustomChallengeTrigger("Lose");
                         SendCustomChallengeTrigger("Lose");
                     }
                 }
-            }else if (CurrentChallengeRules.m_Name == "Lost in action")
+            } else if (CurrentChallengeRules.m_Name == "Lost in action")
             {
-                if(CurrentCustomChalleng.m_CurrentTask == 1)
+                if (CurrentCustomChalleng.m_CurrentTask == 1)
                 {
-                    if(iAmHost == true)
+                    if (iAmHost == true)
                     {
                         int HowManyOnCamp = 0;
                         int HowManyOnServer = 1;
@@ -17228,14 +11907,14 @@ namespace SkyCoop
                             if (Server.clients[i].IsBusy())
                             {
                                 HowManyOnServer++;
-                                if (ClientIsLoading(i) == false && playersData[i].m_Levelid == 10)
+                                if (Shared.ClientIsLoading(i) == false && playersData[i].m_Levelid == 10)
                                 {
                                     HowManyOnCamp++;
                                 }
                             }
                         }
 
-                        if(HowManyOnCamp == HowManyOnServer)
+                        if (HowManyOnCamp == HowManyOnServer)
                         {
                             CurrentCustomChalleng.m_Started = false;
                             ProcessCustomChallengeTrigger("Win");
@@ -17249,16 +11928,18 @@ namespace SkyCoop
 
         public static void ProcessCustomChallengeTrigger(string TRIGGER)
         {
-            MelonLogger.Msg("[ProcessCustomChallengeTrigger] "+ TRIGGER);
-            
-            if(TRIGGER == "Lose")
+            MelonLogger.Msg("[ProcessCustomChallengeTrigger] " + TRIGGER);
+
+#if (!DEDICATED)
+
+            if (TRIGGER == "Lose")
             {
-                if(m_Panel_ChallengeComplete == null)
+                if (m_Panel_ChallengeComplete == null)
                 {
                     m_Panel_ChallengeComplete = InterfaceManager.LoadPanel<Panel_ChallengeComplete>();
                 }
                 m_Panel_ChallengeComplete.ShowPanel(Panel_ChallengeComplete.Options.ShowFailStatInfo);
-                m_Panel_ChallengeComplete.SetStatInfoText("Ехать ты лох конечно", "Оставшиеся время:", CurrentCustomChalleng.m_Time,"Обкакался раз:", 99);
+                m_Panel_ChallengeComplete.SetStatInfoText("Ехать ты лох конечно", "Оставшиеся время:", CurrentCustomChalleng.m_Time, "Обкакался раз:", 99);
             }
             else if (TRIGGER == "Win")
             {
@@ -17269,7 +11950,8 @@ namespace SkyCoop
                 m_Panel_ChallengeComplete.ShowPanel(Panel_ChallengeComplete.Options.Succeeded);
                 m_Panel_ChallengeComplete.SetStatInfoText("Ну молодец", "Оставшиеся время:", CurrentCustomChalleng.m_Time, "Обкакался раз:", 0);
             }
-            else if (TRIGGER.StartsWith("CairnID"))
+#endif
+            if (TRIGGER.StartsWith("CairnID"))
             {
                 int ID = int.Parse(TRIGGER.Replace("CairnID", ""));
                 AddFoundCairn(ID, false);
@@ -17286,17 +11968,24 @@ namespace SkyCoop
                 using (Packet _packet = new Packet((int)ClientPackets.CHALLENGETRIGGER))
                 {
                     _packet.Write(TRIGGER);
-                    SendTCPData(_packet);
+                    SendUDPData(_packet);
                 }
             }
         }
 
-        public static CustomChallengeData CurrentCustomChalleng = new CustomChallengeData();
-        public static CustomChallengeRules CurrentChallengeRules = new CustomChallengeRules();
+        public static DataStr.CustomChallengeData CurrentCustomChalleng = new DataStr.CustomChallengeData();
+        public static DataStr.CustomChallengeRules CurrentChallengeRules = new DataStr.CustomChallengeRules();
 
         public static string GetFormatedTextForChallange()
         {
             TimeSpan span = TimeSpan.FromSeconds(CurrentCustomChalleng.m_Time);
+
+            return span.ToString(@"hh\:mm\:ss");
+        }
+        public static string GetFormatedTimeForExpedition(int Seconds)
+        {
+            TimeSpan span = TimeSpan.FromSeconds(Seconds);
+
             return span.ToString(@"hh\:mm\:ss");
         }
         public static int CalculateHowManyTaskDone()
@@ -17304,7 +11993,7 @@ namespace SkyCoop
             int done = 0;
             for (int i = 0; i < CurrentCustomChalleng.m_Done.Count; i++)
             {
-                if(CurrentCustomChalleng.m_Done[i] >= CurrentChallengeRules.m_Tasks[i].m_GoalVal)
+                if (CurrentCustomChalleng.m_Done[i] >= CurrentChallengeRules.m_Tasks[i].m_GoalVal)
                 {
                     done++;
                 }
@@ -17312,14 +12001,44 @@ namespace SkyCoop
             return done;
         }
 
+        public static void ExpeditionUI(string ExpeditionName, string desc, int TimeLeft)
+        {
+            Panel_Log Log = InterfaceManager.m_Panel_Log;
+            Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
+            Panel_Actions Act = InterfaceManager.m_Panel_Actions;
+            string Time = GetFormatedTimeForExpedition(TimeLeft);
+
+            desc = ExpeditionName + "\n" + desc;
+
+            if (Rad)
+            {
+                Rad.m_MissionObjectiveLabel.text = desc;
+                Rad.m_MissionTimerLabel.text = Time;
+            }
+            if (Act)
+            {
+                Act.m_MissionObjectiveWithTimerLabel.text = desc;
+                Act.m_MissionTimerLabel.text = Time;
+                Act.m_MissionTimerLabel.gameObject.SetActive(true);
+            }
+            if (Log)
+            {
+                Log.m_MissionNameHeaderLabel.text = ExpeditionName;
+                Log.m_MissionNameLabel.text = ExpeditionName;
+
+                Log.m_MissionDescriptionLabel.text = desc;
+                Log.m_TimerLabel.text = Time;
+            }
+        }
+
+
         public static void PatchChallange()
         {
-            if(CurrentChallengeRules.m_ID == 0)
+            if (CurrentChallengeRules.m_ID == 0)
             {
                 return;
             }
-            
-            
+
             string Cname = CurrentChallengeRules.m_Name;
             string Cdesc;
             string Ctime = GetFormatedTextForChallange();
@@ -17337,7 +12056,7 @@ namespace SkyCoop
                 {
                     Cdesc = Cdesc + " " + CurrentResult + "/" + NeedToGoal;
                 }
-            }else{
+            } else {
                 Cdesc = "";
 
                 for (int i = 0; i < CurrentChallengeRules.m_Tasks.Count; i++)
@@ -17352,20 +12071,20 @@ namespace SkyCoop
                     {
                         element = element + "\n";
                     }
-                    element = element+ "[";
+                    element = element + "[";
                     if (CurrentResult >= NeedToGoal)
                     {
                         element = element + "X] ";
-                    }else{
+                    } else {
                         element = element + " ] ";
                     }
                     element = element + TaskText;
-                    Cdesc = Cdesc+element;
+                    Cdesc = Cdesc + element;
                 }
 
                 DisplayIndex = CalculateHowManyTaskDone();
             }
-            
+
             Panel_Log Log = InterfaceManager.m_Panel_Log;
             Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
             Panel_Actions Act = InterfaceManager.m_Panel_Actions;
@@ -17385,7 +12104,7 @@ namespace SkyCoop
                 Log.m_MissionNameHeaderLabel.text = Cname;
                 Log.m_MissionNameLabel.text = Cname;
 
-                if(CurrentChallengeRules.m_Tasks.Count > 1)
+                if (CurrentChallengeRules.m_Tasks.Count > 1)
                 {
                     Log.m_MissionNameHeaderLabel.text = Cname + " " + DisplayIndex + "/" + CurrentChallengeRules.m_Tasks.Count;
                 }
@@ -17417,11 +12136,11 @@ namespace SkyCoop
 
         public static void ContinuePoiskMujikov()
         {
-            if(CurrentSearchIndex < sceneCount)
+            if (CurrentSearchIndex < sceneCount)
             {
                 string Load = scenes[CurrentSearchIndex];
                 GameManager.LoadSceneWithLoadingScreen(Load);
-                MelonLogger.Msg(ConsoleColor.Green, "[PoiskMujikov] Loading scene " + Load +" Left scenes "+ CurrentSearchIndex+"/"+ sceneCount);
+                MelonLogger.Msg(Green, "[PoiskMujikov] Loading scene " + Load + " Left scenes " + CurrentSearchIndex + "/" + sceneCount);
             }
         }
 
@@ -17432,7 +12151,7 @@ namespace SkyCoop
         public static void PoiskMujikov()
         {
             sceneCount = UnityEngine.SceneManagement.SceneManager.sceneCountInBuildSettings;
-            MelonLogger.Msg(ConsoleColor.Blue, "[PoiskMujikov] Scenes in game " + sceneCount);
+            MelonLogger.Msg(Blue, "[PoiskMujikov] Scenes in game " + sceneCount);
             scenes = new string[sceneCount];
             for (int i = 0; i < sceneCount; i++)
             {
@@ -17443,10 +12162,10 @@ namespace SkyCoop
 
         public static int GetPasswordFromGear(string name)
         {
-            if(name.Contains("CanneryCodeNote"))
+            if (name.Contains("CanneryCodeNote"))
             {
                 return 1540;
-            }else if (name.Contains("BlackrockCodeNote"))
+            } else if (name.Contains("BlackrockCodeNote"))
             {
                 return 3008;
             }
@@ -17454,11 +12173,11 @@ namespace SkyCoop
         }
         public static void RestoreCodeFromGears()
         {
-            MelonLogger.Msg(ConsoleColor.Blue, "[Papers codes] Checking all papers to make sure if we have code");
+            MelonLogger.Msg(Blue, "[Papers codes] Checking all papers to make sure if we have code");
             foreach (GearItemObject item in GameManager.GetInventoryComponent().m_Items)
             {
                 int Code = GetPasswordFromGear(item.m_GearItemName);
-                if(Code != 0)
+                if (Code != 0)
                 {
                     RememoberCode(Code);
                 }
@@ -17469,11 +12188,1130 @@ namespace SkyCoop
         {
             if (GameManager.GetPlayerManagerComponent().m_KnownCodes.Contains(code))
             {
-                MelonLogger.Msg(ConsoleColor.Yellow,"[Papers codes] Code "+code +" is already known");
-            }else{
-                MelonLogger.Msg(ConsoleColor.Green, "[Papers codes] Code " + code + " added to the player's memory");
+                MelonLogger.Msg(Yellow, "[Papers codes] Code " + code + " is already known");
+            } else {
+                MelonLogger.Msg(Green, "[Papers codes] Code " + code + " added to the player's memory");
                 GameManager.GetPlayerManagerComponent().m_KnownCodes.Add(code);
             }
+        }
+
+        public static void UseKey(string KeySeed, GameObject Door, bool LeadKey)
+        {
+            if (Door && Door.GetComponent<LoadScene>())
+            {
+                if (PendingKeysAction == KeysAction.LOCK)
+                {
+                    TryLockDoor(Door.GetComponent<LoadScene>(), KeySeed);
+                }
+                else if (PendingKeysAction == KeysAction.OPEN)
+                {
+                    if (iAmHost)
+                    {
+                        if (LeadKey && !MPSaveManager.TryUseLeadKey())
+                        {
+                            RemoveKey(KeySeed);
+                            HUDMessage.AddMessage("The key broke!");
+                            return;
+                        }
+                        bool Correct = MPSaveManager.TryUseKey(level_guid, Door.GetComponent<Comps.DoorLockedOnKey >().m_DoorKey, KeySeed);
+                        if (Correct)
+                        {
+                            Door.GetComponent<LoadScene>().Activate();
+                        } else {
+                            HUDMessage.AddMessage("Incorrect key!");
+                            Door.GetComponent<Lock>().PlayLockedAudio();
+                        }
+                    }
+                    else if (sendMyPosition)
+                    {
+                        DoPleaseWait("Please wait...", "Trying open this door...");
+                        using (Packet _packet = new Packet((int)ClientPackets.TRYOPENDOOR))
+                        {
+                            _packet.Write(Door.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey);
+                            _packet.Write(KeySeed);
+                            _packet.Write(level_guid);
+                            _packet.Write(LeadKey);
+                            SendUDPData(_packet);
+                        }
+                    }
+                } else if (PendingKeysAction == KeysAction.UNLOCK)
+                {
+                    if (iAmHost)
+                    {
+                        bool Correct = MPSaveManager.TryUseKey(level_guid, Door.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey, KeySeed);
+                        if (Correct)
+                        {
+                            MPSaveManager.RemoveLockedDoor(level_guid, Door.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey);
+                        } else {
+                            HUDMessage.AddMessage("Incorrect key!");
+                            Door.GetComponent<Lock>().PlayLockedAudio();
+                        }
+                    } else if (sendMyPosition) {
+                        DoPleaseWait("Please wait...", "Trying unlock this door...");
+                        using (Packet _packet = new Packet((int)ClientPackets.TRYOPENDOOR))
+                        {
+                            _packet.Write(Door.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey);
+                            _packet.Write(KeySeed);
+                            _packet.Write(level_guid);
+                            _packet.Write(LeadKey);
+                            SendUDPData(_packet);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static List<DataStr.DoorKey> GetKeysList()
+        {
+            List<DataStr.DoorKey> KeysList = new List<DataStr.DoorKey>();
+
+            foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
+            {
+                if (Gear.m_GearItemName == "GEAR_SCDoorKey" || Gear.m_GearItemName == "GEAR_SCDoorKeyLead")
+                {
+                    if (Gear.m_GearItem.m_ObjectGuid && !string.IsNullOrEmpty(Gear.m_GearItem.m_ObjectGuid.m_Guid))
+                    {
+                        string GUID = Gear.m_GearItem.m_ObjectGuid.m_Guid;
+                        if (GUID.Contains('_'))
+                        {
+                            string[] D = GUID.Split('_');
+                            KeysList.Add(new DataStr.DoorKey(D[1], D[0], Gear.m_GearItemName == "GEAR_SCDoorKeyLead"));
+                        }
+                    }
+                }
+            }
+
+            return KeysList;
+        }
+        public static void RemoveKey(string Seed)
+        {
+            foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
+            {
+                if (Gear.m_GearItemName == "GEAR_SCDoorKeyLead")
+                {
+                    if (Gear.m_GearItem.m_ObjectGuid && !string.IsNullOrEmpty(Gear.m_GearItem.m_ObjectGuid.m_Guid))
+                    {
+                        string GUID = Gear.m_GearItem.m_ObjectGuid.m_Guid;
+                        if (GUID.Contains('_'))
+                        {
+                            string[] D = GUID.Split('_');
+                            if(D[1] == Seed)
+                            {
+                                UnityEngine.Object.Destroy(Gear.m_GearItem.gameObject);
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public static int GetLockpicks()
+        {
+            return GameManager.GetInventoryComponent().GetNumGearWithName("GEAR_SCLockpick");
+        }
+
+
+        public enum KeysAction
+        {
+            OPEN,
+            LOCK,
+            UNLOCK,
+        }
+
+        public static KeysAction PendingKeysAction = KeysAction.LOCK;
+
+        public static void SelectKeys(GameObject Door, KeysAction Act)
+        {
+            PendingKeysAction = Act;
+            ShowKeysActionsPicker(Door, Act);
+        }
+        public static void LockPick(GameObject objectInteractedWith)
+        {
+            DataStr.PriorityActionForOtherPlayer act = GetCustomAction("Lockpick");
+            DoLongAction(objectInteractedWith, act.m_ProcessText, act.m_Action);
+            GameManager.GetInventoryComponent().RemoveUnits(GameManager.GetInventoryComponent().GetBestGearItemWithName("GEAR_SCLockpick"), 1);
+
+            if (objectInteractedWith.GetComponent<Comps.DoorLockedOnKey>())
+            {
+                if (sendMyPosition)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.LOCKPICK))
+                    {
+                        _packet.Write(objectInteractedWith.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey);
+                        _packet.Write(level_guid);
+                        SendUDPData(_packet);
+                    }
+                } else {
+                    MPSaveManager.TryLockPick(level_guid, objectInteractedWith.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey, 0);
+                }
+            }
+        }
+
+        public static void RequestExpedition()
+        {
+            PlayRadioOver();
+            Shared.GameRegion Region = ConvertGameRegion(GameManager.GetUniStorm().m_CurrentRegion);
+            MelonLogger.Msg("Trying to get expedition on "+ExpeditionBuilder.GetRegionString((int)Region));
+            if (iAmHost)
+            {
+                ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), (int)Region);
+            } else
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.STARTEXPEDITION))
+                {
+                    _packet.Write((int)Region);
+                    SendUDPData(_packet);
+                }
+            }
+        }
+
+        public static void ShowRadioActionPicker(GameObject objectInteractedWith)
+        {
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+                Action act1 = new Action(() => RequestExpedition());
+                Action act2 = new Action(() => ShowInvitesAfterPicker());
+                
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_map", "Start Expedition", act1));
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_knowledge_people", "Expedition Invites", act2));
+                
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                Panel.EnableWithCurrentList();
+            }
+        }
+
+        public static void SendInvietToPlayer(int ClientID)
+        {
+            if (iAmHost)
+            {
+                if (ClientID != -1)
+                {
+                    ExpeditionManager.CreateInviteToExpedition(Shared.GetMacAddress(), Server.GetMACByID(ClientID));
+                }
+            } else
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.CREATEEXPEDITIONINVITE))
+                {
+                    _packet.Write(ClientID);
+                    SendUDPData(_packet);
+                }
+            }
+        }
+
+        public static void AcceptInvite(ExpeditionManager.ExpeditionInvite Invite)
+        {
+            if (iAmHost)
+            {
+                ExpeditionManager.AcceptInvite(Invite.m_PersonToInviteMAC, Invite.m_InviterMAC);
+            }
+            if (sendMyPosition)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.ACCEPTEXPEDITIONINVITE))
+                {
+                    _packet.Write(Invite);
+                    SendUDPData(_packet);
+                }
+            }
+        }
+
+        public static void ShowInvitesPicker(GameObject objectInteractedWith, List<ExpeditionManager.ExpeditionInvite> Invites)
+        {
+            if (Invites.Count == 0)
+            {
+                HUDMessage.AddMessage("You have not any invites.");
+                return;
+            }
+
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                string Icon = "ico_knowledge_people";
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+
+                foreach (ExpeditionManager.ExpeditionInvite Invite in Invites)
+                {
+                    Action act = new Action(() => AcceptInvite(Invite));
+                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, "Invite by " + Invite.m_InviterName, act));
+                }
+
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                Panel.EnableWithCurrentList();
+            }
+        }
+        public static void ShowInvitesAfterPicker()
+        {
+            Pathes.ShowInvitesAfterPicker = true;
+        }
+
+        public static void KnockKnock(GameObject Door)
+        {
+            if (Door)
+            {
+                LoadScene LS = Door.GetComponent<LoadScene>();
+                string Scene;
+                if (LS)
+                {
+                    Scene = Door.GetComponent<LoadScene>().m_SceneToLoad + "_" + Door.GetComponent<LoadScene>().m_GUID;
+                }else{
+                    return;
+                }
+
+                if (sendMyPosition)
+                {
+                    using (Packet _packet = new Packet((int)ClientPackets.KNOCKKNOCK))
+                    {
+                        _packet.Write(Scene);
+                        SendUDPData(_packet);
+                    }
+                }
+                if (iAmHost)
+                {
+                    MPSaveManager.AddKnockDoorRequest(0, Scene);
+                }
+            }
+        }
+
+        public static void PickupBlank(GameObject objectInteractedWith)
+        {
+            PickupDroppedGear(objectInteractedWith, true);
+        }
+
+        public static int PendingLocksmithAction = 0;
+        public static GameObject PendingLocksmithObject = null;
+
+        public static void LocksmithWork(GameObject objectInteractedWith, int Tool)
+        {
+            if(Tool == 0 && !GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_Hacksaw"))
+            {
+                HUDMessage.AddMessage("You need hacksaw!");
+                GameAudioManager.PlayGUIError();
+                return;
+            }
+            else if (Tool == 1 && !GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_SharpeningStone"))
+            {
+                HUDMessage.AddMessage("You need whetstone!");
+                GameAudioManager.PlayGUIError();
+                return;
+            }
+
+            if (objectInteractedWith.GetComponent<Comps.DroppedGearDummy>())
+            {
+                int Hash = objectInteractedWith.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
+                if (iAmHost)
+                {
+                    if (!MPSaveManager.CanWorkOnBlank(Hash))
+                    {
+                        HUDMessage.AddMessage("Someone already work on this!");
+                        GameAudioManager.PlayGUIError();
+                    }else{
+                        MPSaveManager.ChangeBlankState(Hash, -1);
+                    }
+                }
+                if (sendMyPosition)
+                {
+                    PendingLocksmithAction = Tool;
+                    PendingLocksmithObject = objectInteractedWith;
+                    DoPleaseWait("Please wait...","Requesting data about blank...");
+                    using (Packet _packet = new Packet((int)ClientPackets.REQUESTLOCKSMITH))
+                    {
+                        _packet.Write(Hash);
+                        SendUDPData(_packet);
+                    }
+                    return;
+                }
+            }
+
+            DataStr.PriorityActionForOtherPlayer act = GetCustomAction("Locksmith"+Tool);
+            DoLongAction(objectInteractedWith, act.m_ProcessText, act.m_Action);
+        }
+
+        public static void ShowBlankworkingPicker(GameObject objectInteractedWith)
+        {
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                PendingRegisterKey = null;
+                Action act = new Action(() => PickupBlank(objectInteractedWith));
+                Action Saw = new Action(() => LocksmithWork(objectInteractedWith, 0));
+                Action Grind = new Action(() => LocksmithWork(objectInteractedWith, 1));
+
+                if (objectInteractedWith.name.ToLower().StartsWith("gear_scdoorkeytemp") || objectInteractedWith.name.ToLower().StartsWith("gear_scdoorkeyleadtemp"))
+                {
+                    Grind = new Action(() => BeginRegisterKey(objectInteractedWith));
+                }
+
+
+                //Action Flattening = new Action(() => LocksmithWork(objectInteractedWith, 2));
+
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_BearSpear", "Sawing", Saw));
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_injury_majorBruising", "Grinding", Grind));
+                //Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_crafting", "Flattening", Flattening));
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_climb", "Pickup", act));
+
+                Panel.EnableWithCurrentList();
+            }
+        }
+
+        public static void LetThemEnter(int ClientID, string Scene)
+        {
+            if (iAmHost)
+            {
+                MPSaveManager.ApplyEnterFromKnock(ClientID, Scene);
+            }
+            if (sendMyPosition)
+            {
+                using (Packet _packet = new Packet((int)ClientPackets.LETENTER))
+                {
+                    _packet.Write(ClientID);
+                    _packet.Write(Scene);
+                    SendUDPData(_packet);
+                }
+            }
+        }
+
+        public static GameObject TempDoor = null;
+
+        public static void CharCoalDraw(CharcoalItem Coal)
+        {
+            if (Coal.m_IsActive || !GameManager.GetPlayerAnimationComponent().CanTransitionToState(PlayerAnimation.State.Stowing))
+            {
+                return;
+            }
+            if (GameManager.GetWeatherComponent().IsIndoorScene())
+            {
+                GameAudioManager.PlayGUIError();
+                HUDMessage.AddMessage(Localization.Get("GAMEPLAY_CannotMapLocalAreaIndoors"));
+            } else if (!CharcoalItem.HasSurveyVisibility(Coal.GetSurveyExtendedTimeSkillBonus()))
+            {
+                GameAudioManager.PlayGUIError();
+                HUDMessage.AddMessage(Localization.Get("GAMEPLAY_DetailSurveyNoVisibility"));
+            } else
+            {
+                Coal.m_IsActive = true;
+                CharcoalItem.m_CharcoalItemInUseForSurvey = Coal;
+                Coal.m_TimeSpentSurveying = 0.0f;
+                Coal.AccelerateTimeOfDay();
+                Coal.m_SurveyAudioID = GameAudioManager.PlaySound(Coal.m_SurveyLoopAudio, InterfaceManager.GetSoundEmitter());
+            }
+        }
+        public static void CreateCustomNote(string Message, GearItem Note = null)
+        {
+            string Compressed = Shared.CompressString(Message);
+
+            if (Note == null)
+            {
+                Note = GameManager.GetPlayerManagerComponent().AddItemCONSOLE("GEAR_SCNote", 1);
+            }
+
+            if (Note.m_ObjectGuid == null)
+            {
+                Note.m_ObjectGuid = Note.gameObject.AddComponent<ObjectGuid>();
+            }
+            Note.m_ObjectGuid.m_Guid = Compressed;
+        }
+
+
+        public static void WriteNote(CharcoalItem Coal)
+        {
+            CharcoalItem.m_CharcoalItemInUseForSurvey = Coal;
+            GameManager.GetPlayerAnimationComponent().Trigger_Generic_Stow();
+            Coal.m_SurveyAudioID = GameAudioManager.PlaySound(Coal.m_SurveyLoopAudio, InterfaceManager.GetSoundEmitter());
+            //InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "NOTE MESSAGE", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Done", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+            InterfaceManager.m_Panel_Log.EnableStatsView();
+            InterfaceManager.m_Panel_Log.OnEnterGeneralNotes();
+            InterfaceManager.m_Panel_Log.m_SectionNav.SetActive(false);
+            InterfaceManager.m_Panel_Log.m_TabsNotesObject.SetActive(false);
+            InterfaceManager.m_Panel_Log.m_NotesTextField.SetText("");
+        }
+
+        public static void ShowCharCoalPicker(GameObject objectInteractedWith, CharcoalItem Coal)
+        {
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+
+                Action Map = new Action(() => CharCoalDraw(Coal));
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_map", "Survey local area", Map));
+                Action Note = new Action(() => WriteNote(Coal));
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_log_Notes", "Write a note", Note));
+
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                Panel.EnableWithCurrentList();
+            }
+        }
+
+        public static void ShowKnockersPicker(GameObject objectInteractedWith, List<int> Knockers)
+        {
+            if (Knockers.Count == 0)
+            {
+                HUDMessage.AddMessage("No body knocking.");
+                return;
+            }
+            
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                string Icon = "ico_unlocked";
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+
+                foreach (int Idx in Knockers)
+                {
+                    Action act = new Action(() => LetThemEnter(Idx, level_guid));
+                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, "Invite " + playersData[Idx].m_Name, act));
+                }
+
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                Panel.EnableWithCurrentList();
+            }
+        }
+
+        public static void ShowKeysActionsPicker(GameObject objectInteractedWith, KeysAction ActType)
+        {
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                List<DataStr.DoorKey> KeysList = GetKeysList();
+                int LockPicks = GetLockpicks();
+                string Icon = "ico_locked";
+                bool CanLockPick = false;
+
+                if (ActType != KeysAction.LOCK)
+                {
+                    Icon = "ico_unlocked";
+                    CanLockPick = true;
+                }
+
+                if (!CanLockPick)
+                {
+                    if(KeysList.Count == 0)
+                    {
+                        HUDMessage.AddMessage("You don't have any keys to lock this door!");
+                        return;
+                    }
+                }
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+
+
+                foreach (DataStr.DoorKey Key in KeysList)
+                {
+                    Action act = new Action(() => UseKey(Key.m_Seed, objectInteractedWith, Key.m_Lead));
+                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Key.m_Name, act));
+                }
+
+                if (CanLockPick)
+                {
+                    if (LockPicks > 0)
+                    {
+                        Action act = new Action(() => LockPick(objectInteractedWith));
+                        Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_Radial_tools", "Lockpick ("+ LockPicks+")", act));
+                    }
+                    Action knock = new Action(() => KnockKnock(objectInteractedWith));
+                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_fist", "Knock", knock));
+                }
+
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                Panel.EnableWithCurrentList();
+            }
+        }
+        public static int GetCurrentRegionIfPossible()
+        {
+            int Region = -1;
+
+            if (GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
+            {
+                Region = (int)GameManager.GetUniStorm().m_CurrentRegion;
+            }
+
+            return Region;
+        }
+        public static ConsoleColor ConvertLoggerColor(Shared.LoggerColor Color)
+        {
+            switch (Color)
+            {
+                case Shared.LoggerColor.Red:
+                    return Red;
+                case Shared.LoggerColor.Green:
+                    return Green;
+                case Shared.LoggerColor.Blue:
+                    return Green;
+                case Shared.LoggerColor.Yellow:
+                    return Yellow;
+                case Shared.LoggerColor.Magenta:
+                    return Magenta;
+                case Shared.LoggerColor.White:
+                    return White;
+                default:
+                    return White;
+            }
+        }
+        public static void DoExpeditionState(int State)
+        {
+            if (State == 0 || State == 1 || State == -1 || State == 4 || State == -2)
+            {
+                OnExpedition = false;
+                if (InterfaceManager.m_Panel_Actions != null)
+                {
+                    InterfaceManager.m_Panel_Actions.m_MissionObjectWithTimer.SetActive(false);
+                    InterfaceManager.m_Panel_Actions.m_MissionObjectiveWithTimerLabel.gameObject.SetActive(false);
+                    InterfaceManager.m_Panel_Actions.m_MissionTimerLabel.gameObject.SetActive(false);
+                }
+            }
+
+            if(m_InterfaceManager && InterfaceManager.m_Panel_HUD)
+            {
+                if (State == 0)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Expedition Cancled", "Time Over", "ico_map");
+                } else if (State == 1)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Expedition Finished", "Loot Your Reward", "ico_map");
+                } else if (State == 2)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Expedition Started", "Objective Updated", "ico_map");
+                } else if (State == 3)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Task Completed", "Objective Updated", "ico_map");
+                } else if (State == -1)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Crash Site Found", "You Late", "icoMap_willAirplane");
+                } else if (State == 4)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Crash Site Found", "Loot Your Reward", "icoMap_willAirplane");
+                } else if (State == 5)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Find Crash Site", "Objective Updated", "icoMap_willAirplane");
+                }else if(State == -2)
+                {
+                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Time Over", "You Late", "icoMap_willAirplane");
+                }
+            }
+        }
+
+        public static void NewPlayerInExpedition(string PlayerName)
+        {
+            GearMessage.AddMessage("ico_knowledge_people", "Joined Expedition", PlayerName, true);
+            PlayRadioOver();
+        }
+        public static void NewExpeditionInvite(string PlayerName)
+        {
+            GearMessage.AddMessage("ico_map", "Expedition Invite", PlayerName, true);
+            DoRadioBeep();
+        }
+
+        public const int PhotoQuality = 60;
+        public static DataStr.Vector2Int GetGearResolution(string GearName)
+        {
+            if(GearName == "GEAR_SCPhoto")
+            {
+                return new DataStr.Vector2Int(320, 200);
+            } else if(GearName == "GEAR_SCMapPiece")
+            {
+                return new DataStr.Vector2Int(200, 200);
+            }
+            return new DataStr.Vector2Int(320, 200);
+        }
+
+        public static void LogScreenshotData()
+        {
+            CameraGlobalRT cameraGlobalRt = GameManager.GetCameraGlobalRT();
+            if (cameraGlobalRt && cameraGlobalRt.GetRenderTexture())
+            {
+                DataStr.Vector2Int Resolution = GetGearResolution("GEAR_SCPhoto");
+                RenderTexture smallTarget = RenderTexture.GetTemporary(Resolution.X, Resolution.Y, 0, (RenderTextureFormat)0);
+                Texture2D t = new Texture2D(((Texture)smallTarget).width, ((Texture)smallTarget).height, (TextureFormat)4, false);
+                Graphics.Blit(cameraGlobalRt.GetRenderTexture(), smallTarget);
+                RenderTexture.active = smallTarget;
+                t.ReadPixels(new Rect(0.0f, 0.0f, (float)((Texture)smallTarget).width, (float)((Texture)smallTarget).height), 0, 0, false);
+                t.Apply();
+                string Base64 = Convert.ToBase64String(ImageConversion.EncodeToJPG(t, PhotoQuality));
+                string GUID = MPSaveManager.AddPhoto(Base64, true);
+                MelonLogger.Msg("Made photo "+ GUID);
+
+                RenderTexture.ReleaseTemporary(smallTarget);
+                UnityEngine.Object.Destroy(t);
+
+
+                if (iAmHost)
+                {
+                    MPSaveManager.AddPhoto(Base64);
+                } else
+                {
+                    if (sendMyPosition == true)
+                    {
+
+                        byte[] bytesToSlice = Encoding.UTF8.GetBytes(Base64);
+                        int HashForSend = GUID.GetHashCode();
+
+                        if (bytesToSlice.Length > 500)
+                        {
+                            List<byte> BytesBuffer = new List<byte>();
+                            BytesBuffer.AddRange(bytesToSlice);
+
+                            while (BytesBuffer.Count >= 500)
+                            {
+                                byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
+                                BytesBuffer.RemoveRange(0, 499);
+
+                                string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
+                                DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
+                                SlicedPacket.m_GearName = GUID;
+                                SlicedPacket.m_SendTo = -1;
+                                SlicedPacket.m_Hash = HashForSend;
+                                SlicedPacket.m_Str = jsonStringSlice;
+
+                                if (BytesBuffer.Count != 0)
+                                {
+                                    SlicedPacket.m_Last = false;
+                                } else
+                                {
+                                    SlicedPacket.m_Last = true;
+                                }
+                                AddPhotoCarefulSlice(SlicedPacket);
+                            }
+
+                            if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
+                            {
+                                byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
+                                BytesBuffer.RemoveRange(0, BytesBuffer.Count);
+
+                                string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
+                                DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
+                                SlicedPacket.m_GearName = GUID;
+                                SlicedPacket.m_SendTo = -1;
+                                SlicedPacket.m_Hash = HashForSend;
+                                SlicedPacket.m_Str = jsonStringSlice;
+                                SlicedPacket.m_Last = true;
+
+                                AddPhotoCarefulSlice(SlicedPacket);
+                                SendNextPhotoCarefulSlice();
+                            }
+                        } else
+                        {
+                            DataStr.SlicedJsonData PhotoPacket = new DataStr.SlicedJsonData();
+                            PhotoPacket.m_GearName = GUID;
+                            PhotoPacket.m_SendTo = -1;
+                            PhotoPacket.m_Hash = HashForSend;
+                            PhotoPacket.m_Str = Base64;
+                            PhotoPacket.m_Last = true;
+                            using (Packet _packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
+                            {
+                                _packet.Write(PhotoPacket);
+                                SendUDPData(_packet);
+                            }
+                        }
+                    }
+                }
+                GearItem Photo = GameManager.GetPlayerManagerComponent().AddItemCONSOLE("GEAR_SCPhoto", 1);
+
+                if (Photo)
+                {
+                    if (Photo.m_ObjectGuid == null)
+                    {
+                        Photo.m_ObjectGuid = Photo.gameObject.AddComponent<ObjectGuid>();
+                    }
+                    Photo.m_ObjectGuid.m_Guid = GUID;
+
+                    Texture2D tex = new Texture2D(Resolution.X, Resolution.Y);
+                    ImageConversion.LoadImage(tex, Convert.FromBase64String(Base64));
+                    Photo.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                }
+                //GameManager.GetPlayerManagerComponent().EquipItem(Photo, false);
+            }
+        }
+
+        public static void ShowRockStashActionPicker(GameObject objectInteractedWith)
+        {
+            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            if (Panel)
+            {
+                Comps.FakeRockCache Stash = null;
+
+                if (objectInteractedWith != null && objectInteractedWith.GetComponent<Comps.FakeRockCache>() != null)
+                {
+                    Stash = objectInteractedWith.GetComponent<Comps.FakeRockCache>();
+                }
+
+                if(Stash == null)
+                {
+                    return;
+                }
+                
+                Panel.Enable(true);
+                Panel.m_ActionPickerItemDataList.Clear();
+                Action act1 = new Action(() => Stash.Open());
+                Action act2 = new Action(() => Stash.Remove());
+
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_rockCache", "GAMEPLAY_Open", act1));
+                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_dismantle", "GAMEPLAY_Dismantle", act2));
+                //Play_RockCache
+
+                Panel.m_ObjectInteractedWith = objectInteractedWith;
+                Panel.EnableWithCurrentList();
+            }
+        }
+
+        public static Comps.FakeRockCache PendingRockCahceRemove = null;
+        public static void ContinueRemovingRockCache()
+        {
+            if(PendingRockCahceRemove != null)
+            {
+                GameManager.s_IsAISuspended = true;
+                Pathes.FakeRockCacheCallback = PendingRockCahceRemove;
+                InterfaceManager.m_Panel_GenericProgressBar.Launch(Localization.Get("GAMEPLAY_BreakingDownProgress"), 2f, 10, 0.0f, "Play_RockCache", null, false, false, null);
+                PendingRockCahceRemove = null;
+            }
+        }
+
+        public static void SpawnRockCache(DataStr.FakeRockCacheVisualData Data)
+        {
+            if(ObjectGuidManager.Lookup(Data.m_GUID) != null)
+            {
+                MelonLogger.Msg(Yellow, "RockCache with GUID "+Data.m_GUID+" already exist!");
+                return;
+            }
+            
+            
+            GameObject reference = GameManager.GetRockCacheManager().m_RockCachePrefab.gameObject;
+            GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, Data.m_Position, Data.m_Rotation);
+            FakeRockCache Cach = obj.GetComponent<FakeRockCache>();
+            if (Cach == null)
+            {
+                Cach = obj.AddComponent<FakeRockCache>();
+            }
+            Cach.m_GUID = Data.m_GUID;
+            Cach.m_Owner = Data.m_Owner;
+            Cach.m_Rocks = reference.GetComponent<RockCache>().m_NumRocksFromDismantle;
+            Cach.m_Sticks = reference.GetComponent<RockCache>().m_NumSticksFromDismantle;
+
+            Cach.m_VisualData.m_GUID = Cach.m_GUID;
+            Cach.m_VisualData.m_LevelGUID = level_guid;
+            Cach.m_VisualData.m_Owner = Cach.m_Owner;
+            Cach.m_VisualData.m_Position = obj.transform.position;
+            Cach.m_VisualData.m_Rotation = obj.transform.rotation;
+
+
+            ObjectGuid GuidObj = obj.GetComponent<ObjectGuid>();
+            if (GuidObj == null)
+            {
+                GuidObj = obj.AddComponent<ObjectGuid>();
+            }
+            GuidObj.Set(Cach.m_GUID);
+
+
+            UnityEngine.Object.Destroy(obj.GetComponent<RockCache>());
+        }
+
+        public static void AddRockCache(DataStr.FakeRockCacheVisualData Data)
+        {
+            if(Data.m_LevelGUID == level_guid && GameManager.GetRockCacheManager() != null)
+            {
+                SpawnRockCache(Data);
+            }
+        }
+        public static void RemoveRockCache(DataStr.FakeRockCacheVisualData Data)
+        {
+            if (Data.m_LevelGUID == level_guid)
+            {
+                GameObject obj = ObjectGuidManager.Lookup(Data.m_GUID);
+
+                if (obj != null)
+                {
+                    UnityEngine.Object.Destroy(obj);
+                }
+            }
+        }
+
+        public static Shared.GameRegion GetCurrentRegion()
+        {
+            if (GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
+            {
+                return ConvertGameRegion(GameManager.GetUniStorm().m_CurrentRegion);
+            } else
+            {
+                return ConvertGameRegion(GameRegion.RandomRegion);
+            }
+        }
+
+        public static Shared.GameRegion ConvertGameRegion(GameRegion Reg)
+        {
+            if(Reg == GameRegion.RandomRegion)
+            {
+                if(m_InterfaceManager && InterfaceManager.m_Panel_Map && InterfaceManager.m_Panel_Map.m_MapObjects.Count > 0)
+                {
+                    Panel_Map Panel = InterfaceManager.m_Panel_Map;
+                    string RegionName = "";
+                    string SceneMapName = Panel.GetMapNameOfCurrentScene();
+
+                    foreach (RegionMap item in Panel.m_MapObjects)
+                    {
+                        if(item.m_RegionName == SceneMapName)
+                        {
+                            RegionName = item.m_RegionName;
+                        }
+                    }
+                    if (string.IsNullOrEmpty(RegionName))
+                    { 
+                        int RegionIndex = Panel.GetIndexOfCurrentScene();
+                        if (Panel.m_UnlockedRegionNames.Count-1 >= RegionIndex)
+                        {
+                            SceneMapName = Panel.m_UnlockedRegionNames[RegionIndex];
+                            foreach (RegionMap item in Panel.m_MapObjects)
+                            {
+                                if (item.m_RegionName == SceneMapName)
+                                {
+                                    RegionName = item.m_RegionName;
+                                }
+                            }
+                        }
+                    }  
+
+                    if (string.IsNullOrEmpty(RegionName))
+                    {
+                        if(GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
+                        {
+                            return (Shared.GameRegion)GameManager.GetUniStorm().m_CurrentRegion;
+                        }
+                    } else
+                    {
+                        if(RegionName == "BlackrockTransitionZone")
+                        {
+                            return Shared.GameRegion.KeepersPassNorth;
+                        } else if(RegionName == "CanyonRoadTransitionZone")
+                        {
+                            return Shared.GameRegion.KeepersPassSouth;
+                        } else if (RegionName == "BlackrockRegion")
+                        {
+                            return Shared.GameRegion.Blackrock;
+                        } else if (RegionName == "RavineTransitionZone")
+                        {
+                            return Shared.GameRegion.Ravine;
+                        } else if (RegionName == "DamRiverTransitionZoneB")
+                        {
+                            return Shared.GameRegion.WindingRiver;
+                        } else if (RegionName == "DamTransitionZone")
+                        {
+                            return Shared.GameRegion.MysteryLake;
+                        } else if (RegionName == "HighwayTransitionZone")
+                        {
+                            return Shared.GameRegion.CrumblingHighWay;
+                        } else
+                        {
+                            return Shared.GameRegion.RandomRegion;
+                        }
+                    }
+                }
+            } else
+            {
+                return (Shared.GameRegion)Reg;
+            }
+
+
+            return Shared.GameRegion.RandomRegion;
+        }
+
+        public static GameRegion ConvertGameRegion(Shared.GameRegion Reg)
+        {
+            if((int)Reg < 0)
+            {
+                return GameRegion.RandomRegion;
+            } else
+            {
+                return (GameRegion)Reg;
+            }
+        }
+
+        public static void MaySpawnRefMan()
+        {
+            System.Random RNG = new System.Random();
+            if (GameManager.m_TimeOfDay != null && GameManager.m_TimeOfDay.IsNight() && RNG.NextDouble() < 0.001f)
+            {
+                SpawnRefMan();
+            }
+        }
+
+        public static void CheckSeeingRefMan()
+        {
+            if(RefMan != null)
+            {
+                if(RefMan.GetComponent<MeshRenderer>().isVisible && !SeenRefMan)
+                {
+                    SeenRefMan = true;
+                    PlayerDamageEvent.SpawnAfflictionEvent("GAMEPLAY_AfflictionFearAfraid", "GAMEPLAY_Affliction", "ico_injury_eventEntity2", InterfaceManager.m_FirstAidRedColor);
+                    GameObject emitterFromGameObject = GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject());
+                    AkSoundEngine.StopPlayingID(AkSoundEngine.PostEvent("Play_FearAffliction", emitterFromGameObject, 4, null, null), 40000);
+                }
+            } else
+            {
+                SeenRefMan = false;
+            }
+        }
+
+        public static void SpawnRefMan()
+        {
+            GameObject reference = Resources.Load<GameObject>("ref_man_1_85_Prefab");
+
+            if (reference)
+            {
+                Vector3 v3 = GameManager.GetPlayerTransform().transform.position;
+                v3 = v3 - GameManager.GetPlayerTransform().transform.forward * 2;
+
+                RefMan = UnityEngine.Object.Instantiate<GameObject>(reference, v3, GameManager.GetPlayerTransform().transform.rotation);
+                UnityEngine.Object.Destroy(RefMan, 5);
+            }
+        }
+
+        public static void CustomPrefabWorkAround(GameObject Obj, string Prefab)
+        {
+            if(Prefab == "Smoke")
+            {
+                UnityEngine.Object.Destroy(Obj.GetComponent<Fire>());
+                UnityEngine.Object.Destroy(Obj.GetComponent<HeatSource>());
+                UnityEngine.Object.Destroy(Obj.GetComponent<Campfire>());
+                UnityEngine.Object.Destroy(Obj.GetComponent<EffectsControllerFire>());
+                GameObject ParticleObj = Obj.transform.GetChild(7).GetChild(1).gameObject;
+                ParticleSystem PS = ParticleObj.GetComponent<ParticleSystem>();
+                ParticleSystemParasite PSP = ParticleObj.AddComponent<ParticleSystemParasite>();
+                PSP.m_ParticleSystem = PS;
+                PS.main.startLifetime = 17f;
+                PS.main.startSize = 2.1f;
+                Obj.transform.GetChild(0).gameObject.SetActive(false);
+                Obj.transform.GetChild(7).gameObject.SetActive(true);
+                Obj.transform.GetChild(26).gameObject.SetActive(false);
+                Obj.transform.GetChild(27).gameObject.SetActive(false);
+            }else if(Prefab == "CORPSE_Convict_001" || Prefab == "CORPSE_Convict_002" || Prefab == "CORPSE_Convict_003")
+            {
+                if (Obj.GetComponent<Container>() == null)
+                {
+                    Obj.AddComponent<Container>();
+                }
+            }else if(Prefab == "INTERACTIVE_CampFireBurntOut")
+            {
+                UnityEngine.Object.Destroy(Obj.GetComponent<Campfire>());
+            }else if(Prefab == "CONTAINER_MetalLockerA")
+            {
+                Container Con = Obj.GetComponentInChildren<Container>();
+                if(Con != null)
+                {
+                    Con.m_CanNeverBeOpened = true;
+                }
+            }
+        }
+
+        public static GameObject SpawnUniversalSyncableObject(DataStr.UniversalSyncableObject Data)
+        {
+            GameObject OldObj = ObjectGuidManager.Lookup(Data.m_GUID);
+            string Prefab = Data.m_Prefab;
+            bool Custom = false;
+            if (Data.m_Prefab == "Smoke")
+            {
+                Prefab = "INTERACTIVE_CampFire";
+                Custom = true;
+            }
+            if (Prefab == "CORPSE_Convict_001" || Prefab == "CORPSE_Convict_002" || Prefab == "CORPSE_Convict_003")
+            {
+                Custom = true;
+            }
+            if(Prefab == "INTERACTIVE_CampFireBurntOut")
+            {
+                Custom = true;
+            }
+            if (Prefab == "CONTAINER_MetalLockerA")
+            {
+                Custom = true;
+            }
+
+            GameObject reference = LoadedBundle.LoadAsset<GameObject>(Prefab);
+            if(reference == null)
+            {
+                reference = Resources.Load<GameObject>(Prefab);
+            }
+
+            if (reference)
+            {
+                GameObject Obj;
+                if(OldObj != null)
+                {
+                    Obj = OldObj;
+                } else
+                {
+                    Obj = UnityEngine.Object.Instantiate<GameObject>(reference, Data.m_Position, Data.m_Rotation);
+                }
+                Obj.name = Data.m_Prefab;
+                ObjectGuid ObjGUID = Obj.GetComponent<ObjectGuid>();
+                if (ObjGUID == null)
+                {
+                    ObjGUID = Obj.AddComponent<ObjectGuid>();
+                }
+                ObjGUID.Set(Data.m_GUID);
+
+                if (Custom)
+                {
+                    CustomPrefabWorkAround(Obj, Data.m_Prefab);
+                }
+
+                if(Obj.GetComponent<Lock>() != null)
+                {
+                    Obj.GetComponent<Lock>().m_ChanceLocked = 0;
+                    Obj.GetComponent<Lock>().m_LockStateRolled = false;
+                    Obj.GetComponent<Lock>().RollLockedState();
+                }
+
+                if (Obj.GetComponent<Container>() != null)
+                {
+                    Obj.GetComponent<Container>().m_RolledSpawnChance = false;
+                    Obj.GetComponent<Container>().m_SpawnChance = 100;
+                    Obj.GetComponent<Container>().Start();
+                    if (sendMyPosition) 
+                    {
+                        MelonLogger.Msg("REQUESTCONTAINERSTATE GUID "+ Data.m_GUID);
+                        using (Packet _packet = new Packet((int)ClientPackets.REQUESTCONTAINERSTATE))
+                        {
+                            _packet.Write(Data.m_Scene);
+                            _packet.Write(Data.m_GUID);
+                            SendUDPData(_packet);
+                        }
+                    }
+                    if (iAmHost)
+                    {
+                        int State = MPSaveManager.GetContainerState(Data.m_Scene, Data.m_GUID);
+                        RemoveLootFromContainer(Obj, State);
+                    }
+                }
+
+                Obj.SetActive(true);
+
+                return Obj;
+            }
+            return null;
+        }
+        public static void RemoveObjectByGUID(string GUID)
+        {
+            GameObject Obj = ObjectGuidManager.Lookup(GUID);
+
+            if (Obj)
+            {
+                UnityEngine.Object.Destroy(Obj);
+            }
+        }
+
+        public static void SetInteractiveZone(ExpeditionInteractiveData Data)
+        {
+            RemoveObjectByGUID(Data.m_GUID);
+            GameObject cube = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            ExpeditionInteractive Comp = cube.AddComponent<ExpeditionInteractive>();
+            Comp.Load(Data);
+            cube.AddComponent<ObjectGuid>().Set(Data.m_GUID);
         }
     }
 }

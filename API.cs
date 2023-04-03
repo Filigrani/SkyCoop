@@ -19,6 +19,8 @@ namespace SkyCoop
         public static bool m_AllowMods = true; // Using mods allowed.
         public static int m_MyClientID = 0; // ID of player on server, (this related to slot what player use).
         public static bool m_Debug = false;
+        public static bool IsP2PServer = false;
+        public static int Port = 0;
 
         public static void CustomEventCallback(Packet _pak, int from)
         { 

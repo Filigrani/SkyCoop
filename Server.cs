@@ -4,6 +4,10 @@ using System.Text;
 using System.Net;
 using System.Net.Sockets;
 using SkyCoop;
+#if (!DEDICATED)
+using MelonLoader;
+using Il2Cpp;
+#endif
 
 namespace GameServer
 {
@@ -12,14 +16,20 @@ namespace GameServer
         public static int MaxPlayers { get; private set; }
         public static int Port { get; private set; }
         public static Dictionary<int, Client> clients = new Dictionary<int, Client>();
+        public static Dictionary<int, string> p2pclients = new Dictionary<int, string>();
         public delegate void PacketHandler(int _fromClient, Packet _packet);
         public static Dictionary<int, PacketHandler> packetHandlers;
-
         public static bool UsingSteamWorks = false;
-        public static Dictionary<int, string> p2pclients = new Dictionary<int, string>();
+        public static UdpClient udpListener;
 
-        private static TcpListener tcpListener;
-        private static UdpClient udpListener;
+        public static void Log(string TXT, Shared.LoggerColor Color = Shared.LoggerColor.White)
+        {
+#if (!DEDICATED)
+            MelonLogger.Msg(MyMod.ConvertLoggerColor(Color),TXT);
+#else
+            Logger.Log(TXT, Color);
+#endif
+        }
 
         public static void Start(int _maxPlayers, int _port = 26950)
         {
@@ -27,62 +37,49 @@ namespace GameServer
             MyMod.MaxPlayers = MaxPlayers;
             Port = _port;
 
-            MelonLoader.MelonLogger.Msg("Starting server...");
+            Log("Starting server...");
             InitializeServerData();
-
-            //tcpListener = new TcpListener(IPAddress.Any, Port);
-            //tcpListener.Start();
-            //tcpListener.BeginAcceptTcpClient(TCPConnectCallback, null);
 
             udpListener = new UdpClient(Port);
             udpListener.BeginReceive(UDPReceiveCallback, null);
 
-            MelonLoader.MelonLogger.Msg($"Server started on port {Port}.");
+            Log($"Server started on port {Port}.");
+
+            MPStats.Start();
+#if(!DEDICATED)
+            MPStats.AddPlayer(MPSaveManager.GetSubNetworkGUID(), MyMod.MyChatName);
+#endif
         }
         public static void StartSteam(int _maxPlayers, string[] whitelist = null)
         {
+#if(!DEDICATED)
+            MPSaveManager.LoadNonUnloadables();
             MaxPlayers = _maxPlayers;
             MyMod.MaxPlayers = MaxPlayers;
-            MelonLoader.MelonLogger.Msg("[SteamWorks.NET] Starting multiplayer...");
+            Log("[SteamWorks.NET] Starting multiplayer...");
             InitializeServerData();
             UsingSteamWorks = true;
-            MyMod.InitAllPlayers(); // Prepare players objects based on amount of max players
+            Shared.InitAllPlayers(); // Prepare players objects based on amount of max players
             MyMod.iAmHost = true;
             MyMod.OverridedHourse = GameManager.GetTimeOfDayComponent().GetHour();
             MyMod.OverridedMinutes = GameManager.GetTimeOfDayComponent().GetMinutes();
             MyMod.OveridedTime = MyMod.OverridedHourse + ":" + MyMod.OverridedMinutes;
             MyMod.NeedSyncTime = true;
-            MyMod.RealTimeCycleSpeed = true;
             //MyMod.LoadAllDropsForScene();
             //MyMod.LoadAllOpenableThingsForScene();
             MyMod.DisableOriginalAnimalSpawns(true);
             MyMod.SetFixedSpawn();
-            MyMod.KillConsole(); // Unregistering cheats if server not allow cheating for you
+            MyMod.KillConsole();
             SteamConnect.Main.SetLobbyServer();
             SteamConnect.Main.SetLobbyState("Playing");
-        }
-
-        private static void TCPConnectCallback(IAsyncResult _result)
-        {
-            TcpClient _client = tcpListener.EndAcceptTcpClient(_result);
-            tcpListener.BeginAcceptTcpClient(TCPConnectCallback, null);
-            MelonLoader.MelonLogger.Msg($"Incoming connection from {_client.Client.RemoteEndPoint}...");
-
-            for (int i = 1; i <= MaxPlayers; i++)
-            {
-                if (clients[i].tcp.socket == null)
-                {
-                    clients[i].tcp.Connect(_client);
-                    return;
-                }
-            }
-
-            MelonLoader.MelonLogger.Msg($"{_client.Client.RemoteEndPoint} failed to connect: Server full!");
+            Log("Server has been runned with InGame time: " + GameManager.GetTimeOfDayComponent().GetHour() + ":" + GameManager.GetTimeOfDayComponent().GetMinutes() + " seed " + GameManager.m_SceneTransitionData.m_GameRandomSeed);
+            MPStats.Start();
+            MPStats.AddPlayer(MPSaveManager.GetSubNetworkGUID(), MyMod.MyChatName);
+#endif
         }
 
         private static void UDPReceiveCallback(IAsyncResult _result)
         {
-            //MelonLoader.MelonLogger.Log("[UDP] UDPReceiveCallback");
             try
             {
                 IPEndPoint _clientEndPoint = new IPEndPoint(IPAddress.Any, 0);
@@ -94,7 +91,6 @@ namespace GameServer
                 catch (System.Net.Sockets.SocketException)
                 {
 
-                    //MelonLoader.MelonLogger.Log("[UDP] Client disconnected!");
                     udpListener.BeginReceive(UDPReceiveCallback, null);
                     return;
                 }
@@ -113,20 +109,54 @@ namespace GameServer
                 using (Packet _packet = new Packet(_data))
                 {
                     int _clientId = _packet.ReadInt();
+                    string SubNetworkGUID = "";
+
+                    if(_clientId != -2)
+                    {
+                        if (_packet.UnreadLength() > 12)
+                        {
+                            SubNetworkGUID = _packet.ReadString();
+
+                            string Reason;
+                            if (MPSaveManager.BannedUsers.TryGetValue(SubNetworkGUID, out Reason))
+                            {
+                                if (string.IsNullOrEmpty(Reason))
+                                {
+                                    ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server.");
+                                    return;
+                                } else
+                                {
+                                    ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server." + "\nReason: " + Reason);
+                                    return;
+                                }
+                            }
+                        } else
+                        {
+                            Log("Client without SubNetworkGUID trying to connect, rejecting, _clientId " + _clientId);
+                            ServerSend.KICKMESSAGE(_clientEndPoint, "Your version of the mod, isn't supported\nHost using version " + MyMod.BuildInfo.Version);
+                            return;
+                        }
+                        if (MyMod.DebugTrafficCheck)
+                        {
+                            Log("[DebugTrafficCheck] _clientId " + _clientId);
+                            Log("[DebugTrafficCheck] SubNetworkGUID " + SubNetworkGUID);
+                        }
+                    }
 
                     if (_clientId == 0)
                     {
                         int freeSlot = 1;
                         bool ReConnection = false;
 
-                        MelonLoader.MelonLogger.Msg("[UDP] Checking all slots for " + _clientEndPoint.Address.ToString());
+                        Log("[UDP] Checking all slots for " + _clientEndPoint.Address.ToString() +" subnetwork GUID "+ SubNetworkGUID);
 
                         for (int i = 1; i <= MaxPlayers; i++)
                         {
-                            if (clients[i].udp != null && clients[i].udp.endPoint != null && clients[i].udp.endPoint.Address.ToString() == _clientEndPoint.Address.ToString())
+                            if (clients[i].udp != null && clients[i].udp.endPoint != null && clients[i].udp.endPoint.Address.ToString() == _clientEndPoint.Address.ToString() && SubNetworkGUID == clients[i].SubNetworkGUID)
                             {
                                 ReConnection = true;
-                                MelonLoader.MelonLogger.Msg("[UDP] Reconnecting " + _clientEndPoint.Address + " as client " + i);
+                                clients[i].RCON = false;
+                                Log("[UDP] Reconnecting " + _clientEndPoint.Address +" " + clients[i].SubNetworkGUID + " as client " + i);
                                 clients[i].TimeOutTime = 0;
                                 clients[i].udp.endPoint = null;
                                 freeSlot = i;
@@ -135,23 +165,50 @@ namespace GameServer
                         }
                         if (ReConnection == false)
                         {
-                            MelonLoader.MelonLogger.Msg("[UDP] Got new connection " + _clientEndPoint.Address);
+                            Log("[UDP] Got new connection " + _clientEndPoint.Address + " subnetwork GUID " + SubNetworkGUID);
                             for (int i = 1; i <= MaxPlayers; i++)
                             {
                                 if (clients[i].udp.endPoint == null)
                                 {
-                                    MelonLoader.MelonLogger.Msg("[UDP] Here an empty slot " + i);
+                                    clients[i].RCON = false;
+                                    Log("[UDP] Here an empty slot " + i);
                                     freeSlot = i;
                                     break;
                                 }
                             }
                         }
                         _clientId = freeSlot;
+                    }else if(_clientId == -1)
+                    {
+                        Log("[UDP] Attempt to get RCON access for " + _clientEndPoint.Address.ToString());
+                        int RCONSLOT = MaxPlayers+1;
+                        if (clients[RCONSLOT].udp.endPoint == null)
+                        {
+                            _clientId = RCONSLOT;
+                        }else{
+                            if(clients[RCONSLOT].udp.endPoint.Address.ToString() == _clientEndPoint.Address.ToString())
+                            {
+                                Log("[UDP] RCON Operator reconnecting...");
+                                _clientId = RCONSLOT;
+                                ServerSend.RCONCONNECTED(_clientId);
+                                return;
+                            }
+                            else{
+                                Log("[UDP] RCON Slot currently busy");
+                                ServerSend.KICKMESSAGE(_clientEndPoint, "RCON Operator slot is busy!");
+                                return;
+                            }
+                        }
+                    }else if(_clientId == -2)
+                    {
+                        ServerSend.PINGSERVER(_clientEndPoint);
+                        return;
                     }
 
                     if (clients[_clientId].udp.endPoint == null)
                     {
                         // If this is a new connection
+                        clients[_clientId].SubNetworkGUID = SubNetworkGUID;
                         clients[_clientId].udp.Connect(_clientEndPoint);
                         return;
                     }
@@ -165,11 +222,11 @@ namespace GameServer
             }
             catch (Exception _ex)
             {
-                MelonLoader.MelonLogger.Msg($"Error receiving UDP data: {_ex}");
+                Log($"Error receiving UDP data: {_ex}");
             }
         }
 
-        public static void SendUDPData(IPEndPoint _clientEndPoint, Packet _packet)
+        public static void SendUDPData(IPEndPoint _clientEndPoint, Packet _packet, bool IgnoreReady = true)
         {
             try
             {
@@ -180,19 +237,68 @@ namespace GameServer
             }
             catch (Exception _ex)
             {
-                MelonLoader.MelonLogger.Msg($"Error sending data to {_clientEndPoint} via UDP: {_ex}");
+                Log($"Error sending data to {_clientEndPoint} via UDP: {_ex}");
             }
         }
         public static void SendP2PData(string _client, Packet _packet)
         {
+#if (!DEDICATED)
             if(_client != "")
             {
                 if(UsingSteamWorks == true && SteamConnect.CanUseSteam == true)
                 {
-                    ulong sid = ulong.Parse(_client);
                     SteamConnect.Main.SendUDPData(_packet, _client);
                 }
             }
+#endif
+        }
+
+        public static string GetMACByID(int ID)
+        {
+            if(ID == 0)
+            {
+                return MPSaveManager.GetSubNetworkGUID();
+            }
+            
+            Client c;
+            if(clients.TryGetValue(ID, out c))
+            {
+                return c.SubNetworkGUID;
+            }
+            return "";
+        }
+
+        public static List<string> GetMACsOfPlayers()
+        {
+            List<string> All = new List<string>();
+#if (!DEDICATED)
+            All.Add(MPSaveManager.GetSubNetworkGUID());
+#endif
+
+            for (int i = 1; i <= MaxPlayers; i++)
+            {
+                if (clients[i].IsBusy())
+                {
+                    All.Add(clients[i].SubNetworkGUID);
+                }
+            }
+            return All;
+        }
+
+        public static int GetIDByMAC(string MAC)
+        {
+            if (MAC == MPSaveManager.GetSubNetworkGUID())
+            {
+                return 0;
+            }
+            foreach (var item in clients)
+            {
+                if(item.Value.SubNetworkGUID == MAC)
+                {
+                    return item.Key;
+                }
+            }
+            return -1;
         }
 
         private static void InitializeServerData()
@@ -200,6 +306,10 @@ namespace GameServer
             for (int i = 1; i <= MaxPlayers; i++)
             {
                 clients.Add(i, new Client(i));
+            }
+            if (MyMod.DedicatedServerAppMode)
+            {
+                clients.Add(MaxPlayers+1, new Client(MaxPlayers + 1));
             }
 
             packetHandlers = new Dictionary<int, PacketHandler>()
@@ -298,8 +408,37 @@ namespace GameServer
                 { (int)ClientPackets.DEATHCREATEEMPTYNOW, ServerHandle.DEATHCREATEEMPTYNOW},
                 { (int)ClientPackets.SPAWNREGIONBANCHECK, ServerHandle.SPAWNREGIONBANCHECK},
                 { (int)ClientPackets.CHALLENGETRIGGER, ServerHandle.CHALLENGETRIGGER},
+                { (int)ClientPackets.RCONCOMMAND, ServerHandle.RCONCOMMAND},
+                { (int)ClientPackets.ADDDOORLOCK, ServerHandle.ADDDOORLOCK},
+                { (int)ClientPackets.TRYOPENDOOR, ServerHandle.TRYOPENDOOR},
+                { (int)ClientPackets.LOCKPICK, ServerHandle.LOCKPICK},
+                { (int)ClientPackets.VERIFYSAVE, ServerHandle.VERIFYSAVE},
+                { (int)ClientPackets.SAVEHASH, ServerHandle.SAVEHASH},
+                { (int)ClientPackets.FORCELOADING, ServerHandle.FORCELOADING},
+                { (int)ClientPackets.REQUESTLOCKSMITH, ServerHandle.REQUESTLOCKSMITH},
+                { (int)ClientPackets.APPLYTOOLONBLANK, ServerHandle.APPLYTOOLONBLANK},
+                { (int)ClientPackets.LETENTER, ServerHandle.LETENTER},
+                { (int)ClientPackets.PEEPHOLE, ServerHandle.PEEPHOLE},
+                { (int)ClientPackets.KNOCKKNOCK, ServerHandle.KNOCKKNOCK},
+                { (int)ClientPackets.RESTART, ServerHandle.RESTART},
+                { (int)ClientPackets.WEATHERVOLUNTEER, ServerHandle.WEATHERVOLUNTEER},
+                { (int)ClientPackets.REREGISTERWEATHER, ServerHandle.REREGISTERWEATHER},
+                { (int)ClientPackets.CHANGECONTAINERSTATE, ServerHandle.CHANGECONTAINERSTATE},
+                { (int)ClientPackets.TRIGGEREMOTE, ServerHandle.TRIGGEREMOTE},
+                { (int)ClientPackets.PHOTOREQUEST, ServerHandle.PHOTOREQUEST},
+                { (int)ClientPackets.GOTPHOTOSLICE, ServerHandle.GOTPHOTOSLICE},
+                { (int)ClientPackets.STARTEXPEDITION, ServerHandle.STARTEXPEDITION},
+                { (int)ClientPackets.ACCEPTEXPEDITIONINVITE, ServerHandle.ACCEPTEXPEDITIONINVITE},
+                { (int)ClientPackets.REQUESTEXPEDITIONINVITES, ServerHandle.REQUESTEXPEDITIONINVITES},
+                { (int)ClientPackets.CREATEEXPEDITIONINVITE, ServerHandle.CREATEEXPEDITIONINVITE},
+                { (int)ClientPackets.ADDROCKCACH, ServerHandle.ADDROCKCACH},
+                { (int)ClientPackets.REMOVEROCKCACH, ServerHandle.REMOVEROCKCACH},
+                { (int)ClientPackets.REMOVEROCKCACHFINISHED, ServerHandle.REMOVEROCKCACHFINISHED},
+                { (int)ClientPackets.CHARCOALDRAW, ServerHandle.CHARCOALDRAW},
+                { (int)ClientPackets.CHATCOMMAND, ServerHandle.CHATCOMMAND},
+                { (int)ClientPackets.REQUESTCONTAINERSTATE, ServerHandle.REQUESTCONTAINERSTATE},
             };
-            Console.WriteLine("Initialized packets.");
+            Log("Initialized packets.");
         }
     }
 }
