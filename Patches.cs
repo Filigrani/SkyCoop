@@ -95,7 +95,7 @@ namespace SkyCoop
                     {
                         variant = 1;
                     }
-                    if (__instance.gameObject.GetComponent<KeroseneLampItem>() != null && __instance.gameObject.GetComponent<KeroseneLampItem>().m_On)
+                    if (__instance.gameObject.GetComponent<Il2CppTLD.Gear.KeroseneLampItem>() != null && __instance.gameObject.GetComponent<Il2CppTLD.Gear.KeroseneLampItem>().m_On)
                     {
                         variant = 1;
                     }
@@ -222,7 +222,7 @@ namespace SkyCoop
                         {
                             variant = 1;
                         }
-                        if (saveObj.gameObject.GetComponent<KeroseneLampItem>() != null && saveObj.gameObject.GetComponent<KeroseneLampItem>().m_On)
+                        if (saveObj.gameObject.GetComponent<Il2CppTLD.Gear.KeroseneLampItem>() != null && saveObj.gameObject.GetComponent<Il2CppTLD.Gear.KeroseneLampItem>().m_On)
                         {
                             variant = 1;
                         }
@@ -292,7 +292,7 @@ namespace SkyCoop
                         {
                             variant = 1;
                         }
-                        if(saveObj.gameObject.GetComponent<KeroseneLampItem>() != null && saveObj.gameObject.GetComponent<KeroseneLampItem>().m_On)
+                        if(saveObj.gameObject.GetComponent<Il2CppTLD.Gear.KeroseneLampItem>() != null && saveObj.gameObject.GetComponent<Il2CppTLD.Gear.KeroseneLampItem>().m_On)
                         {
                             variant = 1;
                         }
@@ -958,12 +958,12 @@ namespace SkyCoop
                     float maxAngleDegrees = 0.0f;
                     if (__instance.m_GunType == GunType.Rifle)
                     {
-                        double num = (double)StatsManager.IncrementValue(StatID.RifleShot);
+                        double num = (double)StatsManager.IncrementValue(Il2CppTLD.Stats.StatID.RifleShot);
                         maxAngleDegrees = GameManager.GetSkillRifle().GetAimAssistAngleDegrees();
                     }
                     else if (__instance.m_GunType == GunType.Revolver)
                     {
-                        double num = (double)StatsManager.IncrementValue(StatID.RevolverShot);
+                        double num = (double)StatsManager.IncrementValue(Il2CppTLD.Stats.StatID.RevolverShot);
                         maxAngleDegrees = GameManager.GetSkillRevolver().GetAimAssistAngleDegrees();
                     }
                     Vector3 position = __instance.transform.position;
@@ -1019,11 +1019,11 @@ namespace SkyCoop
                             LocalizedDamage component = hit.collider.GetComponent<LocalizedDamage>();
                             if (__instance.m_GunType == GunType.Rifle)
                             {
-                                double num2 = (double)StatsManager.IncrementValue(StatID.SuccessfulHits_Rifle);
+                                double num2 = (double)StatsManager.IncrementValue(Il2CppTLD.Stats.StatID.SuccessfulHits_Rifle);
                             }
                             else if (__instance.m_GunType == GunType.Revolver)
                             {
-                                double num3 = (double)StatsManager.IncrementValue(StatID.SuccessfulHits_Revolver);
+                                double num3 = (double)StatsManager.IncrementValue(Il2CppTLD.Stats.StatID.SuccessfulHits_Revolver);
                             }
                             BodyDamage.Weapon bodyDamageWeapon = GunTypeMethods.ToBodyDamageWeapon(__instance.m_GunType);
                             float bleedOutMinutes = component.GetBleedOutMinutes(bodyDamageWeapon);
@@ -7279,16 +7279,16 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(KeroseneLampItem), "ReduceFuel")]
+        [HarmonyLib.HarmonyPatch(typeof(Il2CppTLD.Gear.KeroseneLampItem), "ReduceFuel")]
         private static class KeroseneLampItem_ReduceFuel
         {
-            private static bool Prefix(KeroseneLampItem __instance, float hoursBurned)
+            private static bool Prefix(Il2CppTLD.Gear.KeroseneLampItem __instance, float hoursBurned)
             {
                 if(MyMod.OverrideLampReduceFuel == -1)
                 {
                     return true;
                 }else{
-                    if (KeroseneLampItem.m_InfiniteLampOn)
+                    if (Il2CppTLD.Gear.KeroseneLampItem.m_InfiniteLampOn)
                     {
                         MyMod.OverrideLampReduceFuel = -1;
                         return true;
@@ -7702,7 +7702,7 @@ namespace SkyCoop
                 __instance.m_HasParasiteRisk = false;
                 __instance.m_HasParasites = false;
 
-                StatsManager.IncrementValue(StatID.IntestinalParasites);
+                StatsManager.IncrementValue(Il2CppTLD.Stats.StatID.IntestinalParasites);
                 if (nofx)
                 {
                     return false;

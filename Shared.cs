@@ -2081,10 +2081,10 @@ namespace SkyCoop
                 Log("Other shokal has pickup item before me! I need to delete my picked gear with IID " + data.m_MyInstanceID);
                 int _IID = data.m_MyInstanceID;
 
-                Il2CppSystem.Collections.Generic.List<GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
+                Il2CppSystem.Collections.Generic.List<Il2CppTLD.Gear.GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
                 for (int i = 0; i < invItems.Count; i++)
                 {
-                    GearItemObject currGear = invItems[i];
+                    Il2CppTLD.Gear.GearItemObject currGear = invItems[i];
                     if (currGear != null)
                     {
                         if (currGear.m_GearItem.m_InstanceID == _IID)
@@ -2379,7 +2379,7 @@ namespace SkyCoop
             Vector3 V3;
             string LevelGUID;
 #if (!DEDICATED)
-            GameObject Animal = PdidTable.GetGameObject(GUID);
+            GameObject Animal = Il2CppTLD.PDID.PdidTable.GetGameObject(GUID);
             if (MyMod.AnimalsController == true)
             {
                 if (Animal) // If I am is animal controller and I have this rabbit, this means I can revive it.
