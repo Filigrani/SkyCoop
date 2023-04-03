@@ -719,10 +719,10 @@ namespace SkyCoop
 
             int _IID = gear.m_MyInstanceID;
 
-            Il2CppSystem.Collections.Generic.List<GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
+            Il2CppSystem.Collections.Generic.List<Il2CppTLD.Gear.GearItemObject> invItems = GameManager.GetInventoryComponent().m_Items;
             for (int i = 0; i < invItems.Count; i++)
             {
-                GearItemObject currGear = invItems[i];
+                Il2CppTLD.Gear.GearItemObject currGear = invItems[i];
                 if (currGear != null)
                 {
                     if(currGear.m_GearItem.m_InstanceID == _IID)
@@ -984,7 +984,7 @@ namespace SkyCoop
         public static void MARKSEARCHEDCONTAINERS(Packet _packet)
         {
             string _GUID = _packet.ReadString();
-            GameObject box = PdidTable.GetGameObject(_GUID);
+            GameObject box = Il2CppTLD.PDID.PdidTable.GetGameObject(_GUID);
             if (box != null)
             {
                 GameObject reference = MyMod.GetGearItemObject("GEAR_SoftWood");
@@ -1210,7 +1210,7 @@ namespace SkyCoop
         {
             string GUID = _packet.ReadString();
             bool Result = _packet.ReadBool();
-            GameObject obj = PdidTable.GetGameObject(GUID);
+            GameObject obj = Il2CppTLD.PDID.PdidTable.GetGameObject(GUID);
             if (obj != null && obj.GetComponent<Comps.SpawnRegionSimple>())
             {
                 obj.GetComponent<Comps.SpawnRegionSimple>().SetBanned(Result);
