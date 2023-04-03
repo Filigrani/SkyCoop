@@ -10,6 +10,34 @@ using GameServer;
 using static SkyCoop.DataStr;
 using static SkyCoop.Comps;
 
+using Il2CppTLD.Gear;
+using Il2CppTLD.AddressableAssets;
+using Il2CppTLD.Audio;
+using Il2CppTLD.Cooking;
+using Il2CppTLD.Electrostatic;
+using Il2CppTLD.Encryption;
+using Il2CppTLD.Events;
+using Il2CppTLD.Gameplay;
+using Il2CppTLD.GameplayTags;
+using Il2CppTLD.Interactions;
+using Il2CppTLD.IO;
+using Il2CppTLD.Logging;
+using Il2CppTLD.ModularElectrolizer;
+using Il2CppTLD.News;
+using Il2CppTLD.OptionalContent;
+using Il2CppTLD.PDID;
+using Il2CppTLD.Platform;
+using Il2CppTLD.RuntimeTest;
+using Il2CppTLD.SaveState;
+using Il2CppTLD.Scenes;
+using Il2CppTLD.Serialization;
+using Il2CppTLD.Stats;
+using Il2CppTLD.Switch;
+using Il2CppTLD.TimeLib;
+using Il2CppTLD.Trial;
+using Il2CppTLD.UI;
+using Il2CppTLD.UserGeneratedContent;
+
 namespace SkyCoop
 {
     public class Pathes
@@ -311,7 +339,6 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-
                 if (__instance.m_InteractiveObjectUnderCrosshair)
                 {
                     if (__instance.m_InteractiveObjectUnderCrosshair.GetComponent<LoadScene>())
@@ -566,11 +593,8 @@ namespace SkyCoop
                     string text = __instance.m_CurrentGroup.m_InputField.GetText();
                     if (!MyMod.ValidNickName(text))
                     {
-                        if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
-                        {
-                            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + "Sorry nickname should not contain non latin symbols", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
-                        }
-                    }else{
+                        __instance.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + "Sorry nickname should not contain non latin symbols", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                    } else{
                         MyMod.MyChatName = text;
                         MPSaveManager.SaveMyName(text);
                     }
@@ -609,15 +633,12 @@ namespace SkyCoop
 
                         if (Error != "")
                         {
-                            if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
-                            {
-                                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + Error, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
-                            }
-                        }else{
+                            __instance.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + Error, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                        } else{
                             if (Seed)
                             {
                                 MyMod.PendingKeySeed = text;
-                                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input name for key", "", Panel_Confirmation.ButtonLayout.Button_2, "Next", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                                __instance.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input name for key", "", Panel_Confirmation.ButtonLayout.Button_2, "Next", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                             }else{
                                 MyMod.PendingKeyName = text;
 
@@ -640,7 +661,7 @@ namespace SkyCoop
                         MPSaveManager.AlignKey(GameManager.GetPlayerManagerComponent().AddItemCONSOLE("GEAR_SCDoorKey", 1), texts[0], texts[1]);
                     } else
                     {
-                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + "It should be seed_name format!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                        __instance.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "ERROR", "\n" + "It should be seed_name format!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                     }
                 }
                 if (__instance.m_CurrentGroup != null && __instance.m_CurrentGroup.m_MessageLabel_InputFieldTitle.text == "NOTE MESSAGE")
@@ -1280,10 +1301,6 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (__instance.name == "GEAR_MedicalSupplies_hangar")
-                {
-                    __instance.m_WeightKG = 0.5f;
-                }
                 __instance.m_DailyHPDecay = 0;
 
                 if (MyMod.IsCustomHandItem(__instance.name) || MyMod.IsUserGeneratedHandItem(__instance.name))
@@ -1902,7 +1919,12 @@ namespace SkyCoop
                 }
                 if (MyMod.PendingSave != null)
                 {
-                    InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Male;
+                    Panel_OptionsMenu Op;
+                    if(!InterfaceManager.TryGetPanel<Panel_OptionsMenu>(out Op))
+                    {
+                        return false;
+                    }
+                    //Op.m_State.m_VoicePersona = VoicePersona.Male;
                     __instance.Enable(false);
                     MyMod.SelectBagesForConnection();
 
@@ -1925,7 +1947,7 @@ namespace SkyCoop
                 }
                 if (MyMod.PendingSave != null)
                 {
-                    InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Female;
+                    //InterfaceManager.m_Panel_OptionsMenu.m_State.m_VoicePersona = VoicePersona.Female;
                     __instance.Enable(false);
                     MyMod.SelectBagesForConnection();
 
@@ -2419,12 +2441,19 @@ namespace SkyCoop
                     }
                     else if (__instance.gameObject.transform.parent.name == "LieDownButton")
                     {
+                        Panel_Rest Rest;
+
+                        if(!InterfaceManager.TryGetPanel<Panel_Rest>(out Rest))
+                        {
+                            return;
+                        }
+
                         if (MyMod.AtBed == false)
                         {
                             MyMod.OutOfBedPosition = GameManager.GetPlayerTransform().position;
-                            if (InterfaceManager.m_Panel_Rest.m_Bed)
+                            if (Rest.m_Bed)
                             {
-                                GameManager.GetPlayerManagerComponent().TeleportPlayer(InterfaceManager.m_Panel_Rest.m_Bed.m_BodyPlacementTransform.position, InterfaceManager.m_Panel_Rest.m_Bed.m_BodyPlacementTransform.rotation);
+                                GameManager.GetPlayerManagerComponent().TeleportPlayer(Rest.m_Bed.m_BodyPlacementTransform.position, Rest.m_Bed.m_BodyPlacementTransform.rotation);
                                 MyMod.AtBed = true;
                             }
                         }
@@ -2433,7 +2462,7 @@ namespace SkyCoop
                             GameManager.GetPlayerManagerComponent().TeleportPlayer(MyMod.OutOfBedPosition, GameManager.GetPlayerTransform().rotation);
                             MyMod.AtBed = false;
                         }
-                        InterfaceManager.m_Panel_Rest.OnCancel();
+                        Rest.OnCancel();
                     }
                 }
             }
@@ -7844,7 +7873,6 @@ namespace SkyCoop
                     {
                         FakeRockCacheCallback.DismantleFinished();
                     }
-                    GameManager.GetPlayerManagerComponent().m_RockCacheInProgress = null;
                     FakeRockCacheCallback = null;
 
                     if (MyMod.sendMyPosition)
