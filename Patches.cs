@@ -60,7 +60,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MelonLogger.Msg("Item dropped " + __instance.m_GearName);
+                MelonLogger.Msg("Item dropped " + MyMod.GetGearName(__instance));
                 if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<Comps.IgnoreDropOverride>() == null)
                 {
                     ShouldDrop = numUnits;
@@ -157,7 +157,7 @@ namespace SkyCoop
                 }
                 if (gearItemToCook != null)
                 {
-                    MelonLogger.Msg("Going to cook " + gearItemToCook.m_GearName + " IgnoreDropOverride");
+                    MelonLogger.Msg("Going to cook " + MyMod.GetGearName(gearItemToCook) + " IgnoreDropOverride");
                     gearItemToCook.gameObject.AddComponent<Comps.IgnoreDropOverride>();
                 }
             }
@@ -1410,7 +1410,7 @@ namespace SkyCoop
                     if (__instance.m_ObjectGuid != null)
                     {
                         MelonLogger.Msg("Going render photo " + __instance.m_ObjectGuid.m_Guid);
-                        Texture2D tex = MPSaveManager.GetPhotoTexture(__instance.m_ObjectGuid.m_Guid, __instance.m_GearName);
+                        Texture2D tex = MPSaveManager.GetPhotoTexture(__instance.m_ObjectGuid.m_Guid, MyMod.GetGearName(__instance));
                         if (tex)
                         {
                             __instance.gameObject.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
@@ -1485,7 +1485,7 @@ namespace SkyCoop
                     {
                         string Key = gi.m_ObjectGuid.Get();
 
-                        MelonLogger.Msg("Have read book " + gi.m_GearName + " GUID " + Key + " Progress "+__instance.m_ElapsedHours+"/"+ __instance.m_TimeRequirementHours);
+                        MelonLogger.Msg("Have read book " + MyMod.GetGearName(gi) + " GUID " + Key + " Progress "+__instance.m_ElapsedHours+"/"+ __instance.m_TimeRequirementHours);
 
                         if(MyMod.BooksResearched.ContainsKey(Key))
                         {
@@ -1509,7 +1509,7 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
 
-                if (gi && gi.m_ClothingItem && !string.IsNullOrEmpty(gi.m_ClothingItem.m_PaperDollTextureName)  && gi.m_GearName == "GEAR_CookingPot")
+                if (gi && gi.m_ClothingItem && !string.IsNullOrEmpty(gi.m_ClothingItem.m_PaperDollTextureName)  && MyMod.GetGearName(gi) == "GEAR_CookingPot")
                     {
                     for (int index = 0; index < __instance.m_PaperDollSlotWidgets.Count; ++index)
                     {
@@ -1572,28 +1572,28 @@ namespace SkyCoop
                 }
                 if (pickupItem.m_BeenInPlayerInventory == false)
                 {
-                    MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
+                    MelonLogger.Msg("Pickedup " + MyMod.GetGearName(pickupItem));
                     pickupItem.m_BeenInPlayerInventory = true;
                     Vector3 V3 = pickupItem.gameObject.transform.position;
                     int ISNTID = pickupItem.m_InstanceID;
-                    string GearName = pickupItem.m_GearName;
+                    string GearName = MyMod.GetGearName(pickupItem);
                     NarrativeCollectibleItem Narrative = pickupItem.GetComponent<NarrativeCollectibleItem>();
 
-                    if (GearName == "GEAR_Knife")
-                    {
-                        if (Supporters.ConfiguratedBenefits.m_Knife)
-                        {
-                            pickupItem.m_GearName = "GEAR_JeremiahKnife";
-                            string Copy = pickupItem.Serialize();
-                            UnityEngine.Object.Destroy(pickupItem.gameObject);
-                            GameObject reference = MyMod.GetGearItemObject("GEAR_JeremiahKnife");
-                            GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, V3, pickupItem.gameObject.transform.rotation);
-                            newGear.GetComponent<GearItem>().Deserialize(Copy);
-                            newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
-                            Narrative = newGear.GetComponent<NarrativeCollectibleItem>();
-                            __instance.ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
-                        }
-                    }
+                    //if (GearName == "GEAR_Knife")
+                    //{
+                    //    if (Supporters.ConfiguratedBenefits.m_Knife)
+                    //    {
+                    //        pickupItem.m_GearName = "GEAR_JeremiahKnife";
+                    //        string Copy = pickupItem.Serialize();
+                    //        UnityEngine.Object.Destroy(pickupItem.gameObject);
+                    //        GameObject reference = MyMod.GetGearItemObject("GEAR_JeremiahKnife");
+                    //        GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, V3, pickupItem.gameObject.transform.rotation);
+                    //        newGear.GetComponent<GearItem>().Deserialize(Copy);
+                    //        newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+                    //        Narrative = newGear.GetComponent<NarrativeCollectibleItem>();
+                    //        __instance.ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
+                    //    }
+                    //}
 
                     if (DuppableGearItem(GearName) || Narrative != null)
                     {
@@ -1620,28 +1620,28 @@ namespace SkyCoop
                 }
                 if (pickupItem.m_BeenInPlayerInventory == false)
                 {
-                    MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
+                    MelonLogger.Msg("Pickedup " + MyMod.GetGearName(pickupItem));
                     pickupItem.m_BeenInPlayerInventory = true;
                     Vector3 V3 = pickupItem.gameObject.transform.position;
                     int ISNTID = pickupItem.m_InstanceID;
-                    string GearName = pickupItem.m_GearName;
+                    string GearName = MyMod.GetGearName(pickupItem);
                     NarrativeCollectibleItem Narrative = pickupItem.GetComponent<NarrativeCollectibleItem>();
 
-                    if (GearName == "GEAR_Knife")
-                    {
-                        if (Supporters.ConfiguratedBenefits.m_Knife)
-                        {
-                            pickupItem.m_GearName = "GEAR_JeremiahKnife";
-                            string Copy = pickupItem.Serialize();
-                            UnityEngine.Object.Destroy(pickupItem.gameObject);
-                            GameObject reference = MyMod.GetGearItemObject("GEAR_JeremiahKnife");
-                            GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, V3, pickupItem.gameObject.transform.rotation);
-                            newGear.GetComponent<GearItem>().Deserialize(Copy);
-                            newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
-                            Narrative = newGear.GetComponent<NarrativeCollectibleItem>();
-                            __instance.ProcessPickupWithNoInspectScreen(newGear.GetComponent<GearItem>(), true);
-                        }
-                    }
+                    //if (GearName == "GEAR_Knife")
+                    //{
+                    //    if (Supporters.ConfiguratedBenefits.m_Knife)
+                    //    {
+                    //        pickupItem.m_GearName = "GEAR_JeremiahKnife";
+                    //        string Copy = pickupItem.Serialize();
+                    //        UnityEngine.Object.Destroy(pickupItem.gameObject);
+                    //        GameObject reference = MyMod.GetGearItemObject("GEAR_JeremiahKnife");
+                    //        GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, V3, pickupItem.gameObject.transform.rotation);
+                    //        newGear.GetComponent<GearItem>().Deserialize(Copy);
+                    //        newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+                    //        Narrative = newGear.GetComponent<NarrativeCollectibleItem>();
+                    //        __instance.ProcessPickupWithNoInspectScreen(newGear.GetComponent<GearItem>(), true);
+                    //    }
+                    //}
 
                     if (DuppableGearItem(GearName) || Narrative != null)
                     {
@@ -1671,28 +1671,28 @@ namespace SkyCoop
                     GearItem pickupItem = go.GetComponent<GearItem>();
                     if (pickupItem.m_BeenInPlayerInventory == false)
                     {
-                        MelonLogger.Msg("Pickedup " + pickupItem.m_GearName);
+                        MelonLogger.Msg("Pickedup " + MyMod.GetGearName(pickupItem));
                         pickupItem.m_BeenInPlayerInventory = true;
                         Vector3 V3 = pickupItem.gameObject.transform.position;
                         int ISNTID = pickupItem.m_InstanceID;
-                        string GearName = pickupItem.m_GearName;
+                        string GearName = MyMod.GetGearName(pickupItem);
                         NarrativeCollectibleItem Narrative = pickupItem.GetComponent<NarrativeCollectibleItem>();
 
-                        if (GearName == "GEAR_Knife")
-                        {
-                            if (Supporters.ConfiguratedBenefits.m_Knife)
-                            {
-                                pickupItem.m_GearName = "GEAR_JeremiahKnife";
-                                string Copy = pickupItem.Serialize();
-                                UnityEngine.Object.Destroy(pickupItem.gameObject);
-                                GameObject reference = MyMod.GetGearItemObject("GEAR_JeremiahKnife");
-                                GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, V3, pickupItem.gameObject.transform.rotation);
-                                newGear.GetComponent<GearItem>().Deserialize(Copy);
-                                newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
-                                Narrative = newGear.GetComponent<NarrativeCollectibleItem>();
-                                __instance.InitializeObjectToPlace(newGear);
-                            }
-                        }
+                        //if (GearName == "GEAR_Knife")
+                        //{
+                        //    if (Supporters.ConfiguratedBenefits.m_Knife)
+                        //    {
+                        //        pickupItem.m_GearName = "GEAR_JeremiahKnife";
+                        //        string Copy = pickupItem.Serialize();
+                        //        UnityEngine.Object.Destroy(pickupItem.gameObject);
+                        //        GameObject reference = MyMod.GetGearItemObject("GEAR_JeremiahKnife");
+                        //        GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, V3, pickupItem.gameObject.transform.rotation);
+                        //        newGear.GetComponent<GearItem>().Deserialize(Copy);
+                        //        newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
+                        //        Narrative = newGear.GetComponent<NarrativeCollectibleItem>();
+                        //        __instance.InitializeObjectToPlace(newGear);
+                        //    }
+                        //}
 
                         if (DuppableGearItem(GearName) || Narrative != null)
                         {
@@ -3882,7 +3882,7 @@ namespace SkyCoop
                         {
                             PlayerName = "Player";
                         }
-                        if (GameManager.GetPlayerManagerComponent().m_ItemInHands && MyMod.IsCustomHandItem(GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName))
+                        if (GameManager.GetPlayerManagerComponent().m_ItemInHands && MyMod.IsCustomHandItem(MyMod.GetGearName(GameManager.GetPlayerManagerComponent().m_ItemInHands)))
                         {
                             __result = PlayerName;
                             return;
@@ -4290,7 +4290,7 @@ namespace SkyCoop
                         string PAction = GetPriorityActionForPlayer(mP.m_ID, mP).m_Action;
                         string ProcessText = GetPriorityActionForPlayer(mP.m_ID, mP).m_ProcessText;
 
-                        if(GameManager.GetPlayerManagerComponent().m_ItemInHands && MyMod.IsCustomHandItem(GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName))
+                        if(GameManager.GetPlayerManagerComponent().m_ItemInHands && MyMod.IsCustomHandItem(MyMod.GetGearName(GameManager.GetPlayerManagerComponent().m_ItemInHands)))
                         {
                             __result = false;
                             return;
@@ -4427,7 +4427,7 @@ namespace SkyCoop
                             GearItem gearItem = __instance.m_Items[index];
                             if (gearItem != null)
                             {
-                                if (gearItem.m_GearName.Contains("MountainTownFarmKey") == true)
+                                if (MyMod.GetGearName(gearItem).Contains("MountainTownFarmKey") == true)
                                 {
                                     return;
                                 }
@@ -5056,7 +5056,7 @@ namespace SkyCoop
                 }
                 if (__instance.gameObject != null && fuel != null)
                 {
-                    MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name + " fuel is " + fuel.m_GearName);
+                    MelonLogger.Msg("[Fire][AddFuel] " + __instance.gameObject.name + " fuel is " + MyMod.GetGearName(fuel));
                 }
                 else if (__instance.gameObject != null && fuel == null)
                 {
@@ -5075,8 +5075,8 @@ namespace SkyCoop
                 }
                 if (__instance.m_StartedByPlayer == true)
                 {
-                    MelonLogger.Msg("Added fuel to fire " + fuel.m_GearName);
-                    MyMod.SendMyFire(__instance, fuel.m_GearName);
+                    MelonLogger.Msg("Added fuel to fire " + MyMod.GetGearName(fuel));
+                    MyMod.SendMyFire(__instance, MyMod.GetGearName(fuel));
                 }
             }
         }
@@ -6933,7 +6933,7 @@ namespace SkyCoop
                     {
                         if(GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
                         {
-                            if(GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName == gi.m_GearName)
+                            if(MyMod.GetGearName(GameManager.GetPlayerManagerComponent().m_ItemInHands) == MyMod.GetGearName(gi))
                             {
                                 __result = false;
                                 return false;
@@ -7220,7 +7220,10 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if (!MyMod.VanilaRadio && gi.m_GearName == "GEAR_HandheldShortwave")
+
+                
+
+                if (!MyMod.VanilaRadio && MyMod.GetGearName(gi) == "GEAR_HandheldShortwave")
                 {
                     __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__HandheldShortwave");
                 }

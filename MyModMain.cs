@@ -306,6 +306,24 @@ namespace SkyCoop
             }
         }
 
+        public static string GetGearName(GearItem gi)
+        {
+            string name = gi.name;
+            string r = name;
+            if (name.Contains("(Clone)"))
+            {
+                int L = name.Length - 7;
+                r = name.Remove(L, 7);
+            }
+            if (name.Contains(" "))
+            {
+                char sperator = Convert.ToChar(" ");
+                string[] slices = name.Split(sperator);
+                r = slices[0];
+            }
+            return r;
+        }
+
 
         public static void AddSlicedJsonData(DataStr.SlicedJsonData jData)
         {
