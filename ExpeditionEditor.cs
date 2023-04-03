@@ -785,7 +785,7 @@ namespace SkyCoop
         public static void PlaceVisualizedObject()
         {
             string GUID = m_LastObjectGUID;
-            GameObject Object = ObjectGuidManager.Lookup(GUID);
+            GameObject Object = PdidTable.GetGameObject(GUID);
             if(Object)
             {
                 GameManager.GetPlayerManagerComponent().StartPlaceMesh(Object, PlaceMeshFlags.None);

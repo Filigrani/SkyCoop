@@ -334,7 +334,7 @@ namespace SkyCoop
                     {
                         if (m_RegionGUID != "")
                         {
-                            GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+                            GameObject RegionSpawnObj = PdidTable.GetGameObject(m_RegionGUID);
 
                             if (RegionSpawnObj != null)
                             {
@@ -349,7 +349,7 @@ namespace SkyCoop
                 if (!m_AddedToRegion && m_RegionGUID != "")
                 {
                     m_AddedToRegion = true;
-                    GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+                    GameObject RegionSpawnObj = PdidTable.GetGameObject(m_RegionGUID);
                     if (RegionSpawnObj)
                     {
                         if (m_Animal.GetComponent<ObjectGuid>() != null && RegionSpawnObj.GetComponent<SpawnRegionSimple>() != null)
@@ -618,7 +618,7 @@ namespace SkyCoop
                     }
                     if (m_RegionGUID != "")
                     {
-                        GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+                        GameObject RegionSpawnObj = PdidTable.GetGameObject(m_RegionGUID);
 
                         if (RegionSpawnObj != null)
                         {
@@ -632,7 +632,7 @@ namespace SkyCoop
                 if (!m_AddedToRegion && m_RegionGUID != "")
                 {
                     m_AddedToRegion = true;
-                    GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+                    GameObject RegionSpawnObj = PdidTable.GetGameObject(m_RegionGUID);
 
                     if (m_Animal.GetComponent<ObjectGuid>() != null)
                     {
@@ -1063,7 +1063,7 @@ namespace SkyCoop
                     {
                         if (m_Animal.GetComponent<ObjectGuid>())
                         {
-                            GameObject SpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+                            GameObject SpawnObj = PdidTable.GetGameObject(m_RegionGUID);
                             if (SpawnObj)
                             {
                                 if (SpawnObj.GetComponent<SpawnRegionSimple>())
@@ -1085,7 +1085,7 @@ namespace SkyCoop
                     AnimalCorplesList.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
                     if (m_RegionGUID != "")
                     {
-                        GameObject SpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
+                        GameObject SpawnObj = PdidTable.GetGameObject(m_RegionGUID);
                         if (SpawnObj)
                         {
                             if (SpawnObj.GetComponent<SpawnRegionSimple>())

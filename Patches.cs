@@ -5968,7 +5968,7 @@ namespace SkyCoop
 
         public static void Play3dAudioOnAnimal(string GUID, int soundID)
         {
-            GameObject Animal = ObjectGuidManager.Lookup(GUID);
+            GameObject Animal = PdidTable.GetGameObject(GUID);
             if (Animal)
             {
                 GameAudioManager.Play3DSound((uint)soundID, Animal);
@@ -5976,7 +5976,7 @@ namespace SkyCoop
         }
         public static void Play3dAudioOnAnimal(string GUID, string soundID)
         {
-            GameObject Animal = ObjectGuidManager.Lookup(GUID);
+            GameObject Animal = PdidTable.GetGameObject(GUID);
             if (Animal)
             {
                 GameAudioManager.Play3DSound(soundID, Animal);

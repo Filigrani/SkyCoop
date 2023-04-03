@@ -2379,7 +2379,7 @@ namespace SkyCoop
             Vector3 V3;
             string LevelGUID;
 #if (!DEDICATED)
-            GameObject Animal = ObjectGuidManager.Lookup(GUID);
+            GameObject Animal = PdidTable.GetGameObject(GUID);
             if (MyMod.AnimalsController == true)
             {
                 if (Animal) // If I am is animal controller and I have this rabbit, this means I can revive it.

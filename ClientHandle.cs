@@ -984,7 +984,7 @@ namespace SkyCoop
         public static void MARKSEARCHEDCONTAINERS(Packet _packet)
         {
             string _GUID = _packet.ReadString();
-            GameObject box = ObjectGuidManager.Lookup(_GUID);
+            GameObject box = PdidTable.GetGameObject(_GUID);
             if (box != null)
             {
                 GameObject reference = MyMod.GetGearItemObject("GEAR_SoftWood");
@@ -1210,7 +1210,7 @@ namespace SkyCoop
         {
             string GUID = _packet.ReadString();
             bool Result = _packet.ReadBool();
-            GameObject obj = ObjectGuidManager.Lookup(GUID);
+            GameObject obj = PdidTable.GetGameObject(GUID);
             if (obj != null && obj.GetComponent<Comps.SpawnRegionSimple>())
             {
                 obj.GetComponent<Comps.SpawnRegionSimple>().SetBanned(Result);

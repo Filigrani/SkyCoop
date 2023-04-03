@@ -350,6 +350,7 @@ namespace SkyCoop
             {
                 __instance.m_ObjectGuid = __instance.gameObject.AddComponent<ObjectGuid>();
                 __instance.m_ObjectGuid.Generate();
+
                 //MelonLogger.Msg("Added GUID for Book " + __instance.m_GearName + " GUID " + __instance.m_ObjectGuid.Get());
             } else {
                 string Key = __instance.m_ObjectGuid.Get();
@@ -1016,7 +1017,7 @@ namespace SkyCoop
 
         public static Container MakeDeathCreate(DataStr.DeathContainerData data)
         {
-            if (ObjectGuidManager.Lookup(data.m_Guid) != null)
+            if (PdidTable.GetGameObject(data.m_Guid) != null)
             {
                 MelonLogger.Msg("Death container  " + data.m_Guid + " already exist");
                 return null;
@@ -1089,7 +1090,7 @@ namespace SkyCoop
 
         public static void RemoveDeathContainer(string GUID, string Scene)
         {
-            GameObject Box = ObjectGuidManager.Lookup(GUID);
+            GameObject Box = PdidTable.GetGameObject(GUID);
             if (Box == null)
             {
                 MelonLogger.Msg("Death container " + GUID + " not exist, can't be deleted");
@@ -1306,7 +1307,7 @@ namespace SkyCoop
 
         public static string GetBreakDownSound(DataStr.BrokenFurnitureSync FindData)
         {
-            GameObject furn = ObjectGuidManager.Lookup(FindData.m_Guid);
+            GameObject furn = PdidTable.GetGameObject(FindData.m_Guid);
             if (furn != null )
             {
                 if (furn.GetComponent<BreakDown>())
@@ -1333,7 +1334,7 @@ namespace SkyCoop
         public static void RemoveBrokenFurniture(string GUID, string ParentGUID, bool ReBake = true)
         {
             MelonLogger.Msg("Going to remove furn "+ GUID+ ParentGUID);
-            GameObject furn = ObjectGuidManager.Lookup(GUID);
+            GameObject furn = PdidTable.GetGameObject(GUID);
             if (furn != null)
             {
                 if (ParentGUID != "")
@@ -1353,7 +1354,7 @@ namespace SkyCoop
         public static void RepairBrokenFurniture(string GUID, string ParentGUID)
         {
             MelonLogger.Msg("Going to repair furn " + GUID + ParentGUID);
-            GameObject furn = ObjectGuidManager.Lookup(GUID);
+            GameObject furn = PdidTable.GetGameObject(GUID);
             if (furn != null)
             {
                 if (ParentGUID != "")
@@ -1415,9 +1416,10 @@ namespace SkyCoop
         public static void UpdateDeployedRopes()
         {
             //MelonLogger.Msg("UpdateDeployedRopes called");
-            for (int i = 0; i < RopeAnchorPoint.m_RopeAnchorPoints.Count; i++)
+
+            for (int i = 0; i < RopeAnchorPoint.s_RopeAnchorPoints.Count; i++)
             {
-                RopeAnchorPoint rope = RopeAnchorPoint.m_RopeAnchorPoints[i];
+                RopeAnchorPoint rope = RopeAnchorPoint.s_RopeAnchorPoints[i];
                 DataStr.ClimbingRopeSync FindData = new DataStr.ClimbingRopeSync();
                 FindData.m_LevelID = levelid;
                 FindData.m_LevelGUID = level_guid;
@@ -1807,7 +1809,7 @@ namespace SkyCoop
 
         public static void AddHarvastedPlant(string harvGUID)
         {
-            GameObject obj = ObjectGuidManager.Lookup(harvGUID);
+            GameObject obj = PdidTable.GetGameObject(harvGUID);
 
             if (obj)
             {
@@ -1828,7 +1830,7 @@ namespace SkyCoop
 
         public static void RemoveHarvastedPlant(string harvGUID)
         {
-            GameObject obj = ObjectGuidManager.Lookup(harvGUID);
+            GameObject obj = PdidTable.GetGameObject(harvGUID);
 
             if (obj)
             {
@@ -1894,7 +1896,7 @@ namespace SkyCoop
 
         public static void RemoveLootFromContainer(string GUID, int State = 0)
         {
-            GameObject obj = ObjectGuidManager.Lookup(GUID);
+            GameObject obj = PdidTable.GetGameObject(GUID);
             if (obj)
             {
                 RemoveLootFromContainer(obj, State);
@@ -2039,10 +2041,10 @@ namespace SkyCoop
                 UnityEngine.Object.Destroy(animal.GetComponent<CharacterController>());
             }
             //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
-            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
-            {
-                UnityEngine.Object.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
-            }
+            //if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
+            //{
+            //    UnityEngine.Object.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
+            //}
             //MelonLogger.Msg("Blackboard DA BECAUSE DA");
             if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
             {
@@ -2123,7 +2125,12 @@ namespace SkyCoop
             PlayerInteractionWith = mP;
             PreviousControlModeBeforeAction = GameManager.GetPlayerManagerComponent().GetControlMode();
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-            InterfaceManager.m_Panel_HUD.StartItemProgressBar(mP.m_InteractTimer, actionString, (GearItem)null, new System.Action(EmptyFn));
+            Panel_HUD HUD;
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            HUD.StartItemProgressBar(mP.m_InteractTimer, actionString, null, new System.Action(EmptyFn));
 
             if (actionType != "Revive")
             {
@@ -2160,7 +2167,12 @@ namespace SkyCoop
             mP.m_IsBeingInteractedWith = false;
             mP.m_InteractTimer = 0.0f;
             PlayerInteractionWith = null;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            Panel_HUD HUD;
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            HUD.CancelItemProgressBar();
         }
 
         public static void LongActionCanceled()
@@ -2173,13 +2185,20 @@ namespace SkyCoop
             InteractionInprocess = false;
             InteractTimer = 0.0f;
             InteractHold = false;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            Panel_HUD HUD;
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            Panel_Inventory_Examine Exa;
+            if (!InterfaceManager.TryGetPanel<Panel_Inventory_Examine>(out Exa))
+            {
+                return;
+            }
+            HUD.CancelItemProgressBar();
             if (InteractionType == "Excision" || InteractionType == "Lockpick" || InteractionType == "Locksmith0" || InteractionType == "Locksmith1")
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine)
-                {
-                    InterfaceManager.m_Panel_Inventory_Examine.StopProgressBarAudio();
-                }
+                Exa.StopProgressBarAudio();
             }
         }
         public static void LongActionFinished(GameObject obj, string ActionType)
@@ -2198,10 +2217,10 @@ namespace SkyCoop
                 if (SwearOnLockpickingDone)
                 {
                     GameAudioManager.PlaySound("Play_SndInvCrowbarPrybar", InterfaceManager.GetSoundEmitter());
-                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIREFAIL", Voice.Priority.Critical);
+                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIREFAIL", Il2CppVoice.Priority.Critical);
                 } else {
                     GameAudioManager.PlaySound("PLAY_SNDMECHSAFETUMBLERFALL", InterfaceManager.GetSoundEmitter());
-                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIRESUCCESS", Voice.Priority.Critical);
+                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIRESUCCESS", Il2CppVoice.Priority.Critical);
                 }
             }else if(ActionType == "Locksmith0" || ActionType == "Locksmith1")
             {
@@ -2402,6 +2421,11 @@ namespace SkyCoop
 
         public static void AddLocalizedSprain(AfflictionBodyArea location, string causeID)
         {
+            Panel_HUD HUD;
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
             bool Legs = false;
             if (location == AfflictionBodyArea.LegLeft)
             {
@@ -2431,8 +2455,8 @@ namespace SkyCoop
                 Spr.m_ElapsedRestList.Add(0.0f);
                 Spr.m_SecondsSinceLastPainAudio = 0.0f;
                 Spr.DoStumbleEffects();
-                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedAnkle", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.m_Panel_HUD.m_DamageEventDisplaySeconds, InterfaceManager.m_Panel_HUD.m_DamageEventFadeOutSeconds);
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleVO, Voice.Priority.Critical);
+                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedAnkle", InterfaceManager.m_FirstAidRedColor, true, HUD.m_DamageEventDisplaySeconds, HUD.m_DamageEventFadeOutSeconds);
+                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleVO, Il2CppVoice.Priority.Critical);
                 GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFX, Spr.gameObject);
 
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedAnkle, causeID);
@@ -2446,8 +2470,11 @@ namespace SkyCoop
                 Spr.m_DurationHoursList.Add(UnityEngine.Random.Range(Spr.m_DurationHoursMin, Spr.m_DurationHoursMax));
                 Spr.m_ElapsedRestList.Add(0.0f);
                 Spr.DoStumbleEffects();
-                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedWrist", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.m_Panel_HUD.m_DamageEventDisplaySeconds, InterfaceManager.m_Panel_HUD.m_DamageEventFadeOutSeconds);
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedWristVO, Voice.Priority.Critical);
+                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedWrist", InterfaceManager.m_FirstAidRedColor, true, HUD.m_DamageEventDisplaySeconds, HUD.m_DamageEventFadeOutSeconds);
+                
+                
+                
+                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedWristVO, Il2CppVoice.Priority.Critical);
                 GameAudioManager.PlaySound(Spr.m_SprainedWristSFX, Spr.gameObject);
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedWrist, causeID);
                 StatsManager.IncrementValue(StatID.Sprains_Wrist);
@@ -2547,7 +2574,7 @@ namespace SkyCoop
                 {
                     if (BodyArea == AfflictionBodyArea.Head)
                     {
-                        GameManager.GetHeadacheComponent().ApplyHeadache(0.5f, 5, 0.3f);
+                        GameManager.GetHeadacheComponent().ApplyHeadache(HeadacheCause.Unknown);
                     }
                     else if (BodyArea == AfflictionBodyArea.ArmRight
                         || BodyArea == AfflictionBodyArea.ArmLeft
@@ -2598,7 +2625,7 @@ namespace SkyCoop
                 }
             }
 
-            GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Voice.Priority.Critical, PlayerVoice.Options.None);
+            GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Il2CppVoice.Priority.Critical, PlayerVoice.Options.None);
 
             Transform V3 = GameManager.GetPlayerTransform();
             GameObject Player = GameManager.GetPlayerObject();
@@ -2681,7 +2708,7 @@ namespace SkyCoop
                 {
                     if (spR.PositionValidForSpawn(zero) == true)
                     {
-                        newAnimal = spR.InstantiateSpawnInternal(WildlifeMode.Normal, zero, identity);
+                        newAnimal = spR.InstantiateSpawnInternal(spRobj.m_SpawnablePrefab, WildlifeMode.Normal, zero, identity);
                     }
                 }
                 if (newAnimal != null)
@@ -2791,7 +2818,7 @@ namespace SkyCoop
                         DFL.m_OldPossition = obj.transform.position;
                         DFL.m_OldRotation = obj.transform.rotation;
 
-                        GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(obj.GetComponent<GearItem>());
+                        GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(obj.GetComponent<GearItem>(), true, true);
                     }
                 }
             } else if (result == 2)
@@ -2812,7 +2839,7 @@ namespace SkyCoop
                     }
                     if (obj.GetComponent<WildlifeItem>())
                     {
-                        obj.GetComponent<WildlifeItem>().ProcessInteraction();
+                        obj.GetComponent<WildlifeItem>().PickupWildlifeItem();
                     }
                 }
             }
@@ -2820,7 +2847,7 @@ namespace SkyCoop
 
         public static void OnHitRabbit(string GUID)
         {
-            GameObject Animal = ObjectGuidManager.Lookup(GUID);
+            GameObject Animal = PdidTable.GetGameObject(GUID);
             if (Animal)
             {
                 if (Animal.GetComponent<BaseAi>())
@@ -2917,7 +2944,7 @@ namespace SkyCoop
 
         public static void SpawnQuartedMess(string GUID)
         {
-            GameObject AnimalCorpse = ObjectGuidManager.Lookup(GUID);
+            GameObject AnimalCorpse = PdidTable.GetGameObject(GUID);
             if (AnimalCorpse)
             {
                 if (AnimalCorpse.GetComponent<Comps.AnimalCorpseObject>() != null && AnimalCorpse.GetComponent<BodyHarvest>() != null)
@@ -2949,7 +2976,7 @@ namespace SkyCoop
                 return;
             }
             Panel_BodyHarvest Harv;
-            if (!InterfaceManager.TryGetPanel<Panel_BodyHarvest>(out HUD))
+            if (!InterfaceManager.TryGetPanel<Panel_BodyHarvest>(out Harv))
             {
                 return;
             }
@@ -3308,7 +3335,7 @@ namespace SkyCoop
             {
                 foreach (var item in AnimalsInRegions)
                 {
-                    GameObject Region = ObjectGuidManager.Lookup(item.Key);
+                    GameObject Region = PdidTable.GetGameObject(item.Key);
                     if (Region && Region.GetComponent<Comps.SpawnRegionSimple>() != null)
                     {
                         Region.GetComponent<Comps.SpawnRegionSimple>().m_Spawned = item.Value;
@@ -3414,7 +3441,9 @@ namespace SkyCoop
 
         public static void ExitHarvesting()
         {
-            Panel_BodyHarvest PBH = InterfaceManager.m_Panel_BodyHarvest;
+            Panel_BodyHarvest PBH;
+
+            if(!InterfaceManager.TryGetPanel<Panel_BodyHarvest>(out PBH))
 
             if (PBH.m_CurrentHarvestAction != Panel_BodyHarvest.HarvestAction.None)
             {
@@ -3597,7 +3626,7 @@ namespace SkyCoop
 
         public static void DeleteAnimal(string _guid)
         {
-            GameObject animal = ObjectGuidManager.Lookup(_guid);
+            GameObject animal = PdidTable.GetGameObject(_guid);
 
             if (animal != null)
             {
@@ -3608,7 +3637,7 @@ namespace SkyCoop
         public static void DoAnimalDamage(string guid, float damage)
         {
             MelonLogger.Msg("Other player damage animal " + guid + " on " + damage);
-            GameObject animal = ObjectGuidManager.Lookup(guid);
+            GameObject animal = PdidTable.GetGameObject(guid);
             if (animal)
             {
                 BaseAi bai = animal.GetComponent<BaseAi>();
@@ -3663,7 +3692,7 @@ namespace SkyCoop
             {
                 return;
             }
-            GameObject animal = ObjectGuidManager.Lookup(dat.m_GUID);
+            GameObject animal = PdidTable.GetGameObject(dat.m_GUID);
             if (animal)
             {
                 if (animal.GetComponent<Comps.AnimalActor>() != null)
@@ -3716,7 +3745,7 @@ namespace SkyCoop
             string _guid = obj.m_Guid;
             int trigg = obj.m_Trigger;
 
-            GameObject animal = ObjectGuidManager.Lookup(_guid);
+            GameObject animal = PdidTable.GetGameObject(_guid);
 
             if (animal != null)
             {
@@ -5070,12 +5099,12 @@ namespace SkyCoop
                 //MelonLogger.Msg("[CharacterController]-> off");
             }
             //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
-            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
-            {
-                //UnityEngine.Component.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
-                animal.GetComponent<NodeCanvas.Framework.Blackboard>().enabled = active;
-                //MelonLogger.Msg("[NodeCanvas.Framework.Blackboard]-> off");
-            }
+            //if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
+            //{
+            //    //UnityEngine.Component.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
+            //    //animal.GetComponent<NodeCanvas.Framework.Blackboard>().enabled = active;
+            //    //MelonLogger.Msg("[NodeCanvas.Framework.Blackboard]-> off");
+            //}
             //MelonLogger.Msg("Blackboard DA BECAUSE DA");
             if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
             {
@@ -5141,7 +5170,7 @@ namespace SkyCoop
                 MelonLogger.Msg(Red, "Can't create animal body prefab name " + prefab);
                 return;
             }
-            GameObject oldObj = ObjectGuidManager.Lookup(GUID);
+            GameObject oldObj = PdidTable.GetGameObject(GUID);
             if (oldObj)
             {
                 if (oldObj.GetComponent<Comps.AnimalCorpseObject>() != null)
@@ -5254,10 +5283,15 @@ namespace SkyCoop
 
         public static void SelectNameForHostSaveFile()
         {
+            Panel_Confirmation Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
+            {
+                return;
+            }
             if (m_Panel_MainMenu != null)
             {
                 m_Panel_MainMenu.ShowNameSaveSlotPopup();
-                InterfaceManager.m_Panel_Confirmation.m_CurrentGroup.m_InputField.SetText(DateTime.Now.ToString());
+                Con.m_CurrentGroup.m_InputField.SetText(DateTime.Now.ToString());
             }
         }
 
@@ -5396,7 +5430,6 @@ namespace SkyCoop
             MelonLogger.Msg("Prepare ui for creating save slot");
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(false);
-            InterfaceManager.TrySetPanelEnabled<Panel_Story>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(false);
 
             if (ServerConfig.m_PlayersSpawnType == 0) // Same as host.
@@ -5559,7 +5592,12 @@ namespace SkyCoop
             } else {
                 MelonLogger.Msg("m_PlayerManager is null");
             }
-            InterfaceManager.m_Panel_Log.ExitInterface();
+            Panel_Log Log;
+            if (!InterfaceManager.TryGetPanel<Panel_Log>(out Log))
+            {
+                return;
+            }
+            Log.ExitInterface();
             GameManager.GetInventoryComponent().DestroyAllGear();
             GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
 
@@ -5775,9 +5813,14 @@ namespace SkyCoop
 
         public static void DoWaitForConnect(bool Steam = false)
         {
+            Panel_Confirmation Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
+            {
+                return;
+            }
             if (HasWaitForConnect == false)
             {
-                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                if (m_InterfaceManager != null)
                 {
                     if (m_Panel_MainMenu != null)
                     {
@@ -5801,7 +5844,7 @@ namespace SkyCoop
                     }
 
 
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, "Connecting...", Txt, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+                    Con.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, "Connecting...", Txt, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
                     HasWaitForConnect = true;
                 }
             }
@@ -5907,13 +5950,19 @@ namespace SkyCoop
             ResendAttempts++;
             RemovePleaseWait();
 
+            Panel_Confirmation Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
+            {
+                return;
+            }
+
             if (ResendAttempts >= 11)
             {
                 QuitWithoutSaving = true;
                 GameManager.CancelPendingSave();
-                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                if (m_InterfaceManager != null)
                 {
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECT TIMEOUT", "\n" + "Host did not responced after 10 Attempts, you can safly exit the game.\nGame won't be saves to keep save valid for host on reconnection!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                    Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECT TIMEOUT", "\n" + "Host did not responced after 10 Attempts, you can safly exit the game.\nGame won't be saves to keep save valid for host on reconnection!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                 }
                 return;
             }
@@ -5946,36 +5995,43 @@ namespace SkyCoop
 
         public static void DoPleaseWait(string title, string text)
         {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            Panel_Confirmation Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n" + text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+                return;
             }
+            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n" + text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
         }
         public static void RemovePleaseWait()
         {
-            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            Panel_Confirmation Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
             {
-                InterfaceManager.m_Panel_Confirmation.OnCancel();
+                return;
             }
+            Con.OnCancel();
         }
 
         public static void RemoveWaitForConnect()
         {
-            HasWaitForConnect = false;
-            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            Panel_Confirmation Con;
+            if(!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
             {
-                InterfaceManager.m_Panel_Confirmation.OnCancel();
+                return;
             }
+            Con.OnCancel();
         }
         public static void DoKickMessage(string txt)
         {
-            RemoveWaitForConnect();
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            Panel_Confirmation Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Confirmation>(out Con))
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                return;
             }
+            RemoveWaitForConnect();
+            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
 
-            if(level_name != "MainMenu")
+            if (level_name != "MainMenu")
             {
                 QuitWithoutSaving = true;
                 GameManager.CancelPendingSave();
@@ -6258,23 +6314,25 @@ namespace SkyCoop
 
         public static void DedicatedServerUpdate()
         {
-            if(InterfaceManager.m_Panel_Loading != null)
-            {
-                Panel_Loading Panel = InterfaceManager.m_Panel_Loading;
+            Panel_Loading Panel;
 
-                Panel.m_HoldScreenAfterLoad = false;
-                Panel.m_ContinueToGame = true;
-                Panel.m_ShowQuoteAfterLoad = false;
+            if(!InterfaceManager.TryGetPanel<Panel_Loading>(out Panel))
+            {
+                return;
             }
-            
-            
+
+            Panel.m_HoldScreenAfterLoad = false;
+            Panel.m_ContinueToGame = true;
+            Panel.m_ShowQuoteAfterLoad = false;
+
+
             if (GameManager.m_PlayerManager != null)
             {
                 GameManager.m_PlayerManager.m_God = true;
                 GameManager.m_PlayerManager.m_Ghost = true;
                 GameManager.m_PlayerObject.transform.position = new Vector3(0, -300, 0);
                 IsDead = true;
-                GameAudioManager.SetRTPCValue(AK.GAME_PARAMETERS.GLOBALVOLUME, 0 * 100f, (GameObject)null);
+                GameAudioManager.SetRTPCValue(AK.GAME_PARAMETERS.GLOBALVOLUME, 0 * 100f, null);
             }
         }
 
@@ -6625,7 +6683,7 @@ namespace SkyCoop
             newGear.GetComponent<GearItem>().m_BeenInPlayerInventory = true;
             newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Placed);
             newGear.AddComponent<Comps.FakeBedDummy>().m_LinkedFakeObject = obj;
-            GameManager.GetPlayerManagerComponent().ProcessBedInteraction(newGear.GetComponent<GearItem>().m_Bed);
+            GameManager.GetPlayerManagerComponent().UseBedItem(newGear.GetComponent<GearItem>());
         }
 
         public static void PickupDroppedGear(GameObject obj, bool SkipLocksmith = false)
@@ -7107,7 +7165,7 @@ namespace SkyCoop
                     Speach = MakenzyDiagnosis[rnd.Next(MakenzyDiagnosis.Count)];
                 }
             }
-            GameManager.GetPlayerVoiceComponent().Play(Speach, Voice.Priority.Critical);
+            GameManager.GetPlayerVoiceComponent().Play(Speach, Il2CppVoice.Priority.Critical);
         }
 
         public static int TimeToDry(string gearName)
@@ -7654,6 +7712,18 @@ namespace SkyCoop
 
         public static void FinishOpeningFakeContainer(string CompressedData)
         {
+            Panel_HUD HUD;
+            Panel_Container Con;
+
+            if(!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            if (!InterfaceManager.TryGetPanel<Panel_Container>(out Con))
+            {
+                return;
+            }
+
             MelonLogger.Msg("Finish Opening Fake Container");
             string Data = "";
             if (CompressedData != "")
@@ -7663,8 +7733,8 @@ namespace SkyCoop
 
             Container box = GoingToOpenContinaer;
             GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
-            GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched = null;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            GameManager.GetPlayerManagerComponent().m_Container = null;
+            HUD.CancelItemProgressBar();
             box.m_SearchInProgress = false;
             box.m_OpenInProgress = false;
             box.m_Inspected = true;
@@ -7681,8 +7751,8 @@ namespace SkyCoop
             MelonLogger.Msg("All done, removing hint");
             //box.m_CapacityKG = 1000f;
             RemovePleaseWait();
-            InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
-            InterfaceManager.m_Panel_Container.Enable(true);
+            Con.SetContainer(box, box.m_LocalizedDisplayName.Text());
+            Con.Enable(true);
             box.m_Inspected = true;
             box.m_StartInspected = true;
             GoingToOpenContinaer = null;
@@ -7715,9 +7785,21 @@ namespace SkyCoop
                 Data = Shared.DecompressString(CompressedData);
             }
 
+            Panel_HUD HUD;
+            Panel_Container Con;
+
+            if (!InterfaceManager.TryGetPanel<Panel_HUD>(out HUD))
+            {
+                return;
+            }
+            if (!InterfaceManager.TryGetPanel<Panel_Container>(out Con))
+            {
+                return;
+            }
+
             GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
-            GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched = null;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            GameManager.GetPlayerManagerComponent().m_Container = null;
+            HUD.CancelItemProgressBar();
             box.m_SearchInProgress = false;
             box.m_OpenInProgress = false;
             box.m_Inspected = true;
@@ -7733,8 +7815,8 @@ namespace SkyCoop
             box.m_Inspected = true;
             box.m_StartInspected = true;
             //box.m_CapacityKG = 1000f;
-            InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
-            InterfaceManager.m_Panel_Container.Enable(true);
+            Con.SetContainer(box, box.m_LocalizedDisplayName.Text());
+            Con.Enable(true);
         }
 
         public static void CloseFakeContainer(Container box)
@@ -7848,7 +7930,13 @@ namespace SkyCoop
                 }
             }
             GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
-            InterfaceManager.m_Panel_Container.Enable(false);
+
+            Panel_Container Con;
+            if (!InterfaceManager.TryGetPanel<Panel_Container>(out Con))
+            {
+                return;
+            }
+            Con.Enable(false);
         }
 
         public static void InitAudio()
@@ -7890,10 +7978,18 @@ namespace SkyCoop
 
         public static void BuildSleepScreen()
         {
+            Panel_Rest Reset;
+
+            if(!InterfaceManager.TryGetPanel<Panel_Rest>(out Reset))
+            {
+                return;
+            }
+            
+            
             if (SleepingButtons == null)
             {
-                SleepingButtons = InterfaceManager.m_Panel_Rest.gameObject.transform.GetChild(3).gameObject;
-                WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.m_Panel_Rest.gameObject.transform);
+                SleepingButtons = Reset.gameObject.transform.GetChild(3).gameObject;
+                WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, Reset.gameObject.transform);
                 UnityEngine.Object.Destroy(WaitForSleepLable.GetComponent<UILocalize>());
                 WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP";
                 WaitForSleepLable.SetActive(false);
@@ -7901,7 +7997,7 @@ namespace SkyCoop
 
             if (new_button == null)
             {
-                new_button = UnityEngine.Object.Instantiate(InterfaceManager.m_Panel_Rest.m_SleepButton, InterfaceManager.m_Panel_Rest.m_SleepButton.transform.parent);
+                new_button = UnityEngine.Object.Instantiate(Reset.m_SleepButton, Reset.m_SleepButton.transform.parent);
 
                 if (new_button2 == null)
                 {
@@ -12003,9 +12099,21 @@ namespace SkyCoop
 
         public static void ExpeditionUI(string ExpeditionName, string desc, int TimeLeft)
         {
-            Panel_Log Log = InterfaceManager.m_Panel_Log;
-            Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
-            Panel_Actions Act = InterfaceManager.m_Panel_Actions;
+            Panel_Log Log;
+            Panel_ActionsRadial Rad;
+            Panel_Actions Act;
+            if (!InterfaceManager.TryGetPanel<Panel_Log>(out Log))
+            {
+                return;
+            }
+            if (!InterfaceManager.TryGetPanel<Panel_ActionsRadial>(out Rad))
+            {
+                return;
+            }
+            if (!InterfaceManager.TryGetPanel<Panel_Actions>(out Act))
+            {
+                return;
+            }
             string Time = GetFormatedTimeForExpedition(TimeLeft);
 
             desc = ExpeditionName + "\n" + desc;
@@ -12085,9 +12193,22 @@ namespace SkyCoop
                 DisplayIndex = CalculateHowManyTaskDone();
             }
 
-            Panel_Log Log = InterfaceManager.m_Panel_Log;
-            Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
-            Panel_Actions Act = InterfaceManager.m_Panel_Actions;
+            
+            Panel_ActionsRadial Rad;
+            Panel_Actions Act;
+            Panel_Log Log;
+            if (!InterfaceManager.TryGetPanel<Panel_Log>(out Log))
+            {
+                return;
+            }
+            if (!InterfaceManager.TryGetPanel<Panel_ActionsRadial>(out Rad))
+            {
+                return;
+            }
+            if (!InterfaceManager.TryGetPanel<Panel_Actions>(out Act))
+            {
+                return;
+            }
             if (Rad)
             {
                 Rad.m_MissionObjectiveLabel.text = Cdesc;
@@ -12531,32 +12652,33 @@ namespace SkyCoop
 
         public static void ShowBlankworkingPicker(GameObject objectInteractedWith)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
-            if (Panel)
+            Panel_ActionPicker Panel;
+            if (!InterfaceManager.TryGetPanel<Panel_ActionPicker>(out Panel))
             {
-                Panel.Enable(true);
-                Panel.m_ActionPickerItemDataList.Clear();
-                Panel.m_ObjectInteractedWith = objectInteractedWith;
-                PendingRegisterKey = null;
-                Action act = new Action(() => PickupBlank(objectInteractedWith));
-                Action Saw = new Action(() => LocksmithWork(objectInteractedWith, 0));
-                Action Grind = new Action(() => LocksmithWork(objectInteractedWith, 1));
-
-                if (objectInteractedWith.name.ToLower().StartsWith("gear_scdoorkeytemp") || objectInteractedWith.name.ToLower().StartsWith("gear_scdoorkeyleadtemp"))
-                {
-                    Grind = new Action(() => BeginRegisterKey(objectInteractedWith));
-                }
-
-
-                //Action Flattening = new Action(() => LocksmithWork(objectInteractedWith, 2));
-
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_BearSpear", "Sawing", Saw));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_injury_majorBruising", "Grinding", Grind));
-                //Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_crafting", "Flattening", Flattening));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_climb", "Pickup", act));
-
-                Panel.EnableWithCurrentList();
+                return;
             }
+            Panel.Enable(true);
+            Panel.m_ActionPickerItemDataList.Clear();
+            Panel.m_ObjectInteractedWith = objectInteractedWith;
+            PendingRegisterKey = null;
+            Action act = new Action(() => PickupBlank(objectInteractedWith));
+            Action Saw = new Action(() => LocksmithWork(objectInteractedWith, 0));
+            Action Grind = new Action(() => LocksmithWork(objectInteractedWith, 1));
+
+            if (objectInteractedWith.name.ToLower().StartsWith("gear_scdoorkeytemp") || objectInteractedWith.name.ToLower().StartsWith("gear_scdoorkeyleadtemp"))
+            {
+                Grind = new Action(() => BeginRegisterKey(objectInteractedWith));
+            }
+
+
+            //Action Flattening = new Action(() => LocksmithWork(objectInteractedWith, 2));
+
+            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_BearSpear", "Sawing", Saw));
+            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_injury_majorBruising", "Grinding", Grind));
+            //Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_crafting", "Flattening", Flattening));
+            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "Pickup", act));
+
+            Panel.EnableWithCurrentList();
         }
 
         public static void LetThemEnter(int ClientID, string Scene)
@@ -12624,29 +12746,35 @@ namespace SkyCoop
             GameManager.GetPlayerAnimationComponent().Trigger_Generic_Stow();
             Coal.m_SurveyAudioID = GameAudioManager.PlaySound(Coal.m_SurveyLoopAudio, InterfaceManager.GetSoundEmitter());
             //InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "NOTE MESSAGE", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Done", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
-            InterfaceManager.m_Panel_Log.EnableStatsView();
-            InterfaceManager.m_Panel_Log.OnEnterGeneralNotes();
-            InterfaceManager.m_Panel_Log.m_SectionNav.SetActive(false);
-            InterfaceManager.m_Panel_Log.m_TabsNotesObject.SetActive(false);
-            InterfaceManager.m_Panel_Log.m_NotesTextField.SetText("");
+            Panel_Log Log;
+            if (!InterfaceManager.TryGetPanel<Panel_Log>(out Log))
+            {
+                return;
+            }
+            Log.EnableStatsView();
+            Log.OnEnterGeneralNotes();
+            Log.m_SectionNav.SetActive(false);
+            Log.m_TabsNotesObject.SetActive(false);
+            Log.m_NotesTextField.SetText("");
         }
 
         public static void ShowCharCoalPicker(GameObject objectInteractedWith, CharcoalItem Coal)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
-            if (Panel)
+            Panel_ActionPicker Panel;
+            if (!InterfaceManager.TryGetPanel<Panel_ActionPicker>(out Panel))
             {
-                Panel.Enable(true);
-                Panel.m_ActionPickerItemDataList.Clear();
-
-                Action Map = new Action(() => CharCoalDraw(Coal));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_map", "Survey local area", Map));
-                Action Note = new Action(() => WriteNote(Coal));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_log_Notes", "Write a note", Note));
-
-                Panel.m_ObjectInteractedWith = objectInteractedWith;
-                Panel.EnableWithCurrentList();
+                return;
             }
+            Panel.Enable(true);
+            Panel.m_ActionPickerItemDataList.Clear();
+
+            Action Map = new Action(() => CharCoalDraw(Coal));
+            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_map", "Survey local area", Map));
+            Action Note = new Action(() => WriteNote(Coal));
+            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_log_Notes", "Write a note", Note));
+
+            Panel.m_ObjectInteractedWith = objectInteractedWith;
+            Panel.EnableWithCurrentList();
         }
 
         public static void ShowKnockersPicker(GameObject objectInteractedWith, List<int> Knockers)
@@ -12656,28 +12784,33 @@ namespace SkyCoop
                 HUDMessage.AddMessage("No body knocking.");
                 return;
             }
-            
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
-            if (Panel)
+
+            Panel_ActionPicker Panel;
+            if (!InterfaceManager.TryGetPanel<Panel_ActionPicker>(out Panel))
             {
-                string Icon = "ico_unlocked";
-                Panel.Enable(true);
-                Panel.m_ActionPickerItemDataList.Clear();
-
-                foreach (int Idx in Knockers)
-                {
-                    Action act = new Action(() => LetThemEnter(Idx, level_guid));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, "Invite " + playersData[Idx].m_Name, act));
-                }
-
-                Panel.m_ObjectInteractedWith = objectInteractedWith;
-                Panel.EnableWithCurrentList();
+                return;
             }
+            string Icon = "ico_unlocked";
+            Panel.Enable(true);
+            Panel.m_ActionPickerItemDataList.Clear();
+
+            foreach (int Idx in Knockers)
+            {
+                Action act = new Action(() => LetThemEnter(Idx, level_guid));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData(Icon, "Invite " + playersData[Idx].m_Name, act));
+            }
+
+            Panel.m_ObjectInteractedWith = objectInteractedWith;
+            Panel.EnableWithCurrentList();
         }
 
         public static void ShowKeysActionsPicker(GameObject objectInteractedWith, KeysAction ActType)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel;
+            if (!InterfaceManager.TryGetPanel<Panel_ActionPicker>(out Panel))
+            {
+                return;
+            }
             if (Panel)
             {
                 List<DataStr.DoorKey> KeysList = GetKeysList();
@@ -12706,7 +12839,7 @@ namespace SkyCoop
                 foreach (DataStr.DoorKey Key in KeysList)
                 {
                     Action act = new Action(() => UseKey(Key.m_Seed, objectInteractedWith, Key.m_Lead));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Key.m_Name, act));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData(Icon, Key.m_Name, act));
                 }
 
                 if (CanLockPick)
@@ -12714,10 +12847,10 @@ namespace SkyCoop
                     if (LockPicks > 0)
                     {
                         Action act = new Action(() => LockPick(objectInteractedWith));
-                        Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_Radial_tools", "Lockpick ("+ LockPicks+")", act));
+                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_Radial_tools", "Lockpick ("+ LockPicks+")", act));
                     }
                     Action knock = new Action(() => KnockKnock(objectInteractedWith));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_fist", "Knock", knock));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_fist", "Knock", knock));
                 }
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
@@ -12975,7 +13108,7 @@ namespace SkyCoop
 
         public static void SpawnRockCache(DataStr.FakeRockCacheVisualData Data)
         {
-            if(ObjectGuidManager.Lookup(Data.m_GUID) != null)
+            if(PdidTable.GetGameObject(Data.m_GUID) != null)
             {
                 MelonLogger.Msg(Yellow, "RockCache with GUID "+Data.m_GUID+" already exist!");
                 return;
@@ -13023,7 +13156,7 @@ namespace SkyCoop
         {
             if (Data.m_LevelGUID == level_guid)
             {
-                GameObject obj = ObjectGuidManager.Lookup(Data.m_GUID);
+                GameObject obj = PdidTable.GetGameObject(Data.m_GUID);
 
                 if (obj != null)
                 {
@@ -13210,7 +13343,7 @@ namespace SkyCoop
 
         public static GameObject SpawnUniversalSyncableObject(DataStr.UniversalSyncableObject Data)
         {
-            GameObject OldObj = ObjectGuidManager.Lookup(Data.m_GUID);
+            GameObject OldObj = PdidTable.GetGameObject(Data.m_GUID);
             string Prefab = Data.m_Prefab;
             bool Custom = false;
             if (Data.m_Prefab == "Smoke")
@@ -13297,7 +13430,7 @@ namespace SkyCoop
         }
         public static void RemoveObjectByGUID(string GUID)
         {
-            GameObject Obj = ObjectGuidManager.Lookup(GUID);
+            GameObject Obj = PdidTable.GetGameObject(GUID);
 
             if (Obj)
             {
