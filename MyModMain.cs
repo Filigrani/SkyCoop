@@ -1040,6 +1040,19 @@ namespace SkyCoop
                 MelonLogger.Msg("Death container  " + data.m_Guid + " already exist");
                 return null;
             }
+            GameObject go = new GameObject();
+            ObjectGuid gu = go.AddComponent<ObjectGuid>();
+            string newGUID = MPSaveManager.GetNewUGUID();
+            gu.SetRuntimeCachedPdid(newGUID);
+            PdidTable.RuntimeRegister(gu, newGUID);
+
+            if(go == PdidTable.GetGameObject(newGUID))
+            {
+                // Yep its added
+            }
+
+
+            
 
             ///GameObject reference = GetGearItemObject("CONTAINER_InaccessibleGear");
             GameObject reference = GetGearItemObject(data.m_ContainerPrefab);
