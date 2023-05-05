@@ -2715,6 +2715,7 @@ namespace SkyCoop
                 Log("StartRegion: " + ServerData.StartRegion, LoggerColor.Blue);
                 ExperienceForDS = ServerData.ExperienceMode;
                 StartingRegionDS = ServerData.StartRegion;
+                MyMod.CustomServerName = ServerData.ServerName;
                 if (ServerData.Seed == 0)
                 {
                     Log("Seed: (Random)", LoggerColor.Blue);

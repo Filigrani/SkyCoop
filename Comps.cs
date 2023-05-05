@@ -3095,6 +3095,7 @@ namespace SkyCoop
                 if (sendMyPosition)
                 {
                     DoPleaseWait("Please wait...", "Preparing to dismantle...");
+                    SetRepeatPacket(ResendPacketType.Cancel, 10);
                     PendingRockCahceRemove = this;
                     using (Packet _packet = new Packet((int)ClientPackets.REMOVEROCKCACH))
                     {
@@ -3161,7 +3162,6 @@ namespace SkyCoop
                 }
             }
         }
-
         public class ExpeditionInteractive : MonoBehaviour
         {
             public ExpeditionInteractive(IntPtr ptr) : base(ptr) { }

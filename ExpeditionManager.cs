@@ -1004,6 +1004,44 @@ namespace SkyCoop
             public int m_SecondsInZone = 0;
             public int m_StayInZoneSeconds = 300;
 
+            public void StartDespawnOfAllObjects()
+            {
+                if (m_ObjectsSpawned)
+                {
+                    foreach (UniversalSyncableObjectSpawner Spawner in m_ObjectSpawners)
+                    {
+                        UniversalSyncableObject Obj = new UniversalSyncableObject();
+                        Obj.m_Prefab = Spawner.m_Prefab;
+                        Obj.m_GUID = Spawner.m_GUID;
+                        Obj.m_Position = Spawner.m_Position;
+                        Obj.m_Rotation = Spawner.m_Rotation;
+
+                        Obj.m_ExpeditionBelong = m_ExpeditionGUID;
+                        Obj.m_Scene = m_Scene;
+                        Obj.m_CreationTime = MyMod.MinutesFromStartServer;
+                        Obj.m_RemoveTime = MyMod.MinutesFromStartServer + 1440;
+
+                        MPSaveManager.AddUniversalSyncableObject(Obj);
+                    }
+                }
+            }
+
+            public void RemoveAllObjects()
+            {
+                if (m_ObjectsSpawned)
+                {
+                    foreach (UniversalSyncableObjectSpawner Spawner in m_ObjectSpawners)
+                    {
+                        MPSaveManager.RemoveUniversalSyncableObject(m_Scene, Spawner.m_GUID);
+#if (!DEDICATED)
+                        if (MyMod.level_guid == m_Scene)
+                        {
+                            MyMod.RemoveObjectByGUID(Spawner.m_GUID);
+                        }
+#endif
+                    }
+                }
+            }
             public void SpawnObjects()
             {
                 if (!m_ObjectsSpawned)
@@ -1022,7 +1060,7 @@ namespace SkyCoop
                             Obj.m_ExpeditionBelong = m_ExpeditionGUID;
                             Obj.m_Scene = m_Scene;
                             Obj.m_CreationTime = MyMod.MinutesFromStartServer;
-                            Obj.m_RemoveTime = MyMod.MinutesFromStartServer + 1440;
+                            Obj.m_RemoveTime = 0;
 
                             MPSaveManager.AddUniversalSyncableObject(Obj);
 
@@ -1123,6 +1161,7 @@ namespace SkyCoop
                     }
                 }
                 SpawnReward();
+                StartDespawnOfAllObjects();
             }
 
             public void CheckFlaregunShot(string Scene, Vector3 Position)
@@ -1150,23 +1189,6 @@ namespace SkyCoop
                             OnCompleted();
                             return;
                         }
-                    }
-                }
-            }
-
-            public void RemoveAllObjects()
-            {
-                if (m_ObjectsSpawned)
-                {
-                    foreach (UniversalSyncableObjectSpawner Spawner in m_ObjectSpawners)
-                    {
-                        MPSaveManager.RemoveUniversalSyncableObject(m_Scene, Spawner.m_GUID);
-#if (!DEDICATED)
-                        if (MyMod.level_guid == m_Scene)
-                        {
-                            MyMod.RemoveObjectByGUID(Spawner.m_GUID);
-                        }
-#endif
                     }
                 }
             }

@@ -177,7 +177,8 @@ namespace SkyCoop
                     if (!Server.clients[PID].IsBusy())
                     {
                         DoorEnterRequested.RemoveAt(i);
-                    }else{
+                        continue;
+                    } else{
                         Scene = MyMod.playersData[PID].m_LevelGuid;
                         V3 = MyMod.playersData[PID].m_Position;
                     }
@@ -193,6 +194,7 @@ namespace SkyCoop
                 {
                     DoorEnterRequested.RemoveAt(i);
                     Log("Knock Removed");
+                    continue;
                 } else
                 {
                     Knock.m_Timeout--;

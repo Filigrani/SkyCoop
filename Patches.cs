@@ -11,6 +11,7 @@ using GameServer;
 using static SkyCoop.DataStr;
 using static SkyCoop.Comps;
 using static Utils;
+using static SkyCoop.MyMod;
 
 namespace SkyCoop
 {
@@ -330,6 +331,7 @@ namespace SkyCoop
                             {
                                 MyMod.TempDoor = Door.gameObject;
                                 MyMod.DoPleaseWait("Looking through the peephole", "Please wait...");
+                                SetRepeatPacket(ResendPacketType.Cancel, 10);
                                 using (Packet _packet = new Packet((int)ClientPackets.PEEPHOLE))
                                 {
                                     _packet.Write(MyMod.level_guid);
@@ -2832,6 +2834,12 @@ namespace SkyCoop
                 //MelonLogger.Msg("[Saving][BooksResearched] Fail!");
             }
         }
+        public static void SaveCustomSkills(SaveSlotType gameMode, string name)
+        {
+            string data = JSON.Dump(MyMod.SaveCustomSkills());
+            SaveGameSlots.SaveDataToSlot(gameMode, SaveGameSystem.m_CurrentEpisode, SaveGameSystem.m_CurrentGameId, name, "skycoop_customskills", data);
+        }
+
 
         [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveGlobalData")] // Once
         public static class SaveGameSystemPatch_SaveSceneData
@@ -2858,6 +2866,7 @@ namespace SkyCoop
                 SaveBookReaded(gameMode, name);
                 SaveSeedRadioFQ(gameMode, name);
                 SaveDeathCreates(gameMode, name);
+                SaveCustomSkills(gameMode, name);
                 SaveUGUID(gameMode, name);
             }
         }
@@ -3054,6 +3063,15 @@ namespace SkyCoop
             }
         }
 
+        public static void LoadCustomSkills(string name)
+        {
+            string data = SaveGameSlots.LoadDataFromSlot(name, "skycoop_customskills");
+            if (data != null)
+            {
+                MyMod.LoadCustomSkills(JSON.Load(data).Make<List<int>>());
+            }
+        }
+
         public static void clearFolder(string FolderName)
         {
             System.IO.DirectoryInfo dir = new System.IO.DirectoryInfo(FolderName);
@@ -3090,6 +3108,7 @@ namespace SkyCoop
                 LoadFixedSpawn(name);
                 LoadFixedSpawnPosition(name);
                 LoadReadedBooks(name);
+                LoadCustomSkills(name);
                 float FQ = LoadRadioFQ(name);
                 MyMod.RadioFrequency = Mathf.Round(FQ * 10.0f) * 0.1f;
                 LoadDeathCreates(name);
@@ -5708,6 +5727,58 @@ namespace SkyCoop
             return false;
         }
 
+        public static void ImproveFirstAidSkill(int Aff)
+        {
+            if (Aff == (int)AfflictionType.SprainedAnkle
+                || Aff == (int)AfflictionType.SprainedWrist
+                || Aff == (int)AfflictionType.SprainedWristMajor
+                || Aff == (int)AfflictionType.SprainPain)
+
+            {
+                return;
+            }
+
+            IncressCustomSkill(CustomSkills.FirstAid, 2);
+
+            if (GameManager.m_Inventory && GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar"))
+            {
+                GearItem Gi = GameManager.GetInventoryComponent().GetLowestConditionGearThatMatchesName("GEAR_MedicalSupplies_hangar");
+                if(Gi != null)
+                {
+                    Gi.Degrade(1);
+
+                    if(Gi.m_CurrentHP <= 1)
+                    {
+                        GameManager.GetInventoryComponent().DestroyGear(Gi.gameObject);
+                    }
+                }
+            }
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "RefreshSelectedSkillDescriptionView")] // Once
+        public static class Panel_Log_Initialize
+        {
+            public static void Postfix(Panel_Log __instance)
+            {
+                if (__instance.m_SkillImageLarge.mainTexture == null)
+                {
+                    //LoadedBundle is your custom bundle with all your stuff.
+                    __instance.m_SkillImageLarge.mainTexture = LoadedBundle.LoadAsset<Texture2D>(__instance.m_SkillsDisplayList[__instance.m_SkillListSelectedIndex].m_Skill.m_SkillImage);
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(SkillsManager), "Awake")] // Once
+        public static class SkillsManagerInitialize
+        {
+            public static void Postfix(SkillsManager __instance)
+            {
+                AddNewSkills(__instance);
+            }
+        }
+
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "PostTreatment")] // Once
         public static class Panel_Diagnosis_PostTreatment
         {
@@ -5731,8 +5802,8 @@ namespace SkyCoop
                         __instance.GetSelectedAffliction().m_Remedy1Complete = false;
                         __instance.GetSelectedAffliction().m_RestHours = 1;
                     }
-
                     MyMod.SendCureAffliction(aff);
+                    ImproveFirstAidSkill(aff.m_Type);
                 }
 
                 List<string> MakenzyDiagnosis = new List<string>();
@@ -5759,6 +5830,91 @@ namespace SkyCoop
                 }else{
                     __instance.m_TreatmentSuccessVO = "Play_SurvivorTreat"; // Astrid default
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "TreatAffliction")] // Once
+        public static class PlayerManager_TreatAffliction
+        {
+            public static void Postfix(PlayerManager __instance, FirstAidItem firstAidItem, AfflictionType afflictionType, AfflictionBodyArea location, int afflictionId)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (afflictionType == AfflictionType.SprainedAnkle
+                    || afflictionType == AfflictionType.SprainedWrist
+                    || afflictionType == AfflictionType.SprainedWristMajor
+                    || afflictionType == AfflictionType.SprainPain)
+
+                {
+                    return;
+                }
+                
+                int Tier = GetFirstAidSkillTier();
+                if (Tier == 4)
+                {
+                    ApplyTreatmentRegeneration(33, 0.25f, "Self Treatment");
+                    GameManager.GetConditionComponent().AddHealth(5, DamageSource.FirstAid);
+                } else if(Tier == 5)
+                {
+                    ApplyTreatmentRegeneration(35, 0.25f, "Self Treatment");
+                    GameManager.GetConditionComponent().AddHealth(5, DamageSource.FirstAid);
+                }
+                IncressCustomSkill(CustomSkills.FirstAid, 1);
+            }
+        }
+
+        public static string OverrideConditionOverTimeCause = "";
+        public static string OverrideHeadacheCause = "";
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Affliction), "GetCurrentAffliction")] // Once
+        public static class Panel_Affliction_GetCurrentAffliction
+        {
+            public static void Postfix(Panel_Affliction __instance, AfflictionType type, int localAfflictionIndex, ref Affliction __result)
+            {
+                if (type == AfflictionType.ConditionOverTimeBuff)
+                {
+                    if (!string.IsNullOrEmpty(OverrideConditionOverTimeCause))
+                    {
+                        __result.m_Cause = OverrideConditionOverTimeCause;
+                    }
+                } else if (type == AfflictionType.Headache)
+                {
+                    if (!string.IsNullOrEmpty(OverrideHeadacheCause))
+                    {
+                        __result.m_Cause = OverrideHeadacheCause;
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(ConditionOverTimeBuff), "Apply")] // Once
+        public static class ConditionOverTimeBuff_Apply
+        {
+            public static void Postfix(ConditionOverTimeBuff __instance, float normalizedValue)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                OverrideConditionOverTimeCause = "";
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(EnergyBoost), "ApplyEnergyBoostExitEffects")] // Once
+        public static class EnergyBoost_ApplyEnergyBoostExitEffects
+        {
+            public static void Postfix()
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                OverrideHeadacheCause = "";
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "RefreshRightPage")] // Once

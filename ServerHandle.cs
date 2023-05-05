@@ -1327,18 +1327,20 @@ namespace GameServer
         }
         public static void CUREAFFLICTION(int _fromClient, Packet _packet)
         {
-            DataStr.AffictionSync toCure = _packet.ReadAffiction();
+            DataStr.AffictionSync Aff = _packet.ReadAffiction();
+            int FirstAidSkill = _packet.ReadInt();
+            bool Medkit = _packet.ReadBool();
             int ForWho = _packet.ReadInt();
 
 #if (!DEDICATED)
             if (ForWho == 0)
             {
-                MyMod.OtherPlayerCuredMyAffiction(toCure);
+                MyMod.OtherPlayerCuredMyAffiction(_fromClient, Aff, FirstAidSkill, Medkit);
             }else{
-                ServerSend.CUREAFFLICTION(ForWho, toCure);
+                ServerSend.CUREAFFLICTION(ForWho, _fromClient, Aff, FirstAidSkill, Medkit);
             }
 #else
-            ServerSend.CUREAFFLICTION(ForWho, toCure);
+            ServerSend.CUREAFFLICTION(ForWho, _fromClient, Aff, FirstAidSkill, Medkit);
 #endif
         }
         public static void ANIMALKILLED(int _fromClient, Packet _packet)

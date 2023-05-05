@@ -1080,8 +1080,11 @@ namespace SkyCoop
         }
         public static void CUREAFFLICTION(Packet _packet)
         {
-            DataStr.AffictionSync toCure = _packet.ReadAffiction();
-            MyMod.OtherPlayerCuredMyAffiction(toCure);
+            DataStr.AffictionSync Aff = _packet.ReadAffiction();
+            int FirstAidSkill = _packet.ReadInt();
+            bool Medkit = _packet.ReadBool();
+            int From = _packet.ReadInt();
+            MyMod.OtherPlayerCuredMyAffiction(From, Aff, FirstAidSkill, Medkit);
         }
         public static void ANIMALCORPSE(Packet _packet)
         {

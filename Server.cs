@@ -109,33 +109,37 @@ namespace GameServer
                 {
                     int _clientId = _packet.ReadInt();
                     string SubNetworkGUID = "";
-                    if (_packet.UnreadLength() > 12)
-                    {
-                        SubNetworkGUID = _packet.ReadString();
 
-                        string Reason;
-                        if(MPSaveManager.BannedUsers.TryGetValue(SubNetworkGUID, out Reason))
+                    if(_clientId != -2)
+                    {
+                        if (_packet.UnreadLength() > 12)
                         {
-                            if (string.IsNullOrEmpty(Reason))
+                            SubNetworkGUID = _packet.ReadString();
+
+                            string Reason;
+                            if (MPSaveManager.BannedUsers.TryGetValue(SubNetworkGUID, out Reason))
                             {
-                                ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server.");
-                                return;
-                            } else
-                            {
-                                ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server." + "\nReason: " + Reason);
-                                return;
+                                if (string.IsNullOrEmpty(Reason))
+                                {
+                                    ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server.");
+                                    return;
+                                } else
+                                {
+                                    ServerSend.KICKMESSAGE(_clientEndPoint, "You has been banned from the server." + "\nReason: " + Reason);
+                                    return;
+                                }
                             }
+                        } else
+                        {
+                            Log("Client without SubNetworkGUID trying to connect, rejecting, _clientId " + _clientId);
+                            ServerSend.KICKMESSAGE(_clientEndPoint, "Your version of the mod, isn't supported\nHost using version " + MyMod.BuildInfo.Version);
+                            return;
                         }
-                    } else
-                    {
-                        Log("Client without SubNetworkGUID trying to connect, rejecting");
-                        ServerSend.KICKMESSAGE(_clientEndPoint, "Your version of the mod, isn't supported\nHost using version " + MyMod.BuildInfo.Version);
-                        return;
-                    }
-                    if (MyMod.DebugTrafficCheck)
-                    {
-                        Log("[DebugTrafficCheck] _clientId " + _clientId);
-                        Log("[DebugTrafficCheck] SubNetworkGUID " + SubNetworkGUID);
+                        if (MyMod.DebugTrafficCheck)
+                        {
+                            Log("[DebugTrafficCheck] _clientId " + _clientId);
+                            Log("[DebugTrafficCheck] SubNetworkGUID " + SubNetworkGUID);
+                        }
                     }
 
                     if (_clientId == 0)

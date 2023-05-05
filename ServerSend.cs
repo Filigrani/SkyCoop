@@ -1835,11 +1835,14 @@ namespace GameServer
             }
         }
 
-        public static void CUREAFFLICTION(int _toClient, DataStr.AffictionSync _msg)
+        public static void CUREAFFLICTION(int _toClient, int FromWho, DataStr.AffictionSync Aff, int FirstAidSkill, bool Medkit)
         {
             using (Packet _packet = new Packet((int)ServerPackets.CUREAFFLICTION))
             {
-                _packet.Write(_msg);
+                _packet.Write(Aff);
+                _packet.Write(FirstAidSkill);
+                _packet.Write(Medkit);
+                _packet.Write(FromWho);
                 _packet.Write(_toClient);
 
                 SendTCPData(_toClient, _packet);
@@ -2227,11 +2230,56 @@ namespace GameServer
                 SendUDPData(SendTo, _packet);
             }
         }
+
+        public static string GetDifficultyString()
+        {
+#if (!DEDICATED)
+            switch (ExperienceModeManager.s_CurrentModeType)
+            {
+                case ExperienceModeType.Pilgrim:
+                    return "Pilgrim";
+                case ExperienceModeType.Voyageur:
+                    return "Voyageur";
+                case ExperienceModeType.Stalker:
+                    return "Stalker";
+                case ExperienceModeType.Interloper:
+                    return "Interloper";
+                default:
+                    return "Unknown";
+            }
+#else
+            switch (Shared.ExperienceForDS)
+            {
+                case 0:
+                    return "Pilgrim";
+                case 1:
+                    return "Voyageur";
+                case 2:
+                    return "Stalker";
+                case 9:
+                    return "Interloper";
+                default:
+                    return "Unknown";
+            }
+#endif
+        }
+
+        public static string GetStatusJson(string Players)
+        {
+            string Json = "{";
+            Json += "'players':[" + Players + "],";
+            Json += "'experience':'" + GetDifficultyString() + "',";
+            Json += "'pvp':'" + MyMod.ServerConfig.m_PVP + "'";
+            Json += "}";
+            return Json;
+        }
+
+
         public static void PINGSERVER(IPEndPoint endPoint)
         {
             using (Packet _packet = new Packet((int)ServerPackets.PINGSERVER))
             {
-                string List = "Players:";
+                string List = "";
                 int Players = 0;
                 int PlayersMax = Server.MaxPlayers;
                 foreach (var c in Server.clients)
@@ -2240,15 +2288,22 @@ namespace GameServer
                     {
                         if (!c.Value.RCON)
                         {
-                            List = List + "\n" + MyMod.playersData[c.Key].m_Name;
+                            if (string.IsNullOrEmpty(List))
+                            {
+                                List = "'" + MyMod.playersData[c.Key].m_Name.Replace("'", "") + "'";
+                            } else
+                            {
+                                List = List+"," + "'" + MyMod.playersData[c.Key].m_Name.Replace("'", "") + "'";
+                            }
                         }
                         Players++;
                     }
                 }
+                _packet.WriteUnicodeString(MyMod.CustomServerName);
                 _packet.Write(MyMod.BuildInfo.Version);
                 _packet.Write(Players);
                 _packet.Write(PlayersMax);
-                _packet.Write(MyMod.ServerConfig);
+                _packet.WriteUnicodeString(GetStatusJson(List));
                 Server.SendUDPData(endPoint, _packet);
             }
         }

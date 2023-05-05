@@ -31,7 +31,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.11.5";
+            public const string Version = "0.11.6";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 5;
         }
@@ -844,6 +844,60 @@ namespace SkyCoop
             HarmonyLib.Harmony.UnpatchAll();
         }
 
+        private static void SetCustomSkillLevel(CustomSkills skillType)
+        {
+            Skill skill = GameManager.GetSkillsManager().m_Skills[(int)skillType];
+            if (skill == null)
+            {
+                return;
+            }
+                
+            int LevelMax = 5;
+            if (uConsole.GetNumParameters() == 0 || uConsole.GetNumParameters() > 1)
+                return;
+            int Level = Mathf.Clamp(uConsole.GetInt(), 1, LevelMax);
+            int currentTierNumber1 = skill.GetCurrentTierNumber();
+            skill.SetTier(Level - 1, SkillsManager.PointAssignmentMode.AssignInAnyMode);
+            int currentTierNumber2 = skill.GetCurrentTierNumber();
+            if (currentTierNumber2 <= currentTierNumber1)
+                return;
+            GameManager.GetSkillNotify().MaybeShowLevelUp(skill.m_SkillIconBackground, skill.m_DisplayName, GameManager.GetSkillsManager().GetTierName(currentTierNumber2), currentTierNumber2 + 1);
+        }
+
+        public static void SetFirstAidTier()
+        {
+            SetCustomSkillLevel(CustomSkills.FirstAid);
+        }
+
+        public static void SkipHourConsole()
+        {
+            if (iAmHost)
+            {
+                int Hours = 1;
+                if (uConsole.GetNumParameters() != 0 || uConsole.GetNumParameters() == 1)
+                {
+                    Hours = uConsole.GetInt();
+                }
+                Shared.SkipRTTime(Hours);
+            }
+        }
+
+        public static void ConsoleRPC()
+        {
+            if (iAmHost)
+            {
+                if (uConsole.GetNumParameters() == 0 || uConsole.GetNumParameters() > 1)
+                {
+                    return;
+                }
+
+                string RPCCOMMAND = "rpc " + uConsole.GetString();
+                MelonLogger.Msg("Console RPC request: "+ RPCCOMMAND);
+                Shared.ExecuteCommand(RPCCOMMAND);
+            }
+        }
+
+
         public override void OnApplicationStart()
         {
             SetAppBackgroundMode();
@@ -902,6 +956,9 @@ namespace SkyCoop
             uConsole.RegisterCommand("oleg", new Action(LootEverything));
             uConsole.RegisterCommand("gimmekey", new Action(CreateDebugKey));
             uConsole.RegisterCommand("givemekey", new Action(CreateDebugKey));
+            uConsole.RegisterCommand("skill_firstaid", new Action(SetFirstAidTier));
+            uConsole.RegisterCommand("skip", new Action(SkipHourConsole));
+            uConsole.RegisterCommand("rpc", new Action(ConsoleRPC));
             Comps.RegisterComponents();
         }
 
@@ -1175,6 +1232,104 @@ namespace SkyCoop
                 Box.DestroyAllGear();
                 MelonLogger.Msg("Everything dropped");
             }
+        }
+        public const int CustomSkillsStart = 9;
+        public enum CustomSkills
+        {
+            FirstAid = 9,
+        }
+        public static List<int> SaveCustomSkills()
+        {
+            SkillsManager Manager = GameManager.GetSkillsManager();
+            List<int> SkillPoints = new List<int>();
+            for (int i = CustomSkillsStart; i != Manager.m_Skills.Count; i++)
+            {
+                SkillPoints.Add(Manager.m_Skills[i].GetPoints());
+            }
+            return SkillPoints;
+        }
+        public static void LoadCustomSkills(List<int> SkillPoints)
+        {
+            SkillsManager Manager = GameManager.GetSkillsManager();
+            for (int i = 0; i != SkillPoints.Count; i++)
+            {
+                Manager.m_Skills[CustomSkillsStart+i].SetPoints(SkillPoints[i], SkillsManager.PointAssignmentMode.AssignInAnyMode);
+            }
+        }
+
+        public static void IncressCustomSkill(CustomSkills Skill, int Points = 1)
+        {
+            SkillsManager Manager = GameManager.GetSkillsManager();
+            Skill Ski = Manager.m_Skills[(int)Skill];
+            int PreviousTier = Ski.GetCurrentTierNumber();
+            Ski.IncrementPoints(Points, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+            int CurrentTier = Ski.GetCurrentTierNumber();
+            if (PreviousTier != CurrentTier)
+            {
+                GameManager.GetSkillNotify().MaybeShowLevelUp(Ski.m_SkillIcon, Ski.m_DisplayName, Manager.GetTierName(CurrentTier), CurrentTier);
+            } else
+            {
+                GameManager.GetSkillNotify().MaybeShowPointIncrease(Ski.m_SkillIcon);
+            }
+        }
+
+
+        public static void AddNewSkills(SkillsManager Manager)
+        {
+            GameObject GO = new GameObject();
+            GO.name = "Skill_FirstAid";
+            Skill_IceFishing SKill = GO.AddComponent<Skill_IceFishing>();
+            SKill.m_LocalizedDisplayName = new LocalizedString();
+            SKill.m_LocalizedDisplayName.m_LocalizationID = "First Aid";
+            SKill.m_SkillIcon = "ico_Radial_firstAid";
+            SKill.m_SkillIconBackground = "ico_skill_large_firstAid";
+            SKill.m_SkillImage = "ico_skill_large_firstAid";
+            SKill.m_SkillType = SkillType.IceFishing;
+            SKill.m_TierLocalizedDescriptions = new LocalizedString[5];
+            SKill.m_TierLocalizedBenefits = new LocalizedString[5];
+            for (int i = 0; i < SKill.m_TierLocalizedDescriptions.Length; i++)
+            {
+                SKill.m_TierLocalizedDescriptions[i] = new LocalizedString();
+                SKill.m_TierLocalizedBenefits[i] = new LocalizedString();
+            }
+            SKill.m_TierLocalizedDescriptions[0].m_LocalizationID = "You have basic knowledge of how to perform first aid. But you need more practice.";
+            SKill.m_TierLocalizedDescriptions[1].m_LocalizationID = "Your practical knowledge is still limited to just a few incidents. But you can already do a much better job of easier your patient's pain.";
+            SKill.m_TierLocalizedDescriptions[2].m_LocalizationID = "Your knowledge is confirmed by practice. Those who you help recover much faster.";
+            SKill.m_TierLocalizedDescriptions[3].m_LocalizationID = "Your knowledge is enough to provide fast and high-quality assistance. Your patients get better right in front of your eyes.";
+            SKill.m_TierLocalizedDescriptions[4].m_LocalizationID = "You have seen everything. You can consider yourself an expert.";
+
+
+            string BaseReneration = "Treated by you patients will get minor regeneration.";
+            string ImprovedReneration = "Treated by you patients will get improved regeneration.";
+            string MajorReneration = "Treated by you patients will get fast regeneration.";
+            string BaseInstaHeal = "Treatment instantly restore 3% of health.";
+            string ImprovedInstaHeal = "Treatment instantly restore 5% of health.";
+            string TreatYourself = "Treating yourself gives minor regeneration.";
+            string NoMedkit = "Your treatment is most effective even without medkit.";
+
+            SKill.m_TierLocalizedBenefits[0].m_LocalizationID = BaseReneration;
+
+            SKill.m_TierLocalizedBenefits[1].m_LocalizationID = ImprovedReneration;
+
+            SKill.m_TierLocalizedBenefits[2].m_LocalizationID = ImprovedReneration + "\n" +
+                                                                BaseInstaHeal;
+
+            SKill.m_TierLocalizedBenefits[3].m_LocalizationID = ImprovedReneration + "\n" +
+                                                                ImprovedInstaHeal + "\n" +
+                                                                TreatYourself;
+
+            SKill.m_TierLocalizedBenefits[4].m_LocalizationID = MajorReneration + "\n" +
+                                                                ImprovedInstaHeal + "\n" +
+                                                                TreatYourself + "\n" +
+                                                                NoMedkit;
+
+            SKill.m_TierPoints = new int[5];
+            SKill.m_TierPoints[0] = 0;
+            SKill.m_TierPoints[1] = 20;
+            SKill.m_TierPoints[2] = 35;
+            SKill.m_TierPoints[3] = 45;
+            SKill.m_TierPoints[4] = 55;
+            Manager.m_Skills.Add(SKill);
         }
 
 
@@ -2281,6 +2436,43 @@ namespace SkyCoop
             }
         }
 
+        public static void ApplyTreatmentRegeneration(float HpPerHour, float NumHours, string Cause)
+        {
+            Pathes.OverrideConditionOverTimeCause = Cause;
+            GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(HpPerHour, NumHours, NumHours);
+            Panel_Affliction.RefreshtListOfShownAfflictionTypes();
+        }
+
+        public static string GetPlayerName(int ID)
+        {
+            if(ID == 0)
+            {
+                if (iAmHost)
+                {
+                    return MyChatName;
+                } else
+                {
+                    if (playersData[ID] != null)
+                    {
+                        return playersData[ID].m_Name;
+                    }
+                }
+            } else
+            {
+                if(ClientUser.myId == ID)
+                {
+                    return MyChatName;
+                } else
+                {
+                    if (playersData[ID] != null)
+                    {
+                        return playersData[ID].m_Name;
+                    }
+                }
+            }
+            return "Unknown";
+        }
+
         public static void OtherPlayerApplyActionOnMe(string ActionType, int FromId)
         {
             if (ActionType == "Bandage")
@@ -2291,7 +2483,7 @@ namespace SkyCoop
                 {
                     bloodL.ApplyBandage(bloodL.m_ElapsedHoursList.Count - 1);
                 }
-                GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(10, 0.3f, 0.3f);
+                ApplyTreatmentRegeneration(10, 0.3f, "Treatment by " + GetPlayerName(FromId));
             }
             if (ActionType == "Sterilize")
             {
@@ -2522,6 +2714,7 @@ namespace SkyCoop
                 {
                     if (BodyArea == AfflictionBodyArea.Head)
                     {
+                        Pathes.OverrideHeadacheCause = DamageCase;
                         GameManager.GetHeadacheComponent().ApplyHeadache(0.5f, 5, 0.3f);
                     }
                     else if (BodyArea == AfflictionBodyArea.ArmRight
@@ -2878,6 +3071,7 @@ namespace SkyCoop
             if (sendMyPosition == true)
             {
                 DoPleaseWait("Trying to pickup little thing", "Please wait...");
+                SetRepeatPacket(ResendPacketType.Cancel, 10);
                 using (Packet _packet = new Packet((int)ClientPackets.PICKUPRABBIT))
                 {
                     _packet.Write(GUID);
@@ -2944,6 +3138,7 @@ namespace SkyCoop
                 } else if (sendMyPosition == true)
                 {
                     DoPleaseWait("Downloading animal carcass", "Please wait...");
+                    SetRepeatPacket(ResendPacketType.Cancel, 10);
                     GoingToHarvest = bh;
                     using (Packet _packet = new Packet((int)ClientPackets.REQUESTANIMALCORPSE))
                     {
@@ -5520,6 +5715,7 @@ namespace SkyCoop
             GameManager.GetHungerComponent().m_CurrentReserveCalories = GameManager.GetHungerComponent().m_MaxReserveCalories;
             GameManager.GetThirstComponent().m_CurrentThirst = 0;
             GameManager.GetFatigueComponent().m_CurrentFatigue = 0;
+            BooksResearched = new Dictionary<string, float>();
             if (GameManager.m_PlayerManager)
             {
                 GameManager.m_PlayerManager.SetControlMode(PlayerControlMode.Normal);
@@ -5539,16 +5735,7 @@ namespace SkyCoop
             GameManager.GetSkillClothingRepair().SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
             GameManager.GetSkillRevolver().SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
             GameManager.GetSkillGunsmithing().SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-
-            GameManager.GetSkillArchery().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillRifle().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillFireStarting().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillCarcassHarvesting().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillCooking().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillIceFishing().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillClothingRepair().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillRevolver().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
-            GameManager.GetSkillGunsmithing().SetTier(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+            GameManager.GetSkillsManager().m_Skills[(int)CustomSkills.FirstAid].SetPoints(0, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
 
 
             ConsoleManager.CONSOLE_afflictions_cure();
@@ -5784,6 +5971,7 @@ namespace SkyCoop
             GearPickup = 5,
             ServerRestart = 6,
             ExpeditionInvites = 7,
+            Cancel,
         }
         public static ResendPacketType LastPacketForRepeat = ResendPacketType.None;
         public static int SecondsLeftUntilWorryAboutPacket = -1;
@@ -5859,6 +6047,12 @@ namespace SkyCoop
                     _packet.Write(true);
                     SendUDPData(_packet);
                 }
+            }
+            else if(request == ResendPacketType.Cancel)
+            {
+                DiscardRepeatPacket();
+                RemovePleaseWait();
+                HUDMessage.AddMessage("Request failed!");
             }
             else
             {
@@ -6836,9 +7030,49 @@ namespace SkyCoop
             }
         }
 
-        public static void OtherPlayerCuredMyAffiction(DataStr.AffictionSync Aff)
+        public static void OtherPlayerCuredMyAffiction(int CureBy, DataStr.AffictionSync Aff, int FirstAidTier = 1, bool Medkit = false)
         {
-            GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(10, 0.3f, 0.3f);
+            bool ApplyBuff = true;
+            if(Aff.m_Type == (int)AfflictionType.SprainedAnkle 
+                || Aff.m_Type ==  (int)AfflictionType.SprainedWrist 
+                || Aff.m_Type == (int)AfflictionType.SprainedWristMajor
+                || Aff.m_Type == (int)AfflictionType.SprainPain)
+            
+            {
+                ApplyBuff = false;
+            }
+            if (ApplyBuff)
+            {
+                int Extra = 0;
+
+                if (Medkit)
+                {
+                    Extra = 2;
+                }
+                
+                if (FirstAidTier == 1)
+                {
+                    ApplyTreatmentRegeneration(30 + Extra, 0.25f, "Treatment by " + GetPlayerName(CureBy));
+                } else if(FirstAidTier == 2)
+                {
+                    ApplyTreatmentRegeneration(33 + Extra, 0.25f, "Treatment by " + GetPlayerName(CureBy));
+                } else if(FirstAidTier == 3)
+                {
+                    ApplyTreatmentRegeneration(33 + Extra, 0.25f, "Treatment by " + GetPlayerName(CureBy));
+                    GameManager.GetConditionComponent().AddHealth(3, DamageSource.FirstAid);
+                }else if(FirstAidTier == 4)
+                {
+                    ApplyTreatmentRegeneration(34 + Extra, 0.25f, "Treatment by " + GetPlayerName(CureBy));
+                    GameManager.GetConditionComponent().AddHealth(5, DamageSource.FirstAid);
+                }else if(FirstAidTier == 5)
+                {
+                    ApplyTreatmentRegeneration(36, 0.25f, "Treatment by " + GetPlayerName(CureBy));
+                    GameManager.GetConditionComponent().AddHealth(5, DamageSource.FirstAid);
+                }
+            }
+            Panel_Affliction.RefreshtListOfShownAfflictionTypes();
+
+
             if (Aff.m_Type == (int)AfflictionType.FoodPoisioning)
             {
                 GameManager.GetFoodPoisoningComponent().TakeAntibiotics();
@@ -6939,21 +7173,42 @@ namespace SkyCoop
                 GameManager.GetIntestinalParasitesComponent().TakeAntibiotics();
             }
         }
+
+        public static bool HasMedkit()
+        {
+            if(GameManager.m_Inventory != null)
+            {
+                return GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_MedicalSupplies_hangar");
+            }
+            return false;
+        }
+        public static int GetFirstAidSkillTier()
+        {
+            SkillsManager Manager = GameManager.GetSkillsManager();
+            if (Manager != null)
+            {
+                return Manager.m_Skills[(int)CustomSkills.FirstAid].GetCurrentTierNumber()+1;
+            }
+            return 1;
+        }
+
         public static void SendCureAffliction(DataStr.AffictionSync Aff)
         {
             if (DebugDiagnosis == true)
             {
-                OtherPlayerCuredMyAffiction(Aff);
+                OtherPlayerCuredMyAffiction(0, Aff, GetFirstAidSkillTier(), HasMedkit());
             } else {
                 if (iAmHost == true)
                 {
-                    ServerSend.CUREAFFLICTION(CurePlayerID, Aff);
+                    ServerSend.CUREAFFLICTION(CurePlayerID, 0, Aff, GetFirstAidSkillTier(), HasMedkit());
                 }
                 if (sendMyPosition == true)
                 {
                     using (Packet _packet = new Packet((int)ClientPackets.CUREAFFLICTION))
                     {
                         _packet.Write(Aff);
+                        _packet.Write(GetFirstAidSkillTier());
+                        _packet.Write(HasMedkit());
                         _packet.Write(CurePlayerID);
                         SendUDPData(_packet);
                     }
@@ -10858,6 +11113,7 @@ namespace SkyCoop
                     else if (sendMyPosition)
                     {
                         DoPleaseWait("Please wait...", "Locking door...");
+                        SetRepeatPacket(ResendPacketType.Cancel, 10);
                         using (Packet _packet = new Packet((int)ClientPackets.ADDDOORLOCK))
                         {
                             _packet.Write(Door.GetSceneToLoad() + "_" + Door.m_GUID);
@@ -12192,6 +12448,7 @@ namespace SkyCoop
                     else if (sendMyPosition)
                     {
                         DoPleaseWait("Please wait...", "Trying open this door...");
+                        SetRepeatPacket(ResendPacketType.Cancel, 10);
                         using (Packet _packet = new Packet((int)ClientPackets.TRYOPENDOOR))
                         {
                             _packet.Write(Door.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey);
@@ -12215,6 +12472,7 @@ namespace SkyCoop
                         }
                     } else if (sendMyPosition) {
                         DoPleaseWait("Please wait...", "Trying unlock this door...");
+                        SetRepeatPacket(ResendPacketType.Cancel, 10);
                         using (Packet _packet = new Packet((int)ClientPackets.TRYOPENDOOR))
                         {
                             _packet.Write(Door.GetComponent<Comps.DoorLockedOnKey>().m_DoorKey);
@@ -12483,6 +12741,7 @@ namespace SkyCoop
                     PendingLocksmithAction = Tool;
                     PendingLocksmithObject = objectInteractedWith;
                     DoPleaseWait("Please wait...","Requesting data about blank...");
+                    SetRepeatPacket(ResendPacketType.Cancel, 10);
                     using (Packet _packet = new Packet((int)ClientPackets.REQUESTLOCKSMITH))
                     {
                         _packet.Write(Hash);
