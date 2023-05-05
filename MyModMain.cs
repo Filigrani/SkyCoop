@@ -2440,7 +2440,6 @@ namespace SkyCoop
         {
             Pathes.OverrideConditionOverTimeCause = Cause;
             GameManager.GetPlayerManagerComponent().ApplyConditionOverTimeBuff(HpPerHour, NumHours, NumHours);
-            Panel_Affliction.RefreshtListOfShownAfflictionTypes();
         }
 
         public static string GetPlayerName(int ID)
@@ -2475,30 +2474,7 @@ namespace SkyCoop
 
         public static void OtherPlayerApplyActionOnMe(string ActionType, int FromId)
         {
-            if (ActionType == "Bandage")
-            {
-                BloodLoss bloodL = GameManager.GetBloodLossComponent();
-
-                if (bloodL.m_ElapsedHoursList.Count > 0)
-                {
-                    bloodL.ApplyBandage(bloodL.m_ElapsedHoursList.Count - 1);
-                }
-                ApplyTreatmentRegeneration(10, 0.3f, "Treatment by " + GetPlayerName(FromId));
-            }
-            if (ActionType == "Sterilize")
-            {
-                InfectionRisk Infect = GameManager.GetInfectionRiskComponent();
-
-                if (Infect.m_ElapsedHoursList.Count > 0)
-                {
-                    Infect.TakeAntiseptic(Infect.m_ElapsedHoursList.Count - 1);
-                }
-            }
-            else if (ActionType == "Revive")
-            {
-                SimRevive();
-            }
-            else if (ActionType == "Stim")
+            if (ActionType == "Stim")
             {
                 GearItem EmergencySt = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_EmergencyStim", 1);
                 EmergencySt.m_EmergencyStim.OnInject();

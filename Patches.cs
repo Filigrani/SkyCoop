@@ -5851,13 +5851,13 @@ namespace SkyCoop
                 {
                     return;
                 }
-                
+
                 int Tier = GetFirstAidSkillTier();
                 if (Tier == 4)
                 {
                     ApplyTreatmentRegeneration(33, 0.25f, "Self Treatment");
                     GameManager.GetConditionComponent().AddHealth(5, DamageSource.FirstAid);
-                } else if(Tier == 5)
+                } else if (Tier == 5)
                 {
                     ApplyTreatmentRegeneration(35, 0.25f, "Self Treatment");
                     GameManager.GetConditionComponent().AddHealth(5, DamageSource.FirstAid);
@@ -5869,54 +5869,54 @@ namespace SkyCoop
         public static string OverrideConditionOverTimeCause = "";
         public static string OverrideHeadacheCause = "";
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Affliction), "GetCurrentAffliction")] // Once
-        public static class Panel_Affliction_GetCurrentAffliction
-        {
-            public static void Postfix(Panel_Affliction __instance, AfflictionType type, int localAfflictionIndex, ref Affliction __result)
-            {
-                if (type == AfflictionType.ConditionOverTimeBuff)
-                {
-                    if (!string.IsNullOrEmpty(OverrideConditionOverTimeCause))
-                    {
-                        __result.m_Cause = OverrideConditionOverTimeCause;
-                    }
-                } else if (type == AfflictionType.Headache)
-                {
-                    if (!string.IsNullOrEmpty(OverrideHeadacheCause))
-                    {
-                        __result.m_Cause = OverrideHeadacheCause;
-                    }
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(ConditionOverTimeBuff), "Apply")] // Once
-        public static class ConditionOverTimeBuff_Apply
-        {
-            public static void Postfix(ConditionOverTimeBuff __instance, float normalizedValue)
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                OverrideConditionOverTimeCause = "";
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(EnergyBoost), "ApplyEnergyBoostExitEffects")] // Once
-        public static class EnergyBoost_ApplyEnergyBoostExitEffects
-        {
-            public static void Postfix()
-            {
-                if (MyMod.CrazyPatchesLogger == true)
-                {
-                    StackTrace st = new StackTrace(new StackFrame(true));
-                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-                }
-                OverrideHeadacheCause = "";
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_Affliction), "GetCurrentAffliction")] // Once
+        //public static class Panel_Affliction_GetCurrentAffliction
+        //{
+        //    public static void Postfix(ref Affliction __result)
+        //    {
+        //        if (__result.m_AfflictionType == AfflictionType.ConditionOverTimeBuff)
+        //        {
+        //            if (!string.IsNullOrEmpty(OverrideConditionOverTimeCause))
+        //            {
+        //                __result.m_Cause = OverrideConditionOverTimeCause;
+        //            }
+        //        } else if (__result.m_AfflictionType == AfflictionType.Headache)
+        //        {
+        //            if (!string.IsNullOrEmpty(OverrideHeadacheCause))
+        //            {
+        //                __result.m_Cause = OverrideHeadacheCause;
+        //            }
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(ConditionOverTimeBuff), "Apply")] // Once
+        //public static class ConditionOverTimeBuff_Apply
+        //{
+        //    public static void Postfix(ConditionOverTimeBuff __instance, float normalizedValue)
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        OverrideConditionOverTimeCause = "";
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(EnergyBoost), "ApplyEnergyBoostExitEffects")] // Once
+        //public static class EnergyBoost_ApplyEnergyBoostExitEffects
+        //{
+        //    public static void Postfix()
+        //    {
+        //        if (MyMod.CrazyPatchesLogger == true)
+        //        {
+        //            StackTrace st = new StackTrace(new StackFrame(true));
+        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+        //        }
+        //        OverrideHeadacheCause = "";
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(Panel_Diagnosis), "RefreshRightPage")] // Once
         public static class Panel_Diagnosis_RefreshRightPage
         {
