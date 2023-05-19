@@ -88,7 +88,13 @@
 			"S": "76561198032749688",
 			"N": "Kyko",
 			"P": ["K", "B", "Supp", "Gift"]
-		}		  
+		},
+		{
+			"E": "76561197999479558",
+			"S": "76561197999479558",
+			"N": "arbuzovichh",
+			"P": ["Dedi"]
+		}
 		  
 	],
 	"Every": ["Ban", "Bee", "Pin", "Crab", "Mlon", "Lkot", "WiRo", "Bear"]
