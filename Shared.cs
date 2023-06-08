@@ -8,6 +8,7 @@ using GameServer;
 using System.Text.RegularExpressions;
 using static SkyCoop.DataStr;
 using System.Net.NetworkInformation;
+using static SkyCoop.ExpeditionBuilder;
 #if (!DEDICATED)
 using UnityEngine;
 using MelonLoader;
@@ -60,7 +61,6 @@ namespace SkyCoop
             AshCanyon,
             Blackrock,
         }
-
 
         public enum LoggerColor
         {
@@ -2788,17 +2788,7 @@ namespace SkyCoop
                 Log("[RCON] Operator Execute: " + CMD, LoggerColor.Magenta);
             }
 
-            if (Low == "disconnect" || Low == "exit" || Low == "quit")
-            {
-                if (_fromClient != -1)
-                {
-                    Server.clients[_fromClient].RCON = false;
-                    ResetDataForSlot(_fromClient);
-                    Log("RCON process disconnect");
-                    Server.clients[_fromClient].udp.Disconnect();
-                }
-                return "";
-            } else if (Low == "trafficdebug" || Low == "traffic" || Low == "trafictrace" || Low == "trafficcheck")
+            if (Low == "trafficdebug" || Low == "traffic" || Low == "trafictrace" || Low == "trafficcheck")
             {
                 MyMod.DebugTrafficCheck = !MyMod.DebugTrafficCheck;
                 return "DebugTrafficCheck = " + MyMod.DebugTrafficCheck;
@@ -3037,6 +3027,83 @@ namespace SkyCoop
                 {
                     return "Incorrect syntax";
                 }
+            } else if (Low.StartsWith("exp "))
+            {
+                string[] Args = CMD.Split(' ');
+                if (Args.Length == 3)
+                {
+                    string Exp = Args[1];
+                    int Client = int.Parse(Args[2]);
+                    string Mac = Server.GetMACByID(Client);
+                    if (string.IsNullOrEmpty(Mac))
+                    {
+                        return "There no player with ID "+ Client;
+                    } else
+                    {
+                        for (int i = ExpeditionManager.m_ActiveExpeditions.Count - 1; i >= 0; i--)
+                        {
+                            if (ExpeditionManager.m_ActiveExpeditions[i].m_Players.Contains(Mac))
+                            {
+                                ExpeditionManager.CompleteExpedition(ExpeditionManager.m_ActiveExpeditions[i].m_GUID, 0);
+                            }
+                        }
+
+                        bool Ok = ExpeditionManager.StartNewExpedition(Mac, 0, Exp, true);
+                        if (Ok)
+                        {
+                            return "Expedition "+ Exp+" started for player ID "+ Client;
+                        } else
+                        {
+                            return "Wasn't able to start expedition " + Exp;
+                        }
+                    }
+                } else
+                {
+                    return "Incorrect syntax.";
+                }
+            } else if (Low == "exps")
+            {
+                RefrashTemplatesList();
+                string Names = "";
+                foreach (var item in m_ExpeditionTasks)
+                {
+                    int Region = item.Key;
+                    foreach (ExpeditionTaskTemplate task in item.Value)
+                    {
+                        if (task.m_CanBeTaken && task.m_TaskType != ExpeditionManager.ExpeditionTaskType.CRASHSITE)
+                        {
+                            string Text = task.m_Alias;
+                            if (string.IsNullOrEmpty(Names))
+                            {
+                                Names = Text;
+                            } else
+                            {
+                                Names +="\n"+Text;
+                            }
+                        }
+                    }
+                }
+                return Names;
+            } else if (Low == "expsfull")
+            {
+                RefrashTemplatesList();
+                string Names = "";
+                foreach (var item in m_ExpeditionTasks)
+                {
+                    int Region = item.Key;
+                    foreach (ExpeditionTaskTemplate task in item.Value)
+                    {
+                        string Text = task.m_Alias;
+                        if (string.IsNullOrEmpty(Names))
+                        {
+                            Names = Text;
+                        } else
+                        {
+                            Names += "\n" + Text;
+                        }
+                    }
+                }
+                return Names;
             }
 #if (DEDICATED)
             else if (Low == "next_weather" || Low == "next weather")

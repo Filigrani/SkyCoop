@@ -106,8 +106,6 @@ namespace SkyCoop
                 m_GearSpawnerGears = JSON.Load(Data.m_GearSpawnerGears).Make<Dictionary<int, string>>();
             }
             NextCrashSiteIn = Data.NextCrashSiteIn;
-
-            
         }
 
         public static void Log(string LOG)
@@ -133,13 +131,22 @@ namespace SkyCoop
 
         public enum ExpeditionTaskType
         {
-            ENTERSCENE,
-            ENTERZONE,
-            COLLECT,
-            FLAREGUNSHOT,
-            CHARCOAL,
-            STAYINZONE,
-            CRASHSITE,
+            ENTERSCENE, // Visit scene.
+            ENTERZONE, // Visit zone on scene.
+            COLLECT, // Collect gear on scene that spawns once you in zone.
+            FLAREGUNSHOT, // Shoot with flaregun being in zone of this scene.
+            CHARCOAL, // Draw with coal on scene in the zone.
+            STAYINZONE, // Just being in zone on the scene.
+            CRASHSITE, // Some settings to make it work for crash sites.
+            AUTOCOMPLETE, // Completes once selected time is over.
+            INTERACT, // Interact with object on the scene that spawns once you in zone.
+        }
+
+        public enum ExpeditionInteractiveImpact
+        {
+            EVERY,
+            ONEOF,
+            NONE,
         }
 
         public enum ExpeditionCompleteOrder
@@ -157,8 +164,19 @@ namespace SkyCoop
             public string m_InviterName = "";
             public int m_Timeout = 60;
         }
+        public class ExpeditionClue
+        {
+            public string m_ExpeditionName = "";
+            public string m_ExpeditionItem = "";
 
-        public static void StartNewExpedition(string LeaderMAC, int Region, string Alias = "")
+            public ExpeditionClue(string GearName, string ExpName)
+            {
+                m_ExpeditionItem = GearName;
+                m_ExpeditionName = ExpName;
+            }
+        }
+
+        public static bool StartNewExpedition(string LeaderMAC, int Region, string Alias = "", bool NoMessage = false)
         {
             DebugLog("Client with MAC "+LeaderMAC+" trying start expedition on region "+Region);
 
@@ -168,23 +186,32 @@ namespace SkyCoop
             {
                 if (m_ActiveExpeditions[i].m_Players.Contains(LeaderMAC))
                 {
-                    ServerSend.ADDHUDMESSAGE(LeaderID, "You are already in expedition!");
-                    return;
+                    if (!NoMessage)
+                    {
+                        ServerSend.ADDHUDMESSAGE(LeaderID, "You are already in expedition!");
+                    }
+                    return false;
                 }
             }
 
             if((Shared.GameRegion)Region == Shared.GameRegion.RandomRegion)
             {
-                ServerSend.ADDHUDMESSAGE(LeaderID, "You can't start expedition here, try to move to another region.");
-                return;
+                if (!NoMessage)
+                {
+                    ServerSend.ADDHUDMESSAGE(LeaderID, "You can't start expedition here, try to move to another region.");
+                }
+                return false;
             }
 
             Expedition Exp = BuildBasicExpedition(Region, Alias);
 
             if(Exp == null)
             {
-                ServerSend.ADDHUDMESSAGE(LeaderID, "No available expeditions, try to move to another region.");
-                return;
+                if (!NoMessage)
+                {
+                    ServerSend.ADDHUDMESSAGE(LeaderID, "No available expeditions, try to move to another region.");
+                }
+                return false;
             }
 
             DebugLog("Expedition created");
@@ -206,6 +233,7 @@ namespace SkyCoop
                 MyMod.DoExpeditionState(2);
 #endif
             }
+            return true;
         }
 
         public static Expedition GetActiveCrashSite()
@@ -662,6 +690,9 @@ namespace SkyCoop
                         if (Task.m_Type == ExpeditionTaskType.CRASHSITE)
                         {
                             CompleteCrashSite(i, Task.GetCrashSiteNearPlayers());
+                        } else
+                        {
+                            CompleteExpedition(i);
                         }
                     } else
                     {
@@ -849,23 +880,28 @@ namespace SkyCoop
                         if (!Task.m_IsComplete && Task.m_SecondsInZone > 0)
                         {
                             int Procent = Task.GetCompleteProcent();
-                            ProgressBar = "Progress: [[00FF00]";
-                            int Stages = Procent / 20;
-                            for (int i2 = 1; i2 <= 20; i2++)
+                            ProgressBar = "Progress: [";
+
+                            int TotalLines = 18;
+                            int Stages = (TotalLines * Procent) / 100;
+                            if (Stages > 0)
                             {
-                                if (Stages > i2)
+                                ProgressBar += "[00FF00]";
+                            }
+                            for (int i2 = 1; i2 <= TotalLines; i2++)
+                            {
+                                ProgressBar += "■";
+                                if(Stages == i2)
                                 {
-                                    ProgressBar += "|";
-                                } else
-                                {
-                                    ProgressBar += " ";
+                                    ProgressBar += ColorAffix;
                                 }
                             }
-                            ProgressBar += ColorAffix + "] " + +Procent + "%";
+                            ProgressBar += "] " + +Procent + "%";
                             ProgressBar = "\n" + ProgressBar;
+
                         }
                     }
-                    
+
                     if (CompleteOrder == ExpeditionCompleteOrder.LINEALLAST)
                     {
                         if (!Task.m_IsComplete && !HideNextOnes)
@@ -927,10 +963,11 @@ namespace SkyCoop
                         MyMod.ExpeditionLastName = m_Name;
                         MyMod.ExpeditionLastTaskText = Text;
                         MyMod.ExpeditionLastTime = m_TimeLeft;
+                        MyMod.LastExpeditionAlias = m_Alias;
 #endif
                     } else
                     {
-                        ServerSend.EXPEDITIONSYNC(Client, m_Name, Text, m_TimeLeft);
+                        ServerSend.EXPEDITIONSYNC(Client, m_Name, Text, m_TimeLeft, m_Alias);
                     }
                 }
 
@@ -943,7 +980,20 @@ namespace SkyCoop
                 }
             }
         }
-
+        public static void RegisterInteractionDone(string GUID)
+        {
+            DebugLog("[RegisterInteractionDone] " + GUID);
+            for (int i = m_ActiveExpeditions.Count - 1; i > -1; i--)
+            {
+                for (int i2 = m_ActiveExpeditions[i].m_Tasks.Count - 1; i2 > -1; i2--)
+                {
+                    if (m_ActiveExpeditions[i].m_Tasks[i2].m_Type == ExpeditionTaskType.INTERACT)
+                    {
+                        m_ActiveExpeditions[i].m_Tasks[i2].CheckInteractiveDone(GUID);
+                    }
+                }
+            }
+        }
         public static void RegisterFlaregunShot(string Scene, Vector3 Position)
         {
             DebugLog("[RegisterFlaregunShot] "+ Scene);
@@ -1003,7 +1053,10 @@ namespace SkyCoop
             public bool m_TimeAdd = true;
             public int m_SecondsInZone = 0;
             public int m_StayInZoneSeconds = 300;
-
+            public Dictionary<string, bool> m_RequiredInteractionsEvery = new Dictionary<string, bool>();
+            public List<string> m_RequiredInteractionsAny = new List<string>();
+            public bool m_RequiredInteractionsAnyDone = true;
+            public bool m_RequiredInteractionsEveryDone = true;
             public void StartDespawnOfAllObjects()
             {
                 if (m_ObjectsSpawned)
@@ -1020,7 +1073,7 @@ namespace SkyCoop
                         Obj.m_Scene = m_Scene;
                         Obj.m_CreationTime = MyMod.MinutesFromStartServer;
                         Obj.m_RemoveTime = MyMod.MinutesFromStartServer + 1440;
-
+                        Obj.m_ObjectGroup = Spawner.m_ObjectGroup;
                         MPSaveManager.AddUniversalSyncableObject(Obj);
                     }
                 }
@@ -1046,11 +1099,24 @@ namespace SkyCoop
             {
                 if (!m_ObjectsSpawned)
                 {
-                    DebugLog("m_ObjectSpawners.Count " + m_ObjectSpawners.Count);
+                    DebugLog("Task " + m_Alias + " SpawnObjects");
                     if (m_ObjectSpawners.Count > 0)
                     {
                         foreach (UniversalSyncableObjectSpawner Spawner in m_ObjectSpawners)
                         {
+                            if(Spawner.m_Prefab == "Expedition3DAudioEvent" || Spawner.m_Prefab == "Expedition2DAudioEvent")
+                            {
+#if (!DEDICATED)
+                                if(MyMod.level_guid == m_Scene)
+                                {
+                                    MyMod.PlayCustomSoundEvent(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab);
+                                }
+#endif
+                                ServerSend.CUSTOMSOUNDEVENT(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab, m_Scene);
+                                continue;
+                            }
+                            
+                            
                             UniversalSyncableObject Obj = new UniversalSyncableObject();
                             Obj.m_Prefab = Spawner.m_Prefab;
                             Obj.m_GUID = Spawner.m_GUID;
@@ -1061,12 +1127,32 @@ namespace SkyCoop
                             Obj.m_Scene = m_Scene;
                             Obj.m_CreationTime = MyMod.MinutesFromStartServer;
                             Obj.m_RemoveTime = 0;
+                            Obj.m_InteractiveData = Spawner.m_InteractiveData;
+                            Obj.m_ObjectGroup = Spawner.m_ObjectGroup;
 
+                            if(Obj.m_Prefab == "ExpeditionInteractive")
+                            {
+                                if (Obj.m_InteractiveData.m_Impact == ExpeditionInteractiveImpact.EVERY)
+                                {
+                                    m_RequiredInteractionsEvery.Add(Obj.m_GUID, false);
+                                    m_RequiredInteractionsEveryDone = false;
+                                } else if (Obj.m_InteractiveData.m_Impact == ExpeditionInteractiveImpact.ONEOF)
+                                {
+                                    m_RequiredInteractionsAny.Add(Obj.m_GUID);
+                                    m_RequiredInteractionsAnyDone = false;
+                                }
+                            }
                             MPSaveManager.AddUniversalSyncableObject(Obj);
-
                             MPSaveManager.RemoveContainer(m_Scene, Spawner.m_GUID);
+                            for (int i = 1; i < 10; i++)
+                            {
+                                MPSaveManager.RemoveContainer(m_Scene, Spawner.m_GUID + i);
+                            }
 #if (!DEDICATED)
-                            MyMod.SpawnUniversalSyncableObject(Obj);
+                            if(MyMod.level_guid == m_Scene)
+                            {
+                                MyMod.SpawnUniversalSyncableObject(Obj);
+                            }
 #endif
                             if (!string.IsNullOrEmpty(Spawner.m_Content))
                             {
@@ -1091,13 +1177,12 @@ namespace SkyCoop
                 DebugLog("Task "+ m_Alias + " SpawnReward");
                 
                 m_RewardAlreadySpawned = true;
-                DebugLog("m_RestockSceneContainers "+ m_RestockSceneContainers);
+                //DebugLog("m_RestockSceneContainers "+ m_RestockSceneContainers);
                 if (m_RestockSceneContainers)
                 {
                     MPSaveManager.AddLootToScene(m_Scene);
-                    DebugLog("Containers Restocked");
                 }
-                DebugLog("m_SpecificContrainers.Count " + m_SpecificContrainers.Count);
+                //DebugLog("m_SpecificContrainers.Count " + m_SpecificContrainers.Count);
                 if (m_SpecificContrainers.Count > 0)
                 {
                     foreach (string ContainerGUID in m_SpecificContrainers)
@@ -1105,7 +1190,7 @@ namespace SkyCoop
                         MPSaveManager.AddLootToContainerOnScene(ContainerGUID, m_Scene);
                     }
                 }
-                DebugLog("m_GearSpawnerGears.Count " + m_GearSpawners.Count);
+                //DebugLog("m_GearSpawnerGears.Count " + m_GearSpawners.Count);
                 if (m_GearSpawners.Count > 0)
                 {
                     foreach (ExpeditionGearSpawner spawn in m_GearSpawners)
@@ -1121,12 +1206,12 @@ namespace SkyCoop
                         DebugLog("Objective Gear Spawned!");
                     }
                 }
-                DebugLog("m_SpecificPlants.Count " + m_SpecificPlants.Count);
+                //DebugLog("m_SpecificPlants.Count " + m_SpecificPlants.Count);
                 if (m_SpecificPlants.Count > 0)
                 {
                     MPSaveManager.ForceGrowPlants(m_Scene, m_SpecificPlants);
                 }
-                DebugLog("m_SpecificBreakdowns.Count " + m_SpecificBreakdowns.Count);
+                //DebugLog("m_SpecificBreakdowns.Count " + m_SpecificBreakdowns.Count);
                 if (m_SpecificBreakdowns.Count > 0)
                 {
                     MPSaveManager.RepairBreakdowns(m_Scene, m_SpecificBreakdowns);
@@ -1135,7 +1220,7 @@ namespace SkyCoop
 
             public int GetCompleteProcent()
             {
-                return (int)(0.5f + ((100f * m_SecondsInZone) / m_StayInZoneSeconds));
+                return (100 * m_SecondsInZone) / m_StayInZoneSeconds;
             }
 
             public void OnCompleted()
@@ -1162,6 +1247,71 @@ namespace SkyCoop
                 }
                 SpawnReward();
                 StartDespawnOfAllObjects();
+            }
+
+            public void CheckInteractiveDone(string GUID)
+            {
+                if (!m_IsComplete)
+                {
+                    bool CanDelete = false;
+                    bool WipeAnylist = false;
+                    
+                    if(!m_RequiredInteractionsAnyDone && m_RequiredInteractionsAny.Count > 0)
+                    {
+                        for (int i = 0; i < m_RequiredInteractionsAny.Count; i++)
+                        {
+                            if (m_RequiredInteractionsAny[i] == GUID)
+                            {
+                                m_RequiredInteractionsAnyDone = true;
+                                WipeAnylist = true;
+                                break;
+                            }
+                        }
+                    }
+                    if (!m_RequiredInteractionsEveryDone && m_RequiredInteractionsEvery.Count > 0)
+                    {
+                        if (m_RequiredInteractionsEvery.ContainsKey(GUID))
+                        {
+                            m_RequiredInteractionsEvery.Remove(GUID);
+                            m_RequiredInteractionsEvery.Add(GUID, true);
+                            CanDelete = true;
+                        }
+                        foreach (var item in m_RequiredInteractionsEvery)
+                        {
+                            if (item.Value)
+                            {
+                                m_RequiredInteractionsEveryDone = true;
+                            } else
+                            {
+                                break;   
+                            }
+                        }
+                    }
+
+                    if (WipeAnylist)
+                    {
+                        for (int i = 0; i < m_RequiredInteractionsAny.Count; i++)
+                        {
+                            MPSaveManager.RemoveUniversalSyncableObject(m_Scene, m_RequiredInteractionsAny[i]);
+#if (!DEDICATED)
+                            if (MyMod.level_guid == m_Scene)
+                            {
+                                MyMod.RemoveObjectByGUID(m_RequiredInteractionsAny[i]);
+                            }
+#endif
+                        }
+                    }
+                    if(CanDelete)
+                    {
+                        MPSaveManager.RemoveUniversalSyncableObject(m_Scene, GUID);
+#if (!DEDICATED)
+                        if (MyMod.level_guid == m_Scene)
+                        {
+                            MyMod.RemoveObjectByGUID(GUID);
+                        }
+#endif
+                    }
+                }
             }
 
             public void CheckFlaregunShot(string Scene, Vector3 Position)
@@ -1305,6 +1455,23 @@ namespace SkyCoop
                             return;
                         }
                     }
+                } else if (m_Type == ExpeditionTaskType.AUTOCOMPLETE)
+                {
+                    m_SecondsInZone++;
+                    if (m_SecondsInZone >= m_StayInZoneSeconds)
+                    {
+                        OnCompleted();
+                        return;
+                    }
+                } else if(m_Type == ExpeditionTaskType.INTERACT)
+                {
+                    if (!m_IsComplete)
+                    {
+                        if (m_ObjectsSpawned && m_RequiredInteractionsEveryDone && m_RequiredInteractionsAnyDone)
+                        {
+                            OnCompleted();
+                        }
+                    }
                 }
             }
         }
@@ -1401,6 +1568,27 @@ namespace SkyCoop
                     Shared.FakeDropItem(GearVisual, true);
 #endif
                     ServerSend.DROPITEM(0, GearVisual, true);
+                }
+            }
+        }
+
+        public static void RemoveObjectGroup(string group)
+        {
+            foreach (var Dict in MPSaveManager.UniversalSyncableObjects.ToList())
+            {
+                string Scene = Dict.Key;
+                foreach (var Obj in Dict.Value.ToList())
+                {
+                    if(Obj.Value.m_ObjectGroup == group)
+                    {
+                        MPSaveManager.RemoveUniversalSyncableObject(Scene, Obj.Value.m_GUID);
+#if (!DEDICATED)
+                        if(MyMod.level_guid == Scene)
+                        {
+                            MyMod.RemoveObjectByGUID(Obj.Value.m_GUID);
+                        }
+#endif
+                    }
                 }
             }
         }

@@ -12,6 +12,7 @@ using static SkyCoop.DataStr;
 using static SkyCoop.Comps;
 using static Utils;
 using static SkyCoop.MyMod;
+using static Il2CppSystem.Net.CookieCollection;
 
 namespace SkyCoop
 {
@@ -1388,6 +1389,13 @@ namespace SkyCoop
                             {
                                 FPI.m_PlayerStateTransitions = reference.GetComponent<FirstPersonItem>().m_PlayerStateTransitions;
                             }
+                            //Harvest HAR = __instance.m_Harvest;
+                            //if(HAR == null)
+                            //{
+                            //    HAR = __instance.gameObject.AddComponent<Harvest>();
+                            //    __instance.m_Harvest = HAR;
+                            //    HAR.m_
+                            //}
                             __instance.m_FirstPersonItem = FPI;
                         }
                     }
@@ -3834,6 +3842,52 @@ namespace SkyCoop
                 gi.m_FoodItem.m_TimeToEatSeconds = restoreTimeToEat;
             }
         }
+
+        public static string DropTimeFormat(int minutesLeft)
+        {
+            int hours = minutesLeft / 60;
+            if (hours >= 24)
+            {
+                int days = hours / 24;
+                if (days != 1)
+                {
+                    return days + " days";
+                } else
+                {
+                    return days + " day";
+                }
+            } else
+            {
+                if (hours >= 1)
+                {
+                    if (hours != 1)
+                    {
+                        return hours + " hours";
+                    } else
+                    {
+                        return hours + " hour";
+                    }
+                } else
+                {
+                    if (minutesLeft >= 1)
+                    {
+                        if (minutesLeft != 1)
+                        {
+                            return minutesLeft + " minutes";
+                        } else
+                        {
+                            return minutesLeft + " minute";
+                        }
+                    } else
+                    {
+                        return "";
+                    }
+                }
+            }
+        }
+
+
+
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectDisplayText")] // Almost always
         internal class PlayerManager_GetInteractiveObjectDisplayText
         {
@@ -3892,6 +3946,16 @@ namespace SkyCoop
                             __result = ColorPrefix + DGD.m_LocalizedDisplayName + ColorAffix;
                         } else
                         {
+                            if (KeyboardUtilities.InputManager.GetKey(KeyCode.LeftShift))
+                            {
+                                string DropTime = DropTimeFormat(MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime);
+                                if (string.IsNullOrEmpty(DropTime))
+                                {
+                                    DropTime = "Just now";
+                                }
+                                __result = DGD.m_LocalizedDisplayName + "\n" + "Dropped " + DropTime + " ago";
+                                return;
+                            }
                             string ActionString = "Dropped";
                             bool IsSnare = false;
                             bool IsLamp = false;
@@ -3949,9 +4013,7 @@ namespace SkyCoop
                                     int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
                                     minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
                                 }
-
-                                int hours = minutesLeft / 60;
-
+                                string DropTime = DropTimeFormat(minutesLeft);
                                 string str = DGD.m_LocalizedDisplayName + "\n";
                                 if (!IsSnare && !IsLamp)
                                 {
@@ -3971,52 +4033,20 @@ namespace SkyCoop
                                     str = str + "Fuel left for ";
                                 }
 
-                                if (hours >= 24)
+                                if(string.IsNullOrEmpty(DropTime))
                                 {
-                                    int days = hours / 24;
-                                    if (days != 1)
-                                    {
-                                        str = str + days + " days";
-                                    } else
-                                    {
-                                        str = str + days + " day";
-                                    }
-
+                                    str = str + DropTime;
                                 } else
                                 {
-                                    if (hours >= 1)
+                                    if (!IsSnare && !IsLamp)
                                     {
-                                        if (hours != 1)
-                                        {
-                                            str = str + hours + " hours";
-                                        } else
-                                        {
-                                            str = str + hours + " hour";
-                                        }
-                                    } else
+                                        str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
+                                    } else if (IsSnare)
                                     {
-                                        if (minutesLeft >= 1)
-                                        {
-                                            if (minutesLeft != 1)
-                                            {
-                                                str = str + minutesLeft + " minutes";
-                                            } else
-                                            {
-                                                str = str + minutesLeft + " minute";
-                                            }
-                                        } else
-                                        {
-                                            if (!IsSnare && !IsLamp)
-                                            {
-                                                str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
-                                            } else if (IsSnare)
-                                            {
-                                                str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
-                                            } else if (IsLamp)
-                                            {
-                                                str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
-                                            }
-                                        }
+                                        str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
+                                    } else if (IsLamp)
+                                    {
+                                        str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
                                     }
                                 }
                                 __result = str + DroppedString;
@@ -4029,13 +4059,21 @@ namespace SkyCoop
                     } 
                     else if(interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>() != null)
                     {
-                        __result = interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>().m_Owner + "'s Backpack";
+                        Comps.DeathDropContainer DC = interactiveObject.gameObject.GetComponent<Comps.DeathDropContainer>();
+
+                        if(DC.m_DeathTime == -1)
+                        {
+                            __result = DC.m_Owner + "'s Backpack\nDropped long time ago";
+                        } else
+                        {
+                            __result = DC.m_Owner + "'s Backpack\nDropped " + DropTimeFormat(MyMod.MinutesFromStartServer - DC.m_DeathTime);
+                        }
                     } else if (interactiveObject.gameObject.GetComponent<FakeRockCache>() != null)
                     {
                         __result = interactiveObject.gameObject.GetComponent<FakeRockCache>().m_Owner + "'s " + Localization.Get("GAMEPLAY_RadialRockCache");
                     } else if (interactiveObject.GetComponent<ExpeditionInteractive>())
                     {
-                        __result = interactiveObject.GetComponent<ExpeditionInteractive>().m_ObjectText;
+                        __result = interactiveObject.GetComponent<ExpeditionInteractive>().m_Data.m_ObjectText;
                     }
                 }
             }
@@ -4345,7 +4383,11 @@ namespace SkyCoop
                     {
                         MyMod.ShowRockStashActionPicker(obj);
                         __result = true;
+                    } else if (obj.GetComponent<ExpeditionInteractive>() != null)
+                    {
+                        __result = obj.GetComponent<ExpeditionInteractive>().TryInteract();
                     }
+                    
                 }
             }
         }
@@ -7637,7 +7679,7 @@ namespace SkyCoop
                         if(InHandName == "GEAR_KnifeImprovised")
                         {
                             DataStr.PriorityActionForOtherPlayer act = MyMod.GetCustomAction("Excision");
-                            MyMod.DoLongAction(Gear.gameObject, act.m_ProcessText, act.m_Action);
+                            MyMod.DoLongAction(Gear.gameObject, act.m_ProcessText, act.m_Action, act.m_ActionDuration, act.m_Hold);
                             return false;
                         }
                     }
@@ -7886,6 +7928,7 @@ namespace SkyCoop
             }
         }
         public static bool ShowInvitesAfterPicker = false;
+        public static bool ShowCluesAfterPicker = false;
         [HarmonyLib.HarmonyPatch(typeof(Panel_ActionPicker), "OnSelect")]
         internal static class Panel_ActionPicker_OnSelect
         {
@@ -7907,6 +7950,10 @@ namespace SkyCoop
                             MyMod.SendUDPData(_packet);
                         }
                     }
+                }else if (ShowCluesAfterPicker)
+                {
+                    ShowCluesAfterPicker = false;
+                    ShowCluesPicker();
                 }
             }
         }
@@ -7941,7 +7988,7 @@ namespace SkyCoop
                     if (gi.m_GearName == "GEAR_HandheldShortwave")
                     {
                         __instance.m_ButtonPromptScrollWheel.ShowPromptForKey("Change frequency", "Scroll");
-                        //AltFire = "Expeditions";
+                        AltFire = "Expeditions";
                         Show = true;
                     } else if (gi.m_GearName == "GEAR_SCNote")
                     {

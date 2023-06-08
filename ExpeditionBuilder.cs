@@ -86,16 +86,9 @@ namespace SkyCoop
             public List<DataStr.UniversalSyncableObjectSpawner> m_Objects = new List<DataStr.UniversalSyncableObjectSpawner>();
         }
 
-        public static void Init(bool Force = false)
+        public static void RefrashTemplatesList()
         {
-            if (Initilized && !Force)
-            {
-                return;
-            }
             m_ExpeditionTasks.Clear();
-            int OneHour = 3600;
-            System.Random RNG = new System.Random();
-            NextCrashSiteIn = RNG.Next(OneHour * 3, OneHour * 6);
             MPSaveManager.CreateFolderIfNotExist(MPSaveManager.GetBaseDirectory() + "Mods");
             MPSaveManager.CreateFolderIfNotExist(MPSaveManager.GetBaseDirectory() + "Mods" + MPSaveManager.GetSeparator() + "ExpeditionTemplates");
 
@@ -120,6 +113,18 @@ namespace SkyCoop
                 m_ExpeditionTasks[Task.m_RegionBelong].Add(Task);
 
             }
+        }
+
+        public static void Init(bool Force = false)
+        {
+            if (Initilized && !Force)
+            {
+                return;
+            }
+            int OneHour = 3600;
+            System.Random RNG = new System.Random();
+            NextCrashSiteIn = RNG.Next(OneHour * 3, OneHour * 6);
+            RefrashTemplatesList();
             Initilized = true;
         }
 

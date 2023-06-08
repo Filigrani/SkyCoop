@@ -25,6 +25,119 @@ namespace GameServer
 
         public delegate void PacketHandler(Packet _packet);
         public static Dictionary<int, PacketHandler> packetHandlers;
+
+        public class PingData
+        {
+            public string ServerData = "";
+            public int PlayersMax = 0;
+            public int Players = 0;
+            public bool CanJoin = false;
+            public string Error = "";
+        }
+
+        public static PingData Ping(string IP, int PORT)
+        {
+            PingData Dat = new PingData();
+            // Request of server status should be done via UDP.
+            // Use same port as game server use.
+            // Default port of Sky Co-op Server is 26950 (if not listed otherwise).
+            // Example: Game server with address 87.254.159.105:26950
+            // Will respond with status data by same 26950 port,
+            // aswell as servers that listed as 87.254.159.105
+            // will respond by port 26950, but I think is obvious.
+
+            // Send to server (signed int) -2 message to request servers status.
+
+            UdpClient Pinger = new UdpClient();
+            Pinger.Client.ReceiveTimeout = 5000;
+            Pinger.Client.SendTimeout = 5000;
+            IPEndPoint endPoint = new IPEndPoint(IPAddress.Parse(IP), PORT);
+
+            try
+            {
+                Pinger.Connect(endPoint);
+                byte[] Buffer = BitConverter.GetBytes(-2);
+                Pinger.Send(Buffer.ToArray(), Buffer.Length);
+
+                byte[] ReturnData = Pinger.Receive(ref endPoint);
+                // First 4 bytes is header, always should be 147
+                // Next 4 bytes is server name length.
+                // Next Unicode formated string of server name.
+                // Next 4 bytes is Mod's version string length
+                // Next UTF8 formated string of version.
+                // Next 4 bytes after version string is current amout of players on server.
+                // Next 4 bytes is max players slots on server.
+                // Next 4 bytes is server information json string length.
+                // Next Unicode formated string of server's information.
+                if (ReturnData == null || ReturnData.Length < 4)
+                {
+                    Dat.CanJoin = false;
+                    Dat.Error = "The server is not responding.";
+                    return Dat;
+                }
+
+                int i = 0;
+                int IntHeader = BitConverter.ToInt32(ReturnData, i);
+                if (IntHeader == 147)
+                {
+                    MelonLogger.Msg("Correct header!");
+                    Dat.CanJoin = true;
+                } else
+                {
+                    MelonLogger.Msg("Wrong header!");
+                    Dat.CanJoin = false;
+                    Dat.Error = "Server respond incorrect data, make sure client and server use same version of the mod.";
+                    return Dat;
+                }
+                i += 4;
+                int ServerNameLength = BitConverter.ToInt32(ReturnData, i);
+                i += 4;
+                string ServerName = Encoding.Unicode.GetString(ReturnData, i, ServerNameLength);
+                i += ServerNameLength;
+                int ServerVersionStringLength = BitConverter.ToInt32(ReturnData, i);
+                i += 4;
+                string ServerVersion = Encoding.UTF8.GetString(ReturnData, i, ServerVersionStringLength);
+                i += ServerVersionStringLength;
+                int Players = BitConverter.ToInt32(ReturnData, i);
+                i += 4;
+                int PlayersMax = BitConverter.ToInt32(ReturnData, i);
+                i += 4;
+                int ServerConfigStringLength = BitConverter.ToInt32(ReturnData, i);
+                i += 4;
+                string ConfigString = Encoding.Unicode.GetString(ReturnData, i, ServerConfigStringLength);
+
+                Dat.ServerData = ConfigString;
+                Dat.Players = Players;
+                Dat.PlayersMax = PlayersMax;
+
+                MelonLogger.Msg(ServerName + " version " + ServerVersion + " Players: " + Players + "/" + PlayersMax + " Server json:");
+                MelonLogger.Msg(ConfigString);
+                Pinger.Close();
+
+                if(Players >= PlayersMax)
+                {
+                    Dat.CanJoin = false;
+                    Dat.Error = "Server is full!";
+                }
+                if(ServerVersion != MyMod.BuildInfo.Version)
+                {
+                    Dat.CanJoin = false;
+                    Dat.Error = "Server using "+ ServerVersion+" version of the mod!";
+                }
+                MyMod.MaxPlayers = PlayersMax;
+                Shared.InitAllPlayers();
+                return Dat;
+            }
+            catch (Exception e)
+            {
+                Dat.Error = e.Message;
+                Dat.CanJoin = false;
+                return Dat;
+            }
+            Dat.Error = "Wasn't able to reach server.";
+            return Dat;
+        }
+
         public static void ConnectToServer()
         {
             myId = 0;
@@ -65,8 +178,18 @@ namespace GameServer
                 ConnectPort = Convert.ToInt32(newPort);
                 MelonLogger.Msg("Going to connect to " + ip + ":" + ConnectPort);
             }
-            ConnectToServer();
             MyMod.DoWaitForConnect(false);
+            PingData D = Ping(ip, ConnectPort);
+
+            if (D.CanJoin)
+            {
+                ConnectToServer();
+            } else
+            {
+                MyMod.RemoveWaitForConnect();
+                MyMod.DoOKMessage("Connection failed", D.Error);
+                MelonLogger.Msg("Connection failed " + D.Error);
+            }
         }
         public class UDP
         {
@@ -341,6 +464,7 @@ namespace GameServer
             { (int)ServerPackets.REMOVEROCKCACH, ClientHandle.REMOVEROCKCACH},
             { (int)ServerPackets.ADDUNIVERSALSYNCABLE, ClientHandle.ADDUNIVERSALSYNCABLE},
             { (int)ServerPackets.REMOVEUNIVERSALSYNCABLE, ClientHandle.REMOVEUNIVERSALSYNCABLE},
+            { (int)ServerPackets.CUSTOMSOUNDEVENT, ClientHandle.CUSTOMSOUNDEVENT},
         };
             MelonLogger.Msg("Initialized packets.");
         }

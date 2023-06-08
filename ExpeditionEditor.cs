@@ -14,8 +14,7 @@ using System.Security.Policy;
 using static SkyCoop.Comps;
 using UnhollowerBaseLib;
 using UnityEngine.SceneManagement;
-using static Utils;
-using Harmony;
+using System.Globalization;
 
 namespace SkyCoop
 {
@@ -96,6 +95,7 @@ namespace SkyCoop
             MyMod.ExpeditionEditorUI.transform.GetChild(28).gameObject.SetActive(false);
             MyMod.ExpeditionEditorUI.transform.GetChild(31).gameObject.SetActive(false);
             MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).gameObject.SetActive(false);
+            MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(9).gameObject.SetActive(false);
         }
 
         public static void BackToSelect(int Region)
@@ -167,7 +167,28 @@ namespace SkyCoop
         }
         public static void ToggleObjectSettingsPanel()
         {
-            MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).gameObject.SetActive(!MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).gameObject.activeSelf);
+            bool Interactive = false;
+            for (int i = 0; i < m_Objects.Count; i++)
+            {
+                if (m_Objects[i].m_GUID == m_LastObjectGUID)
+                {
+                    if(m_Objects[i].m_Prefab == "ExpeditionInteractive")
+                    {
+                        Interactive = true;
+                    }
+                    
+                    break;
+                }
+            }
+            if (!Interactive)
+            {
+                MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(9).gameObject.SetActive(false);
+                MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).gameObject.SetActive(!MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).gameObject.activeSelf);
+            } else
+            {
+                MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).gameObject.SetActive(false);
+                MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(9).gameObject.SetActive(!MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(9).gameObject.activeSelf);
+            }
         }
         public static void ToggleObjectsList()
         {
@@ -305,6 +326,67 @@ namespace SkyCoop
             }
         }
 
+        public static ExpeditionInteractiveData GetInteractiveData(UniversalSyncableObjectSpawner Object)
+        {
+            ExpeditionInteractiveData Data = new ExpeditionInteractiveData();
+            Transform Panel = MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(9);
+            Data.m_GUID = Object.m_GUID;
+            Data.m_Position.x = float.Parse(Panel.GetChild(0).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Position.y = float.Parse(Panel.GetChild(1).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Position.z = float.Parse(Panel.GetChild(2).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+
+            Data.m_Rotation.x = float.Parse(Panel.GetChild(3).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Rotation.y = float.Parse(Panel.GetChild(4).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Rotation.z = float.Parse(Panel.GetChild(5).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+
+            Data.m_Scale.x = float.Parse(Panel.GetChild(6).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Scale.y = float.Parse(Panel.GetChild(7).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Scale.z = float.Parse(Panel.GetChild(8).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+
+            Data.m_ObjectText = Panel.GetChild(9).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            Data.m_InteractTime = float.Parse(Panel.GetChild(10).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_InteractText = Panel.GetChild(11).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            Data.m_Tool = Panel.GetChild(12).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            Data.m_Material = Panel.GetChild(13).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            Data.m_MaterialCount = int.Parse(Panel.GetChild(14).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Audio = Panel.GetChild(16).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            Data.m_Yield = Panel.GetChild(17).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            Data.m_YieldCount = int.Parse(Panel.GetChild(18).gameObject.GetComponent<UnityEngine.UI.InputField>().text);
+            Data.m_Impact = (ExpeditionInteractiveImpact) Panel.GetChild(19).gameObject.GetComponent<UnityEngine.UI.Dropdown>().m_Value;
+            Data.m_ObjectGroupToRemove = Panel.GetChild(20).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+            return Data;
+        }
+
+        public static void SetnteractiveData(UniversalSyncableObjectSpawner Object)
+        {
+            ExpeditionInteractiveData Data = Object.m_InteractiveData;
+            Transform Panel = MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(9);
+
+            Panel.GetChild(0).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Position.x.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(1).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Position.y.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(2).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Position.z.ToString(CultureInfo.InvariantCulture);
+
+            Panel.GetChild(3).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Rotation.x.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(4).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Rotation.y.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(5).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Rotation.z.ToString(CultureInfo.InvariantCulture);
+
+            Panel.GetChild(6).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Scale.x.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(7).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Scale.y.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(8).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Scale.z.ToString(CultureInfo.InvariantCulture);
+
+            Panel.GetChild(9).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_ObjectText;
+            Panel.GetChild(10).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_InteractTime.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(11).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_InteractText;
+            Panel.GetChild(12).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Tool;
+            Panel.GetChild(13).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Material;
+            Panel.GetChild(14).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_MaterialCount.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(16).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Audio.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(17).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_Yield.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(18).gameObject.GetComponent<UnityEngine.UI.InputField>().text = Data.m_YieldCount.ToString(CultureInfo.InvariantCulture);
+            Panel.GetChild(19).gameObject.GetComponent<UnityEngine.UI.Dropdown>().Set((int)Data.m_Impact);
+            Panel.GetChild(20).gameObject.GetComponent<UnityEngine.UI.InputField>().SetText(Data.m_ObjectGroupToRemove);
+        }
+
         public static void UpdateObjectSettings()
         {
             for (int i = m_Objects.Count - 1; i >= 0; i--)
@@ -312,6 +394,8 @@ namespace SkyCoop
                 if (m_Objects[i].m_GUID == m_LastObjectGUID)
                 {
                     m_Objects[i].m_Content = MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).GetChild(1).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
+                    m_Objects[i].m_InteractiveData = GetInteractiveData(m_Objects[i]);
+                    m_Objects[i].m_ObjectGroup = MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).GetChild(3).gameObject.GetComponent<UnityEngine.UI.InputField>().text;
                     return;
                 }
             }
@@ -365,6 +449,8 @@ namespace SkyCoop
                     {
                         MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(2).gameObject.GetComponent<UnityEngine.UI.Text>().text = "GUID: " + m_LastObjectGUID;
                         MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).GetChild(1).gameObject.GetComponent<UnityEngine.UI.InputField>().SetText(m_Objects[i].m_Content);
+                        SetnteractiveData(m_Objects[i]);
+                        MyMod.ExpeditionEditorUI.transform.GetChild(31).GetChild(4).GetChild(3).gameObject.GetComponent<UnityEngine.UI.InputField>().SetText(m_Objects[i].m_ObjectGroup);
                         return;
                     }
                 }
@@ -719,6 +805,12 @@ namespace SkyCoop
             }
         }
 
+        public static void ApplyObjectSettings()
+        {
+            UpdateObjectSettings();
+            VisualizeObjects();
+        }
+
         public static void VisualizeObjects()
         {
             DisableVisualizeObjects();
@@ -730,8 +822,13 @@ namespace SkyCoop
                 Obj.m_GUID = Spawner.m_GUID;
                 Obj.m_Position = Spawner.m_Position;
                 Obj.m_Rotation = Spawner.m_Rotation;
+                Obj.m_InteractiveData = Spawner.m_InteractiveData;
 
                 MPSaveManager.RemoveContainer(MyMod.level_guid, Spawner.m_GUID);
+                for (int i = 1; i < 10; i++)
+                {
+                    MPSaveManager.RemoveContainer(MyMod.level_guid, Spawner.m_GUID + i);
+                }
                 if (!string.IsNullOrEmpty(Spawner.m_Content))
                 {
                     MPSaveManager.SaveContainer(MyMod.level_guid, Spawner.m_GUID, Spawner.m_Content);
@@ -744,7 +841,7 @@ namespace SkyCoop
                 Obj.m_ExpeditionBelong = "";
                 Obj.m_Scene = MyMod.level_guid;
                 Obj.m_CreationTime = MyMod.MinutesFromStartServer;
-                GameObject newObject = MyMod.SpawnUniversalSyncableObject(Obj);
+                GameObject newObject = MyMod.SpawnUniversalSyncableObject(Obj, true);
                 if (newObject)
                 {
                     m_VisualizeObjects.Add(newObject);
@@ -803,6 +900,9 @@ namespace SkyCoop
             Spawner.m_Position = GameManager.GetPlayerTransform().transform.position;
             Spawner.m_Rotation = GameManager.GetPlayerTransform().transform.rotation;
             Spawner.m_GUID = ObjectGuidManager.GenerateNewGuidString();
+            Spawner.m_InteractiveData.m_Position = Spawner.m_Position;
+            Spawner.m_InteractiveData.m_Rotation = Spawner.m_Rotation.eulerAngles;
+            Spawner.m_InteractiveData.m_GUID = Spawner.m_GUID;
             m_Objects.Add(Spawner);
             m_LastObjectGUID = Spawner.m_GUID;
             VisualizeObjects();
@@ -821,7 +921,7 @@ namespace SkyCoop
 
             DirectoryInfo d = new DirectoryInfo("Mods" + Seperator + "ExpeditionTemplates");
 
-            ExpeditionBuilder.Init(true);
+            RefrashTemplatesList();
             List<string> Names = new List<string>();
             List<int> RegionBelong = new List<int>();
 

@@ -110,7 +110,7 @@ namespace GameServer
                     int _clientId = _packet.ReadInt();
                     string SubNetworkGUID = "";
 
-                    if(_clientId != -2)
+                    if(_clientId != -2 && _clientId != -1)
                     {
                         if (_packet.UnreadLength() > 12)
                         {
@@ -179,25 +179,25 @@ namespace GameServer
                         _clientId = freeSlot;
                     }else if(_clientId == -1)
                     {
-                        Log("[UDP] Attempt to get RCON access for " + _clientEndPoint.Address.ToString());
-                        int RCONSLOT = MaxPlayers+1;
-                        if (clients[RCONSLOT].udp.endPoint == null)
+                        Log("[RCON] Request by " + _clientEndPoint.Address.ToString());
+
+                        if(_packet.UnreadLength() > 4)
                         {
-                            _clientId = RCONSLOT;
-                        }else{
-                            if(clients[RCONSLOT].udp.endPoint.Address.ToString() == _clientEndPoint.Address.ToString())
+                            string RCONPass = _packet.ReadString();
+                            if(RCONPass == MyMod.RCON)
                             {
-                                Log("[UDP] RCON Operator reconnecting...");
-                                _clientId = RCONSLOT;
-                                ServerSend.RCONCONNECTED(_clientId);
-                                return;
-                            }
-                            else{
-                                Log("[UDP] RCON Slot currently busy");
-                                ServerSend.KICKMESSAGE(_clientEndPoint, "RCON Operator slot is busy!");
-                                return;
+                                if (_packet.UnreadLength() > 4)
+                                {
+                                    string RCONCommand = _packet.ReadUnicodeString();
+                                    string CallBack = Shared.ExecuteCommand(RCONCommand, -1);
+                                    ServerSend.RCONSENDSTRING(_clientEndPoint, CallBack);
+                                }
+                            } else
+                            {
+                                ServerSend.RCONSENDSTRING(_clientEndPoint, "Request rejected!");
                             }
                         }
+                        return;
                     }else if(_clientId == -2)
                     {
                         ServerSend.PINGSERVER(_clientEndPoint);
@@ -436,6 +436,8 @@ namespace GameServer
                 { (int)ClientPackets.CHARCOALDRAW, ServerHandle.CHARCOALDRAW},
                 { (int)ClientPackets.CHATCOMMAND, ServerHandle.CHATCOMMAND},
                 { (int)ClientPackets.REQUESTCONTAINERSTATE, ServerHandle.REQUESTCONTAINERSTATE},
+                { (int)ClientPackets.INTERACTIONDONE, ServerHandle.INTERACTIONDONE},
+                { (int)ClientPackets.REMOVEOBJECTGROUP, ServerHandle.REMOVEOBJECTGROUP},
             };
             Log("Initialized packets.");
         }

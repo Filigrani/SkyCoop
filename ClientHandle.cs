@@ -1284,7 +1284,7 @@ namespace SkyCoop
                 {
                     string Name = MyMod.PendingLocksmithObject.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_GearName;
                     DataStr.PriorityActionForOtherPlayer act = MyMod.GetCustomAction("Locksmith" + MyMod.PendingLocksmithAction);
-                    MyMod.DoLongAction(MyMod.PendingLocksmithObject, act.m_ProcessText, act.m_Action);
+                    MyMod.DoLongAction(MyMod.PendingLocksmithObject, act.m_ProcessText, act.m_Action, act.m_ActionDuration, act.m_Hold);
                 }
             }else{
                 HUDMessage.AddMessage("Someone already work on this!");
@@ -1550,8 +1550,10 @@ namespace SkyCoop
             string ExpeditionName = _packet.ReadString();
             string Text = _packet.ReadString();
             int TimeLeft = _packet.ReadInt();
+            string Alias = _packet.ReadString();
 
-            if(string.IsNullOrEmpty(ExpeditionName) && string.IsNullOrEmpty(Text) && TimeLeft == 0)
+
+            if (string.IsNullOrEmpty(ExpeditionName) && string.IsNullOrEmpty(Text) && TimeLeft == 0)
             {
                 MyMod.OnExpedition = false;
             } else
@@ -1560,6 +1562,7 @@ namespace SkyCoop
                 MyMod.ExpeditionLastName = ExpeditionName;
                 MyMod.ExpeditionLastTaskText = Text;
                 MyMod.ExpeditionLastTime = TimeLeft;
+                MyMod.LastExpeditionAlias = Alias;
             }
         }
         public static void EXPEDITIONRESULT(Packet _packet)
@@ -1624,6 +1627,13 @@ namespace SkyCoop
         {
             string GUID = _packet.ReadString();
             MyMod.RemoveObjectByGUID(GUID);
+        }
+        public static void CUSTOMSOUNDEVENT(Packet _packet)
+        {
+            Vector3 Position = _packet.ReadVector3();
+            string SOUND = _packet.ReadString();
+            string PREFAB = _packet.ReadString();
+            MyMod.PlayCustomSoundEvent(Position, SOUND, PREFAB);
         }
     }
 }

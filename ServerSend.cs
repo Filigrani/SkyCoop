@@ -2274,6 +2274,15 @@ namespace GameServer
             return Json;
         }
 
+        public static void RCONSENDSTRING(IPEndPoint endPoint, string STR)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.RCONCALLBACK))
+            {
+                _packet.WriteUnicodeString(STR);
+                Server.SendUDPData(endPoint, _packet);
+            }
+        }
+
 
         public static void PINGSERVER(IPEndPoint endPoint)
         {
@@ -2414,13 +2423,14 @@ namespace GameServer
                 SendUDPDataToAllButNotSender(_packet, From);
             }
         }
-        public static void EXPEDITIONSYNC(int For, string Name, string Task, int Time)
+        public static void EXPEDITIONSYNC(int For, string Name, string Task, int Time, string Alias)
         {
             using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONSYNC))
             {
                 _packet.Write(Name);
                 _packet.Write(Task);
                 _packet.Write(Time);
+                _packet.Write(Alias);
                 SendUDPData(For, _packet);
             }
         }
@@ -2527,6 +2537,16 @@ namespace GameServer
             using (Packet _packet = new Packet((int)ServerPackets.REMOVEUNIVERSALSYNCABLE))
             {
                 _packet.Write(GUID);
+                SendUDPDataToAll(_packet, Scene);
+            }
+        }
+        public static void CUSTOMSOUNDEVENT(Vector3 Position, string SOUND, string Prefab, string Scene)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CUSTOMSOUNDEVENT))
+            {
+                _packet.Write(Position);
+                _packet.Write(SOUND);
+                _packet.Write(Prefab);
                 SendUDPDataToAll(_packet, Scene);
             }
         }

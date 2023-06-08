@@ -55,20 +55,7 @@ namespace GameServer
                     return;
                 }
             }else{
-                Log("RCON request from client " + _fromClient);
-
-                string RCONpass = _packet.ReadString();
-                if(RCONpass == MyMod.RCON)
-                {
-                    Log("Correct RCON password, client registered as operator.");
-                    Server.clients[_fromClient].RCON = true;
-                    ServerSend.RCONCONNECTED(_fromClient);
-                }else{
-                    Log("Incorrect RCON password, client kicked.");
-                    ServerSend.KICKMESSAGE(_fromClient, "Wrong RCON password!");
-                    Server.clients[_fromClient].udp.Disconnect();
-                }
-
+                ServerSend.KICKMESSAGE(_fromClient, "Outdated RCON protocol!");
                 return;
             }
 
@@ -1633,12 +1620,7 @@ namespace GameServer
 
         public static void RCONCOMMAND(int _fromClient, Packet _packet)
         {
-            if(Server.clients[_fromClient] != null && Server.clients[_fromClient].RCON)
-            {
-                Server.clients[_fromClient].TimeOutTime = 0;
-                string CMD = _packet.ReadString();
-                ServerSend.RCONCALLBACK(_fromClient, Shared.ExecuteCommand(CMD, _fromClient));
-            }
+
         }
         public static void FORCELOADING(int _fromClient, Packet _packet)
         {
@@ -1867,6 +1849,19 @@ namespace GameServer
             int State = MPSaveManager.GetContainerState(Scene, GUID);
             //Log("State is "+State+" sending it back to client "+_fromClient);
             ServerSend.CHANGECONTAINERSTATE(0, GUID, State, Scene, false, _fromClient);
+        }
+        public static void INTERACTIONDONE(int _fromClient, Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+            ExpeditionManager.RegisterInteractionDone(GUID);
+#if (!DEDICATED)
+            MyMod.RemoveObjectByGUID(GUID);
+#endif
+        }
+        public static void REMOVEOBJECTGROUP(int _fromClient, Packet _packet)
+        {
+            string group = _packet.ReadString();
+            ExpeditionManager.RemoveObjectGroup(group);
         }
     }
 }

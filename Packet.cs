@@ -194,6 +194,8 @@ namespace GameServer
         ADDUNIVERSALSYNCABLE,
         REMOVEUNIVERSALSYNCABLE,
         REQUESTCONTAINERSTATE,
+        CUSTOMSOUNDEVENT,
+        REMOVEOBJECTGROUP,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -376,6 +378,9 @@ namespace GameServer
         ADDUNIVERSALSYNCABLE,
         REMOVEUNIVERSALSYNCABLE,
         REQUESTCONTAINERSTATE,
+        CUSTOMSOUNDEVENT,
+        INTERACTIONDONE,
+        REMOVEOBJECTGROUP,
     }
 
     public class Packet : IDisposable
@@ -977,6 +982,7 @@ namespace GameServer
             Write(obj.m_Rotation);
             Write(obj.m_Owner);
             Write(obj.m_ContainerPrefab);
+            Write(obj.m_DeathTime);
         }
         public DataStr.DeathContainerData ReadDeathContainer()
         {
@@ -987,6 +993,7 @@ namespace GameServer
             obj.m_Rotation = ReadQuaternion();
             obj.m_Owner = ReadString();
             obj.m_ContainerPrefab = ReadString();
+            obj.m_DeathTime = ReadInt();
             return obj;
         }
 
@@ -1682,6 +1689,44 @@ namespace GameServer
             return obj;
         }
 
+        public void Write(ExpeditionInteractiveData obj)
+        {
+            Write(obj.m_Position);
+            Write(obj.m_Rotation);
+            Write(obj.m_Scale);
+            Write(obj.m_ObjectText);
+            Write(obj.m_InteractText);
+            Write(obj.m_InteractTime);
+            Write(obj.m_Tool);
+            Write(obj.m_Material);
+            Write(obj.m_MaterialCount);
+            Write(obj.m_GUID);
+            Write(obj.m_Audio);
+            Write(obj.m_Yield);
+            Write(obj.m_YieldCount);
+            Write(obj.m_ObjectGroupToRemove);
+        }
+
+        public ExpeditionInteractiveData ReadInteractiveData()
+        {
+            ExpeditionInteractiveData obj = new ExpeditionInteractiveData();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadVector3();
+            obj.m_Scale = ReadVector3();
+            obj.m_ObjectText = ReadString();
+            obj.m_InteractText = ReadString();
+            obj.m_InteractTime = ReadFloat();
+            obj.m_Tool = ReadString();
+            obj.m_Material = ReadString();
+            obj.m_MaterialCount = ReadInt();
+            obj.m_GUID = ReadString();
+            obj.m_Audio = ReadString();
+            obj.m_Yield = ReadString();
+            obj.m_YieldCount = ReadInt();
+            obj.m_ObjectGroupToRemove = ReadString();
+            return obj;
+        }
+
         public void Write(UniversalSyncableObject obj)
         {
             Write(obj.m_Prefab);
@@ -1692,6 +1737,7 @@ namespace GameServer
             Write(obj.m_CreationTime);
             Write(obj.m_RemoveTime);
             Write(obj.m_ExpeditionBelong);
+            Write(obj.m_InteractiveData);
         }
 
         public UniversalSyncableObject ReadUniversalSyncable()
@@ -1705,6 +1751,7 @@ namespace GameServer
             obj.m_CreationTime = ReadInt();
             obj.m_RemoveTime = ReadInt();
             obj.m_ExpeditionBelong = ReadString();
+            obj.m_InteractiveData = ReadInteractiveData();
             return obj;
         }
 

@@ -127,6 +127,7 @@ namespace SkyCoop
         {
             public DeathDropContainer(IntPtr ptr) : base(ptr) { }
             public string m_Owner = "UNKNOWN";
+            public int m_DeathTime = -1;
         }
         public class DoorLockedOnKey : MonoBehaviour
         {
@@ -3165,70 +3166,71 @@ namespace SkyCoop
         public class ExpeditionInteractive : MonoBehaviour
         {
             public ExpeditionInteractive(IntPtr ptr) : base(ptr) { }
-            public string m_ObjectText = "Object";
-            public string m_InteractText = "Interacting...";
-            public float m_InteractTime = 1f;
-            public string m_Tool = "";
-            public string m_Material = "";
-            public int m_MaterialCount = 1;
-
-            public void Load(ExpeditionInteractiveData Data)
+            public ExpeditionInteractiveData m_Data = new ExpeditionInteractiveData();
+            public void Load()
             {
-                m_ObjectText = Data.m_ObjectText;
-                m_InteractText = Data.m_InteractText;
-                m_InteractTime = Data.m_InteractTime;
-                m_Tool = Data.m_Tool;
-                m_Material = Data.m_Material;
-                m_MaterialCount = Data.m_MaterialCount;
-                gameObject.transform.position = Data.m_Position;
-                gameObject.transform.rotation = Data.m_Rotation;
-                gameObject.transform.localScale = Data.m_Scale;
+                gameObject.transform.position = m_Data.m_Position;
+                gameObject.transform.localEulerAngles = m_Data.m_Rotation;
+                gameObject.transform.localScale = m_Data.m_Scale;
+                gameObject.name = "ExpeditionInteractive_" + m_Data.m_ObjectText;
             }
 
-            public void TryInteract()
+            public bool TryInteract()
             {
-                if (CanInteract())
+                bool Can = CanInteract();
+                if (Can)
                 {
-
+                    DoLongAction(gameObject, m_Data.m_InteractText, "ExpInt", m_Data.m_InteractTime, true, m_Data.m_Audio);
+                    SendInteractingGUID(m_Data.m_GUID);
+                    return true;
+                } else
+                {
+                    return false;
                 }
             }
 
             public bool CanInteract()
             {
                 bool HaveTool = false;
-                if (string.IsNullOrEmpty(m_Tool))
+                if (string.IsNullOrEmpty(m_Data.m_Tool))
                 {
                     HaveTool = true;
                 } else
                 {
-                    HaveTool = GameManager.GetInventoryComponent().HasNonRuinedItem(m_Tool);
+                    HaveTool = GameManager.GetInventoryComponent().HasNonRuinedItem(m_Data.m_Tool);
                 }
                 bool HaveMaterials = false;
-                if (string.IsNullOrEmpty(m_Material) || m_MaterialCount == 0)
+                if (string.IsNullOrEmpty(m_Data.m_Material) || m_Data.m_MaterialCount == 0)
                 {
                     HaveMaterials = true;
                 }else 
                 {
-                    int Num = GameManager.GetInventoryComponent().NumGearInInventory(m_Material);
+                    int Num = GameManager.GetInventoryComponent().NumGearInInventory(m_Data.m_Material);
 
-                    if(Num >= m_MaterialCount)
+                    if(Num >= m_Data.m_MaterialCount)
                     {
                         HaveMaterials = true;
                     }
-                    HUDMessage.AddMessage("You need ");
                 }
 
                 if (!HaveTool && !HaveMaterials)
                 {
-                    HUDMessage.AddMessage("You need "+ Utils.GetGearDisplayName(m_Tool) + " and x"+m_MaterialCount+" "+ Utils.GetGearDisplayName(m_Material) + "!");
+                    if(m_Data.m_MaterialCount > 1)
+                    {
+                        HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName(m_Data.m_Tool) + " and " + m_Data.m_MaterialCount + " " + Utils.GetGearDisplayName(m_Data.m_Material));
+                    } else
+                    {
+                        HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName(m_Data.m_Tool) + " and " + Utils.GetGearDisplayName(m_Data.m_Material));
+                    }
+                    
                     GameAudioManager.PlayGUIError();
                 } else if(!HaveTool && HaveMaterials) 
                 {
-                    HUDMessage.AddMessage("You need " + Utils.GetGearDisplayName(m_Tool) + "!");
+                    HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName(m_Data.m_Tool));
                     GameAudioManager.PlayGUIError();
                 } else if (HaveTool && !HaveMaterials)
                 {
-                    HUDMessage.AddMessage("You need x" + m_MaterialCount + " " + Utils.GetGearDisplayName(m_Material) + "!");
+                    HUDMessage.AddMessage("Requires " + m_Data.m_MaterialCount + " " + Utils.GetGearDisplayName(m_Data.m_Material));
                     GameAudioManager.PlayGUIError();
                 }
 

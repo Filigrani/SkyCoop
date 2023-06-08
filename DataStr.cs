@@ -272,6 +272,7 @@ namespace SkyCoop
             public string m_ContainerPrefab = "CONTAINER_BackPack";
             public Vector3 m_Position = new Vector3(0,0,0);
             public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+            public int m_DeathTime = -1;
             public bool Equals(DeathContainerData other)
             {
                 if (other == null)
@@ -689,6 +690,8 @@ namespace SkyCoop
             public int m_CreationTime = 0;
             public int m_RemoveTime = 0;
             public string m_ExpeditionBelong = "";
+            public ExpeditionInteractiveData m_InteractiveData = new ExpeditionInteractiveData();
+            public string m_ObjectGroup = "";
         }
         public class UniversalSyncableObjectSpawner
         {
@@ -697,6 +700,8 @@ namespace SkyCoop
             public Vector3 m_Position = new Vector3(0, 0, 0);
             public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
             public string m_Content = "";
+            public ExpeditionInteractiveData m_InteractiveData = new ExpeditionInteractiveData();
+            public string m_ObjectGroup = "";
         }
 
         public class Vector2Int
@@ -718,7 +723,7 @@ namespace SkyCoop
         public class ExpeditionInteractiveData
         {
             public Vector3 m_Position = new Vector3(0,0,0);
-            public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+            public Vector3 m_Rotation = new Vector3(0,0,0);
             public Vector3 m_Scale = new Vector3(1,1,1);
             public string m_ObjectText = "Object";
             public string m_InteractText = "Interacting...";
@@ -727,6 +732,11 @@ namespace SkyCoop
             public string m_Material = "";
             public int m_MaterialCount = 1;
             public string m_GUID = "";
+            public string m_Audio = "";
+            public string m_Yield = "";
+            public int m_YieldCount = 1;
+            public ExpeditionManager.ExpeditionInteractiveImpact m_Impact = ExpeditionManager.ExpeditionInteractiveImpact.EVERY;
+            public string m_ObjectGroupToRemove = "";
         }
     }
 }
