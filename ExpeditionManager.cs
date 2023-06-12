@@ -28,6 +28,32 @@ namespace SkyCoop
         public static List<ExpeditionInvite> m_Invites = new List<ExpeditionInvite>();
         public static int NextCrashSiteIn = 3600 *2;
         public static bool Debug = true;
+        public static List<ExpeditionClue> m_Clues = new List<ExpeditionClue>();
+        public static float m_ClueChance = 0.05f;
+
+        public static void InitClues()
+        {
+            m_Clues.Clear();
+
+            m_Clues.Add(new ExpeditionClue("GEAR_SCHopeless","Mountian Crash", "HopelessRescueCrashSite"));
+            m_Clues.Add(new ExpeditionClue("GEAR_SCCacheNote#-1", "Mystery Lake Cache", "HopelessRescueCrashSite"));
+        }
+        public static bool IsClueGear(string GearName, int ID = 0)
+        {
+            string SearchName = GearName.ToLower();
+            if (ID != 0)
+            {
+                SearchName = GearName.ToLower() + "#"+ID;
+            }
+            foreach (ExpeditionClue Clue in m_Clues)
+            {
+                if(SearchName == Clue.m_ExpeditionItem.ToLower())
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
 
         public class SaveData
         {
@@ -166,17 +192,19 @@ namespace SkyCoop
         }
         public class ExpeditionClue
         {
-            public string m_ExpeditionName = "";
             public string m_ExpeditionItem = "";
+            public string m_ExpeditionName = "";
+            public string m_ExpeditionAlias = "";
 
-            public ExpeditionClue(string GearName, string ExpName)
+            public ExpeditionClue(string GearName, string DisplayName, string Alias)
             {
                 m_ExpeditionItem = GearName;
-                m_ExpeditionName = ExpName;
+                m_ExpeditionName = DisplayName;
+                m_ExpeditionAlias = Alias;
             }
         }
 
-        public static bool StartNewExpedition(string LeaderMAC, int Region, string Alias = "", bool NoMessage = false)
+        public static bool StartNewExpedition(string LeaderMAC, int Region, string Alias = "", bool NoMessage = false, bool Special = false)
         {
             DebugLog("Client with MAC "+LeaderMAC+" trying start expedition on region "+Region);
 
@@ -203,14 +231,21 @@ namespace SkyCoop
                 return false;
             }
 
-            Expedition Exp = BuildBasicExpedition(Region, Alias);
+            Expedition Exp = BuildBasicExpedition(Region, Alias, false, true);
 
             if(Exp == null)
             {
                 if (!NoMessage)
                 {
-                    ServerSend.ADDHUDMESSAGE(LeaderID, "No available expeditions, try to move to another region.");
+                    if (!Special)
+                    {
+                        ServerSend.ADDHUDMESSAGE(LeaderID, "No available expeditions, try to move to another region.");
+                    } else
+                    {
+                        ServerSend.ADDHUDMESSAGE(LeaderID, "You can't start this expedition right now, please try later.");
+                    }
                 }
+
                 return false;
             }
 
@@ -1142,26 +1177,30 @@ namespace SkyCoop
                                     m_RequiredInteractionsAnyDone = false;
                                 }
                             }
+                            // Add
                             MPSaveManager.AddUniversalSyncableObject(Obj);
+                            // Wipe previous data.
                             MPSaveManager.RemoveContainer(m_Scene, Spawner.m_GUID);
                             for (int i = 1; i < 10; i++)
                             {
                                 MPSaveManager.RemoveContainer(m_Scene, Spawner.m_GUID + i);
                             }
+                            // Add new loot
+                            if (!string.IsNullOrEmpty(Spawner.m_Content))
+                            {
+                                MPSaveManager.SaveContainer(m_Scene, Spawner.m_GUID, Spawner.m_Content);
+                                MPSaveManager.SetConstainerState(m_Scene, Spawner.m_GUID, 1, true);
+                            } else
+                            {
+                                MPSaveManager.SetConstainerState(m_Scene, Spawner.m_GUID, 2, true);
+                            }
+                            // Spawn and sync
 #if (!DEDICATED)
-                            if(MyMod.level_guid == m_Scene)
+                            if (MyMod.level_guid == m_Scene)
                             {
                                 MyMod.SpawnUniversalSyncableObject(Obj);
                             }
 #endif
-                            if (!string.IsNullOrEmpty(Spawner.m_Content))
-                            {
-                                MPSaveManager.SaveContainer(m_Scene, Spawner.m_GUID, Spawner.m_Content);
-                                MPSaveManager.SetConstainerState(m_Scene, Spawner.m_GUID, 1);
-                            } else
-                            {
-                                MPSaveManager.SetConstainerState(m_Scene, Spawner.m_GUID, 2);
-                            }
                             ServerSend.ADDUNIVERSALSYNCABLE(Obj);
                         }
                     }

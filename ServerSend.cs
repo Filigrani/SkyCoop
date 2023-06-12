@@ -2550,5 +2550,21 @@ namespace GameServer
                 SendUDPDataToAll(_packet, Scene);
             }
         }
+        public static void REQUESTSPECIALEXPEDITION(int ForClient)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTSPECIALEXPEDITION))
+            {
+                _packet.Write(true);
+                SendUDPData(ForClient, _packet);
+            }
+        }
+        public static void REQUESTSPHOTOAGAIN(int ForClient, string GUID)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTSPHOTOAGAIN))
+            {
+                _packet.Write(GUID);
+                SendUDPData(ForClient, _packet);
+            }
+        }
     }
 }

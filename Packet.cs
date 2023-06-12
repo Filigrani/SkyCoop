@@ -196,6 +196,8 @@ namespace GameServer
         REQUESTCONTAINERSTATE,
         CUSTOMSOUNDEVENT,
         REMOVEOBJECTGROUP,
+        REQUESTSPECIALEXPEDITION,
+        REQUESTSPHOTOAGAIN,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -381,6 +383,8 @@ namespace GameServer
         CUSTOMSOUNDEVENT,
         INTERACTIONDONE,
         REMOVEOBJECTGROUP,
+        REQUESTSPECIALEXPEDITION,
+        REQUESTSPHOTOAGAIN,
     }
 
     public class Packet : IDisposable

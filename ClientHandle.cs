@@ -18,6 +18,7 @@ using Il2CppSystem.Reflection;
 using System.Diagnostics;
 using static SkyCoop.Shared;
 using static Utils;
+using static SkyCoop.DataStr;
 
 namespace SkyCoop
 {
@@ -1004,7 +1005,7 @@ namespace SkyCoop
         }
         public static void READYSENDNEXTSLICEPHOTO(Packet _packet)
         {
-            MyMod.SendNextPhotoCarefulSlice();
+
         }
         
         public static void CHANGEAIM(Packet _packet)
@@ -1634,6 +1635,40 @@ namespace SkyCoop
             string SOUND = _packet.ReadString();
             string PREFAB = _packet.ReadString();
             MyMod.PlayCustomSoundEvent(Position, SOUND, PREFAB);
+        }
+        public static void REQUESTSPECIALEXPEDITION(Packet _packet)
+        {
+            bool Ok = _packet.ReadBool();
+            if (Ok)
+            {
+                if (!string.IsNullOrEmpty(MyMod.DeleteGearOnExpeditionConfirmed))
+                {
+                    GameManager.GetInventoryComponent().RemoveGearFromInventory(MyMod.DeleteGearOnExpeditionConfirmed, 1);
+                    MyMod.DeleteGearOnExpeditionConfirmed = "";
+                }
+                MyMod.PlayRadioOver();
+            }
+            MyMod.RemovePleaseWait();
+        }
+        public static void REQUESTSPHOTOAGAIN(Packet _packet)
+        {
+            string GUID = _packet.ReadString();
+
+            string Base64 = MPSaveManager.LoadPhoto(GUID);
+            if (string.IsNullOrEmpty(Base64))
+            {
+                Base64 = MPSaveManager.LoadPhoto(GUID, true);
+            }
+
+            List<SlicedBase64Data> Slices = Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo);
+            foreach (SlicedBase64Data Slice in Slices)
+            {
+                using (Packet __packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
+                {
+                    __packet.Write(Slice);
+                    MyMod.SendUDPData(__packet);
+                }
+            }
         }
     }
 }

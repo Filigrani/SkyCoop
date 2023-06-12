@@ -1458,6 +1458,26 @@ namespace SkyCoop
                         __instance.m_LocalizedDisplayName.m_LocalizationID = __instance.m_ObjectGuid.m_Guid.Split('_')[0];
                     }
                 }
+                if (ExpeditionManager.IsClueGear(__instance.m_GearName))
+                {
+                    if (__instance.m_NarrativeCollectibleItem == null)
+                    {
+                        NarrativeCollectibleItem N = __instance.gameObject.AddComponent<NarrativeCollectibleItem>();
+                        N.m_HudMessageOnPickup = new LocalizedString();
+                        N.m_HudMessageOnPickup.m_LocalizationID = "Youn found [50C878]special item[-] use it to start advanced expedition via handheld radio.";
+                        N.m_JournalEntryNumber = -1;
+                        N.m_ShowDuringInspect = true;
+                        __instance.m_NarrativeCollectibleItem = N;
+                    }
+
+                    if(__instance.m_GearName == "GEAR_SCHopeless")
+                    {
+                        __instance.m_NarrativeCollectibleItem.m_NarrativeTextLocID = "I found out that a civilian plane crashed on Timberwolf Mountain, you can rummage around there yourself. I won't go to this godforsaken hole teeming with wolves.";
+                    }else if (__instance.m_GearName == "GEAR_SCHopeless")
+                    {
+
+                    }
+                }
             }
         }
 
@@ -7395,6 +7415,10 @@ namespace SkyCoop
                 {
                     __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__HandheldShortwave");
                 }
+                if (gi.m_GearName == "GEAR_Shovel")
+                {
+                    __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__Shovel");
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Utils), "GetInventoryGridIconTexture")] // A lot
@@ -7411,6 +7435,10 @@ namespace SkyCoop
                 if (!MyMod.VanilaRadio && name == "ico_GearItem__HandheldShortwave")
                 {
                     __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__HandheldShortwave");
+                }
+                if (name == "ico_GearItem__Shovel")
+                {
+                    __result = MyMod.LoadedBundle.LoadAsset<Texture2D>("ico_GearItem__Shovel");
                 }
             }
         }
@@ -7988,6 +8016,7 @@ namespace SkyCoop
                     if (gi.m_GearName == "GEAR_HandheldShortwave")
                     {
                         __instance.m_ButtonPromptScrollWheel.ShowPromptForKey("Change frequency", "Scroll");
+                        __instance.m_ButtonPromptReload.ShowPromptForKey(Localization.Get("GAMEPLAY_Help"),"Reload");
                         AltFire = "Expeditions";
                         Show = true;
                     } else if (gi.m_GearName == "GEAR_SCNote")
@@ -8087,6 +8116,55 @@ namespace SkyCoop
                     {
                         ExpeditionManager.RegisterCharcoalDrawing(MyMod.level_guid, Position);
                     }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Container), "PopulateContents")]
+        internal static class Container_PopulateContents
+        {
+            private static void Postfix(Container __instance)
+            {
+                string Gear = GetClueGear();
+                if (!string.IsNullOrEmpty(Gear))
+                {
+                    string PrefabName = Gear;
+                    int NarativeID = -1;
+                    if (PrefabName.Contains('#'))
+                    {
+                        string[] Slices = PrefabName.Split('#');
+                        PrefabName = Slices[0];
+                        NarativeID = int.Parse(Slices[1]);
+                    }
+                    
+                    GameObject reference = GetGearItemObject(PrefabName);
+
+                    if(reference == null) 
+                    {
+                        return;
+                    }
+                    GameObject newGear = UnityEngine.Object.Instantiate<GameObject>(reference, __instance.gameObject.transform);
+                    newGear.name = reference.name;
+                    GearItem Gi = newGear.GetComponent<GearItem>();
+                    __instance.AddGear(Gi);
+                    newGear.transform.parent = __instance.gameObject.transform;
+                    Gi.ManualStart();
+                    if(Gi.m_NarrativeCollectibleItem != null)
+                    {
+                        Gi.m_NarrativeCollectibleItem.m_JournalEntryNumber = NarativeID;
+                    }
+                    newGear.SetActive(false);
+                    MelonLogger.Msg("Special Gear "+ Gear+" spawned in "+__instance.gameObject.name);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(InputManager), "GetOpenActionsPanelHeldDown")]
+        internal static class InputManager_GetOpenActionsPanelHeldDown
+        {
+            private static void Postfix(InputManager __instance, bool __result)
+            {
+                if(ForcedShowExpeditionHUDSeconds > 0)
+                {
+                    __result = true;
                 }
             }
         }

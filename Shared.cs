@@ -1676,61 +1676,6 @@ namespace SkyCoop
 #endif
         }
 
-        public static void AddSlicedJsonDataForPhoto(DataStr.SlicedJsonData jData, int ClientID)
-        {
-            //Log("Got Dropped Item Slice for hash:" + jData.m_Hash + " Is Last " + jData.m_Last);
-            if (MyMod.SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
-            {
-                string previousString = "";
-                if (MyMod.SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out previousString) == true)
-                {
-                    string wholeString = previousString + jData.m_Str;
-                    MyMod.SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    MyMod.SlicedJsonDataBuffer.Add(jData.m_Hash, wholeString);
-                } else
-                {
-                    MyMod.SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
-                }
-            } else
-            {
-                MyMod.SlicedJsonDataBuffer.Add(jData.m_Hash, jData.m_Str);
-            }
-
-            if (jData.m_Last)
-            {
-                string finalJsonData = "";
-                if (MyMod.SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
-                {
-                    MyMod.SlicedJsonDataBuffer.Remove(jData.m_Hash);
-
-                    MPSaveManager.AddPhoto(finalJsonData, false, jData.m_GearName);
-#if (!DEDICATED)
-                    MPSaveManager.AddPhoto(finalJsonData, true, jData.m_GearName);
-                    foreach (var item in MyMod.DroppedGearsObjs)
-                    {
-                        if (item.Value != null && item.Value.GetComponent<Comps.DroppedGearDummy>())
-                        {
-                            if (item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_PhotoGUID == jData.m_GearName)
-                            {
-                                Texture2D tex = MPSaveManager.GetPhotoTexture(jData.m_GearName, item.Value.GetComponent<Comps.DroppedGearDummy>().m_Extra.m_GearName);
-                                if (tex)
-                                {
-                                    item.Value.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
-                                }
-                            }
-                        }
-                    }
-#endif
-                    List<SlicedBase64Data> Slices = GetBase64Sliced(finalJsonData, jData.m_GearName, SlicedBase64Purpose.Photo);
-                    foreach (SlicedBase64Data Slice in Slices)
-                    {
-                        ServerSend.BASE64SLICE(Slice, MyMod.playersData[ClientID].m_LevelGuid);
-                    }
-                }
-            }
-            ServerSend.READYSENDNEXTSLICEPHOTO(ClientID, true);
-        }
-
         public static void AddLoadingClient(int clientID)
         {
             if (MyMod.playersData[clientID] != null)
@@ -3182,9 +3127,10 @@ namespace SkyCoop
             return macAddr;
         }
 
-#if (!DEDICATED)
-        public static void RequestPhoto(string PhotoGUID)
+
+        public static void RequestPhoto(string PhotoGUID, int Client = 0)
         {
+#if (!DEDICATED)
             if (MyMod.sendMyPosition)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.PHOTOREQUEST))
@@ -3193,8 +3139,15 @@ namespace SkyCoop
                     MyMod.SendUDPData(_packet);
                 }
             }
-        }
 #endif
+            if (MyMod.iAmHost)
+            {
+                if(Client != 0)
+                {
+                    ServerSend.REQUESTSPHOTOAGAIN(Client, PhotoGUID);
+                }
+            }
+        }
 
         public static List<SlicedBase64Data> GetBase64Sliced(string FullString, string GUID, SlicedBase64Purpose Purpose)
         {
@@ -3245,7 +3198,7 @@ namespace SkyCoop
             return Result;
         }
 
-        public static void AddBase64Slice(SlicedBase64Data Data)
+        public static void AddBase64Slice(SlicedBase64Data Data, int FromClient = 0)
         {
             if (!Base64Slices.ContainsKey(Data.m_GUID))
             {
@@ -3273,9 +3226,7 @@ namespace SkyCoop
                             } else
                             {
                                 Log("Some slices are missing! Doing another request", LoggerColor.Red);
-#if (!DEDICATED)
-                                RequestPhoto(PhotoGUID);
-#endif
+                                RequestPhoto(PhotoGUID, FromClient);
                                 return;
                             }
                         }
@@ -3286,9 +3237,15 @@ namespace SkyCoop
                         if (IsBase64 && CheckSum == Data.m_CheckSum)
                         {
                             Log("Everything correct, applying this photo");
-
-                            MPSaveManager.AddPhoto(Base64, true, PhotoGUID);
 #if (!DEDICATED)
+                            if (MyMod.sendMyPosition)
+                            {
+                                MPSaveManager.AddPhoto(Base64, true, PhotoGUID);
+                            } else
+                            {
+                                MPSaveManager.AddPhoto(Base64, true, PhotoGUID);
+                                MPSaveManager.AddPhoto(Base64, false, PhotoGUID);
+                            }
 
                             foreach (var item in MyMod.DroppedGearsObjs)
                             {
@@ -3305,7 +3262,15 @@ namespace SkyCoop
                                     }
                                 }
                             }
+#else
+                                MPSaveManager.AddPhoto(Base64, true, PhotoGUID);
+                                MPSaveManager.AddPhoto(Base64, false, PhotoGUID);
 #endif
+                            List<SlicedBase64Data> Slices = GetBase64Sliced(Base64, Data.m_GUID, SlicedBase64Purpose.Photo);
+                            foreach (SlicedBase64Data Slice in Slices)
+                            {
+                                ServerSend.BASE64SLICE(Slice, MyMod.playersData[FromClient].m_LevelGuid);
+                            }
                         } else
                         {
                             if (!IsBase64)
@@ -3315,9 +3280,7 @@ namespace SkyCoop
                             {
                                 Log("Checksum is incorrect, doing another request...", LoggerColor.Red);
                             }
-#if (!DEDICATED)
-                            RequestPhoto(PhotoGUID);
-#endif
+                            RequestPhoto(PhotoGUID, FromClient);
                         }
                     }
                 }

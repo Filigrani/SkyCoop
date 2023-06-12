@@ -1074,8 +1074,8 @@ namespace GameServer
         }
         public static void GOTPHOTOSLICE(int _fromClient, Packet _packet)
         {
-            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
-            Shared.AddSlicedJsonDataForPhoto(got, _fromClient);
+            DataStr.SlicedBase64Data got = _packet.ReadSlicedBase64Data();
+            Shared.AddBase64Slice(got, _fromClient);
         }
         public static void REQUESTPICKUP(int _fromClient, Packet _packet)
         {
@@ -1862,6 +1862,15 @@ namespace GameServer
         {
             string group = _packet.ReadString();
             ExpeditionManager.RemoveObjectGroup(group);
+        }
+        public static void REQUESTSPECIALEXPEDITION(int _fromClient, Packet _packet)
+        {
+            string Alias = _packet.ReadString();
+            bool Started = ExpeditionManager.StartNewExpedition(Server.GetMACByID(_fromClient), 0, Alias, false, true);
+            if (Started)
+            {
+                ServerSend.REQUESTSPECIALEXPEDITION(_fromClient);
+            }
         }
     }
 }

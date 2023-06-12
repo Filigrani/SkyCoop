@@ -185,7 +185,7 @@ namespace SkyCoop
         }
 
 
-        public static Expedition BuildBasicExpedition(int Region, string Alias = "", bool DebugFlag = false)
+        public static Expedition BuildBasicExpedition(int Region, string Alias = "", bool DebugFlag = false, bool NoMulty = false)
         {
             bool FoundValid = false;
             int TargetRegion = 0;
@@ -258,6 +258,16 @@ namespace SkyCoop
 
             if (!string.IsNullOrEmpty(Alias))
             {
+                if (NoMulty)
+                {
+                    foreach (Expedition Active in m_ActiveExpeditions)
+                    {
+                        if(Active.m_Alias == Alias)
+                        {
+                            return null;
+                        }
+                    }
+                }
                 string ExpeditonJSON = GetExpeditionJsonByAlias(Alias);
                 SelectedTask = JSON.Load(ExpeditonJSON).Make<ExpeditionTaskTemplate>();
                 FoundValid = true;

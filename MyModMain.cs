@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.11.7";
+            public const string Version = "0.11.8";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 5;
         }
@@ -188,6 +188,8 @@ namespace SkyCoop
         public static string NotificationString = "";
         public static GameObject ExpeditionEditorUI = null;
         public static GameObject ExpeditionEditorSelectUI = null;
+        public static GameObject TF2HUD = null;
+        public static int ForcedShowExpeditionHUDSeconds = 0;
 
         public static string CustomServerName = "";
         public static string MyLobby = "";
@@ -414,7 +416,7 @@ namespace SkyCoop
                     newGear.name = CloneTrimer(newGear.name);
 
                     DataStr.ExtraDataForDroppedGear Extra = jData.m_Extra;
-
+                    GearItem Gi = newGear.GetComponent<GearItem>();
                     if (newGear.GetComponent<KeroseneLampItem>() != null && Extra != null)
                     {
                         int minutesDroped = MinutesFromStartServer - Extra.m_DroppedTime;
@@ -486,27 +488,35 @@ namespace SkyCoop
                     if (place == false)
                     {
                         bool skipPickup = false;
-                        if (newGear.GetComponent<GearItem>().m_Bed != null)
+                        if (Gi.m_Bed != null)
                         {
-                            if (newGear.GetComponent<GearItem>().m_Bed.GetState() == BedRollState.Placed)
+                            if (Gi.m_Bed.GetState() == BedRollState.Placed)
                             {
-                                newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Rolled);
+                                Gi.m_Bed.SetState(BedRollState.Rolled);
                                 skipPickup = true;
                             }
                         }
-                        if (skipPickup == false)
+                        Gi.ManualStart();
+                        Gi.ManualUpdate();
+                        if (Gi.m_GearName == "GEAR_SCNote" && string.IsNullOrEmpty(Extra.m_Dropper))
                         {
-                            GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
-                        } else {
-                            GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(newGear.GetComponent<GearItem>(), false, false);
+                            skipPickup = true;
+                            Pathes.DisplayNote(Gi);
                         }
 
+                        if (skipPickup == false)
+                        {
+                            GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(Gi);
+                        } else
+                        {
+                            GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(Gi, false, false);
+                        }
                     } else {
-                        newGear.GetComponent<GearItem>().PlayPickUpClip();
+                        Gi.PlayPickUpClip();
                         GameManager.GetPlayerManagerComponent().StartPlaceMesh(newGear, PlaceMeshFlags.None);
                     }
 
-                    PatchBookReadTime(newGear.GetComponent<GearItem>());
+                    PatchBookReadTime(Gi);
                 }
             }
         }
@@ -964,6 +974,7 @@ namespace SkyCoop
             uConsole.RegisterCommand("skip", new Action(SkipHourConsole));
             uConsole.RegisterCommand("rpc", new Action(ConsoleRPC));
             Comps.RegisterComponents();
+            ExpeditionManager.InitClues();
         }
 
         public static void LootEverything()
@@ -5117,6 +5128,14 @@ namespace SkyCoop
                         DoRadioSearch();
                     }
                 }
+
+                if(InterfaceManager.m_Panel_HUD != null && !InterfaceManager.m_Panel_HUD.IsShowingCollectibleNote())
+                {
+                    if (ForcedShowExpeditionHUDSeconds > 0)
+                    {
+                        ForcedShowExpeditionHUDSeconds--;
+                    }
+                }
             }
 
             if (chatInput != null && chatInput.gameObject.activeSelf == false && ChatObject != null && ChatObject.activeSelf == true)
@@ -7057,11 +7076,20 @@ namespace SkyCoop
                     newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Rolled);
                     SkipPickup = true;
                 }
+                newGear.GetComponent<GearItem>().ManualStart();
+                newGear.GetComponent<GearItem>().ManualUpdate();
+
+                if(newGear.GetComponent<GearItem>().m_GearName == "GEAR_SCNote" && string.IsNullOrEmpty(DGD.m_Extra.m_Dropper))
+                {
+                    Pathes.DisplayNote(newGear.GetComponent<GearItem>());
+                    SkipPickup = true;
+                }
 
                 if (SkipPickup == false)
                 {
                     GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(newGear.GetComponent<GearItem>());
-                } else {
+                } else
+                {
                     GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(newGear.GetComponent<GearItem>(), false, false);
                 }
                 PatchBookReadTime(newGear.GetComponent<GearItem>());
@@ -7983,25 +8011,6 @@ namespace SkyCoop
             }
         }
 
-        public static void SendNextPhotoCarefulSlice()
-        {
-            if (CarefulSlicesPhotoBuffer.Count > 0)
-            {
-                DataStr.SlicedJsonData slice = CarefulSlicesPhotoBuffer[0];
-                using (Packet _packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
-                {
-                    _packet.Write(slice);
-                    SendUDPData(_packet);
-                }
-                CarefulSlicesPhotoBuffer.Remove(CarefulSlicesPhotoBuffer[0]);
-                CarefulSlicesSent++;
-            } else
-            {
-                MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
-                CarefulSlicesSent = 0;
-            }
-        }
-
         public static void FinishOpeningFakeContainer(string CompressedData)
         {
             MelonLogger.Msg("Finish Opening Fake Container");
@@ -8573,6 +8582,9 @@ namespace SkyCoop
                     Action act3 = new Action(() => ExpeditionEditor.BackToSelect(6));
                     ExpeditionEditorSelectUI.transform.GetChild(4).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act3);
                 }
+
+                //GameObject LoadedAssets15 = LoadedBundle.LoadAsset<GameObject>("TF_Health");
+                //TF2HUD = GameObject.Instantiate(LoadedAssets15, UiCanvas.transform);
             }
         }
 
@@ -8718,6 +8730,40 @@ namespace SkyCoop
                 {
                     ExpeditionEditor.LastOnlyShowFirstTasksState = ExpeditionEditorSelectUI.transform.GetChild(5).gameObject.GetComponent<UnityEngine.UI.Toggle>().isOn;
                     ExpeditionEditor.RefreshExpeditionsList(ExpeditionEditor.LastSelectedRegion);
+                }
+            }
+            if(TF2HUD != null)
+            {
+                
+                Condition Con = GameManager.GetConditionComponent();
+                if (Con != null)
+                {
+                    TF2HUD.transform.GetChild(6).gameObject.GetComponent<UnityEngine.UI.Text>().text = Convert.ToInt32(Con.m_CurrentHP).ToString();
+                    if(Con.m_CurrentHP < Con.m_MaxHP)
+                    {
+                        TF2HUD.transform.GetChild(7).gameObject.GetComponent<UnityEngine.UI.Text>().text = Convert.ToInt32(Con.m_MaxHP).ToString();
+                    } else
+                    {
+                        TF2HUD.transform.GetChild(7).gameObject.GetComponent<UnityEngine.UI.Text>().text = "";
+                    }
+                    float healthPercent = (100f / Con.m_MaxHP) * Con.m_CurrentHP;
+                    bool LowHp = Con.m_CurrentHP < 45;
+                    bool OverHeal = Con.m_CurrentHP > 100;
+                    TF2HUD.transform.GetChild(3).gameObject.SetActive(LowHp);
+                    TF2HUD.transform.GetChild(2).gameObject.SetActive(OverHeal);
+                    if (LowHp)
+                    {
+                        //UnityEngine.UI.Image imgComp = TF2HUD.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Image>();
+                        //imgComp.color = Color.Lerp(new Color(159, 18, 7, 255), new Color(159, 18, 7, 0), Mathf.PingPong(Time.time * 2.2f, 1));
+                    }
+                    if (OverHeal)
+                    {
+                        //UnityEngine.UI.Image imgComp = TF2HUD.transform.GetChild(2).gameObject.GetComponent<UnityEngine.UI.Image>();
+                        //imgComp.color = Color.Lerp(new Color(255, 255, 255, 255), new Color(255, 255, 255, 0), Mathf.PingPong(Time.time * 0.5f, 1));
+                    }
+                    
+
+                    TF2HUD.transform.GetChild(5).gameObject.GetComponent<UnityEngine.UI.Image>().fillAmount = healthPercent/100;
                 }
             }
         }
@@ -9846,7 +9892,6 @@ namespace SkyCoop
                 return false;
             }
         }
-
         public static void UpdateRadio()
         {
             if (ViewModelRadioNeedle)
@@ -9882,13 +9927,21 @@ namespace SkyCoop
 
             if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
             {
-                
-
                 Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
                 if(Panel && !Panel.IsEnabled())
                 {
-                    ShowRadioActionPicker(null);
+                    if (MPSaveManager.NeverSeenExpeditions())
+                    {
+                        ExpeditionHint();
+                    } else
+                    {
+                        ShowRadioActionPicker(null);
+                    }
                 }
+            }
+            if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
+            {
+                ExpeditionHint();
             }
 
             if (LastSearchDistance != float.PositiveInfinity && CairnsSearchActive())
@@ -10644,6 +10697,10 @@ namespace SkyCoop
                 {
                     UpdateDoll();
                 }
+            }
+            if(ForcedShowExpeditionHUDSeconds > 0)
+            {
+                InterfaceManager.m_Panel_Actions.Enable(true);
             }
         }
 
@@ -12500,8 +12557,18 @@ namespace SkyCoop
             Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
             Panel_Actions Act = InterfaceManager.m_Panel_Actions;
             string Time = GetFormatedTimeForExpedition(TimeLeft);
-
             desc = ExpeditionName + "\n" + desc;
+
+            if (ForcedShowExpeditionHUDSeconds > 0)
+            {
+                if (!DefaultIsRussian)
+                {
+                    desc += "\n\nYou can hold [50C878]TAB[-] key to see this panel again, once it close.";
+                } else
+                {
+                    desc += "\n\nВы можете зажать кнопку [50C878]TAB[-] чтобы показать эту панель ещё раз, когда она пропадёт.";
+                }
+            }
 
             if (Rad)
             {
@@ -12860,6 +12927,24 @@ namespace SkyCoop
             }
         }
 
+        public static void ExpeditionHint()
+        {
+            Panel_TutorialPopup.TutorialPopupRequest R = new Panel_TutorialPopup.TutorialPopupRequest();
+
+            if (!DefaultIsRussian)
+            {
+                R.m_TitleLocID = "Expeditions Starter Guide";
+                R.m_MessageLocID = "The [27AE60]Handheld Radio[-] can be used to start or join expeditions.\nClick [00FFFF]Right Mouse Button[-] when you holding Handheld Radio to open Expeditions Menu.\nTo start [FFB233]Random Expedition[-] click [FFB233]«Start Expedition»[-] in Expeditions Menu.\n If you found any [50C878]Special Items[-] you can start [50C878]Special Expedition[-], an advanced challenges with a much higher reward.\n[50C878]Special Items[-] can be found in any container, click [50C878]«Special Expedition»[-] in Expeditions Menu to see if you have any of them to start expedition.\nYou can also [00FFFF]Invite[-] other players to your Expedition, to do so, just click on them when you holding [27AE60]Handheld Radio[-].\nAny received [00FFFF]Invites[-] you can find in Expedition Menu.\nIf you already in Expedition, you can hold [27AE60]TAB[-] key to see Expedition Objective.";
+            } else
+            {
+                R.m_TitleLocID = "Начальное Руководство По Экспедициям";
+                R.m_MessageLocID = "Используя [27AE60]Рацию[-] Вы можете начинать экспедиции и присоединяться к ним.\nКликните [00FFFF]Правой Кнопкой Мыши[-] когда держите Рацию в руках, чтобы открыть Меню Экспедиций.\nЧтобы начать [FFB233]Случайную Экспедицию[-] кликните [FFB233]«Start Expedition»[-] в Меню Экспедиций.\nЕсли вы найдёте какие либо [50C878]Специальные Предметы[-] Вы сможете начать [50C878]Специальную Экспедицию[-], сложные испытания с более весомой наградой.\n[50C878]Специальные Предметы[-] случайно могут быть найдеты в любом контейнере, кликните [50C878]«Special Expedition»[-] в Меню Экспедиций чтобы узнать есть ли у Вас какие либо [50C878]Специальные Предметы[-] для старта экспедиции.\nА также Вы можете [00FFFF]Приглашать[-] других игроков в Вашу Экспедицию, чтобы это сделать, просто кликните по ним держа в руках [27AE60]Рацию[-].\nВсе полученные [00FFFF]Приглашения[-] Вы можете найти в меню Экспедиций.\nЕсли же вы уже в экспедиции, вы можете зажать кнопку [27AE60]TAB[-] чтобы увидеть Цель текущей Экспедиции.";
+            }
+            InterfaceManager.m_Panel_TutorialPopup.QueueTutorialPopupRequest(R);
+            InterfaceManager.m_Panel_TutorialPopup.ShowCurrentTutorialPopup();
+            MPSaveManager.SeenExpeditions();
+        }
+
         public static void ShowRadioActionPicker(GameObject objectInteractedWith)
         {
             Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
@@ -12918,23 +13003,99 @@ namespace SkyCoop
                 }
             }
         }
-
-        public static void StartExpeditionWithClue(string Name)
+        public static string DeleteGearOnExpeditionConfirmed = "";
+        public static void StartExpeditionWithClue(ExpeditionClue Clue)
         {
-            GameManager.GetInventoryComponent().RemoveGearFromInventory(Name, 1);
+            if (iAmHost)
+            {
+                bool Started = ExpeditionManager.StartNewExpedition(Server.GetMACByID(0), 0, Clue.m_ExpeditionAlias, false, true);
+                if (Started)
+                {
+                    GameManager.GetInventoryComponent().RemoveGearFromInventory(Clue.m_ExpeditionItem, 1);
+                }
+            } else if(sendMyPosition)
+            {
+                MyMod.DoPleaseWait("Please wait...", "Calling to coordinator...");
+                DeleteGearOnExpeditionConfirmed = Clue.m_ExpeditionItem;
+                using (Packet _packet = new Packet((int)ClientPackets.REQUESTSPECIALEXPEDITION))
+                {
+                    _packet.Write(Clue.m_ExpeditionAlias);
+                    SetRepeatPacket(ResendPacketType.Cancel, 5);
+                    SendUDPData(_packet);
+                }
+            }
+        }
+
+        public static string GetClueGear(bool RollChance = true)
+        {
+            System.Random RNG = new System.Random();
+            if (RollChance)
+            {
+                if (RNG.NextDouble() > ExpeditionManager.m_ClueChance)
+                {
+                    MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] Failed!");
+                    return "";
+                }
+            }
+            List<string> PossibleGears = new List<string>();
+            foreach (ExpeditionClue Clue in ExpeditionManager.m_Clues)
+            {
+                bool HaveThisOne = false;
+                foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
+                {
+                    string ClueName = Clue.m_ExpeditionItem.ToLower();
+                    string GearName = Gear.m_GearItemName.ToLower();
+                    string AltName = "";
+                    if (Gear != null && Gear.m_GearItem != null && Gear.m_GearItem.m_NarrativeCollectibleItem)
+                    {
+                        AltName = GearName + "#" + Gear.m_GearItem.m_NarrativeCollectibleItem.m_JournalEntryNumber;
+                    }
+                    if (GearName == ClueName || (!string.IsNullOrEmpty(AltName) && AltName == ClueName))
+                    {
+                        HaveThisOne = true;
+                        break;
+                    }
+                }
+                if (!HaveThisOne)
+                {
+                    PossibleGears.Add(Clue.m_ExpeditionItem);
+                }
+            }
+            if(PossibleGears.Count == 0)
+            {
+                MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] Have everything, return nothing");
+                return "";
+            }else if(PossibleGears.Count == 1)
+            {
+                string Gear = PossibleGears[0];
+                MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] "+ Gear);
+                return Gear;
+            } else
+            {
+                string Gear = PossibleGears[RNG.Next(0, PossibleGears.Count - 1)];
+                MelonLogger.Msg(ConsoleColor.Blue, "[GetClueGear] " + Gear);
+                return Gear;
+            }
         }
 
         public static List<ExpeditionClue> FindClues()
         {
             List<ExpeditionClue> Clues = new List<ExpeditionClue>();
-            foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
+            foreach (ExpeditionClue Clue in ExpeditionManager.m_Clues)
             {
-                if (Gear.m_GearItemName == "GEAR_Special")
+                foreach (GearItemObject Gear in GameManager.GetInventoryComponent().m_Items)
                 {
-                    Clues.Add(new ExpeditionClue(Gear.m_GearItemName, "Timberwolf mountain\nPlane Crash"));
-                } else if(Gear.m_GearItemName == "GEAR_Special2")
-                {
-                    Clues.Add(new ExpeditionClue(Gear.m_GearItemName, "Something epic"));
+                    string ClueName = Clue.m_ExpeditionItem.ToLower();
+                    string GearName = Gear.m_GearItemName.ToLower();
+                    string AltName = "";
+                    if(Gear != null && Gear.m_GearItem != null && Gear.m_GearItem.m_NarrativeCollectibleItem)
+                    {
+                        AltName = GearName + "#" + Gear.m_GearItem.m_NarrativeCollectibleItem.m_JournalEntryNumber;
+                    }
+                    if(GearName == ClueName || (!string.IsNullOrEmpty(AltName) && AltName == ClueName))
+                    {
+                        Clues.Add(Clue);
+                    }
                 }
             }
             return Clues;
@@ -12945,7 +13106,7 @@ namespace SkyCoop
             List<ExpeditionClue> Clues = FindClues();
             if (Clues.Count == 0)
             {
-                HUDMessage.AddMessage("You don't have any [50C878]special items[-] to start any advanced expedition.");
+                HUDMessage.AddMessage("You don't have any [50C878]special items[-] to start advanced expedition.");
                 return;
             }
 
@@ -12958,7 +13119,7 @@ namespace SkyCoop
 
                 foreach (ExpeditionClue Clue in Clues)
                 {
-                    Action act = new Action(() => StartExpeditionWithClue(Clue.m_ExpeditionItem));
+                    Action act = new Action(() => StartExpeditionWithClue(Clue));
                     Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Clue.m_ExpeditionName, act));
                 }
 
@@ -13321,7 +13482,10 @@ namespace SkyCoop
                 }
             }
 
-            if(m_InterfaceManager && InterfaceManager.m_Panel_HUD)
+            ForcedShowExpeditionHUDSeconds = 20;
+            InterfaceManager.m_Panel_Actions.Enable(true);
+
+            if (m_InterfaceManager && InterfaceManager.m_Panel_HUD)
             {
                 if (State == 0)
                 {
@@ -13402,64 +13566,12 @@ namespace SkyCoop
                 {
                     if (sendMyPosition == true)
                     {
-
-                        byte[] bytesToSlice = Encoding.UTF8.GetBytes(Base64);
-                        int HashForSend = GUID.GetHashCode();
-
-                        if (bytesToSlice.Length > 500)
+                        List<SlicedBase64Data> Slices = Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo);
+                        foreach (SlicedBase64Data Slice in Slices)
                         {
-                            List<byte> BytesBuffer = new List<byte>();
-                            BytesBuffer.AddRange(bytesToSlice);
-
-                            while (BytesBuffer.Count >= 500)
-                            {
-                                byte[] sliceOfBytes = BytesBuffer.GetRange(0, 499).ToArray();
-                                BytesBuffer.RemoveRange(0, 499);
-
-                                string jsonStringSlice = Encoding.UTF8.GetString(sliceOfBytes);
-                                DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
-                                SlicedPacket.m_GearName = GUID;
-                                SlicedPacket.m_SendTo = -1;
-                                SlicedPacket.m_Hash = HashForSend;
-                                SlicedPacket.m_Str = jsonStringSlice;
-
-                                if (BytesBuffer.Count != 0)
-                                {
-                                    SlicedPacket.m_Last = false;
-                                } else
-                                {
-                                    SlicedPacket.m_Last = true;
-                                }
-                                AddPhotoCarefulSlice(SlicedPacket);
-                            }
-
-                            if (BytesBuffer.Count < 500 && BytesBuffer.Count != 0)
-                            {
-                                byte[] LastSlice = BytesBuffer.GetRange(0, BytesBuffer.Count).ToArray();
-                                BytesBuffer.RemoveRange(0, BytesBuffer.Count);
-
-                                string jsonStringSlice = Encoding.UTF8.GetString(LastSlice);
-                                DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
-                                SlicedPacket.m_GearName = GUID;
-                                SlicedPacket.m_SendTo = -1;
-                                SlicedPacket.m_Hash = HashForSend;
-                                SlicedPacket.m_Str = jsonStringSlice;
-                                SlicedPacket.m_Last = true;
-
-                                AddPhotoCarefulSlice(SlicedPacket);
-                                SendNextPhotoCarefulSlice();
-                            }
-                        } else
-                        {
-                            DataStr.SlicedJsonData PhotoPacket = new DataStr.SlicedJsonData();
-                            PhotoPacket.m_GearName = GUID;
-                            PhotoPacket.m_SendTo = -1;
-                            PhotoPacket.m_Hash = HashForSend;
-                            PhotoPacket.m_Str = Base64;
-                            PhotoPacket.m_Last = true;
                             using (Packet _packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
                             {
-                                _packet.Write(PhotoPacket);
+                                _packet.Write(Slice);
                                 SendUDPData(_packet);
                             }
                         }

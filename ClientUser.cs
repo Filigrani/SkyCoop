@@ -465,6 +465,8 @@ namespace GameServer
             { (int)ServerPackets.ADDUNIVERSALSYNCABLE, ClientHandle.ADDUNIVERSALSYNCABLE},
             { (int)ServerPackets.REMOVEUNIVERSALSYNCABLE, ClientHandle.REMOVEUNIVERSALSYNCABLE},
             { (int)ServerPackets.CUSTOMSOUNDEVENT, ClientHandle.CUSTOMSOUNDEVENT},
+            { (int)ServerPackets.REQUESTSPECIALEXPEDITION, ClientHandle.REQUESTSPECIALEXPEDITION},
+            { (int)ServerPackets.REQUESTSPHOTOAGAIN, ClientHandle.REQUESTSPHOTOAGAIN},
         };
             MelonLogger.Msg("Initialized packets.");
         }
