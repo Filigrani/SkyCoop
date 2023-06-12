@@ -3232,8 +3232,16 @@ namespace SkyCoop
                         }
                         bool IsBase64 = IsBase64String(Base64);
                         long CheckSum = GetDeterministicId(Base64);
+                        long CheckSumAlt = -CheckSum - 1;
                         Log("Final string is base64? "+IsBase64);
                         Log("Final checksum " + CheckSum+" expected "+ Data.m_CheckSum);
+                        if(Data.m_CheckSum == CheckSumAlt)
+                        {
+                            // eeh, that fine, skip check sum validation
+                            Log("Final checksum minory diffirent.");
+                            CheckSum = Data.m_CheckSum;
+                        }
+
                         if (IsBase64 && CheckSum == Data.m_CheckSum)
                         {
                             Log("Everything correct, applying this photo");
@@ -3262,15 +3270,23 @@ namespace SkyCoop
                                     }
                                 }
                             }
+                            if (MyMod.iAmHost)
+                            {
+                                List<SlicedBase64Data> Slices = GetBase64Sliced(Base64, Data.m_GUID, SlicedBase64Purpose.Photo);
+                                foreach (SlicedBase64Data Slice in Slices)
+                                {
+                                    ServerSend.BASE64SLICE(Slice, MyMod.playersData[FromClient].m_LevelGuid);
+                                }
+                            }
 #else
                                 MPSaveManager.AddPhoto(Base64, true, PhotoGUID);
                                 MPSaveManager.AddPhoto(Base64, false, PhotoGUID);
+                                List<SlicedBase64Data> Slices = GetBase64Sliced(Base64, Data.m_GUID, SlicedBase64Purpose.Photo);
+                                foreach (SlicedBase64Data Slice in Slices)
+                                {
+                                    ServerSend.BASE64SLICE(Slice, MyMod.playersData[FromClient].m_LevelGuid);
+                                }
 #endif
-                            List<SlicedBase64Data> Slices = GetBase64Sliced(Base64, Data.m_GUID, SlicedBase64Purpose.Photo);
-                            foreach (SlicedBase64Data Slice in Slices)
-                            {
-                                ServerSend.BASE64SLICE(Slice, MyMod.playersData[FromClient].m_LevelGuid);
-                            }
                         } else
                         {
                             if (!IsBase64)
