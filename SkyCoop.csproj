@@ -68,6 +68,7 @@
     <Compile Include="Shared.cs" />
     <Compile Include="SteamConnect.cs" />
     <Compile Include="Supporters.cs" />
+    <Compile Include="TFHUD.cs" />
     <Compile Include="ThreadManager.cs" />
   </ItemGroup>
   <ItemGroup>

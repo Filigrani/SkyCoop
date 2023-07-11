@@ -817,6 +817,20 @@ namespace SkyCoop
 
             foreach (UniversalSyncableObjectSpawner Spawner in m_Objects)
             {
+                if (Spawner.m_Prefab == "RockCache")
+                {
+                    FakeRockCacheVisualData FRCVD = new FakeRockCacheVisualData();
+                    FRCVD.m_GUID = Spawner.m_GUID;
+                    FRCVD.m_Position = Spawner.m_Position;
+                    FRCVD.m_Rotation = Spawner.m_Rotation;
+                    FRCVD.m_Owner = "Unknown";
+
+                    MyMod.AddRockCache(FRCVD);
+
+                    MPSaveManager.AddRockCach(FRCVD, 0);
+                    MPSaveManager.SaveContainer(MyMod.level_guid, Spawner.m_GUID, Spawner.m_Content);
+                    continue;
+                }
                 UniversalSyncableObject Obj = new UniversalSyncableObject();
                 Obj.m_Prefab = Spawner.m_Prefab;
                 Obj.m_GUID = Spawner.m_GUID;

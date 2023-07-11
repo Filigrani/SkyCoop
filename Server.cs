@@ -159,6 +159,10 @@ namespace GameServer
                                 clients[i].TimeOutTime = 0;
                                 clients[i].udp.endPoint = null;
                                 freeSlot = i;
+                                if (MyMod.playersData[i] != null)
+                                {
+                                    MyMod.playersData[i].m_FirstBoot = false;
+                                }
                                 break;
                             }
                         }
@@ -172,6 +176,10 @@ namespace GameServer
                                     clients[i].RCON = false;
                                     Log("[UDP] Here an empty slot " + i);
                                     freeSlot = i;
+                                    if (MyMod.playersData[i] != null)
+                                    {
+                                        MyMod.playersData[i].m_FirstBoot = false;
+                                    }
                                     break;
                                 }
                             }

@@ -34,7 +34,7 @@ namespace SkyCoop
             public const string Description = "Multiplayer mod";
             public const string Author = "Filigrani";
             public const string Company = null;
-            public const string Version = "0.11.8";
+            public const string Version = "0.12.0";
             public const string DownloadLink = null;
             public const int RandomGenVersion = 5;
         }
@@ -188,7 +188,6 @@ namespace SkyCoop
         public static string NotificationString = "";
         public static GameObject ExpeditionEditorUI = null;
         public static GameObject ExpeditionEditorSelectUI = null;
-        public static GameObject TF2HUD = null;
         public static int ForcedShowExpeditionHUDSeconds = 0;
 
         public static string CustomServerName = "";
@@ -233,6 +232,7 @@ namespace SkyCoop
         public static GameObject ViewModelPhoto = null;
         public static GameObject ViewModelMap = null;
         public static GameObject ViewModelNote = null;
+        public static SkinnedMeshRenderer ViewModelRifle = null;
         //public static GameObject ViewModelFish = null;
         public static bool UseBoltInsteadOfStone = false;
         public static bool OriginalRadioSeaker = false;
@@ -442,11 +442,15 @@ namespace SkyCoop
                             ObjectGuid GUIDComp = newGear.AddComponent<ObjectGuid>();
                             GUIDComp.m_Guid = GUID;
                             gi.m_ObjectGuid = GUIDComp;
-                            MelonLogger.Msg("Going render photo " + GUID);
-                            Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, gi.m_GearName);
-                            if (tex)
+
+                            if(gi.m_GearName != "GEAR_SCMapReveal")
                             {
-                                newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                                MelonLogger.Msg("Going render photo " + GUID);
+                                Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, gi.m_GearName);
+                                if (tex)
+                                {
+                                    newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                                }
                             }
                         }
                     }
@@ -496,6 +500,7 @@ namespace SkyCoop
                                 skipPickup = true;
                             }
                         }
+                        Gi.m_LastUpdatedTODHours = 0;
                         Gi.ManualStart();
                         Gi.ManualUpdate();
                         if (Gi.m_GearName == "GEAR_SCNote" && string.IsNullOrEmpty(Extra.m_Dropper))
@@ -911,6 +916,21 @@ namespace SkyCoop
             }
         }
 
+        public static void DumpInterloperBans()
+        {
+            Il2CppReferenceArray<UnityEngine.Object> Stuff = Resources.LoadAll("", GameObject.Il2CppType);
+            foreach (var item in Stuff)
+            {
+                GameObject obj = item.Cast<GameObject>();
+                if(obj != null && obj.GetComponent<DisableObjectForXPMode>())
+                {
+                    if (obj.GetComponent<DisableObjectForXPMode>().m_XPModesToDisable.Contains(ExperienceModeType.Interloper))
+                    {
+                        MelonLogger.Msg("[DumpInterloperBans] "+ item.name);
+                    }
+                }
+            }
+        }
 
         public override void OnApplicationStart()
         {
@@ -919,7 +939,7 @@ namespace SkyCoop
             DedicatedServerAppMode = DedicatedServerWithRender || Application.isBatchMode;
 
             ModsValidation.GetModsHash(true);
-
+            //DumpInterloperBans();
             bool ForceNoSteam = Environment.GetCommandLineArgs().Contains("-nosteam");
             bool ForceNoEgs = Environment.GetCommandLineArgs().Contains("-noegs");
 
@@ -975,6 +995,8 @@ namespace SkyCoop
             uConsole.RegisterCommand("rpc", new Action(ConsoleRPC));
             Comps.RegisterComponents();
             ExpeditionManager.InitClues();
+            Shared.LoadInterloperReplace();
+            TFHUD.Enabled = Environment.GetCommandLineArgs().Contains("-tfhud");
         }
 
         public static void LootEverything()
@@ -1981,6 +2003,28 @@ namespace SkyCoop
             //    ViewModelNote.transform.localEulerAngles = new Vector3(325, 300, 60);
             //    ViewModelNote.transform.localPosition = new Vector3(0.03f, 0.067f, 0.01f);
             //}
+            //if (Supporters.ConfiguratedBenefits.m_Canadium || !Supporters.ConfiguratedBenefits.m_Canadium)
+            //{
+            //    string PathRifle = "/CHARACTER_FPSPlayer/NEW_FPHand_Rig/GAME_DATA/Origin/HipJoint/Chest_Joint/Camera_Weapon_Offset/Shoulder_Joint/Shoulder_Joint_Offset/shoulder_prop_point/FPH_Rifle(Clone)/GAME_DATA/Meshes/mesh_rifle";
+            //    if (ViewModelRifle == null)
+            //    {
+            //        GameObject Obj = GameObject.Find(PathRifle);
+            //        if(Obj != null)
+            //        {
+            //            ViewModelRifle = Obj.GetComponent<SkinnedMeshRenderer>();
+            //        }
+            //    }
+
+            //    if (ViewModelRifle)
+            //    {
+            //        Material MatTemplate = LoadedBundle.LoadAsset<Material>("CanadiumTemplate");
+            //        if(MatTemplate != null)
+            //        {
+            //            MatTemplate.mainTexture = ViewModelRifle.material.mainTexture;
+            //            ViewModelRifle.material = MatTemplate;
+            //        }
+            //    }
+            //}
         }
 
         public static void AddHarvastedPlant(string harvGUID)
@@ -2431,6 +2475,7 @@ namespace SkyCoop
                 DisableObjectForXPMode.RemoveDisabler(new_gear.gameObject);
                 new_gear.m_RolledSpawnChance = true;
                 new_gear.m_BeenInPlayerInventory = true;
+                new_gear.m_LastUpdatedTODHours = 0;
                 new_gear.ManualStart();
                 GameManager.GetPlayerManagerComponent().EquipItem(new_gear, false);
                 GameManager.GetInventoryComponent().RemoveGear(obj);
@@ -6192,8 +6237,18 @@ namespace SkyCoop
                 DiscardRepeatPacket();
                 RemovePleaseWait();
                 HUDMessage.AddMessage("Request failed!");
-            }
-            else
+            } else if (request == ResendPacketType.Container)
+            {
+                if(GoingToOpenContinaer != null)
+                {
+                    OpenFakeContainer(GoingToOpenContinaer);
+                } else
+                {
+                    DiscardRepeatPacket();
+                    RemovePleaseWait();
+                    HUDMessage.AddMessage("Request failed!");
+                }
+            } else
             {
                 MelonLogger.Msg("Can't simulate request " + request);
                 DiscardRepeatPacket();
@@ -6744,7 +6799,7 @@ namespace SkyCoop
                     }
                 }
 
-                if (!string.IsNullOrEmpty(extra.m_PhotoGUID))
+                if (!string.IsNullOrEmpty(extra.m_PhotoGUID) && extra.m_GearName != "gear_scmapreveal")
                 {
                     MelonLogger.Msg("Photo "+ extra.m_PhotoGUID);
                     Texture2D tex = MPSaveManager.GetPhotoTexture(extra.m_PhotoGUID, extra.m_GearName);
@@ -6883,11 +6938,15 @@ namespace SkyCoop
                         ObjectGuid GUIDComp = newGear.AddComponent<ObjectGuid>();
                         GUIDComp.m_Guid = GUID;
                         gi.m_ObjectGuid = GUIDComp;
-                        MelonLogger.Msg("Going render photo " + GUID);
-                        Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, gi.m_GearName);
-                        if (tex)
+
+                        if(gi.m_GearName != "GEAR_SCMapReveal")
                         {
-                            newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                            MelonLogger.Msg("Going render photo " + GUID);
+                            Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, gi.m_GearName);
+                            if (tex)
+                            {
+                                newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                            }
                         }
                     }
                 }
@@ -7037,12 +7096,18 @@ namespace SkyCoop
                         ObjectGuid GUIDComp = newGear.AddComponent<ObjectGuid>();
                         GUIDComp.m_Guid = GUID;
                         gi.m_ObjectGuid = GUIDComp;
-                        MelonLogger.Msg("Going render photo " + GUID);
-                        Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, DGD.m_Extra.m_GearName);
-                        if (tex)
+
+                        if(DGD.m_Extra.m_GearName != "gear_scmapreveal")
                         {
-                            newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+
+                            MelonLogger.Msg("Going render photo " + GUID);
+                            Texture2D tex = MPSaveManager.GetPhotoTexture(GUID, DGD.m_Extra.m_GearName);
+                            if (tex)
+                            {
+                                newGear.transform.GetChild(0).gameObject.GetComponent<Renderer>().material.mainTexture = tex;
+                            }
                         }
+
                     }
                 }
                 if (!string.IsNullOrEmpty(DGD.m_Extra.m_ExpeditionNote))
@@ -7076,6 +7141,7 @@ namespace SkyCoop
                     newGear.GetComponent<GearItem>().m_Bed.SetState(BedRollState.Rolled);
                     SkipPickup = true;
                 }
+                newGear.GetComponent<GearItem>().m_LastUpdatedTODHours = 0;
                 newGear.GetComponent<GearItem>().ManualStart();
                 newGear.GetComponent<GearItem>().ManualUpdate();
 
@@ -7975,23 +8041,6 @@ namespace SkyCoop
             CarefulSlicesPhotoBuffer.Add(slice);
         }
         public static int CarefulSlicesSent = 0;
-        public static void SendNextCarefulSlice()
-        {
-            if (CarefulSlicesBuffer.Count > 0)
-            {
-                DataStr.SlicedJsonData slice = CarefulSlicesBuffer[0];
-                using (Packet _packet = new Packet((int)ClientPackets.GOTCONTAINERSLICE))
-                {
-                    _packet.Write(slice);
-                    SendUDPData(_packet);
-                }
-                CarefulSlicesBuffer.Remove(CarefulSlicesBuffer[0]);
-                CarefulSlicesSent++;
-            } else {
-                MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
-                CarefulSlicesSent = 0;
-            }
-        }
         public static void SendNextGearCarefulSlice()
         {
             if (CarefulSlicesGearBuffer.Count > 0)
@@ -8009,6 +8058,46 @@ namespace SkyCoop
                 MelonLogger.Msg("Finished sending all " + CarefulSlicesSent + " slices");
                 CarefulSlicesSent = 0;
             }
+        }
+
+        public static string InterloperFilterContainer(string Data)
+        {
+            //MelonLogger.Msg("[InterloperFilterContainer] Starting...");
+            
+            if(ExperienceModeManager.s_CurrentModeType != ExperienceModeType.Interloper)
+            {
+                //MelonLogger.Msg("[InterloperFilterContainer] Return stock");
+                return Data;
+            }
+            ContainerSaveDataProxy containerSaveDataProxy = Utils.DeserializeObject<ContainerSaveDataProxy>(Data);
+            for (int i = containerSaveDataProxy.m_SerializedItems.Count-1; i >= 0 ; i--)
+            {
+                ContainerItemSaveData Gi = containerSaveDataProxy.m_SerializedItems[i];
+                if (Gi != null)
+                {
+                    //MelonLogger.Msg("[InterloperFilterContainer] Processing "+ Gi.m_PrefabName);
+                    string NewPrefab = Shared.GetInterloperReplace(Gi.m_PrefabName);
+                    //MelonLogger.Msg("[InterloperFilterContainer] NewPrefabName " + NewPrefab);
+
+                    if(Gi.m_PrefabName == NewPrefab)
+                    {
+                        //MelonLogger.Msg("[InterloperFilterContainer] Doing nothing!");
+                        continue;
+                    }
+
+                    if (string.IsNullOrEmpty(NewPrefab))
+                    {
+                        //MelonLogger.Msg("[InterloperFilterContainer] Must be removed!");
+                        containerSaveDataProxy.m_SerializedItems.RemoveAt(i);
+                    } else
+                    {
+                        Gi.m_SerializedGear = Gi.m_SerializedGear.Replace(Gi.m_PrefabName, NewPrefab);
+                        Gi.m_PrefabName = NewPrefab;
+                        //MelonLogger.Msg("[InterloperFilterContainer] Name replaced!");
+                    }
+                }
+            }
+            return Utils.SerializeObject(containerSaveDataProxy);
         }
 
         public static void FinishOpeningFakeContainer(string CompressedData)
@@ -8030,14 +8119,13 @@ namespace SkyCoop
             box.m_StartInspected = true;
             if (Data == "")
             {
-                MelonLogger.Msg("Opening empty");
+                MelonLogger.Msg("Container empty");
                 box.DestroyAllGear();
             } else {
                 MelonLogger.Msg("Opening with loot, loading loot to the container");
                 Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
-                box.Deserialize(Data, loadedlist);
+                box.Deserialize(InterloperFilterContainer(Data), loadedlist);
             }
-            MelonLogger.Msg("All done, removing hint");
             //box.m_CapacityKG = 1000f;
             RemovePleaseWait();
             InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
@@ -8087,7 +8175,7 @@ namespace SkyCoop
                 box.DestroyAllGear();
             } else {
                 Il2CppSystem.Collections.Generic.List<GearItem> loadedlist = new Il2CppSystem.Collections.Generic.List<GearItem>();
-                box.Deserialize(Data, loadedlist);
+                box.Deserialize(InterloperFilterContainer(Data), loadedlist);
             }
             box.m_Inspected = true;
             box.m_StartInspected = true;
@@ -8583,8 +8671,10 @@ namespace SkyCoop
                     ExpeditionEditorSelectUI.transform.GetChild(4).GetComponent<UnityEngine.UI.Button>().onClick.AddListener(act3);
                 }
 
-                //GameObject LoadedAssets15 = LoadedBundle.LoadAsset<GameObject>("TF_Health");
-                //TF2HUD = GameObject.Instantiate(LoadedAssets15, UiCanvas.transform);
+                if (TFHUD.Enabled)
+                {
+                    TFHUD.Init(LoadedBundle, UiCanvas.transform);
+                }
             }
         }
 
@@ -8596,7 +8686,6 @@ namespace SkyCoop
             }
             return false;
         }
-
 
         public static void UpdateCanvasUis()
         {
@@ -8732,40 +8821,7 @@ namespace SkyCoop
                     ExpeditionEditor.RefreshExpeditionsList(ExpeditionEditor.LastSelectedRegion);
                 }
             }
-            if(TF2HUD != null)
-            {
-                
-                Condition Con = GameManager.GetConditionComponent();
-                if (Con != null)
-                {
-                    TF2HUD.transform.GetChild(6).gameObject.GetComponent<UnityEngine.UI.Text>().text = Convert.ToInt32(Con.m_CurrentHP).ToString();
-                    if(Con.m_CurrentHP < Con.m_MaxHP)
-                    {
-                        TF2HUD.transform.GetChild(7).gameObject.GetComponent<UnityEngine.UI.Text>().text = Convert.ToInt32(Con.m_MaxHP).ToString();
-                    } else
-                    {
-                        TF2HUD.transform.GetChild(7).gameObject.GetComponent<UnityEngine.UI.Text>().text = "";
-                    }
-                    float healthPercent = (100f / Con.m_MaxHP) * Con.m_CurrentHP;
-                    bool LowHp = Con.m_CurrentHP < 45;
-                    bool OverHeal = Con.m_CurrentHP > 100;
-                    TF2HUD.transform.GetChild(3).gameObject.SetActive(LowHp);
-                    TF2HUD.transform.GetChild(2).gameObject.SetActive(OverHeal);
-                    if (LowHp)
-                    {
-                        //UnityEngine.UI.Image imgComp = TF2HUD.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Image>();
-                        //imgComp.color = Color.Lerp(new Color(159, 18, 7, 255), new Color(159, 18, 7, 0), Mathf.PingPong(Time.time * 2.2f, 1));
-                    }
-                    if (OverHeal)
-                    {
-                        //UnityEngine.UI.Image imgComp = TF2HUD.transform.GetChild(2).gameObject.GetComponent<UnityEngine.UI.Image>();
-                        //imgComp.color = Color.Lerp(new Color(255, 255, 255, 255), new Color(255, 255, 255, 0), Mathf.PingPong(Time.time * 0.5f, 1));
-                    }
-                    
-
-                    TF2HUD.transform.GetChild(5).gameObject.GetComponent<UnityEngine.UI.Image>().fillAmount = healthPercent/100;
-                }
-            }
+            TFHUD.Update();
         }
 
         public static void DebugCrap()
@@ -8999,6 +9055,12 @@ namespace SkyCoop
             float waterGave = 0;
 
             WaterSupply bottle = null;
+
+            if(LastSelectedGearName == "GEAR_SCNote" || LastSelectedGearName == "GEAR_SCPhoto" || LastSelectedGearName == "GEAR_SCMapPiece")
+            {
+                return;
+            }
+
 
             if (LastSelectedGearName == "GEAR_WaterSupplyPotable" || LastSelectedGearName == "GEAR_WaterSupplyNotPotable")
             {
@@ -9939,7 +10001,7 @@ namespace SkyCoop
                     }
                 }
             }
-            if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
+            if (InputManager.GetReloadPressed(InputManager.m_CurrentContext) && MouseActionIsAllowed())
             {
                 ExpeditionHint();
             }
@@ -10137,7 +10199,9 @@ namespace SkyCoop
                 || (UICamera.currentScheme != UICamera.ControlScheme.Controller && managerComponent.m_InteractiveObjectUnderCrosshair && !managerComponent.PlayerIsZooming() && managerComponent.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>())
                 || managerComponent.IsInPlacementMode()
                 || InputManager.IsClickHoldActive()
-                || InteractionInprocess)
+                || InteractionInprocess
+                || ConsoleIsOpen()
+                || ChatIsOpen())
             {
                 return false;
             }
@@ -10451,6 +10515,24 @@ namespace SkyCoop
                     }
                 }
             }
+        }
+        public static bool ConsoleIsOpen()
+        {
+            if (uConsole.m_Instance != null)
+            {
+                return uConsole.m_On;
+            }
+            return false;
+        }
+
+
+        public static bool ChatIsOpen()
+        {
+            if (chatInput != null)
+            {
+                return chatInput.gameObject.activeSelf;
+            }
+            return false;
         }
 
         public static void UpdateEmoteWheel()
@@ -11159,6 +11241,10 @@ namespace SkyCoop
                     AddSemiPrefab("FireTiny", GameObject.Find("Art/FX/PlaneCrash/Fire/FX_FirePoint (5)"));
                     AddSemiPrefab("FireLarge", GameObject.Find("Art/FX/PlaneCrash/Fire/FX_FirePoint (7)"));
                     AddSemiPrefab("FireLight", GameObject.Find("Art/FX/PlaneCrash/Lighting/Over (2)"));
+                    AddSemiPrefab("RedLamp", GameObject.Find("Art/CommunityHall/OBJ_StormLantern_Prefab"));
+                    AddSemiPrefab("RockDummy", GameObject.Find("Art/Story/TRN_RockCliffBig06_ClimbA_Left_Prefab"));
+
+                    
 
                     UnityEngine.SceneManagement.SceneManager.UnloadScene("RuralRegion_STORY");
                     DonePreload = true;
@@ -13566,15 +13652,7 @@ namespace SkyCoop
                 {
                     if (sendMyPosition == true)
                     {
-                        List<SlicedBase64Data> Slices = Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo);
-                        foreach (SlicedBase64Data Slice in Slices)
-                        {
-                            using (Packet _packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
-                            {
-                                _packet.Write(Slice);
-                                SendUDPData(_packet);
-                            }
-                        }
+                        Shared.SendSlicedBase64Data(Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo));
                     }
                 }
                 GearItem Photo = GameManager.GetPlayerManagerComponent().AddItemCONSOLE("GEAR_SCPhoto", 1);
@@ -13894,11 +13972,19 @@ namespace SkyCoop
             {
                 Obj.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
                 Obj.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material = GetSemiPrefab("SnowPileB").transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material;
+            } else if (Prefab == "RockWall")
+            {
+                Obj.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
+                Obj.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material = GetSemiPrefab("RockDummy").transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material;
             }
         }
 
         public static void PlayCustomSoundEvent(Vector3 Position, string Sound, string Prefab)
         {
+            if(Prefab == "ExpeditionAudioEvent")
+            {
+                Prefab = "Expedition2DAudioEvent";
+            }
             GameObject reference = LoadedBundle.LoadAsset<GameObject>(Prefab);
             AudioClip audioClip = LoadedBundle.LoadAsset<AudioClip>(Sound);
             if (reference == null)
@@ -13965,7 +14051,7 @@ namespace SkyCoop
             {
                 Custom = true;
             }
-            if(Prefab == "FireSmall" || Prefab == "FireTiny" || Prefab == "FireLarge" || Prefab == "SnowPile")
+            if(Prefab == "FireSmall" || Prefab == "FireTiny" || Prefab == "FireLarge" || Prefab == "SnowPile" || Prefab == "RockWall")
             {
                 Custom = true;
             }

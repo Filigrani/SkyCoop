@@ -1544,6 +1544,36 @@ namespace SkyCoop
                         __instance.m_PaperDollSlots[index].mainTexture = (Texture)Txt;
                     }
                 }
+
+                ////Silly hook
+
+                //if (gi && gi.m_ClothingItem && !string.IsNullOrEmpty(gi.m_ClothingItem.m_PaperDollTextureName))
+                //{
+                //    for (int index = 0; index < __instance.m_PaperDollSlotWidgets.Count; ++index)
+                //    {
+                //        __instance.m_PaperDollSlotWidgets[index].enabled = true;
+
+
+                //        bool Male = GameManager.GetPlayerManagerComponent().m_VoicePersona == VoicePersona.Male;
+                //        AssetBundleRef Ref;
+                //        string TxtName = gi.m_ClothingItem.m_PaperDollTextureName;
+
+                //        if (Male)
+                //        {
+                //            Ref = InterfaceManager.m_Panel_Clothing.m_PaperDollBundleFemale;
+                //            TxtName = TxtName + "_F";
+                //        } else
+                //        {
+                //            Ref = InterfaceManager.m_Panel_Clothing.m_PaperDollBundleMale;
+                //            if (TxtName.EndsWith("_F"))
+                //            {
+                //                TxtName = TxtName.Remove(TxtName.Length - 2, 2);
+                //            }
+                //        }
+                //        __instance.m_PaperDollSlots[index].material.SetTexture("_MainTex", (Texture)Ref.LoadAsset<Texture2D>(TxtName));
+
+                //    }
+                //}
             }
         }
 
@@ -3906,6 +3936,90 @@ namespace SkyCoop
             }
         }
 
+        public static string GetLampHoverString(DroppedGearDummy DGD)
+        {
+            string GearName = DGD.m_LocalizedDisplayName;
+            string Dropper = DGD.m_Extra.m_Dropper;
+            string ActionString = "Dropped";
+            int minutesLeft = DGD.m_Extra.m_GoalTime - MyMod.MinutesFromStartServer;
+            string DropTime = DropTimeFormat(minutesLeft);
+            string FuelLeft = "Fuel left for " + DropTime;
+            bool Lit = DGD.m_Extra.m_Variant != 0;
+            if (Lit)
+            {
+                ActionString = "Placed";
+                if (string.IsNullOrEmpty(DropTime))
+                {
+                    FuelLeft = "No Fuel left " + ActionString + " by " + Dropper;
+                } else
+                {
+                    FuelLeft = "Fuel left for "+ DropTime + ActionString + " by " + Dropper;
+                }
+                return GearName + "\n" + FuelLeft;
+            } else
+            {
+                return GearName +"\n" + ActionString + " by " + Dropper;
+            }
+        }
+        public static string GetSnareHoverString(DroppedGearDummy DGD)
+        {
+            string GearName = DGD.m_LocalizedDisplayName;
+            string Dropper = DGD.m_Extra.m_Dropper;
+            string ActionString = "Dropped";
+            int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+            int minutesLeft = MyMod.TimeToDry("GEAR_Snare") - minutesOnDry + 1;
+            string DropTime = DropTimeFormat(minutesLeft);
+            bool IsSetup = DGD.m_Extra.m_Variant != 0;
+            if (IsSetup)
+            {
+                ActionString = "Setup";
+
+                if(DGD.m_Extra.m_GoalTime == -1)
+                {
+                    return GearName + "\n" + "Cannot snare here " + ActionString + " by " + Dropper;
+                } else
+                {
+                    if (string.IsNullOrEmpty(DropTime))
+                    {
+                        DropTime = "As soon as no one see";
+                    }
+                    if (DGD.m_Extra.m_Variant == 1)
+                    {
+                        return GearName + "\n" + "May catch in: " + DropTime + " " + ActionString + " by " + Dropper;
+                    } else
+                    {
+                        return GearName + "\n" + "Will catch in: " + DropTime + " " + ActionString + " by " + Dropper;
+                    }
+                }
+            } else
+            {
+                return GearName + "\n" + ActionString + " by " + Dropper;
+            }
+        }
+
+        public static string GetCureableHoverString(DroppedGearDummy DGD, string Name)
+        {
+            string GearName = DGD.m_LocalizedDisplayName;
+            string Dropper = DGD.m_Extra.m_Dropper;
+            string ActionString = "dropped";
+            int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
+            int minutesLeft = MyMod.TimeToDry(Name) - minutesOnDry + 1;
+            string DropTime = DropTimeFormat(minutesLeft);
+
+            if(DGD.m_Extra.m_GoalTime == -1)
+            {
+                return GearName + "\n" + "Cannot be cured here, " + ActionString + " by " + Dropper;
+            }
+
+            if (string.IsNullOrEmpty(DropTime))
+            {
+                return GearName + "\n" + "Cured, " + ActionString + " by " + Dropper; ;
+            } else
+            {
+                return GearName + "\n" + "Cures in: " + DropTime + ", " + ActionString + " by " + Dropper;
+            }
+        }
+
 
 
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectDisplayText")] // Almost always
@@ -3958,8 +4072,10 @@ namespace SkyCoop
                     else if (interactiveObject.GetComponent<Comps.DroppedGearDummy>() != null)
                     {
                         Comps.DroppedGearDummy DGD = interactiveObject.GetComponent<Comps.DroppedGearDummy>();
+                        string Dropper = DGD.m_Extra.m_Dropper;
 
-                        if (string.IsNullOrEmpty(DGD.m_Extra.m_Dropper))
+
+                        if (string.IsNullOrEmpty(Dropper))
                         {
                             string ColorPrefix = "[87DBF5]";
                             string ColorAffix = "[-]";
@@ -3969,31 +4085,25 @@ namespace SkyCoop
                             if (KeyboardUtilities.InputManager.GetKey(KeyCode.LeftShift))
                             {
                                 string DropTime = DropTimeFormat(MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime);
+                                
                                 if (string.IsNullOrEmpty(DropTime))
                                 {
-                                    DropTime = "Just now";
+                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Dropped just now";
+                                    return;
                                 }
                                 __result = DGD.m_LocalizedDisplayName + "\n" + "Dropped " + DropTime + " ago";
                                 return;
                             }
                             string ActionString = "Dropped";
-                            bool IsSnare = false;
-                            bool IsLamp = false;
-                            if (interactiveObject.name.Contains("GEAR_Snare"))
-                            {
-                                IsSnare = true;
-                                if (DGD.m_Extra.m_Variant != 0)
-                                {
-                                    ActionString = "Setup";
-                                }
-                            }
                             if (interactiveObject.name.Contains("GEAR_KeroseneLampB"))
                             {
-                                IsLamp = true;
-                                if (DGD.m_Extra.m_Variant != 0)
-                                {
-                                    ActionString = "Placed";
-                                }
+                                __result = GetLampHoverString(DGD);
+                                return;
+                            }
+                            if (interactiveObject.name.Contains("GEAR_Snare"))
+                            {
+                                __result = GetSnareHoverString(DGD);
+                                return;
                             }
 
                             string DroppedString = " " + ActionString + " by " + DGD.m_Extra.m_Dropper;
@@ -4008,68 +4118,11 @@ namespace SkyCoop
                                 }
                             } else if (DGD.m_Extra.m_GoalTime == -1)
                             {
-                                if (!IsSnare && !IsLamp)
-                                {
-                                    __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
-                                } else if (IsSnare)
-                                {
-
-                                    if (DGD.m_Extra.m_Variant == 1)
-                                    {
-                                        __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot snare here" + DroppedString;
-                                    } else
-                                    {
-                                        __result = DGD.m_LocalizedDisplayName + "\n" + DroppedString;
-                                    }
-                                }
+                                __result = DGD.m_LocalizedDisplayName + "\n" + "Cannot be cured here" + DroppedString;
                             } else
                             {
-                                int minutesLeft;
-                                if (IsLamp)
-                                {
-                                    minutesLeft = DGD.m_Extra.m_GoalTime - MyMod.MinutesFromStartServer;
-                                } else
-                                {
-                                    int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
-                                    minutesLeft = MyMod.TimeToDry(interactiveObject.name) - minutesOnDry + 1;
-                                }
-                                string DropTime = DropTimeFormat(minutesLeft);
-                                string str = DGD.m_LocalizedDisplayName + "\n";
-                                if (!IsSnare && !IsLamp)
-                                {
-                                    str = str + "Cures in: ";
-                                } else if (IsSnare)
-                                {
-
-                                    if (DGD.m_Extra.m_Variant == 1)
-                                    {
-                                        str = str + "May catch: ";
-                                    } else
-                                    {
-                                        str = str + "Will catch: ";
-                                    }
-                                } else if (IsLamp)
-                                {
-                                    str = str + "Fuel left for ";
-                                }
-
-                                if(string.IsNullOrEmpty(DropTime))
-                                {
-                                    str = str + DropTime;
-                                } else
-                                {
-                                    if (!IsSnare && !IsLamp)
-                                    {
-                                        str = DGD.m_LocalizedDisplayName + "\n" + "Cured";
-                                    } else if (IsSnare)
-                                    {
-                                        str = DGD.m_LocalizedDisplayName + "\n" + "As soon as no one see";
-                                    } else if (IsLamp)
-                                    {
-                                        str = DGD.m_LocalizedDisplayName + "\n" + "No fuel left";
-                                    }
-                                }
-                                __result = str + DroppedString;
+                                __result = GetCureableHoverString(DGD, interactiveObject.name);
+                                return;
                             }
                         }
                     } 
@@ -8168,5 +8221,72 @@ namespace SkyCoop
                 }
             }
         }
+
+        //public static UILabel CordsText = null;
+
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Initialize")]
+        //internal static class Panel_Map_Initialize
+        //{
+        //    private static void Postfix(Panel_Map __instance)
+        //    {
+        //        if(CordsText == null)
+        //        {
+        //            GameObject obj = new GameObject();
+        //            obj.transform.parent = __instance.gameObject.transform;
+        //            CordsText = obj.AddComponent<UILabel>();
+        //            UILabel Donor = __instance.gameObject.transform.GetChild(1).GetChild(0).gameObject.GetComponent<UILabel>();
+        //            CordsText.font = Donor.font;
+        //            CordsText.keepCrispWhenShrunk = UILabel.Crispness.Always;
+        //            CordsText.depth = 1;
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Update")]
+        //internal static class Panel_Map_Update
+        //{
+        //    private static void Postfix(Panel_Map __instance)
+        //    {
+        //        if (CordsText != null && __instance.m_Crosshair != null)
+        //        {
+        //            CordsText.gameObject.transform.localPosition = __instance.m_Crosshair.gameObject.transform.localPosition;
+        //            //Vector2 mapPos = new Vector2(CordsText.gameObject.transform.localPosition.x, CordsText.gameObject.transform.localPosition.y);
+        //            Vector2 mapPos = new Vector2(__instance.m_PlayerIcon.localPosition.x, __instance.m_PlayerIcon.localPosition.y);
+        //            Vector3 worldPos = Vector2.zero;
+        //            float W = 0;
+        //            __instance.MapPositionToWorldPosition(__instance.m_UnlockedRegionNames[__instance.m_RegionSelectedIndex], mapPos, 0, out worldPos, out W);
+        //            string Text = "X " + worldPos.x + " Z " + worldPos.z;
+        //            CordsText.text = Text;
+        //            CordsText.mText = Text;
+        //            CordsText.mProcessedText = Text;
+        //        }
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(GearItem), "ProcessPickupItemInteraction")]
+        //internal static class GearItem_ProcessPickupItemInteraction
+        //{
+        //    private static void Postfix(GearItem __instance)
+        //    {
+        //        if(__instance.m_GearName == "GEAR_SCMapReveal" && __instance.m_ObjectGuid != null)
+        //        {
+        //            string RevealRegion = __instance.m_ObjectGuid.Get();
+
+        //            Panel_Map Map = InterfaceManager.m_Panel_Map;
+        //            if (!string.IsNullOrEmpty(RevealRegion))
+        //            {
+        //                if (Map != null)
+        //                {
+        //                    if (Map.m_MapElementData.ContainsKey(RevealRegion))
+        //                    {
+        //                        var mapElementSaveDataList = Map.m_MapElementData[RevealRegion];
+        //                        for (int index = 0; index < mapElementSaveDataList.Count; ++index)
+        //                        {
+        //                            mapElementSaveDataList[index].m_NameIsKnown = true;
+        //                        } 
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
     }
 }

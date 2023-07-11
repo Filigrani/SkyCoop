@@ -318,17 +318,6 @@ namespace GameServer
                 SendTCPData(_toClient, _packet);
             }
         }
-        public static void GOTCONTAINERSLICE(int _toClient, DataStr.SlicedJsonData _msg)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.GOTCONTAINERSLICE))
-            {
-                _packet.Write(_msg);
-                _packet.Write(_toClient);
-
-                int pSize = _packet.Length();
-                SendTCPData(_toClient, _packet);
-            }
-        }
         public static void OPENEMPTYCONTAINER(int _toClient, bool _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.OPENEMPTYCONTAINER))
@@ -1740,22 +1729,6 @@ namespace GameServer
                 SendUDPDataToAllButNotSender(_packet, _From);
             }
         }
-
-        public static void SLICEDBYTES(int _From, DataStr.SlicedBytesData _msg, bool toEveryOne, int OnlyFor = -1)
-        {
-
-        }
-
-        public static void READYSENDNEXTSLICE(int _toClient, bool _msg)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.READYSENDNEXTSLICE))
-            {
-                _packet.Write(_msg);
-                _packet.Write(_toClient);
-
-                SendTCPData(_toClient, _packet);
-            }
-        }
         public static void READYSENDNEXTSLICEGEAR(int _toClient, bool _msg)
         {
             using (Packet _packet = new Packet((int)ServerPackets.READYSENDNEXTSLICEGEAR))
@@ -2427,8 +2400,8 @@ namespace GameServer
         {
             using (Packet _packet = new Packet((int)ServerPackets.EXPEDITIONSYNC))
             {
-                _packet.Write(Name);
-                _packet.Write(Task);
+                _packet.WriteUnicodeString(Name);
+                _packet.WriteUnicodeString(Task);
                 _packet.Write(Time);
                 _packet.Write(Alias);
                 SendUDPData(For, _packet);
@@ -2548,6 +2521,16 @@ namespace GameServer
                 _packet.Write(SOUND);
                 _packet.Write(Prefab);
                 SendUDPDataToAll(_packet, Scene);
+            }
+        }
+        public static void CUSTOMSOUNDEVENT(Vector3 Position, string SOUND, string Prefab, int For)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.CUSTOMSOUNDEVENT))
+            {
+                _packet.Write(Position);
+                _packet.Write(SOUND);
+                _packet.Write(Prefab);
+                SendUDPData(For, _packet);
             }
         }
         public static void REQUESTSPECIALEXPEDITION(int ForClient)

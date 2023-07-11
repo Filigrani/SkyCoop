@@ -154,17 +154,19 @@ namespace GameServer
         }
         public static void DoConnectToIp(string _ip)
         {
+            MPSaveManager.SaveLastConnectedServer(_ip);
             string newPort = "";
             string newIP = "";
-            if (_ip.Contains(":"))
+            if (_ip.Contains(':'))
             {
-                char seperator = Convert.ToChar(":");
-
-                string[] sliced = _ip.Split(seperator);
-                newIP = sliced[0];
+                string[] sliced = _ip.Split(':');
+                newIP = Dns.GetHostAddresses(sliced[0]).FirstOrDefault().ToString();
                 newPort = sliced[1];
+            } else
+            {
+                newIP = Dns.GetHostAddresses(_ip).FirstOrDefault().ToString();
+                newPort = "26950";
             }
-
             if (newIP == "" && newPort == "")
             {
                 PendingConnectionIp = _ip;

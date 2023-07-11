@@ -52,10 +52,10 @@ namespace SkyCoop
                 {
                     System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
                     int Idx = RNG.Next(0, m_GearsVariant.Count - 1);
-                    return m_GearsVariant[Idx];
+                    return Shared.GetInterloperReplace(m_GearsVariant[Idx]);
                 } else if (m_GearsVariant.Count == 1)
                 {
-                    return m_GearsVariant[0];
+                    return Shared.GetInterloperReplace(m_GearsVariant[0]);
                 }
                 return "GEAR_Tinder";
             }
@@ -559,6 +559,7 @@ namespace SkyCoop
                     Neighbors.Add((int)Shared.GameRegion.CoastalHighWay);
                     Neighbors.Add((int)Shared.GameRegion.CrumblingHighWay);
                     Neighbors.Add((int)Shared.GameRegion.WindingRiver);
+                    Neighbors.Add((int)Shared.GameRegion.DesolationPoint);
                     break;
                 default:
                     break;

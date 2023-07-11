@@ -237,6 +237,7 @@ namespace SkyCoop
 
             public bool m_IsSafe = false;
             public string m_SteamOrEGSID = "";
+            public bool m_FirstBoot = true;
         }
         public class MultiPlayerClientStatus //: MelonMod
         {
@@ -659,15 +660,16 @@ namespace SkyCoop
         public enum SlicedBase64Purpose
         {
             Photo,
+            Container,
         }
 
 
         public class SlicedBase64Data
         {
             public string m_Slice = "";
-            public int m_Slices = 0;
-            public int m_SliceNum = 0;
-            public long m_CheckSum = 0;
+            public int m_LastSliceIndex = 0;
+            public int m_SliceIndex = 0;
+            public string m_CheckSum = "";
             public string m_GUID = "";
             public int m_Purpose = 0;
         }
@@ -737,6 +739,32 @@ namespace SkyCoop
             public int m_YieldCount = 1;
             public ExpeditionManager.ExpeditionInteractiveImpact m_Impact = ExpeditionManager.ExpeditionInteractiveImpact.EVERY;
             public string m_ObjectGroupToRemove = "";
+        }
+        public class Base64SliceBase
+        {
+            public string[] m_Slices = null;
+            public int m_SlicesGot = 0;
+            public int m_SlicesNum = 0;
+
+            public Base64SliceBase(int SlicesNum)
+            {
+                m_SlicesNum = SlicesNum;
+                m_Slices = new string[SlicesNum];
+            }
+
+            public void SetSlice(int Index, string Slice)
+            {
+                if(Index <= m_Slices.Length - 1)
+                {
+                    m_Slices[Index] = Slice;
+                    m_SlicesGot++;
+                }
+            }
+
+            public bool IsReady()
+            {
+                return m_SlicesGot == m_SlicesNum;
+            }
         }
     }
 }

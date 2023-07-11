@@ -36,7 +36,7 @@ namespace SkyCoop
             m_Clues.Clear();
 
             m_Clues.Add(new ExpeditionClue("GEAR_SCHopeless","Mountian Crash", "HopelessRescueCrashSite"));
-            m_Clues.Add(new ExpeditionClue("GEAR_SCCacheNote#-1", "Mystery Lake Cache", "HopelessRescueCrashSite"));
+            //m_Clues.Add(new ExpeditionClue("GEAR_SCCacheNote#-1", "Mystery Lake Cache", "HopelessRescueCrashSite"));
         }
         public static bool IsClueGear(string GearName, int ID = 0)
         {
@@ -203,7 +203,37 @@ namespace SkyCoop
                 m_ExpeditionAlias = Alias;
             }
         }
-
+        public static Expedition GetExpeditionByGUID(string GUID)
+        {
+            foreach (Expedition Exp in m_ActiveExpeditions)
+            {
+                if (Exp.m_GUID == GUID)
+                {
+                    return Exp;
+                }
+            }
+            return null;
+        }
+        public static bool PlayerInExpedition(string MAC)
+        {
+            if (string.IsNullOrEmpty(MAC))
+            {
+                return false;
+            }
+            
+            for (int i = 0; i < m_ActiveExpeditions.Count; i++)
+            {
+                if (m_ActiveExpeditions[i].m_Players.Contains(MAC))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+        public static bool PlayerInExpedition(int PlayerID)
+        {
+            return PlayerInExpedition(Server.GetMACByID(PlayerID));
+        }
         public static bool StartNewExpedition(string LeaderMAC, int Region, string Alias = "", bool NoMessage = false, bool Special = false)
         {
             DebugLog("Client with MAC "+LeaderMAC+" trying start expedition on region "+Region);
@@ -289,18 +319,11 @@ namespace SkyCoop
             return null;
         }
 
-        public static void MayInviteToCrashSite(int ClientID)
+        public static void MayNotifyAboutCrashSite(int ClientID)
         {
-            string MAC = Server.GetMACByID(ClientID);
-            Expedition m_ActiveCrashSite = GetActiveCrashSite();
-            if (m_ActiveCrashSite != null)
+            if (!string.IsNullOrEmpty(m_ActiveCrashSiteGUID))
             {
-                if (!m_ActiveCrashSite.m_Players.Contains(MAC))
-                {
-                    ServerSend.EXPEDITIONRESULT(ClientID, 5);
-                    m_ActiveCrashSite.m_Players.Add(MAC);
-                    return;
-                }
+                ServerSend.EXPEDITIONRESULT(ClientID, 5);
             }
         }
 
@@ -310,25 +333,6 @@ namespace SkyCoop
             if (m_ActiveCrashSite != null)
             {
                 return;
-            }
-
-            List<string> MACs = Server.GetMACsOfPlayers();
-            List<string> InviteMACs = new List<string>();
-            foreach (string MAC in MACs)
-            {
-                bool ClientBusy = false;
-                for (int i = 0; i < m_ActiveExpeditions.Count; i++)
-                {
-                    if (m_ActiveExpeditions[i].m_Players.Contains(MAC))
-                    {
-                        ClientBusy = true;
-                        break;
-                    }
-                }
-                if (!ClientBusy)
-                {
-                    InviteMACs.Add(MAC);
-                }
             }
 
             string CrashSiteAlias = GetRandomCrashSiteName(CrashSiteID);
@@ -361,16 +365,11 @@ namespace SkyCoop
                 DebugLog("CrashSite Task[" + i + "] " + Exp.m_Tasks[i].m_Alias + " Type " + Exp.m_Tasks[i].m_Type.ToString());
             }
 
-            foreach (string MAC in InviteMACs)
+            for (int i = 0; i < MyMod.playersData.Count; ++i)
             {
-                int ClientID = Server.GetIDByMAC(MAC);
-                Exp.m_Players.Add(MAC);
-
-                if (ClientID != -1)
-                {
-                    ServerSend.EXPEDITIONRESULT(ClientID, 5);
-                }
+                ServerSend.EXPEDITIONRESULT(i, 5);
             }
+
             m_ActiveExpeditions.Add(Exp);
             m_ActiveCrashSiteGUID = Exp.m_GUID;
             MultiplayerChatMessage Message = new MultiplayerChatMessage();
@@ -647,7 +646,7 @@ namespace SkyCoop
 
         public static void CompleteCrashSite(int RemoveID, List<int> ClosePlayers, int DefaultFinishState = -1)
         {
-            List<int> PlayersIDs = m_ActiveExpeditions[RemoveID].GetExpeditionPlayersIDs();
+            List<int> PlayersIDs = m_ActiveExpeditions[RemoveID].GetExpeditionPlayersIDs(true);
 
             if (RemoveID != -1)
             {
@@ -768,9 +767,33 @@ namespace SkyCoop
             public int m_TasksCompleted = 0;
             public int m_TimeLeft = 7200;
 
-            public List<DataStr.MultiPlayerClientData> GetExpeditionPlayersData()
+            public List<DataStr.MultiPlayerClientData> GetExpeditionPlayersData(bool Everyone = false)
             {
                 List<DataStr.MultiPlayerClientData> Data = new List<DataStr.MultiPlayerClientData>();
+
+                if (Everyone)
+                {
+                    List<int> PlayersIDs = GetExpeditionPlayersIDs(Everyone);
+                    foreach (int ClientID in PlayersIDs)
+                    {
+                        if (ClientID != -1 && ClientID != 0)
+                        {
+                            if (MyMod.playersData[ClientID] != null)
+                            {
+                                Data.Add(MyMod.playersData[ClientID]);
+                            }
+                        } else if (ClientID == 0)
+                        {
+#if (!DEDICATED)
+                            MultiPlayerClientData P = new MultiPlayerClientData();
+                            P.m_LevelGuid = MyMod.level_guid;
+                            P.m_Position = GameManager.GetPlayerTransform().position;
+                            Data.Add(P);
+#endif
+                        }
+                    }
+                    return Data;
+                }
                 foreach (string MAC in m_Players)
                 {
                     int ClientID = Server.GetIDByMAC(MAC);
@@ -793,21 +816,48 @@ namespace SkyCoop
 
                 return Data;
             }
-            public List<int> GetExpeditionPlayersIDs()
+            public List<int> GetExpeditionPlayersIDs(bool Everyone = false)
             {
                 List<int> IDs = new List<int>();
-                foreach (string MAC in m_Players)
+                bool IsCS = IsCrashSite();
+                if (!IsCS)
                 {
-                    int ClientID = Server.GetIDByMAC(MAC);
-                    if (ClientID != -1)
+                    foreach (string MAC in m_Players)
                     {
-                        if (MyMod.playersData[ClientID] != null)
+                        int ClientID = Server.GetIDByMAC(MAC);
+                        if (ClientID != -1)
                         {
-                            IDs.Add(ClientID);
+                            if (MyMod.playersData[ClientID] != null)
+                            {
+                                IDs.Add(ClientID);
+                            }
+                        }
+                    }
+                } else
+                {
+                    if (Everyone)
+                    {
+                        for (int i = 0; i < MyMod.playersData.Count; i++)
+                        {
+                            if (MyMod.playersData[i] != null)
+                            {
+                                IDs.Add(i);
+                            }
+                        }
+                    } else
+                    {
+                        for (int i = 0; i < MyMod.playersData.Count; i++)
+                        {
+                            if (MyMod.playersData[i] != null)
+                            {
+                                if (!PlayerInExpedition(i))
+                                {
+                                    IDs.Add(i);
+                                }
+                            }
                         }
                     }
                 }
-
                 return IDs;
             }
 
@@ -837,6 +887,31 @@ namespace SkyCoop
                 }
             }
 
+            public bool IsCrashSite()
+            {
+                if (m_TimeLeft <= 0)
+                {
+                    if (m_Tasks.Count > 0)
+                    {
+                        ExpeditionTask Task = m_Tasks[m_Tasks.Count - 1];
+                        if (Task.m_Type == ExpeditionTaskType.CRASHSITE)
+                        {
+                            return true;
+                        } else
+                        {
+                            return false;
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(m_ActiveCrashSiteGUID) && m_ActiveCrashSiteGUID == m_GUID)
+                {
+                    return true;
+                } else
+                {
+                    return false;
+                }
+            }
+
             public void UpdateTasks()
             {
                 int NeedToComplete = m_Tasks.Count;
@@ -847,7 +922,7 @@ namespace SkyCoop
                     if (m_Tasks.Count > 0)
                     {
                         ExpeditionTask Task = m_Tasks[m_Tasks.Count - 1];
-                        if (Task.m_Type == ExpeditionTaskType.CRASHSITE)
+                        if (IsCrashSite())
                         {
                             CompleteCrashsite(-2, m_GUID);
                         } else
@@ -861,7 +936,7 @@ namespace SkyCoop
                     return;
                 }
 
-                List<DataStr.MultiPlayerClientData> PlayersData = GetExpeditionPlayersData();
+                List<DataStr.MultiPlayerClientData> PlayersData = GetExpeditionPlayersData(IsCrashSite());
                 ExpeditionCompleteOrder CompleteOrder = ExpeditionCompleteOrder.LINEAL;
                 bool CanUseNextCompleteOrder = true;
                 bool DontUpdateLaterTasks = false;
@@ -1139,10 +1214,33 @@ namespace SkyCoop
                     {
                         foreach (UniversalSyncableObjectSpawner Spawner in m_ObjectSpawners)
                         {
-                            if(Spawner.m_Prefab == "Expedition3DAudioEvent" || Spawner.m_Prefab == "Expedition2DAudioEvent")
+                            if(Spawner.m_Prefab == "Expedition3DAudioEvent" || Spawner.m_Prefab == "Expedition2DAudioEvent" || Spawner.m_Prefab == "ExpeditionAudioEvent")
                             {
+                                if (Spawner.m_Prefab == "ExpeditionAudioEvent")
+                                {
+                                    Expedition exp = GetExpeditionByGUID(m_ExpeditionGUID);
+                                    if (exp != null)
+                                    {
+                                        List<int> Players = exp.GetExpeditionPlayersIDs(true);
+                                        foreach (int PlayerID in Players)
+                                        {
+#if (!DEDICATED)                                            
+                                            if (PlayerID == 0)
+                                            {
+                                                MyMod.PlayCustomSoundEvent(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab);
+                                            } else
+                                            {
+                                                ServerSend.CUSTOMSOUNDEVENT(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab, PlayerID);
+                                            }
+#else
+                                            ServerSend.CUSTOMSOUNDEVENT(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab, PlayerID);
+#endif
+                                        }
+                                    }
+                                    continue;
+                                }
 #if (!DEDICATED)
-                                if(MyMod.level_guid == m_Scene)
+                                if (MyMod.level_guid == m_Scene)
                                 {
                                     MyMod.PlayCustomSoundEvent(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab);
                                 }
@@ -1150,8 +1248,24 @@ namespace SkyCoop
                                 ServerSend.CUSTOMSOUNDEVENT(Spawner.m_Position, Spawner.m_Content, Spawner.m_Prefab, m_Scene);
                                 continue;
                             }
-                            
-                            
+
+                            if(Spawner.m_Prefab == "RockCache")
+                            {
+                                FakeRockCacheVisualData FRCVD = new FakeRockCacheVisualData();
+                                FRCVD.m_GUID = Spawner.m_GUID;
+                                FRCVD.m_Position = Spawner.m_Position;
+                                FRCVD.m_Rotation = Spawner.m_Rotation;
+                                FRCVD.m_Owner = "Unknown";
+#if (!DEDICATED)
+                                if (MyMod.level_guid == m_Scene)
+                                {
+                                    MyMod.AddRockCache(FRCVD);
+                                }
+#endif
+                                MPSaveManager.AddRockCach(FRCVD, 0);
+                                MPSaveManager.SaveContainer(m_Scene, Spawner.m_GUID, Spawner.m_Content);
+                                continue;
+                            }
                             UniversalSyncableObject Obj = new UniversalSyncableObject();
                             Obj.m_Prefab = Spawner.m_Prefab;
                             Obj.m_GUID = Spawner.m_GUID;
@@ -1561,6 +1675,13 @@ namespace SkyCoop
                 if (Spawner.RollChance(PlayersInExpedition) || DebugFlag)
                 {
                     string Prefab = Spawner.PickGear();
+
+                    if (string.IsNullOrEmpty(Prefab))
+                    {
+                        return;
+                    }
+
+
                     Vector3 PlaceV3 = Spawner.m_Possition;
                     Quaternion Rotation = Spawner.m_Rotation;
                     int SearchKey;

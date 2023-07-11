@@ -462,6 +462,9 @@ namespace SkyCoop
         {
             ExpeditionBuilder.Init();
             ExpeditionManager.InitClues();
+#if (DEDICATED)
+            Shared.LoadInterloperReplace();
+#endif
             int SaveSeed = GetSeed();
             Log("LoadNonUnloadables Seed "+ SaveSeed);
             string LockedDoorsJSON = LoadData("LockedDoors", SaveSeed);
@@ -2109,6 +2112,21 @@ namespace SkyCoop
         public static void SeenExpeditions()
         {
             SaveData("SeenExpeditions", "");
+        }
+        public static void SaveLastConnectedServer(string Server)
+        {
+            SaveData("LastServer", Server);
+        }
+        public static string GetLastConnectedServer()
+        {
+            string Server = LoadData("LastServer");
+            if (!string.IsNullOrEmpty(Server))
+            {
+                return Server;
+            } else
+            {
+                return "127.0.0.1";
+            }
         }
 
         public static UniversalSyncableObject GetUniversalSyncable(string Scene, string GUID)

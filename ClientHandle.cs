@@ -975,8 +975,7 @@ namespace SkyCoop
         }
         public static void GOTCONTAINERSLICE(Packet _packet)
         {
-            DataStr.SlicedJsonData got = _packet.ReadSlicedGear();
-            Shared.AddSlicedJsonDataForContainer(got);
+
         }
         public static void OPENEMPTYCONTAINER(Packet _packet)
         {
@@ -997,7 +996,7 @@ namespace SkyCoop
         }
         public static void READYSENDNEXTSLICE(Packet _packet)
         {
-            MyMod.SendNextCarefulSlice();
+
         }
         public static void READYSENDNEXTSLICEGEAR(Packet _packet)
         {
@@ -1508,16 +1507,12 @@ namespace SkyCoop
                 GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
                 InterfaceManager.m_Panel_Container.Enable(false);
                 Shared.ContainerDecompressedDataBackup = "";
+                Shared.ContainerGUIDDataBackup = "";
             } else
             {
-                Container box = InterfaceManager.m_Panel_Container.m_Container;
-                string GUID = "";
-                if (!string.IsNullOrEmpty(Shared.ContainerDecompressedDataBackup) && box != null)
+                string GUID = Shared.ContainerGUIDDataBackup;
+                if (!string.IsNullOrEmpty(Shared.ContainerDecompressedDataBackup) && !string.IsNullOrEmpty(GUID))
                 {
-                    if (box.GetComponent<ObjectGuid>())
-                    {
-                        GUID = box.GetComponent<ObjectGuid>().Get();
-                    }
                     MyMod.RemovePleaseWait();
                     MyMod.DoPleaseWait("Host received invalid data", "Trying send data again...");
                     Shared.SendContainerData(Shared.CompressString(Shared.ContainerDecompressedDataBackup), MyMod.level_guid, GUID, Shared.ContainerDecompressedDataBackup);
@@ -1548,11 +1543,10 @@ namespace SkyCoop
         }
         public static void EXPEDITIONSYNC(Packet _packet)
         {
-            string ExpeditionName = _packet.ReadString();
-            string Text = _packet.ReadString();
+            string ExpeditionName = _packet.ReadUnicodeString();
+            string Text = _packet.ReadUnicodeString();
             int TimeLeft = _packet.ReadInt();
             string Alias = _packet.ReadString();
-
 
             if (string.IsNullOrEmpty(ExpeditionName) && string.IsNullOrEmpty(Text) && TimeLeft == 0)
             {
@@ -1659,16 +1653,7 @@ namespace SkyCoop
             {
                 Base64 = MPSaveManager.LoadPhoto(GUID, true);
             }
-
-            List<SlicedBase64Data> Slices = Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo);
-            foreach (SlicedBase64Data Slice in Slices)
-            {
-                using (Packet __packet = new Packet((int)ClientPackets.GOTPHOTOSLICE))
-                {
-                    __packet.Write(Slice);
-                    MyMod.SendUDPData(__packet);
-                }
-            }
+            Shared.SendSlicedBase64Data(Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo));
         }
     }
 }

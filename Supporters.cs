@@ -155,6 +155,10 @@ namespace SkyCoop
             {
                 Configurated.m_BrightNick = true;
             }
+            if (Original.m_Canadium && Desired.m_Canadium)
+            {
+                Configurated.m_Canadium = true;
+            }
             DebugLog("Configurated flairs for this player:");
             for (int i = 0; i < Desired.m_Flairs.Count; i++)
             {
@@ -181,6 +185,7 @@ namespace SkyCoop
         {
             public bool m_Knife = false;
             public bool m_BrightNick = false;
+            public bool m_Canadium = false;
             public List<int> m_Flairs = new List<int>();
         }
 
@@ -293,6 +298,10 @@ namespace SkyCoop
             if (Perks.Contains("B"))
             {
                 Data.m_BrightNick = true;
+            }
+            if (Perks.Contains("C"))
+            {
+                Data.m_Canadium = true;
             }
 
             for (int i = 0; i < Perks.Count; i++)

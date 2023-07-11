@@ -1654,8 +1654,8 @@ namespace GameServer
         public void Write(SlicedBase64Data obj)
         {
             Write(obj.m_Slice);
-            Write(obj.m_Slices);
-            Write(obj.m_SliceNum);
+            Write(obj.m_LastSliceIndex);
+            Write(obj.m_SliceIndex);
             Write(obj.m_CheckSum);
             Write(obj.m_GUID);
             Write(obj.m_Purpose);
@@ -1665,9 +1665,9 @@ namespace GameServer
         {
             SlicedBase64Data obj = new SlicedBase64Data();
             obj.m_Slice = ReadString();
-            obj.m_Slices = ReadInt();
-            obj.m_SliceNum = ReadInt();
-            obj.m_CheckSum = ReadLong();
+            obj.m_LastSliceIndex = ReadInt();
+            obj.m_SliceIndex = ReadInt();
+            obj.m_CheckSum = ReadString();
             obj.m_GUID = ReadString();
             obj.m_Purpose = ReadInt();
             return obj;
