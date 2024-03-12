@@ -1126,9 +1126,11 @@ namespace SkyCoop
                     MyMod.GoingToHarvest.m_MeatAvailableKG = Meat;
                     MyMod.GoingToHarvest.m_GutAvailableUnits = Guts;
                     MyMod.GoingToHarvest.m_HideAvailableUnits = Hide;
+                    MyMod.DiscardRepeatPacket();
                     MyMod.OpenBodyHarvest(MyMod.GoingToHarvest);
                 }
             }else{
+                MyMod.DiscardRepeatPacket();
                 MyMod.RemovePleaseWait();
                 HUDMessage.AddMessage("Nothing to harvest");
             }
@@ -1277,6 +1279,7 @@ namespace SkyCoop
         public static void REQUESTLOCKSMITH(Packet _packet)
         {
             MyMod.RemovePleaseWait();
+            MyMod.DiscardRepeatPacket();
             int State = _packet.ReadInt();
             if (State != -1)
             {
@@ -1654,6 +1657,17 @@ namespace SkyCoop
                 Base64 = MPSaveManager.LoadPhoto(GUID, true);
             }
             Shared.SendSlicedBase64Data(Shared.GetBase64Sliced(Base64, GUID, SlicedBase64Purpose.Photo));
+        }
+        public static void REQUESTEXPEDITIONSPROGRESS(Packet _packet)
+        {
+            List<int> Regions = _packet.ReadIntList();
+            List<int> Progress = _packet.ReadIntList();
+            int TotalProgress = _packet.ReadInt();
+            MelonLogger.Msg(ConsoleColor.Green, "Total Progress: "+ TotalProgress);
+            for (int i = 0; i < Regions.Count; i++)
+            {
+                MelonLogger.Msg(ConsoleColor.Green, ExpeditionBuilder.GetRegionString(Regions[i])+": "+ Progress[i]);
+            }
         }
     }
 }

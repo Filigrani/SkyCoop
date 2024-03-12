@@ -80,6 +80,7 @@ namespace SkyCoop
         public static bool RockCachesChanged = false;
         public static Dictionary<string, Dictionary<string, UniversalSyncableObject>> UniversalSyncableObjects = new Dictionary<string, Dictionary<string, UniversalSyncableObject>>();
         public static bool UniversalSyncableObjectsChanged = false;
+        public static Dictionary<string, int> FestiveGearsSpawnCooldown = new Dictionary<string, int>();
         public static void SaveGlobalData()
         {
             Log("Dedicated server saving...");
@@ -91,6 +92,7 @@ namespace SkyCoop
             GlobalData.Add("deathcreates", JSON.Dump(MyMod.DeathCreates));
             string[] saveProxy2 = { MyMod.OveridedTime };
             GlobalData.Add("gametime", JSON.Dump(saveProxy2));
+            GlobalData.Add("festivegears", JSON.Dump(FestiveGearsSpawnCooldown));
             string Jonny = JSON.Dump(GlobalData);
             SaveData("GlobalServerData", Jonny, GetSeed());
             Log("Save is done! Next save " + MyMod.DsSavePerioud + " seconds later");
@@ -335,6 +337,10 @@ namespace SkyCoop
                     NewGear.m_Extra.m_Dropper = Blank.m_Dropper;
                     NewGear.m_Extra.m_GearName = NewGear.m_GearName;
                     NewGear.m_Extra.m_Variant = 4;
+                    if (NewGear.m_GearName == "gear_scwoodformb")
+                    {
+                        NewGear.m_Extra.m_GoalTime = MyMod.MinutesFromStartServer + 60;
+                    }
                     string GearJson;
                     int SearchKey;
 #if (!DEDICATED)
@@ -770,7 +776,7 @@ namespace SkyCoop
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.DropsData, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
-            foreach (var item in RecentOpenableThings)
+            foreach (var item in RecentOpenableThings.ToList())
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.Openables, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
@@ -790,6 +796,7 @@ namespace SkyCoop
             {
                 SaveData(GetKeyTemplate(SaveKeyTemplateType.HarvestedPlants, item.Key), JSON.Dump(item.Value), SaveSeed);
             }
+
             RecentVisual = new Dictionary<string, Dictionary<int, DataStr.DroppedGearItemDataPacket>>();
             RecentData = new Dictionary<string, Dictionary<int, DataStr.SlicedJsonDroppedGear>>();
             RecentOpenableThings = new Dictionary<string, Dictionary<string, bool>>();
@@ -1843,6 +1850,11 @@ namespace SkyCoop
             MyMod.DeathCreates = JSON.Load(GetDictionaryString(GlobalData, "deathcreates")).Make<List<DeathContainerData>>();
             string[] saveProxy2 = JSON.Load(GetDictionaryString(GlobalData, "gametime")).Make<string[]>();
             MyMod.OveridedTime = saveProxy2[0];
+            string FesgiveJSON = GetDictionaryString(GlobalData, "festivegears");
+            if (!string.IsNullOrEmpty(FesgiveJSON))
+            {
+                FestiveGearsSpawnCooldown = JSON.Load(FesgiveJSON).Make<Dictionary<string, int>>();
+            }
         }
         public static void SaveJsonSnapshot(string Alias, string JSON)
         {
@@ -2150,6 +2162,30 @@ namespace SkyCoop
             } else
             {
                 return null;
+            }
+        }
+        public static void TrySpawnFestives(string Scene)
+        {
+            if (ResourceIndependent.GearSpawnersReady)
+            {
+                if (FestiveGearsSpawnCooldown.Count > 0)
+                {
+                    List<KeyValuePair<string, int>> Festives = FestiveGearsSpawnCooldown.ToList();
+                    for (int i = Festives.Count - 1; i >= 0; i--)
+                    {
+                        if (Festives[i].Value < MyMod.MinutesFromStartServer)
+                        {
+                            Festives.RemoveAt(i);
+                        }
+                    }
+                    FestiveGearsSpawnCooldown = Festives.ToDictionary(x => x.Key, x => x.Value);
+                    if (!FestiveGearsSpawnCooldown.ContainsKey(Scene))
+                    {
+                        ResourceIndependent.SpawnSomeGearsOnScene(Scene, "", "GEAR_SCPresent");
+                        ResourceIndependent.SpawnSomeGearsOnScene(Scene, "SANDBOX", "GEAR_SCPresent");
+                        FestiveGearsSpawnCooldown.Add(Scene, MyMod.MinutesFromStartServer + 1440);
+                    }
+                }
             }
         }
     }

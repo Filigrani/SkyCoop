@@ -9,7 +9,6 @@ using System.Numerics;
 #endif
 using SkyCoop;
 using System.Net;
-using System.Net.Sockets;
 
 namespace GameServer
 {
@@ -2546,6 +2545,23 @@ namespace GameServer
             using (Packet _packet = new Packet((int)ServerPackets.REQUESTSPHOTOAGAIN))
             {
                 _packet.Write(GUID);
+                SendUDPData(ForClient, _packet);
+            }
+        }
+        public static void REQUESTEXPEDITIONSPROGRESS(int ForClient, MPStats.ExpeditionsProgressData Data)
+        {
+            List<int> Regions = new List<int>();
+            List<int> Progress = new List<int>();
+            foreach (var item in Data.ExpeditionsProgress)
+            {
+                Regions.Add(item.Key);
+                Progress.Add(item.Value);
+            }
+            using (Packet _packet = new Packet((int)ServerPackets.REQUESTEXPEDITIONSPROGRESS))
+            {
+                _packet.Write(Regions);
+                _packet.Write(Progress);
+                _packet.Write(Data.TotalProgress);
                 SendUDPData(ForClient, _packet);
             }
         }

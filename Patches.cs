@@ -12,7 +12,7 @@ using static SkyCoop.DataStr;
 using static SkyCoop.Comps;
 using static Utils;
 using static SkyCoop.MyMod;
-using static Il2CppSystem.Net.CookieCollection;
+using AK;
 
 namespace SkyCoop
 {
@@ -28,13 +28,19 @@ namespace SkyCoop
         {
             private static int ShouldDrop = 0;
             private static int Had = 0;
-            public static void Prefix(GearItem __instance, int numUnits)
+            public static bool Prefix(GearItem __instance, int numUnits)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
                     StackTrace st = new StackTrace(new StackFrame(true));
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_GearName == "GEAR_SCHeatPack" || __instance.m_GearName == "GEAR_SCHeatPackC" || __instance.m_GearName == "GEAR_SCEmergencyRation" || __instance.m_GearName == "GEAR_SCLiquidLead")
+                {
+                    GameAudioManager.PlayGUIError();
+                    HUDMessage.AddMessage("YOU CAN'T DROP THIS", true, true);
+                    return false;
                 }
                 MelonLogger.Msg("Item dropped " + __instance.m_GearName);
                 if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<Comps.IgnoreDropOverride>() == null)
@@ -50,6 +56,7 @@ namespace SkyCoop
                         Had = 1;
                     }
                 }
+                return true;
             }
             public static void Postfix(GearItem __instance, int numUnits, GearItem __result)
             {
@@ -58,6 +65,10 @@ namespace SkyCoop
                     StackTrace st = new StackTrace(new StackFrame(true));
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                if (__instance.m_GearName == "GEAR_SCHeatPack" || __instance.m_GearName == "GEAR_SCHeatPackC" || __instance.m_GearName == "GEAR_SCEmergencyRation" || __instance.m_GearName == "GEAR_SCLiquidLead")
+                {
+                    return;
                 }
                 if (MyMod.InOnline() == true && __instance.gameObject.GetComponent<Comps.IgnoreDropOverride>() == null)
                 {
@@ -1398,6 +1409,31 @@ namespace SkyCoop
                             //}
                             __instance.m_FirstPersonItem = FPI;
                         }
+                    } else if(__instance.name == "GEAR_ScrapLead")
+                    {
+                        //Harvest Harvy = __instance.gameObject.AddComponent<Harvest>();
+                        //Harvy.m_Audio = "Play_HarvestingMetalSaw";
+                        //Harvy.m_DurationMinutes = 3;
+                        //Harvy.m_YieldGear = new GearItem[] { GetGearItemPrefab("GEAR_ScrapLead") };
+                        //Harvy.m_YieldGearUnits = new int[] { 1 };
+                        //__instance.m_Harvest = Harvy;
+                    } else if (__instance.name == "GEAR_Softwood" || __instance.name == "GEAR_Hardwood")
+                    {
+                        Harvest Harvy = __instance.gameObject.AddComponent<Harvest>();
+                        Harvy.m_Audio = "PLAY_HARVESTINGGENERIC";
+                        Harvy.m_DurationMinutes = 15;
+                        Harvy.m_YieldGear = new GearItem[] { GetGearItemPrefab("GEAR_SCWoodForm") };
+                        Harvy.m_YieldGearUnits = new int[] { 3 };
+                        Harvy.m_RequiredTools = new ToolsItem[] { GetGearItemPrefab("GEAR_Knife").GetComponent<ToolsItem>() };
+                        __instance.m_Harvest = Harvy;
+                    } else if (__instance.name == "GEAR_SCWoodFormB")
+                    {
+                        EvolveItem Evo = __instance.gameObject.AddComponent<EvolveItem>();
+                        Evo.m_GearItem = __instance;
+                        Evo.m_GearItemToBecome = GetGearItemPrefab("GEAR_SCDoorKeyLeadTemp");
+                        Evo.m_RequireIndoors = false;
+                        Evo.m_TimeToEvolveGameDays = 0.04f;
+                        __instance.m_EvolveItem = Evo;
                     }
                 }
                 if(MyMod.IsUserGeneratedHandItem(__instance.name))
@@ -1442,6 +1478,19 @@ namespace SkyCoop
                         __instance.gameObject.AddComponent<Comps.CookpotHelmet>();
                         __instance.gameObject.GetComponent<Comps.CookpotHelmet>().m_GearItem =  __instance;
                         __instance.gameObject.GetComponent<Comps.CookpotHelmet>().m_ClothingItem = CLTH;
+                    }
+                } else if (__instance.name == "GEAR_SCHeatPack" || __instance.name == "GEAR_SCHeatPackC")
+                {
+                    if (__instance.gameObject.GetComponent<HeatSource>() == null)
+                    {
+                        HeatSource HTS = __instance.gameObject.AddComponent<HeatSource>();
+                        HTS.m_TempIncrease = 10;
+                        HTS.m_MaxTempIncrease = 10;
+                        HTS.m_StartingTemp = 10;
+                        HTS.m_MaxTempIncreaseInnerRadius = 2;
+                        HTS.m_MaxTempIncreaseOuterRadius = 1;
+                        HTS.m_StartOn = true;
+                        HTS.m_TimeToReachMaxTempMinutes = 1;
                     }
                 }
                 if (__instance.m_ResearchItem)
@@ -4006,17 +4055,26 @@ namespace SkyCoop
             int minutesLeft = MyMod.TimeToDry(Name) - minutesOnDry + 1;
             string DropTime = DropTimeFormat(minutesLeft);
 
-            if(DGD.m_Extra.m_GoalTime == -1)
+            string Done = "Cured";
+            string WillBeDone = "Cures in";
+
+            if (Name.Contains("GEAR_SCWoodFormB"))
+            {
+                Done = "Cooled";
+                WillBeDone = "Cools in";
+            }
+
+            if (DGD.m_Extra.m_GoalTime == -1)
             {
                 return GearName + "\n" + "Cannot be cured here, " + ActionString + " by " + Dropper;
             }
 
             if (string.IsNullOrEmpty(DropTime))
             {
-                return GearName + "\n" + "Cured, " + ActionString + " by " + Dropper; ;
+                return GearName + "\n" + Done + ", " + ActionString + " by " + Dropper; ;
             } else
             {
-                return GearName + "\n" + "Cures in: " + DropTime + ", " + ActionString + " by " + Dropper;
+                return GearName + "\n" + WillBeDone + ": " + DropTime + ", " + ActionString + " by " + Dropper;
             }
         }
 
@@ -5589,6 +5647,7 @@ namespace SkyCoop
             MyMod.TrackableDroppedGearsObjs.Clear();
             MyMod.OpenableThings.Clear();
             MyMod.DoorsObjs.Clear();
+            MPSaveManager.TrySpawnFestives(MyMod.level_name);
 
             if (!MyMod.DedicatedServerAppMode && (MyMod.iAmHost == true || MyMod.InOnline() == false))
             {
@@ -6115,7 +6174,7 @@ namespace SkyCoop
         [HarmonyLib.HarmonyPatch(typeof(BodyHarvestManager), "Serialize")] // Once
         public static class BodyHarvestManager_Serialize
         {
-            public static bool Prefix(BaseAiManager __instance)
+            public static bool Prefix(BodyHarvestManager __instance)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -6123,14 +6182,40 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MelonLogger.Msg("[BodyHarvestManager] Serialize");
+                MelonLogger.Msg("[BodyHarvestManager] Prefix Serialize");
                 return false;
+            }
+            public static void Postfix(BodyHarvestManager __instance, ref string __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg("[BodyHarvestManager] Postfix Serialize");
+                BodyHarvestSaveList bodyHarvestSaveList = new BodyHarvestSaveList();
+                bodyHarvestSaveList.m_SerializedBodyHarvests.Clear();
+                for (int index = 0; index < BodyHarvestManager.m_BodyHarvestList.Count; ++index)
+                {
+                    BodyHarvest bh = BodyHarvestManager.m_BodyHarvestList[index];
+                    if (bh != null && bh.gameObject.activeSelf && bh.enabled && bh.gameObject.GetComponent<GearItem>() == null && bh.m_Ravaged && bh.m_StartRavaged && bh.gameObject.GetComponent<Comps.AnimalCorpseObject>() == null)
+                        bodyHarvestSaveList.m_SerializedBodyHarvests.Add(new BodyHarvestSaveData()
+                        {
+                            m_Position = bh.transform.position,
+                            m_Rotation = bh.transform.rotation,
+                            m_PrefabName = bh.gameObject.name,
+                            m_Guid = Utils.GetGuidFromGameObject(bh.gameObject),
+                            m_SerializedBodyHarvest = bh.Serialize()
+                        });
+                }
+                __result = Utils.SerializeObject(bodyHarvestSaveList);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(BodyHarvestManager), "Deserialize")] // Once
         public static class BodyHarvestManager_Deserialize
         {
-            public static bool Prefix(BaseAiManager __instance)
+            public static bool Prefix(BodyHarvestManager __instance)
             {
                 if (MyMod.CrazyPatchesLogger == true)
                 {
@@ -6138,8 +6223,46 @@ namespace SkyCoop
                     MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                MelonLogger.Msg("[BodyHarvestManager] Deserialize");
+                MelonLogger.Msg("[BodyHarvestManager] Prefix Deserialize");
                 return false;
+            }
+            public static void Postfix(BodyHarvestManager __instance, string text)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MelonLogger.Msg("[BodyHarvestManager] Postfix Deserialize");
+                if (string.IsNullOrEmpty(text))
+                {
+                    return;
+                }
+                foreach (BodyHarvestSaveData serializedBodyHarvest in Utils.DeserializeObject<BodyHarvestSaveList>(text).m_SerializedBodyHarvests)
+                {
+                    GameObject gameObject = ObjectGuidManager.Lookup(serializedBodyHarvest.m_Guid);
+                    BodyHarvest bh = null;
+                    if (gameObject != null)
+                    {
+                        bh = gameObject.GetComponent<BodyHarvest>();
+                    }
+                    if (bh == null)
+                    {
+                        bh = BodyHarvestManager.InstantiateBodyHarvestGameObject(serializedBodyHarvest);
+                        if (bh != null)
+                            Utils.SetGuidForGameObject(bh.gameObject, serializedBodyHarvest.m_Guid);
+                        else
+                            continue;
+                    } else
+                    {
+                        bh.transform.position = serializedBodyHarvest.m_Position;
+                        bh.transform.rotation = serializedBodyHarvest.m_Rotation;
+                    }
+                    bh.Deserialize(serializedBodyHarvest.m_SerializedBodyHarvest, true);
+                    BodyHarvestManager.MaybeRestoreCorpseState(bh);
+                    BodyHarvestManager.MaybeRestoreCarcassSite(bh);
+                }
             }
         }
 
@@ -7279,7 +7402,7 @@ namespace SkyCoop
 
                 if (gi != null)
                 {
-                    if (MyMod.IsCustomHandItem(gi.m_GearName) || MyMod.IsUserGeneratedHandItem(gi.m_GearName))
+                    if (MyMod.IsCustomHandItem(gi.m_GearName) || MyMod.IsUserGeneratedHandItem(gi.m_GearName) || gi.m_GearName == "GEAR_SCHeatPackB" || gi.m_GearName == "GEAR_SCPresent")
                     {
                         __result = "GAMEPLAY_Use";
                     } else if (gi.m_GearName == "GEAR_SCNote")
@@ -7290,6 +7413,27 @@ namespace SkyCoop
                     //{
                     //    __result = "GAMEPLAY_Place";
                     //}
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "CanDrop")] // Once
+        private static class ItemDescriptionPage_CanDrop
+        {
+            private static void Postfix(ItemDescriptionPage __instance, GearItem gi, ref bool __result)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+
+                if (gi != null)
+                {
+                    if(gi.m_GearName == "GEAR_SCHeatPack" || gi.m_GearName == "GEAR_SCHeatPackC" || gi.m_GearName == "GEAR_SCEmergencyRation" || gi.m_GearName == "GEAR_SCLiquidLead")
+                    {
+                        __result = false;
+                    }
                 }
             }
         }
@@ -7341,34 +7485,33 @@ namespace SkyCoop
         }
 
 
-        //[HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "OnEquip")] // Once
-        //private static class ItemDescriptionPage_OnEquip
-        //{
-        //    private static void Postfix(ItemDescriptionPage __instance)
-        //    {
-        //        if (MyMod.CrazyPatchesLogger == true)
-        //        {
-        //            StackTrace st = new StackTrace(new StackFrame(true));
-        //            MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
-        //            MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
-        //        }
-        //        MyMod.ProcessGivingItem(true);
+        [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "OnEquip")] // Once
+        private static class ItemDescriptionPage_OnEquip
+        {
+            private static void Postfix(ItemDescriptionPage __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                MyMod.ProcessGivingItem(true);
 
-        //        GearItem gi = InterfaceManager.m_Panel_Inventory.GetCurrentlySelectedGearItem();
+                GearItem gi = InterfaceManager.m_Panel_Inventory.GetCurrentlySelectedGearItem();
 
-        //        if (gi != null)
-        //        {
-        //            if (gi.m_GearName == "GEAR_SCNote")
-        //            {
-        //                DisplayNote(gi);
-        //            } else if (Shared.IsLocksmithItem(gi.m_GearName))
-        //            {
-        //                GameManager.GetPlayerManagerComponent().StartPlaceMesh(gi.gameObject, PlaceMeshFlags.None);
-        //            }
-        //            InterfaceManager.m_Panel_Inventory.Enable(false, true);
-        //        }
-        //    }
-        //}
+                if (gi != null)
+                {
+                    if (gi.m_GearName == "GEAR_SCHeatPackB")
+                    {
+                        OpenHeatPack(gi);
+                    }else if(gi.m_GearName == "GEAR_SCPresent")
+                    {
+                        OpenPresent(gi);
+                    }
+                }
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(Panel_HUD), "OnCollectibleNoteReadingClickBack")] // Once
         private static class Panel_HUD_OnCollectibleNoteReadingClickBack
         {
@@ -7501,6 +7644,8 @@ namespace SkyCoop
             private static void Postfix()
             {
                 GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_HandheldShortwave");
+                GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_SCHeatPack");
+                GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_SCEmergencyRation");
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "UpdateMissionsPage")]
@@ -8119,6 +8264,9 @@ namespace SkyCoop
             }
         }
         public static FakeRockCache FakeRockCacheCallback = null;
+        public static GearItem HeatPackOpenCallback = null;
+        public static GearItem PresentOpenCallback = null;
+        public static bool SmeltingLead = false;
         [HarmonyLib.HarmonyPatch(typeof(Panel_GenericProgressBar), "ProgressBarEnded")]
         internal static class Panel_GenericProgressBar_ProgressBarEnded
         {
@@ -8145,6 +8293,47 @@ namespace SkyCoop
                     {
                         ServerSend.FURNBREAKINSTOP(0, true, true);
                     }
+                }else if(HeatPackOpenCallback != null)
+                {
+                    if (success)
+                    {
+                        OpenHeatPackFinished(HeatPackOpenCallback);
+                    }
+                    HeatPackOpenCallback = null;
+                } else if (PresentOpenCallback != null)
+                {
+                    if (success)
+                    {
+                        OpenPresentFinished(PresentOpenCallback);
+                    }
+                    PresentOpenCallback = null;
+                } else if (SmeltingLead)
+                {
+                    if (success)
+                    {
+                        GearItem CanGear = GameManager.GetInventoryComponent().GetBestGearItemWithName("GEAR_RecycledCan");
+                        if (CanGear)
+                        {
+                            GameManager.GetInventoryComponent().DestroyGear(CanGear.gameObject);
+                        }
+                        GearItem LeadGear = GameManager.GetInventoryComponent().GetBestGearItemWithName("GEAR_ScrapLead");
+                        if (LeadGear)
+                        {
+                            if (LeadGear.m_StackableItem && LeadGear.m_StackableItem.m_Units > 1)
+                            {
+                                LeadGear.m_StackableItem.m_Units--;
+                            } else
+                            {
+                                GameManager.GetInventoryComponent().DestroyGear(LeadGear.gameObject);
+                            }
+                        }
+                        GameManager.GetPlayerVoiceComponent().Play("PLAY_FIRESUCCESS", Voice.Priority.Critical);
+                        GearItem Liquid = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_SCLiquidLead");
+                        string text = Localization.Get("GAMEPLAY_ItemAddedToInventory").Replace("{item-name}", Liquid.m_DisplayName);
+                        GameManager.GetLogComponent().AddItem(text);
+                        GearMessage.AddMessage(Liquid, Localization.Get("GAMEPLAY_Added"), Liquid.m_DisplayName);
+                    }
+                    SmeltingLead = false;
                 }
             }
         }
@@ -8286,6 +8475,502 @@ namespace SkyCoop
         //                }
         //            }
         //        }
+        //    }
+        //}
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "ManualUpdate")] // Called often
+        internal static class GearItem_ManualUpdate
+        {
+            private static void Postfix(GearItem __instance)
+            {
+                if (MyMod.CrazyPatchesLogger == true)
+                {
+                    StackTrace st = new StackTrace(new StackFrame(true));
+                    MelonLogger.Msg(ConsoleColor.Blue, "----------------------------------------------------");
+                    MelonLogger.Msg(ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
+                }
+                bool IsHeatPack = __instance.m_GearName == "GEAR_SCHeatPack" || __instance.m_GearName == "GEAR_SCHeatPackC";
+                bool IsLiquidLead = __instance.m_GearName == "GEAR_SCLiquidLead";
+                if (IsHeatPack || IsLiquidLead)
+                {
+                    __instance.m_CurrentHP--;
+                    if (IsHeatPack)
+                    {
+                        __instance.gameObject.SetActive(true);
+                        __instance.gameObject.transform.GetChild(0).gameObject.SetActive(false);
+                    }
+                    if (__instance.m_CurrentHP <= 0)
+                    {
+                        string text = Localization.Get("GAMEPLAY_Ruined").Replace("{item-name}", __instance.m_DisplayName);
+                        GameManager.GetLogComponent().AddItem(text);
+                        GearMessage.AddMessage(__instance, Localization.Get("GAMEPLAY_RuinedPopup"), __instance.m_DisplayName);
+                        GameManager.GetInventoryComponent().DestroyGear(__instance.gameObject);
+                    }
+                }
+            }
+        }
+
+        public static void OpenHeatPackFinished(GearItem Heatpack)
+        {
+            GameManager.GetInventoryComponent().DestroyGear(Heatpack.gameObject);
+            GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory("GEAR_SCHeatPackC");
+        }
+
+        public static void OpenHeatPack(GearItem Heatpack)
+        {
+            HeatPackOpenCallback = Heatpack;
+            InterfaceManager.m_Panel_GenericProgressBar.Launch(Localization.Get("GAMEPLAY_OpeningProgress"), 1f, 0.0f, 0.0f, "Play_SndInvJerky", (string)null, true, true, null);
+        }
+
+        public enum PresentRarity
+        {
+            Shit,
+            Low,
+            Medium,
+            High,
+            Epic,
+            Legend,
+        }
+
+        public static List<string> ShitTier = new List<string>() 
+        { 
+            "GEAR_Stick",
+            "GEAR_Tinder",
+            "GEAR_Stone",
+            "GEAR_Cloth",
+            "GEAR_NewsprintRoll",
+            "GEAR_PaperStack",
+            "GEAR_ReclaimedWoodB",
+            "GEAR_LeatherShoes",
+            "GEAR_BasicGloves",
+            "GEAR_TeeShirt",
+            "GEAR_BaseballCap",
+            "GEAR_RecycledCan",
+            "GEAR_SkiBoots",
+        };
+        public static List<string> LowTier = new List<string>()
+        {
+            "GEAR_CarBattery",
+            "GEAR_DustingSulfur",
+            "GEAR_ScrapLead",
+            "GEAR_ScrapMetal",
+            "GEAR_StumpRemover",
+            "GEAR_Rope",
+            "GEAR_Snare",
+            "GEAR_Water500ml",
+            "GEAR_DogFood",
+            "GEAR_EnergyBar",
+            "GEAR_KetchupChips",
+            "GEAR_CottonHoodie",
+            "GEAR_Leather",
+            "GEAR_CottonSocks",
+            "GEAR_MackinawJacket",
+            "GEAR_BasicWinterCoat",
+            "GEAR_CanOpener",
+            "GEAR_SimpleTools",
+            "GEAR_HeavyBandage",
+            "GEAR_BottlePainKillers",
+            "GEAR_BottleHydrogenPeroxide",
+            "GEAR_BottleAntibiotics",
+            "GEAR_RoseHipTea",
+            "GEAR_ReishiTea",
+            "GEAR_WaterPurificationTablets",
+            "GEAR_BasicWoolHat",
+            "GEAR_FleeceMittens",
+            "GEAR_CoffeeCup",
+            "GEAR_Jeans",
+            "GEAR_BasicWoolScarf",
+            "GEAR_LongUnderwear",
+        };
+        public static List<string> MediumTier = new List<string>()
+        {
+            "GEAR_GreenTeaPackage",
+            "GEAR_PeanutButter",
+            "GEAR_Peaches",
+            "GEAR_Soda",
+            "GEAR_SodaEnergy",
+            "GEAR_SodaGrape",
+            "GEAR_SodaOrange",
+            "GEAR_TomatoSoupCan",
+            "GEAR_SewingKit",
+            "GEAR_LampFuel",
+            "GEAR_JerryCanRusty",
+            "GEAR_CoffeeTin",
+            "GEAR_BirchbarkPrepared",
+            "GEAR_Firestriker",
+            "GEAR_Mittens",
+            "GEAR_WorkGloves",
+            "GEAR_DownSkiJacket",
+            "GEAR_WoolSocks",
+            "GEAR_HighQualityTools",
+            "GEAR_CookingPot",
+            "GEAR_Knife",
+            "GEAR_FlareA",
+            "GEAR_BlueFlare",
+            "GEAR_BirchbarkTea",
+            "GEAR_Toque",
+            "GEAR_CargoPants",
+            "GEAR_InsulatedPants",
+            "GEAR_WoolWrap",
+            "GEAR_FishermanSweater",
+        };
+        public static List<string> HighTier = new List<string>()
+        {
+            "GEAR_QualityWinterCoat",
+            "GEAR_PremiumWinterCoat",
+            "GEAR_MilitaryParka",
+            "GEAR_HeavyParka",
+            "GEAR_Arrow",
+            "GEAR_RifleAmmoSingle",
+            "GEAR_RevolverAmmoSingle",
+            "GEAR_GunpowderCan",
+            "GEAR_KeroseneLampB",
+            "GEAR_Hacksaw",
+            "GEAR_Hatchet",
+            "GEAR_HomeMadeSoup",
+            "GEAR_ClimbingSocks",
+            "GEAR_Gauntlets",
+            "GEAR_MRE",
+            "GEAR_CombatPants",
+            "GEAR_Balaclava",
+        };
+        public static List<string> EpicTier = new List<string>()
+        {
+            "GEAR_RevolverAmmoBox",
+            "GEAR_RifleAmmoBox",
+            "GEAR_FlareGunAmmoSingle",
+            "GEAR_EmergencyStim",
+            "GEAR_RabbitSkinMittens",
+            "GEAR_RabbitskinHat",
+            "GEAR_BearHide",
+            "GEAR_MooseHide",
+            "GEAR_SCHeatPackB",
+        };
+        public static List<string> LegendTier = new List<string>()
+        {
+            "GEAR_Bow",
+            "GEAR_Revolver",
+            "GEAR_Rifle",
+            "GEAR_BearSkinCoat",
+            "GEAR_MooseHideCloak",
+            "GEAR_WolfSkinCape",
+            "GEAR_EarMuffs",
+            "GEAR_MooseHideBag",
+            "GEAR_LongUnderwearWool",
+        };
+
+
+        public static void SpawnAndTakeGiftGear()
+        {
+            InterfaceManager.m_Panel_Inventory.Enable(false);
+            PresentRarity Rarity = PresentRarity.Shit;
+            System.Random random = new System.Random();
+            string GearName = "GEAR_Stone";
+
+            int Rolled = random.Next(0, 100);
+            if(Rolled <= 5)
+            {
+                Rarity = PresentRarity.Legend;
+                GearName = LegendTier[random.Next(0, LegendTier.Count)];
+            } else if(Rolled <= 13)
+            {
+                Rarity = PresentRarity.Epic;
+                GearName = EpicTier[random.Next(0, EpicTier.Count)];
+            } else if (Rolled <= 16)
+            {
+                Rarity = PresentRarity.High;
+                GearName = HighTier[random.Next(0, HighTier.Count)];
+            } else if (Rolled <= 20)
+            {
+                Rarity = PresentRarity.Medium;
+                GearName = MediumTier[random.Next(0, MediumTier.Count)];
+            } else if (Rolled <= 22)
+            {
+                Rarity = PresentRarity.Low;
+                GearName = LowTier[random.Next(0, LowTier.Count)];
+            } else
+            {
+                Rarity = PresentRarity.Shit;
+                GearName = ShitTier[random.Next(0, ShitTier.Count)];
+            }
+            //if (ExperienceModeManager.s_CurrentModeType == ExperienceModeType.Interloper)
+            //{
+            //    GearName = Shared.GetInterloperReplace(GearName);
+            //}
+            GearItem Gift = GameManager.GetPlayerManagerComponent().InstantiateItemAtPlayersFeet(GearName, 1);
+            if(Gift == null)
+            {
+                return;
+            }
+            Comps.DropFakeOnLeave DFL = Gift.gameObject.AddComponent<Comps.DropFakeOnLeave>();
+            DFL.m_OldPossition = Gift.gameObject.transform.position;
+            DFL.m_OldRotation = Gift.gameObject.transform.rotation;
+            GameManager.GetPlayerManagerComponent().ProcessInspectablePickupItem(Gift);
+
+            if(Rarity == PresentRarity.Shit)
+            {
+                AkSoundEngine.SetSwitch(SWITCHES.URGENCY.GROUP, SWITCHES.URGENCY.SWITCH.HIGH, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+                GameManager.GetPlayerVoiceComponent().Play("PLAY_FIREFAIL", Voice.Priority.Critical);
+            }else if(Rarity == PresentRarity.Low)
+            {
+                AkSoundEngine.SetSwitch(SWITCHES.URGENCY.GROUP, SWITCHES.URGENCY.SWITCH.LOW, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+                GameManager.GetPlayerVoiceComponent().Play("PLAY_VOINSPECTOBJECT", Voice.Priority.Critical);
+            } else if (Rarity == PresentRarity.Medium)
+            {
+                AkSoundEngine.SetSwitch(SWITCHES.URGENCY.GROUP, SWITCHES.URGENCY.SWITCH.MED, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+                GameManager.GetPlayerVoiceComponent().Play("PLAY_VOINSPECTOBJECT", Voice.Priority.Critical);
+            } else if (Rarity == PresentRarity.High)
+            {
+                AkSoundEngine.SetSwitch(SWITCHES.URGENCY.GROUP, SWITCHES.URGENCY.SWITCH.MED, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+                GameManager.GetPlayerVoiceComponent().Play("PLAY_VOINSPECTOBJECT", Voice.Priority.Critical);
+            } else if (Rarity == PresentRarity.Epic)
+            {
+                AkSoundEngine.SetSwitch(SWITCHES.URGENCY.GROUP, SWITCHES.URGENCY.SWITCH.HIGH, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+                GameManager.GetPlayerVoiceComponent().Play("PLAY_VOINSPECTOBJECT", Voice.Priority.Critical);
+            } else if (Rarity == PresentRarity.Legend)
+            {
+                GameManager.GetPlayerVoiceComponent().Play("PLAY_ENTITYDEATHVO", Voice.Priority.Critical);
+            }
+        }
+
+        public static void OpenPresentFinished(GearItem Box)
+        {
+            GameManager.GetPlayerManagerComponent().ConsumeUnitFromInventory(Box.gameObject);
+            SpawnAndTakeGiftGear();
+        }
+
+        public static void OpenPresent(GearItem Box)
+        {
+            PresentOpenCallback = Box;
+            InterfaceManager.m_Panel_GenericProgressBar.Launch(Localization.Get("GAMEPLAY_OpeningProgress"), 3f, 0.0f, 0.0f, "Play_HarvestingCardboard", (string)null, true, true, null);
+        }
+
+        public static void TrySmeltLead(GameObject interactionObject)
+        {
+            CookingSlot CookingSlot = interactionObject.GetComponent<CookingSlot>();
+            bool Lead = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_ScrapLead");
+            bool Can = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_RecycledCan");
+            if (Lead && Can)
+            {
+                //GearItem CanGear = GameManager.GetInventoryComponent().GetBestGearItemWithName("GEAR_RecycledCan");
+                //GearItem LeadGear = GameManager.GetInventoryComponent().GetBestGearItemWithName("GEAR_ScrapLead");
+                //if (LeadGear.m_StackableItem && LeadGear.m_StackableItem.m_Units > 1)
+                //{
+                //    LeadGear.m_StackableItem.m_Units--;
+                //} else
+                //{
+                //    GameManager.GetInventoryComponent().DestroyGear(LeadGear.gameObject);
+                //}
+                //if (CanGear)
+                //{
+                //    CanGear.gameObject.AddComponent<Comps.IgnoreDropOverride>();
+                //    CookingSlot.m_GearPlacePoint.DropAndPlaceItem(CanGear);
+
+                //    Cookable CanCookable = CanGear.m_Cookable;
+
+                //    GameObject reference = GetGearItemObject("GEAR_RosehipsPrepared");
+                //    Cookable referenceGi = reference.GetComponent<Cookable>();
+
+                //    GameObject LeadObj = UnityEngine.Object.Instantiate<GameObject>(GetGearItemObject("GEAR_ScrapLead"), new Vector3(0, 0, 0), new Quaternion(0, 0, 0, 0));
+                //    GearItem LeadGi = LeadObj.GetComponent<GearItem>();
+                //    Cookable CookableLead = LeadObj.AddComponent<Cookable>();
+                //    CookableLead.m_CookableType = Cookable.CookableType.Liquid;
+                //    CookableLead.m_CookAudio = "Play_BoilingLiquidLight";
+                //    CookableLead.m_CookedPrefab = GetGearItemPrefab("GEAR_ScrapLead");
+
+                //    CookableLead.m_CookTimeMinutes = 10f;
+                //    CookableLead.m_DoNotCookWhenDropped = true;
+                //    CookableLead.m_ReadyTimeMinutes = float.PositiveInfinity;
+
+                //    CookableLead.m_CookingPotMaterialsList = new Material[] { referenceGi.m_CookingPotMaterialsList[0]};
+                //    CookableLead.m_CookingPotRawMaterialsList = new Material[] { };
+                //    CookableLead.m_MeshPotStyle = referenceGi.m_MeshPotStyle;
+                //    CookableLead.m_MeshCanStyle = referenceGi.m_MeshCanStyle;
+
+                //    CookableLead.m_PutInPotAudio = "Play_AddWaterToPot";
+
+                //    LeadGi.m_Cookable = CookableLead;
+                //    CanGear.m_CookingPotItem.AttachToFire(GameManager.GetFireManagerComponent().GetClosestFire(CookingSlot.gameObject.transform.position), CookingSlot.m_GearPlacePoint);
+                //    CanGear.m_CookingPotItem.StartCooking(LeadGi);
+                //}
+                SmeltingLead = true;
+                InterfaceManager.m_Panel_GenericProgressBar.Launch("Smelting...", 10f, 10, 0.0f, "PLAY_GASFIRE", null, false, false, null);
+
+            } else if (!Lead && !Can)
+            {
+                HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName("GEAR_ScrapLead") + " and " + Utils.GetGearDisplayName("GEAR_RecycledCan"));
+            } else if(!Lead && Can)
+            {
+                HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName("GEAR_ScrapLead"));
+            }else if(Lead && !Can)
+            {
+                HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName("GEAR_RecycledCan"));
+            }
+        }
+
+        //public static void ShowHookedCookingSlotPicker(GameObject objectInteractedWith)
+        //{
+        //    Panel_ActionPicker __instance = InterfaceManager.m_Panel_ActionPicker;
+        //    __instance.Enable(true);
+        //    __instance.m_ActionPickerItemDataList.Clear();
+        //    __instance.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_cooking_pot", "GAMEPLAY_Cook", new System.Action(__instance.CookingSlotCookCallback)));
+        //    __instance.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_water_prep", "GAMEPLAY_Water", new System.Action(__instance.CookingSlotWaterCallback)));
+        //    Action act = new Action(() => TrySmeltLead(objectInteractedWith));
+        //    __instance.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_forge", "Smelt lead", act));
+        //    __instance.m_ObjectInteractedWith = objectInteractedWith;
+        //    __instance.EnableWithCurrentList();
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionPicker), "ShowActionPicker", new Type[] { typeof(GameObject), typeof(Il2CppSystem.Collections.Generic.IEnumerable<Panel_ActionPicker.ActionPickerItemData>) })]
+        //internal static class Panel_ActionPicker_ShowActionPicker
+        //{
+        //    private static bool Prefix(Panel_ActionPicker __instance, GameObject interactionObject)
+        //    {
+        //        MelonLogger.Msg("Panel_ActionPicker Prefix ShowActionPicker");
+        //        if(interactionObject != null && interactionObject.GetComponent<CookingSlot>())
+        //        {
+        //            ShowHookedCookingSlotPicker(interactionObject);
+        //            return false;
+        //        }
+        //        return true;
+        //    }
+        //}
+        public static void ShowHookedCookingSlotPicker(GameObject objectInteractedWith)
+        {
+            Panel_ActionPicker __instance = InterfaceManager.m_Panel_ActionPicker;
+            Action act = new Action(() => TrySmeltLead(objectInteractedWith));
+            bool FireIsActive = false;
+
+            CookingSlot CS = objectInteractedWith.GetComponent<CookingSlot>();
+            Campfire CF = objectInteractedWith.GetComponent<Campfire>();
+            WoodStove WS = objectInteractedWith.GetComponent<WoodStove>();
+
+            if (CS != null && CS.m_GearPlacePoint != null && CS.m_GearPlacePoint.m_FireToAttach != null)
+            {
+                FireIsActive = CS.m_GearPlacePoint.m_FireToAttach.IsBurning();
+            } else if(CF != null && CF.m_Fire != null)
+            {
+                FireIsActive = CF.m_Fire.IsBurning();
+            }else if(WS != null && WS.m_Fire != null)
+            {
+                FireIsActive = WS.m_Fire.IsBurning();
+            }
+            if (FireIsActive)
+            {
+                __instance.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_forge", "Smelt lead", act));
+                __instance.m_ObjectInteractedWith = objectInteractedWith;
+                __instance.EnableWithCurrentList();
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ActionPicker), "ShowActionPicker", new Type[] { typeof(GameObject), typeof(Il2CppSystem.Collections.Generic.IEnumerable<Panel_ActionPicker.ActionPickerItemData>) })]
+        internal static class Panel_ActionPicker_ShowActionPicker
+        {
+            private static void Postfix(Panel_ActionPicker __instance, GameObject interactionObject)
+            {
+                MelonLogger.Msg("Panel_ActionPicker Postfix ShowActionPicker");
+                if (interactionObject != null && (interactionObject.GetComponent<CookingSlot>() || interactionObject.GetComponent<Campfire>() || interactionObject.GetComponent<WoodStove>()))
+                {
+                    ShowHookedCookingSlotPicker(interactionObject);
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "CanPlaceFromRadial")]
+        private static class Panel_ActionsRadial_CanPlaceFromRadial
+        {
+            private static void Postfix(Panel_ActionsRadial __instance, GearItem gi, ref bool __result)
+            {
+                if (__result)
+                { 
+                    if(gi.m_GearName == "GEAR_SCEmergencyRation" || gi.m_GearName == "GEAR_SCLiquidLead")
+                    {
+                        __result = false;
+                        return;
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Container), "CanMoveItemToContainerInMoveAll")]
+        private static class Panel_Container_CanMoveItemToContainerInMoveAll
+        {
+            private static void Postfix(Panel_Container __instance, GearItem gearItem, ref bool __result)
+            {
+                if (__result)
+                {
+                    if (gearItem.m_GearName == "GEAR_SCEmergencyRation" || gearItem.m_GearName == "GEAR_HeatPack" || gearItem.m_GearName == "GEAR_HeatPackC" || gearItem.m_GearName == "GEAR_SCLiquidLead")
+                    {
+                        __result = false;
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Container), "ItemPassesFilter")]
+        private static class Panel_Container_ItemPassesFilter
+        {
+            private static void Postfix(Panel_Container __instance, GearItem pi, ref bool __result)
+            {
+                if (__result)
+                {
+                    if (pi.m_GearName == "GEAR_SCEmergencyRation" || pi.m_GearName == "GEAR_SCHeatPack" || pi.m_GearName == "GEAR_SCHeatPackC" || pi.m_GearName == "GEAR_SCLiquidLead")
+                    {
+                        __result = false;
+                    }
+                }
+            }
+        }
+
+
+
+
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "GetGearItemsForRadial")]
+        //private static class Panel_ActionsRadial_GetGearItemsForRadial
+        //{
+        //    private static void Postfix(Panel_ActionsRadial __instance, ref Il2CppSystem.Collections.Generic.List<GearItem> __result)
+        //    {
+        //        if (__result.Count > 8)
+        //        {
+        //            List<GearItem> _List = new List<GearItem>(){
+        //                __result[0],
+        //                __result[1],
+        //                __result[2],
+        //                __result[3],
+        //                __result[4],
+        //                __result[5],
+        //                __result[6],
+        //                __result[7]};
+        //            __result.Clear();
+        //            for (int i = 0; i < _List.Count; i++)
+        //            {
+        //                __result.Insert(i, _List[i]);
+        //            }
+        //        };
+        //    }
+        //}
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "Initialize")]
+        //private static class Panel_ActionsRadial_Initialize
+        //{
+        //    private static void Postfix(Panel_ActionsRadial __instance)
+        //    {
+        //        __instance.m_WeaponRadialOrder = new string[] {
+        //            "GEAR_FlareGun",
+        //            "GEAR_Rifle",
+        //            "GEAR_Bow",
+        //            "GEAR_Stone",
+        //            "GEAR_RifleHuntingLodge",
+        //            "GEAR_BearSpear",
+        //            "GEAR_BearSpearStory",
+        //            "GEAR_Revolver",
+        //            "GEAR_NoiseMaker",
+        //            //Now non vanila stuff
+        //            "GEAR_Knife",
+        //            "GEAR_KnifeImprovised",
+        //            "GEAR_KnifeScrapMetal",
+        //            "GEAR_JeremiahKnife",
+        //            "GEAR_Hatchet",
+        //            "GEAR_HatchetImprovised",
+        //            "GEAR_FireAxe",
+        //            "GEAR_Hammer",
+        //            "GEAR_Prybar",
+        //            "GEAR_Shovel"
+        //        };
         //    }
         //}
     }

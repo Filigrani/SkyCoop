@@ -90,7 +90,7 @@ namespace SkyCoop
             JSONString = MPSaveManager.VectorsFixUp(JSONString);
 
             SaveData Data = JSON.Load(JSONString).Make<SaveData>();
-            if (!string.IsNullOrEmpty(Data.m_ActiveExpeditions))
+            if (Data != null && !string.IsNullOrEmpty(Data.m_ActiveExpeditions))
             {
                 m_ActiveExpeditions = JSON.Load(Data.m_ActiveExpeditions).Make<List<Expedition>>();
                 foreach (Expedition Exp in m_ActiveExpeditions)
@@ -609,7 +609,8 @@ namespace SkyCoop
         }
         public static void CompleteExpedition(int RemoveID, int FinishState = 1)
         {
-            List<int> PlayersIDs = m_ActiveExpeditions[RemoveID].GetExpeditionPlayersIDs();
+            Expedition Exp = m_ActiveExpeditions[RemoveID];
+            List<int> PlayersIDs = Exp.GetExpeditionPlayersIDs();
             if (RemoveID != -1)
             {
                 foreach (int ClientID in PlayersIDs)
@@ -629,7 +630,7 @@ namespace SkyCoop
                         string MAC = Server.GetMACByID(ClientID);
                         if (!string.IsNullOrEmpty(MAC))
                         {
-                            MPStats.AddExpedition(MAC);
+                            MPStats.AddExpedition(MAC, Exp.m_Alias);
                         }
                     }
                 }

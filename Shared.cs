@@ -1193,6 +1193,12 @@ namespace SkyCoop
                 {
                     return "gear_scdoorkeylead";
                 }
+            } else if (GearName == "gear_scwoodform")
+            {
+                if (Tool == 5)
+                {
+                    return "gear_scwoodformb";
+                }
             }
             return "broke";
         }
@@ -1361,6 +1367,9 @@ namespace SkyCoop
                 {
                     MPSaveManager.AddBlank(Hash, element.m_GearName, Scene, element.m_Extra.m_Dropper);
                 }
+            } else if(extra.m_Variant == 5)
+            {
+                MPSaveManager.AddBlank(Hash, element.m_GearName, Scene, element.m_Extra.m_Dropper);
             }
 
             MPSaveManager.AddGearData(Scene, Hash, element);
@@ -1520,7 +1529,7 @@ namespace SkyCoop
                 MyMod.ShowCFGData();
                 SendFeedBackMessage("Server configuration printer to your log.");
                 return true;
-            } else if (Command == "!stats" || Command == "!today")
+            } else if (Command == "!stats" || Command == "!today" || Command == "!progress")
             {
                 SendChatCommandToHost(Command);
                 return true;
@@ -1606,6 +1615,22 @@ namespace SkyCoop
             }else if(Command == "!today")
             {
                 FeedBack = MPStats.TodayStats.GetString(false, true, true);
+            } else if (Command == "!progress")
+            {
+                if (MyMod.iAmHost && From != 0)
+                {
+                    ServerHandle.REQUESTEXPEDITIONSPROGRESS(From);
+                } else
+                {
+#if (!DEDICATED)
+                    MPStats.ExpeditionsProgressData Data = MPStats.GetExpeditionsProgress(Server.GetMACByID(From));
+                    MelonLogger.Msg(ConsoleColor.Green, "Total Progress: " + Data.TotalProgress);
+                    foreach (var item in Data.ExpeditionsProgress)
+                    {
+                        MelonLogger.Msg(ConsoleColor.Green, ExpeditionBuilder.GetRegionString(item.Key) + ": " + item.Value);
+                    }
+#endif
+                }
             }
 
             if (!string.IsNullOrEmpty(FeedBack))
@@ -2059,9 +2084,9 @@ namespace SkyCoop
             }
             return bh;
         }
-        public static void BanSpawnRegion(string GUID)
+        public static void BanSpawnRegion(string GUID, int BanDuration = 1440)
         {
-            int CanBeUnbannedIn = MyMod.MinutesFromStartServer + 1440;
+            int CanBeUnbannedIn = MyMod.MinutesFromStartServer + BanDuration;
             if (!MyMod.BannedSpawnRegions.ContainsKey(GUID))
             {
                 MyMod.BannedSpawnRegions.Add(GUID, CanBeUnbannedIn);
@@ -2885,12 +2910,15 @@ namespace SkyCoop
         }
         public static string GetMacAddress()
         {
-            string macAddr =
-                (
-                    from nic in NetworkInterface.GetAllNetworkInterfaces()
-                    where nic.OperationalStatus == OperationalStatus.Up
-                    select nic.GetPhysicalAddress().ToString()
-                ).FirstOrDefault();
+            string macAddr = string.Empty;
+            foreach (NetworkInterface nic in NetworkInterface.GetAllNetworkInterfaces())
+            {
+                if (nic.OperationalStatus == OperationalStatus.Up && nic.NetworkInterfaceType != NetworkInterfaceType.Loopback && nic.GetPhysicalAddress().ToString().Length > 4)
+                {
+                    macAddr = nic.GetPhysicalAddress().ToString();
+                    break;
+                }
+            }
             return macAddr;
         }
 
@@ -3285,6 +3313,41 @@ namespace SkyCoop
                 }
             }
         }
+        public static bool IsInterloperExpereinceMode()
+        {
+#if (!DEDICATED)
+            return ExperienceModeManager.s_CurrentModeType == ExperienceModeType.Interloper;
+#else
+            return Shared.ExperienceForDS == 9;
+#endif
+        }
+        public static bool IsStalkerExpereinceMode()
+        {
+#if (!DEDICATED)
+            return ExperienceModeManager.s_CurrentModeType == ExperienceModeType.Stalker;
+#else
+            return Shared.ExperienceForDS == 2;
+#endif
+        }
+
+        public static bool IsVoyageurExpereinceMode()
+        {
+#if (!DEDICATED)
+            return ExperienceModeManager.s_CurrentModeType != ExperienceModeType.Voyageur;
+#else
+            return Shared.ExperienceForDS == 1;
+#endif
+        }
+
+        public static bool IsPilgrimExpereinceMode()
+        {
+#if (!DEDICATED)
+            return ExperienceModeManager.s_CurrentModeType != ExperienceModeType.Pilgrim;
+#else
+            return Shared.ExperienceForDS == 0;
+#endif
+        }
+
         public static string GetInterloperReplace(string Gear)
         {
 #if (!DEDICATED)

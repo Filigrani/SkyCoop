@@ -198,6 +198,7 @@ namespace GameServer
         REMOVEOBJECTGROUP,
         REQUESTSPECIALEXPEDITION,
         REQUESTSPHOTOAGAIN,
+        REQUESTEXPEDITIONSPROGRESS,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -385,6 +386,7 @@ namespace GameServer
         REMOVEOBJECTGROUP,
         REQUESTSPECIALEXPEDITION,
         REQUESTSPHOTOAGAIN,
+        REQUESTEXPEDITIONSPROGRESS,
     }
 
     public class Packet : IDisposable

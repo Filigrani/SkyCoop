@@ -4,6 +4,7 @@ using System.Text;
 using SkyCoop;
 using static SkyCoop.Shared;
 using static SkyCoop.DataStr;
+using System.Linq;
 #if (!DEDICATED)
 using MelonLoader;
 using UnityEngine;
@@ -1124,14 +1125,18 @@ namespace GameServer
 
             foreach (var item in Shared.AnimalsKilled)
             {
-                int DespawnTime = item.Value.m_CreatedTime+14400;
-                if (DespawnTime < MyMod.MinutesFromStartServer)
+                if(item.Value.m_PrefabName != "DeadBody")
                 {
-                    ToRemove.Add(item.Key);
-                }else{
-                    if(item.Value.m_LevelGUID == LevelGUID)
+                    int DespawnTime = item.Value.m_CreatedTime + 14400;
+                    if (DespawnTime < MyMod.MinutesFromStartServer)
                     {
-                        SendAnimalCorpse(item.Value, _fromClient);
+                        ToRemove.Add(item.Key);
+                    } else
+                    {
+                        if (item.Value.m_LevelGUID == LevelGUID)
+                        {
+                            SendAnimalCorpse(item.Value, _fromClient);
+                        }
                     }
                 }
             }
@@ -1158,7 +1163,7 @@ namespace GameServer
             }
             SendAllOpenables(_fromClient, Scene);
             RequestAnimalCorpses(_fromClient, Scene);
-
+            MPSaveManager.TrySpawnFestives(Scene);
 
 #if (!DEDICATED)
             if(MyMod.CurrentCustomChalleng.m_Started && MyMod.CurrentChallengeRules.m_Name == "Lost in action")
@@ -1406,6 +1411,7 @@ namespace GameServer
         public static void REQUESTANIMALCORPSE(int _fromClient, Packet _packet)
         {
             string GUID = _packet.ReadString();
+            bool CanSpawn = _packet.ReadBool();
             Log("Client "+_fromClient+" requested animal corpse "+GUID);
             DataStr.AnimalKilled Animal;
             if (Shared.AnimalsKilled.TryGetValue(GUID, out Animal))
@@ -1416,7 +1422,22 @@ namespace GameServer
                 Log("Sending responce");
                 ServerSend.REQUESTANIMALCORPSE(_fromClient, Meat, Guts, Hide);
             }else{
-                ServerSend.REQUESTANIMALCORPSE(_fromClient, -1, 0, 0);
+                if (CanSpawn)
+                {
+                    BodyHarvestUnits Units = Shared.GetBodyHarvestUnits("WILDLIFE_Stag");
+                    Animal = new AnimalKilled();
+                    Animal.m_GUID = GUID;
+                    Animal.m_Guts = Units.m_Guts;
+                    Animal.m_Hide = 1;
+                    Animal.m_Meat = Units.m_Meat;
+                    Animal.m_PrefabName = "DeadBody";
+                    Shared.AnimalsKilled.Add(GUID, Animal);
+                    MPSaveManager.AnimalsKilledChanged = true;
+                    ServerSend.REQUESTANIMALCORPSE(_fromClient, Units.m_Meat, Units.m_Guts, 1);
+                } else
+                {
+                    ServerSend.REQUESTANIMALCORPSE(_fromClient, -1, 0, 0);
+                }
             }
         }
         public static void QUARTERANIMAL(int _fromClient, Packet _packet)
@@ -1869,6 +1890,11 @@ namespace GameServer
             {
                 ServerSend.REQUESTSPECIALEXPEDITION(_fromClient);
             }
+        }
+        public static void REQUESTEXPEDITIONSPROGRESS(int _fromClient, Packet _packet = null)
+        {
+            MPStats.ExpeditionsProgressData Data = MPStats.GetExpeditionsProgress(Server.GetMACByID(_fromClient));
+            ServerSend.REQUESTEXPEDITIONSPROGRESS(_fromClient, Data);
         }
     }
 }

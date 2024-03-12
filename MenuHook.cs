@@ -7,6 +7,7 @@ using MelonLoader;
 using MelonLoader.TinyJSON;
 using GameServer;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace SkyCoop
 {
@@ -619,18 +620,29 @@ namespace SkyCoop
                 return true;
             }
         }
+
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_SelectExperience), "OnExperienceClicked", null)]
         public class Panel_SelectExperience_OnExperienceClicked
         {
             public static bool Prefix(Panel_SelectExperience __instance)
             {
-                if (MenuMode == "Vote")
+                Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
+                if (selectedMenuItem == null)
                 {
-                    Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
-                    if (selectedMenuItem == null)
+                    return false;
+                }
+                ExperienceModeType _type = selectedMenuItem.m_Type;
+                if (!Environment.GetCommandLineArgs().Contains("-customexp"))
+                {
+                    if (_type == ExperienceModeType.Custom)
                     {
+                        MyMod.NoCustomExp();
                         return false;
                     }
+                }
+                if (MenuMode == "Vote")
+                {
                     if (SteamConnect.CanUseSteam)
                     {
                         SteamConnect.Main.VoteForExperienceMode((int)selectedMenuItem.m_Type);
@@ -639,9 +651,8 @@ namespace SkyCoop
                     InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
                     ChangeMenuItems("Lobby");
                     return false;
-                }else if (MenuMode == "NewGameSelect")
+                } else if (MenuMode == "NewGameSelect")
                 {
-                    Panel_SelectExperience.XPModeMenuItem selectedMenuItem = __instance.GetSelectedMenuItem();
                     if (selectedMenuItem == null)
                     {
                         return false;
@@ -649,10 +660,11 @@ namespace SkyCoop
                     TempExperience = (int)selectedMenuItem.m_Type;
                     __instance.Enable(false);
 
-                    if(MyMod.ServerConfig.m_PlayersSpawnType != 2)
+                    if (MyMod.ServerConfig.m_PlayersSpawnType != 2)
                     {
                         InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
-                    }else{
+                    } else
+                    {
                         MyMod.LobbyStartingRegion = (int)GameRegion.RandomRegion;
                         MyMod.LobbyStartingExperience = TempExperience;
                         SteamConnect.Main.SetNewGameSettings(MyMod.LobbyStartingRegion, MyMod.LobbyStartingExperience);
@@ -661,7 +673,7 @@ namespace SkyCoop
                         MyMod.m_Panel_Sandbox.Enable(true);
                         ChangeMenuItems("Lobby");
                     }
-                    
+
                     return false;
                 }
 

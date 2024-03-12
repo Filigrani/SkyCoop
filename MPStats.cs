@@ -121,17 +121,17 @@ namespace SkyCoop
             public void AddSecond()
             {
                 Seconds++;
-                if (Seconds > 60){Seconds = 0;AddMinute();}
+                if (Seconds >= 60){Seconds = 0;AddMinute();}
             }
             public void AddMinute()
             {
                 Minutes++;
-                if (Minutes > 60){ Minutes = 0; AddHour(); }
+                if (Minutes >= 60){ Minutes = 0; AddHour(); }
             }
             public void AddHour()
             {
                 Hours++;
-                if (Hours > 24){Hours = 0; AddDay(); }
+                if (Hours >= 24){Hours = 0; AddDay(); }
             }
             public void AddDay()
             {
@@ -200,6 +200,7 @@ namespace SkyCoop
             public int Visits = 1;
             public int Deaths = 0;
             public int ExpeditionsCompleted = 0;
+            public Dictionary<string, bool> CompletedExpeditions = new Dictionary<string, bool>();
             public int CrashSitesFound = 0;
             public PlayTime TotalPlayTime = new PlayTime();
             public Dictionary<int, PlayTime> RegionsHistory = new Dictionary<int, PlayTime>();
@@ -241,6 +242,12 @@ namespace SkyCoop
                 }
                 return Info;
             }
+        }
+
+        public class ExpeditionsProgressData
+        {
+            public Dictionary<int, int> ExpeditionsProgress = new Dictionary<int, int>();
+            public int TotalProgress = 0;
         }
 
         public class Day
@@ -404,12 +411,61 @@ namespace SkyCoop
             }
             AllTimeStats.Deaths++;
         }
-        public static void AddExpedition(string MAC)
+
+        public static ExpeditionsProgressData GetExpeditionsProgress(string MAC)
+        {
+            PlayerStatistic Stat = GetPlayerGlobalStats(MAC);
+            ExpeditionsProgressData Data = new ExpeditionsProgressData();
+            if (Stat != null)
+            {
+                int TotalExpeditions = 0;
+                int CompletedExpeditions = 0;
+                for (int RegionIndex = -Shared.GameRegionNegativeOffset; RegionIndex <= Shared.GameRegionPositiveOffset; RegionIndex++)
+                {
+                    string RegionName = ExpeditionBuilder.GetRegionString(RegionIndex);
+                    int TotalExpeditionsOnRegion = 0;
+                    int CompletedExpeditionsOnRegion = 0;
+                    int RegionProgress = 0;
+
+                    List<ExpeditionBuilder.ExpeditionTaskTemplate> Expeditions;
+                    if (ExpeditionBuilder.m_ExpeditionTasks.TryGetValue(RegionIndex, out Expeditions))
+                    {
+                        foreach (ExpeditionBuilder.ExpeditionTaskTemplate Expedition in Expeditions)
+                        {
+                            if (Expedition.m_CanBeTaken)
+                            {
+                                bool Completed = Stat.CompletedExpeditions.ContainsKey(Expedition.m_Alias);
+                                TotalExpeditions++;
+                                TotalExpeditionsOnRegion++;
+                                if (Completed)
+                                {
+                                    CompletedExpeditionsOnRegion++;
+                                    CompletedExpeditions++;
+                                }
+                            }
+                        }
+                        RegionProgress = (int)((double)CompletedExpeditionsOnRegion / TotalExpeditionsOnRegion * 100);
+                        Data.ExpeditionsProgress.Add(RegionIndex, RegionProgress);
+                    } else
+                    {
+                        continue;
+                    }
+                }
+                Data.TotalProgress = (int)((double)CompletedExpeditions / TotalExpeditions * 100);
+            }
+            return Data;
+        }
+
+        public static void AddExpedition(string MAC, string Alias)
         {
             PlayerStatistic Stat;
             if (TodayStats.Players.TryGetValue(MAC, out Stat))
             {
                 Stat.ExpeditionsCompleted++;
+                if (!Stat.CompletedExpeditions.ContainsKey(Alias))
+                {
+                    Stat.CompletedExpeditions.Add(Alias, true);
+                }
                 TodayStats.Players[MAC] = Stat;
             }
             TodayStats.ExpeditionsCompleted++;
@@ -417,6 +473,11 @@ namespace SkyCoop
             if (RecentPlayersGlobalStatistic.ContainsKey(MAC))
             {
                 RecentPlayersGlobalStatistic[MAC].ExpeditionsCompleted++;
+
+                if (!RecentPlayersGlobalStatistic[MAC].CompletedExpeditions.ContainsKey(Alias))
+                {
+                    RecentPlayersGlobalStatistic[MAC].CompletedExpeditions.Add(Alias, true);
+                }
             }
             AllTimeStats.ExpeditionsCompleted++;
         }

@@ -766,5 +766,41 @@ namespace SkyCoop
                 return m_SlicesGot == m_SlicesNum;
             }
         }
+        public class BufferedGearSpawners
+        {
+            public Dictionary<string, SceneGearSpawners> GearSpawners = new Dictionary<string, SceneGearSpawners>();
+        }
+
+        public class SceneGearSpawners
+        {
+            public string SceneName = "";
+            public List<PrefabSpawnDescriptor> PrefabSpawns = new List<PrefabSpawnDescriptor>();
+            public List<RandomSpawnObjectDescriptor> RandomSpawns = new List<RandomSpawnObjectDescriptor>();
+        }
+
+        public class GearSpawnerElement
+        {
+            public string GearName = "";
+            public int Weight = 0;
+            public float Chance = 0;
+            public Vector3 Position = new Vector3(0, 0, 0);
+            public Quaternion Rotation = new Quaternion(0, 0, 0, 0);
+        }
+
+        public class RandomSpawnObjectDescriptor
+        {
+            public List<GearSpawnerElement> Gears = new List<GearSpawnerElement>();
+            public int SpawnOnInterloper = 0;
+            public int SpawnOnStalker = 0;
+            public int SpawnOnVoyageur = 0;
+            public int SpawnOnPiligrim = 0;
+        }
+        public class PrefabSpawnDescriptor
+        {
+            public List<GearSpawnerElement> Gears = new List<GearSpawnerElement>();
+            public int ChanceOfNoSpawn = 0;
+            public int Min = 0;
+            public int Max = 0;
+        }
     }
 }

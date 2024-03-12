@@ -387,7 +387,9 @@ namespace SkyCoop
                     //    ContainerOverride = "";
                     //}
                     //ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), (int)GameManager.GetUniStorm().m_CurrentRegion);
-                    MyMod.LogScreenshotData();
+                    //MyMod.LogScreenshotData();
+                    ResourceIndependent.SpawnSomeGearsOnScene(MyMod.level_name, "", "GEAR_SCPresent");
+                    ResourceIndependent.SpawnSomeGearsOnScene(MyMod.level_name, "SANDBOX", "GEAR_SCPresent");
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "CrashSite"))
                 {
