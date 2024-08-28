@@ -3085,6 +3085,29 @@ namespace SkyCoop
                 if (newAnimal != null)
                 {
                     GameObject animal = newAnimal.gameObject;
+
+                    // Prevent too many spawns
+                    System.Random rnd = new System.Random();
+                    if (rnd.Next(10) != 0)
+                    {
+                        UnityEngine.Component.Destroy(animal);
+                        return;
+                    }
+
+                    // Count predators
+                    int predators = 0;
+                    for (int index = 0; index < BaseAiManager.m_BaseAis.Count; ++index)
+                    {
+                        if (BaseAiManager.m_BaseAis[index].m_AiType.Equals(AiType.Predator)) predators++;
+                    }
+
+                    // Prevent too many predators
+                    if (newAnimal.m_AiType.Equals(AiType.Predator) && !(rnd.Next(100) == 0 && predators < 1))
+                    {
+                        UnityEngine.Component.Destroy(animal);
+                        return;
+                    }
+                    
                     if (animal.GetComponent<ObjectGuid>() == null)
                     {
                         animal.AddComponent<ObjectGuid>();
