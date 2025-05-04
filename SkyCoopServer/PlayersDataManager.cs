@@ -13,7 +13,7 @@ namespace SkyCoopServer
     {
         public List<DataStr.PlayerData> m_Players = new List<DataStr.PlayerData>();
 
-        public bool m_RecursiveDebug = true;
+        public bool m_RecursiveDebug = false;
 
         private Server s_Server;
 
