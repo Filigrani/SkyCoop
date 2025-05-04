@@ -2,6 +2,7 @@
 using Il2CppTLD.Gameplay;
 using Il2CppTLD.Scenes;
 using MelonLoader;
+using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
@@ -12,6 +13,7 @@ namespace SkyCoop
     {
         public static Server Server;
         public static Client Client;
+        public static ClientVoice ClientVoice;
 
         public override void OnInitializeMelon()
         {
@@ -51,6 +53,7 @@ namespace SkyCoop
                 if(Client.m_IsReady)
                 {
                     PlayersManager.UpdateLocalPlayer();
+                    ClientVoice.Update();
                 }
             }
 

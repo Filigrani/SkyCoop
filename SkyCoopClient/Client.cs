@@ -5,6 +5,7 @@ using System.Net;
 using SkyCoopServer;
 using MonoMod.Utils;
 using UnityEngine;
+using SkyCoopClient;
 
 namespace SkyCoop
 {
@@ -164,6 +165,9 @@ namespace SkyCoop
                 }
             }
             ConnectToServer(IP, Port);
+
+            ModMain.ClientVoice = new ClientVoice();
+            ModMain.ClientVoice.Start();
         }
 
         public void ConnectToServer(string ip, int port, string key = "key")
