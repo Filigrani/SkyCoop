@@ -165,9 +165,6 @@ namespace SkyCoop
                 }
             }
             ConnectToServer(IP, Port);
-
-            ModMain.ClientVoice = new ClientVoice();
-            ModMain.ClientVoice.Start();
         }
 
         public void ConnectToServer(string ip, int port, string key = "key")

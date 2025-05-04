@@ -53,9 +53,18 @@ namespace SkyCoop
                 if(Client.m_IsReady)
                 {
                     PlayersManager.UpdateLocalPlayer();
-                    ClientVoice.Update();
                 }
             }
+
+            if(ClientVoice != null && ClientVoice.m_Instance != null)
+            {
+                ClientVoice.m_Instance.PollEvents();
+
+                if (ClientVoice.m_IsReady)
+                {
+                    ClientVoice.Update();
+                }
+            } 
 
             if(Server != null && Server.m_IsReady)
             {

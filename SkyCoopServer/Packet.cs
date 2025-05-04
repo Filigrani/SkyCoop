@@ -60,5 +60,11 @@ namespace SkyCoopServer
             Quaternion quat = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return quat;
         }
+
+        public static Quaternion ReadVoice(this NetDataReader Reader)
+        {
+            Quaternion quat = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
+            return quat;
+        }
     }
 }

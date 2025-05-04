@@ -89,5 +89,12 @@ namespace SkyCoop
             writer.Put((int)Packet.Type.ClientFire);
             SendToHost(writer);
         }
+
+        public static void SendVoice(byte[] VoiceSample)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put(VoiceSample);
+            SendToHost(writer);
+        }
     }
 }

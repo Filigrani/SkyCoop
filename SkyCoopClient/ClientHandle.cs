@@ -30,6 +30,7 @@ namespace SkyCoop
             int Seed = Reader.GetInt();
             string StartingRegion = Reader.ReadString();
             string GameMode = Reader.ReadString();
+            int VoicePort = Reader.GetInt();
 
             PlayersManager.InitilizePlayers(PlayersMax);
 
@@ -38,10 +39,17 @@ namespace SkyCoop
             Logger.Log(ConsoleColor.Cyan, "Seed: " + Seed);
             Logger.Log(ConsoleColor.Cyan, "StartingRegion: "+ StartingRegion);
             Logger.Log(ConsoleColor.Cyan, "GameMode: " + GameMode);
+            Logger.Log(ConsoleColor.Cyan, "VoicePort: " + VoicePort);
 
             ModMain.Client.m_IsReady = true;
             MenuHook.RemovePleaseWait();
             ModMain.SetupSurvivalSettings(GameMode, Seed, StartingRegion);
+
+            if(VoicePort != 0)
+            {
+                ModMain.ClientVoice = new SkyCoopClient.ClientVoice();
+                ModMain.ClientVoice.Connect(ModMain.Client.m_HostEndPoint.Address, VoicePort);
+            }
         }
 
         public static void ClientPosition(NetDataReader Reader)

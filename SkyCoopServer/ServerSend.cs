@@ -28,6 +28,7 @@ namespace SkyCoopServer
             writer.Put(CFG.m_Seed);
             writer.Write(CFG.m_StartingRegion);
             writer.Write(CFG.m_GameMode);
+            writer.Put(CFG.m_VoicePort);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 

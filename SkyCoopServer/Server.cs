@@ -11,6 +11,7 @@ namespace SkyCoopServer
         public EventBasedNetListener m_Listener;
         public NetManager m_Instance;
         public bool m_IsReady = false;
+        public ServerVoice m_VoiceServer = null;
 
         // Data Sync Instances
         public PlayersDataManager m_PlayersData;
@@ -65,6 +66,21 @@ namespace SkyCoopServer
             return Indexes;
         }
 
+        public DataStr.PlayerData GetPlayerDataByNetPeer(NetPeer Peer)
+        {
+            if (m_Instance != null)
+            {
+                foreach (NetPeer _Peer in m_Instance.ConnectedPeerList)
+                {
+                    if (_Peer.Address == Peer.Address)
+                    {
+                        return m_PlayersData.GetPlayer(_Peer.Id);
+                    }
+                }
+            }
+            return null;
+        }
+
         public NetPeer GetClient(int Index)
         {
             if (m_Instance != null)
@@ -85,6 +101,10 @@ namespace SkyCoopServer
             if (m_Instance != null && m_IsReady)
             {
                 m_Instance.PollEvents();
+            }
+            if(m_VoiceServer != null)
+            {
+                m_VoiceServer.Update();
             }
         }
 
@@ -141,6 +161,13 @@ namespace SkyCoopServer
 
             m_IsReady = true;
             Console.WriteLine($"Server is started port={port}");
+
+            if(m_Config.m_VoicePort != 0)
+            {
+                m_VoiceServer = new ServerVoice(this);
+                m_VoiceServer.m_Port = m_Config.m_VoicePort;
+                m_VoiceServer.StartServer();
+            }
         }
     }
 }
