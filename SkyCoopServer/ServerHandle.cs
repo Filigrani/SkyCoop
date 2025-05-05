@@ -14,7 +14,7 @@ namespace SkyCoopServer
         public static void Welcome(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string Message = Reader.ReadString();
-            Console.WriteLine("Сlient "+ Client .Id+ " responced with message: " + Message);
+            Console.WriteLine("[GameServer] Сlient " + Client .Id+ " responced with message: " + Message);
             ServerSend.ServerConfig(Client, ServerInstance.m_Config);
         }
 
@@ -33,7 +33,7 @@ namespace SkyCoopServer
         public static void ClientScene(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string Scene = Reader.ReadString();
-            Console.WriteLine("(ClientScene) Client " + Client.Id + " sent Scene "+Scene);
+            Console.WriteLine("[GameServer] (ClientScene) Client " + Client.Id + " sent Scene "+Scene);
             ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, Scene);
         }
 

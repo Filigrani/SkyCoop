@@ -39,6 +39,7 @@ namespace SkyCoop
                     Comps.NetworkPlayer NP = Player.AddComponent<Comps.NetworkPlayer>();
                     NP.m_Animator = Player.GetComponent<Animator>();
                     NP.LoadEquipment();
+                    NP.AddAudioSource();
 
                     NP.m_PlayerID = PlayerID;
 

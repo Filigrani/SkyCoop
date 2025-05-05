@@ -56,16 +56,6 @@ namespace SkyCoop
                 }
             }
 
-            if(ClientVoice != null && ClientVoice.m_Instance != null)
-            {
-                ClientVoice.m_Instance.PollEvents();
-
-                if (ClientVoice.m_IsReady)
-                {
-                    ClientVoice.Update();
-                }
-            } 
-
             if(Server != null && Server.m_IsReady)
             {
                 Server.Update();

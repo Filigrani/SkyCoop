@@ -62,6 +62,7 @@ namespace SkyCoop
             public float m_Smoother = 0.1f;
             public GearHandPose m_GearHandPose = GearHandPose.None;
             public Actions m_Action = Actions.None;
+            public AudioSource m_AudioSource;
 
             public enum GearHandPose
             {
@@ -214,6 +215,14 @@ namespace SkyCoop
                 //ModMain.AddPlaceholderHoldingGear(this, "GEAR_ClothSheet", false);
                 //ModMain.AddPlaceholderHoldingGear(this, "GEAR_FireAxe", false);
                 //ModMain.AddPlaceholderHoldingGear(this, "CORPSE_Human_Frozen4", false);
+            }
+
+            public void AddAudioSource()
+            {
+                GameObject obj = new GameObject();
+                obj.name = "OBJ_VoicePlayback";
+                obj.transform.parent = this.transform;
+                m_AudioSource = obj.AddComponent<AudioSource>();
             }
 
             public static void AddPlaceholderHoldingGear(Comps.NetworkPlayer Player, string GearName, GearHandPose HandPose = GearHandPose.None, bool Bogus = true)

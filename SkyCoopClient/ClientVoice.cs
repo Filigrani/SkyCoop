@@ -5,11 +5,23 @@ using OpenVoiceSharp;
 using System.Net;
 using SkyCoop;
 using UnityEngine;
+using static Il2Cpp.UIBasicSprite;
 
 namespace SkyCoopClient
 {
     public class ClientVoice
     {
+        public NetPacketProcessor m_PacketProcessor = new NetPacketProcessor();
+        public EventBasedNetListener m_Listener;
+        public NetManager m_Instance;
+        public bool m_IsReady = false;
+        public NetPeer m_HostEndPoint;
+
+        public VoiceChatInterface VoiceInterface = new VoiceChatInterface(stereo: false, enableNoiseSuppression: false);
+        public BasicMicrophoneRecorder MicrophoneRecorder = new BasicMicrophoneRecorder(stereo: false);
+        public int BufferSamples = VoiceUtilities.GetSampleSize(1) / 2;
+        public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer = new Dictionary<int, CircularAudioBuffer<float>>();
+
         public ClientVoice()
         {
             m_Listener = new EventBasedNetListener();
@@ -25,7 +37,6 @@ namespace SkyCoopClient
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
             {
                 //SkyCoop.Logger.Log(ConsoleColor.Cyan, "Ping to voice server: " + ping);
-                m_IsReady = true;
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
@@ -91,74 +102,64 @@ namespace SkyCoopClient
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
                 m_HostEndPoint = fromPeer;
-                ExecuteVoice(fromPeer, dataReader);
+                switch(dataReader.GetInt())
+                {
+                    case 0:
+                        ExecuteVoice(fromPeer, dataReader);
+                        break;
+                    case 1:
+                        Welcome(dataReader);
+                        break;
+                }
+                
 
                 dataReader.Recycle();
             };
+
+            Task.Run(() =>
+            {
+                while (ModMain.Client.m_IsReady) 
+                {
+                    Update();
+                }
+            });
         }
-
-
-        public NetPacketProcessor m_PacketProcessor = new NetPacketProcessor();
-        public EventBasedNetListener m_Listener;
-        public NetManager m_Instance;
-        public bool m_IsReady = false;
-        public NetPeer m_HostEndPoint;
-
-
-        public VoiceChatInterface VoiceInterface = new VoiceChatInterface(stereo:true, enableNoiseSuppression:false);
-        public BasicMicrophoneRecorder MicrophoneRecorder = new BasicMicrophoneRecorder(stereo:true);
-        public int BufferSamples = VoiceUtilities.GetSampleSize(2) / 2;
-        public CircularAudioBuffer<float> VoiceBuffer;
-        public AudioSource VoiceSource;
 
         public void Connect(IPAddress Ip, int Port)
         {
             SkyCoop.Logger.Log(ConsoleColor.Cyan, "Going to connect to voice chat: " + Ip.ToString()+":"+ Port);
             m_Instance.Start();
             m_Instance.Connect(Ip.ToString(), Port, "voice");
-            DefineGlobalAudio();
-        }
-
-        public void DefineGlobalAudio()
-        {
-            GameObject obj = new GameObject();
-            obj.name = "testvoice";
-            SceneManager.DontDestroyOnLoad(obj);
-            VoiceSource = obj.AddComponent<AudioSource>();
-            AudioClip clip = AudioClip.Create(
-                "Voice",
-                VoiceBuffer.BufferLength,
-                2,
-                48000,
-                false);
-            VoiceSource.clip = clip;
         }
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
         {
+            int clientId = Reader.GetInt(); //id
             byte[] Data = new byte[Reader.GetInt()];
-
-            SkyCoop.Logger.Log("Got voice sample " + Data.Length);
             Reader.GetBytes(Data, Data.Length);
-            //foreach (byte b in Data)
-            //{
-            //    SkyCoop.Logger.Log("byte " + b);
-            //}
-            PlayVoice(Data);
-        }
 
-        public void PlayVoice(byte[] Data)
-        {
-            SkyCoop.Logger.Log("Going to decode");
             (byte[] decodedData, int decodedLength) = VoiceInterface.WhenDataReceived(Data, Data.Length);
             float[] samples = new float[decodedLength / 2];
             VoiceUtilities.Convert16BitToFloat(decodedData, samples);
 
-            //foreach (byte b in samples)
-            //{
-            //    SkyCoop.Logger.Log("byte " + b);
-            //}
-            VoiceBuffer.PushChunk(samples);
+            if (VoiceBuffer.ContainsKey(clientId)) 
+            {
+                CircularAudioBuffer<float> buffer = VoiceBuffer[clientId];
+                buffer.PushChunk(samples);
+                VoiceBuffer[clientId] = buffer;
+            }
+            else
+            {
+                CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
+                buffer.PushChunk(samples);
+                VoiceBuffer.Add(clientId, buffer);
+            }
+        }
+
+        public void Welcome(NetDataReader dataReader)
+        {
+            SkyCoop.Logger.Log(ConsoleColor.Cyan, dataReader.GetString());
+            m_IsReady = true;
         }
 
         public void SendToHost(NetDataWriter writer)
@@ -175,32 +176,62 @@ namespace SkyCoopClient
 
             MicrophoneRecorder.DataAvailable += (pcmData, length) =>
             {
-                //if (!VoiceConnected)
-                //    return;
+                if (!m_IsReady)
+                    return;
                 if (!VoiceInterface.IsSpeaking(pcmData))
                     return;
 
                 (byte[] encodedData, int encodedLength) = VoiceInterface.SubmitAudioData(pcmData, length);
 
-
-                SkyCoop.Logger.Log(ConsoleColor.Cyan, "encodedData " + encodedLength + " " + encodedData.Length);
-
                 NetDataWriter writer = new NetDataWriter();
+                writer.Put(0);
+                writer.Put(ModMain.Client.m_MyEndPoint.RemoteId);
                 writer.Put(encodedLength);
                 writer.Put(encodedData);
                 SendToHost(writer);
             };
-            VoiceBuffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
-
             MicrophoneRecorder.StartRecording();
         }
 
         public void Update()
         {
-            if (VoiceSource && VoiceBuffer.BufferFull)
+            m_Instance.PollEvents();
+
+            if (m_IsReady && VoiceBuffer.Count > 0)
             {
-                VoiceSource.clip.SetData(VoiceBuffer.ReadAllBuffer(), 0);
-                VoiceSource.Play();
+                foreach (var clientBuffer in VoiceBuffer.ToList()) 
+                {
+                    CircularAudioBuffer<float> buffer = clientBuffer.Value;
+
+                    if (buffer.BufferFull)
+                    {
+                        Comps.NetworkPlayer player = PlayersManager.GetPlayer(clientBuffer.Key);
+                        if (player.m_AudioSource.clip != null)
+                        {
+                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
+                            player.m_AudioSource.clip.SetData(buffer.ReadAllBuffer(), 0);
+                            player.m_AudioSource.Play();
+
+                            VoiceBuffer[clientBuffer.Key] = buffer;
+
+                        }
+                        else
+                        {
+                            player.m_AudioSource.clip = AudioClip.Create(                
+                                "Voice",
+                                buffer.BufferLength,                
+                                1,
+                                48000,                
+                                true,
+                                false);
+                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
+                            player.m_AudioSource.clip.SetData(buffer.ReadAllBuffer(), 0);
+                            player.m_AudioSource.Play();
+
+                            VoiceBuffer[clientBuffer.Key] = buffer;
+                        }
+                    }
+                }
             }
         }
     }

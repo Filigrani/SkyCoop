@@ -16,8 +16,8 @@ namespace SkyCoop
     {
         public static void Welcome(NetDataReader Reader)
         {
-            string Message = Reader.ReadString();
-            Logger.Log(ConsoleColor.Cyan,"Server welcomes me with message: "+ Message);
+            int ID = Reader.GetInt();
+            Logger.Log(ConsoleColor.Cyan, $"Server welcomes me with my ID: {ID}");
             ClientSend.Welcome();
             MenuHook.RemovePleaseWait();
             MenuHook.DoPleaseWait("Please wait...", "Getting data about server...");
@@ -47,8 +47,7 @@ namespace SkyCoop
 
             if(VoicePort != 0)
             {
-                ModMain.ClientVoice = new SkyCoopClient.ClientVoice();
-                ModMain.ClientVoice.Connect(ModMain.Client.m_HostEndPoint.Address, VoicePort);
+                Task.Run(() => { ModMain.Client.ConnectToServerVoice(VoicePort); });
             }
         }
 

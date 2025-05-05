@@ -42,6 +42,7 @@ namespace SkyCoop
         public EventBasedNetListener m_Listener;
         public NetManager m_Instance;
         public NetPeer m_HostEndPoint;
+        public NetPeer m_MyEndPoint;
 
         public bool m_IsReady = false;
 
@@ -173,7 +174,13 @@ namespace SkyCoop
             Logger.Log($"Trying to connect to {ip}:{port} with key: {key}");
             Logger.Log("m_Instance.DisconnectTimeout "+ m_Instance.DisconnectTimeout);
             m_Instance.Start();
-            m_Instance.Connect(ip, port, key);
+            m_MyEndPoint = m_Instance.Connect(ip, port, key);
+        }
+
+        public void ConnectToServerVoice(int port)
+        {
+            ModMain.ClientVoice = new SkyCoopClient.ClientVoice();
+            ModMain.ClientVoice.Connect(ModMain.Client.m_HostEndPoint.Address, port);
         }
     }
 }

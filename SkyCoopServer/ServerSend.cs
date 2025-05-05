@@ -12,11 +12,11 @@ namespace SkyCoopServer
 {
     public class ServerSend
     {
-        public static void Welcome(NetPeer Client, string Message)
+        public static void Welcome(NetPeer Client, int id)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.Welcome);
-            writer.Write(Message);
+            writer.Put(id);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 

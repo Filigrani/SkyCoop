@@ -102,10 +102,6 @@ namespace SkyCoopServer
             {
                 m_Instance.PollEvents();
             }
-            if(m_VoiceServer != null)
-            {
-                m_VoiceServer.Update();
-            }
         }
 
         public void EverySecond(object obj)
@@ -124,7 +120,7 @@ namespace SkyCoopServer
         public void StartServer(int port, int maxPlayers, string key = "key")
         {
             m_PlayersData.InitilizePlayers(maxPlayers);
-            Console.WriteLine("Starting server");
+            Console.WriteLine("[GameServer] Starting server");
             m_Instance.Start(port);
 
             m_Listener.ConnectionRequestEvent += request =>
@@ -137,18 +133,18 @@ namespace SkyCoopServer
 
             m_Listener.PeerConnectedEvent += peer =>
             {
-                Console.WriteLine("We got connection: {0}", peer+" assigned them as "+ peer.Id);
-                ServerSend.Welcome(peer, "Welcome client "+peer.Id);
+                Console.WriteLine("[GameServer] We got connection: {0}", peer+" assigned them as "+ peer.Id);
+                ServerSend.Welcome(peer, peer.Id);
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
-                Console.WriteLine("Client", peer.Id + " disconnected " + message.Reason.ToString());
+                Console.WriteLine("[GameServer] Client", peer.Id + " disconnected " + message.Reason.ToString());
             };
 
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
             {
-                //Console.WriteLine("Ping to Client "+peer.Id+": " + ping);
+                //Console.WriteLine("[GameServer] Ping to Client "+peer.Id+": " + ping);
             };
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
@@ -160,14 +156,19 @@ namespace SkyCoopServer
             };
 
             m_IsReady = true;
-            Console.WriteLine($"Server is started port={port}");
+            Console.WriteLine($"[GameServer] Server is started port={port}");
 
             if(m_Config.m_VoicePort != 0)
             {
-                m_VoiceServer = new ServerVoice(this);
-                m_VoiceServer.m_Port = m_Config.m_VoicePort;
-                m_VoiceServer.StartServer();
+                Task.Run(StartServerVoice);
             }
+        }
+
+        public void StartServerVoice()
+        {
+            m_VoiceServer = new ServerVoice(this);
+            m_VoiceServer.m_Port = m_Config.m_VoicePort;
+            m_VoiceServer.StartServer();
         }
     }
 }

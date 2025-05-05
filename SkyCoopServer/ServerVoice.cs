@@ -1,5 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
+using System.Net;
 
 namespace SkyCoopServer
 {
@@ -64,29 +65,43 @@ namespace SkyCoopServer
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
         {
-            byte[] Data = new byte[Reader.GetInt()];
-            Reader.GetBytes(Data, Data.Length);
+            if(Reader.GetInt() == 0)
+            {
+                int clientId = Reader.GetInt();
+                byte[] Data = new byte[Reader.GetInt()];
+                Reader.GetBytes(Data, Data.Length);
 
-            SendVoiceToAll(Peer, Data);
+                SendVoiceToAll(Peer, Data, clientId);
+            }
         }
 
-        public void SendVoiceToAll(NetPeer Peer, byte[] Data)
+        public void SendVoiceToAll(NetPeer Peer, byte[] Data, int ClientId)
         {
             foreach (NetPeer _Peer in m_Instance.ConnectedPeerList)
             {
-                //if (_Peer.Address != Peer.Address)
-                //{
+                if (_Peer.Id != Peer.Id)
+                {
                     NetDataWriter writer = new NetDataWriter();
+                    writer.Put(0);
+                    writer.Put(ClientId);
                     writer.Put(Data.Length);
                     writer.Put(Data);
                     _Peer.Send(writer, DeliveryMethod.Unreliable);
-                //}
+                }
             }
+        }
+
+        public void SendWelcomeToClient(NetPeer Peer)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put(1); //Welcome
+            writer.Put($"Welcome to VoiceServer Client№{Peer.Id}");
+            Peer.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
         public void StartServer(int port, int maxPlayers, string key = "voice")
         {
-            Console.WriteLine("Starting voice server");
+            Console.WriteLine("[VoiceServer] Starting voice server");
             m_Instance.Start(port);
 
             m_Listener.ConnectionRequestEvent += request =>
@@ -99,18 +114,19 @@ namespace SkyCoopServer
 
             m_Listener.PeerConnectedEvent += peer =>
             {
-                Console.WriteLine("We got connection: {0}", peer + " assigned them as " + peer.Id);
-                ServerSend.Welcome(peer, "Welcome client " + peer.Id);
+                Console.WriteLine("[VoiceServer] We got connection: {0}", peer + " assigned them as " + peer.Id);
+
+                SendWelcomeToClient(peer);
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
-                Console.WriteLine("Voice Client", peer.Id + " disconnected " + message.Reason.ToString());
+                Console.WriteLine("[VoiceServer] Voice Client", peer.Id + " disconnected " + message.Reason.ToString());
             };
 
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
             {
-                //Console.WriteLine("Ping to Client "+peer.Id+": " + ping);
+                //Console.WriteLine("[VoiceServer] Ping to Client "+peer.Id+": " + ping);
             };
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
@@ -120,7 +136,14 @@ namespace SkyCoopServer
             };
 
             m_IsReady = true;
-            Console.WriteLine($"Voice server is started port={port}");
+            Console.WriteLine($"[VoiceServer] Voice server is started port={port}");
+
+            Task.Run(() => {
+                while (m_GameServer.m_IsReady) 
+                { 
+                    Update(); 
+                } 
+            });
         }
     }
 }
