@@ -198,5 +198,16 @@ namespace SkyCoop
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(vp_FPSCamera), "Awake")]
+        private static class vp_FPSCamera_Awake
+        {
+            private static void Postfix(vp_FPSCamera __instance)
+            {
+                if (__instance.GetComponent<AudioListener>() == null)
+                {
+                    __instance.gameObject.AddComponent<AudioListener>();
+                }
+            }
+        }
     }
 }

@@ -9,7 +9,7 @@ namespace SkyCoopServer
         public int m_Port = 37850;
 
         public EventBasedNetListener m_Listener;
-        public const float c_MaxProximityChatDistance = 17; // Voice3d AudioSource has it set to 13, but keep it a bit higher, to catch up with movement sync.
+        public const float c_MaxProximityChatDistance = 30; // Voice3d AudioSource has it set to 25, but keep it a bit higher, to catch up with movement sync.
         public NetManager m_Instance;
         public bool m_IsReady = false;
 
