@@ -1,4 +1,5 @@
 ﻿using Il2Cpp;
+using Il2CppEasyRoads3Dv3;
 using Il2CppInterop.Runtime;
 using Il2CppSystem.IO;
 using Il2CppSystem.Linq;
@@ -32,6 +33,8 @@ namespace SkyCoop
                     Logger.Log(ConsoleColor.Blue, "Main Asset Bundle is loaded.");
                 }
             }
+            //DumpAddressablesContent();
+            //DumpPrefabsList();
         }
 
         public static T GetAssetFromGame<T>(string AssetName) where T : UnityEngine.Object
@@ -122,6 +125,27 @@ namespace SkyCoop
             foreach (var item in Resources.LoadAll(""))
             {
                 Logger.Log(ConsoleColor.Magenta, "[Resources] " + item.name);
+            }
+        }
+
+        public static void RegisterIlegalGearsCommand()
+        {
+            uConsole.RegisterCommand("give", new Action(GiveIlegalGear));
+        }
+
+        public static void GiveIlegalGear()
+        {
+            GameObject reference = GetAssetFromGame<GameObject>(uConsole.GetString());
+            if (reference)
+            {
+                GameObject GearObject = UnityEngine.Object.Instantiate(reference);
+                GearItem item = GearObject.GetComponent<GearItem>();
+                if(item != null)
+                {
+                    item.CompleteSpawnFromCONSOLE();
+                    GameManager.GetInventoryComponent().AddGear(item);
+                }
+
             }
         }
     }

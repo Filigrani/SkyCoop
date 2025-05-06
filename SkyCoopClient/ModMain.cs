@@ -34,7 +34,13 @@ namespace SkyCoop
         {
             Comps.RegisterComponents();
             AssetManager.PreloadMainBundle();
-            //AssetManager.DumpPrefabsList();
+            AssetManager.RegisterIlegalGearsCommand();
+        }
+
+        [Obsolete]
+        public override void OnLevelWasInitialized(int level)
+        {
+            MeleeManager.ReintilizeViewModels();
         }
 
         public static void OnGameBoot()
@@ -59,6 +65,17 @@ namespace SkyCoop
             if(Server != null && Server.m_IsReady)
             {
                 Server.Update();
+            }
+
+            if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
+            {
+                if (GameManager.m_NewPlayerAnimation)
+                {
+                    if (GameManager.m_NewPlayerAnimation.CanTransitionToState(PlayerAnimation.State.Throwing))
+                    {
+                      MeleeManager.TryToAttack();
+                    }
+                }
             }
         }
 

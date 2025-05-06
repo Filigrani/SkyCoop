@@ -62,7 +62,8 @@ namespace SkyCoop
             public float m_Smoother = 0.1f;
             public GearHandPose m_GearHandPose = GearHandPose.None;
             public Actions m_Action = Actions.None;
-            public AudioSource m_AudioSource;
+            public AudioSource m_AudioSource3D;
+            public AudioSource m_AudioSource2D;
 
             public enum GearHandPose
             {
@@ -219,10 +220,8 @@ namespace SkyCoop
 
             public void AddAudioSource()
             {
-                GameObject obj = new GameObject();
-                obj.name = "OBJ_VoicePlayback";
-                obj.transform.parent = this.transform;
-                m_AudioSource = obj.AddComponent<AudioSource>();
+                m_AudioSource3D = gameObject.transform.FindChild("Voice3D").GetComponent<AudioSource>();
+                m_AudioSource2D = gameObject.transform.FindChild("Voice2D").GetComponent<AudioSource>();
             }
 
             public static void AddPlaceholderHoldingGear(Comps.NetworkPlayer Player, string GearName, GearHandPose HandPose = GearHandPose.None, bool Bogus = true)

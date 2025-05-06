@@ -5,7 +5,6 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Threading.Tasks;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
@@ -13,7 +12,7 @@ namespace SkyCoopServer
     {
         public List<DataStr.PlayerData> m_Players = new List<DataStr.PlayerData>();
 
-        public bool m_RecursiveDebug = false;
+        public bool m_RecursiveDebug = true;
 
         private Server s_Server;
 
@@ -205,6 +204,30 @@ namespace SkyCoopServer
                     }
                 }
             }
+        }
+
+        public bool PlayerCanHearOtherPlayer(int SpeakerID, int ListenerID)
+        {
+            if(SpeakerID == ListenerID)
+            {
+                return m_RecursiveDebug;
+            }
+            
+            DataStr.PlayerData Speaker = GetPlayer(SpeakerID);
+            DataStr.PlayerData Listener = GetPlayer(ListenerID);
+            if (Speaker != null && Listener != null)
+            {
+
+                //TODO: If Speaker and Listener are dead, always return true, because spectators must be able to hear each other.
+
+
+                if (Speaker.m_Scene == Listener.m_Scene) // For now mostly just to prevent player for hearing others during loading.
+                {
+                    return Vector3.Distance(Speaker.m_Position, Listener.m_Position) < ServerVoice.c_MaxProximityChatDistance;
+                }
+            }
+
+            return false;
         }
         public void PlayerChangeAction(int Index, int Action, bool Broadcast = true)
         {

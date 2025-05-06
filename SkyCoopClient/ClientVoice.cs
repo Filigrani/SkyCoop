@@ -206,27 +206,27 @@ namespace SkyCoopClient
                     if (buffer.BufferFull)
                     {
                         Comps.NetworkPlayer player = PlayersManager.GetPlayer(clientBuffer.Key);
-                        if (player.m_AudioSource.clip != null)
+                        if (player.m_AudioSource3D.clip != null)
                         {
-                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
-                            player.m_AudioSource.clip.SetData(buffer.ReadAllBuffer(), 0);
-                            player.m_AudioSource.Play();
+                            //SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
+                            player.m_AudioSource3D.clip.SetData(buffer.ReadAllBuffer(), 0);
+                            player.m_AudioSource3D.Play();
 
                             VoiceBuffer[clientBuffer.Key] = buffer;
 
                         }
                         else
                         {
-                            player.m_AudioSource.clip = AudioClip.Create(                
+                            player.m_AudioSource3D.clip = AudioClip.Create(                
                                 "Voice",
                                 buffer.BufferLength,                
                                 1,
                                 48000,                
                                 true,
                                 false);
-                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
-                            player.m_AudioSource.clip.SetData(buffer.ReadAllBuffer(), 0);
-                            player.m_AudioSource.Play();
+                            //SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
+                            player.m_AudioSource3D.clip.SetData(buffer.ReadAllBuffer(), 0);
+                            player.m_AudioSource3D.Play();
 
                             VoiceBuffer[clientBuffer.Key] = buffer;
                         }
