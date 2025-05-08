@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!78 &1
+TagManager:
+  serializedVersion: 2
+  tags:
+  - Flesh
+  layers:
+  - Default
+  - TransparentFX
+  - Ignore Raycast
+  - 
+  - Water
+  - UI
+  - Decoration
+  - 
+  - Ground
+  - TerrainObject
+  - NPC_Trigger
+  - Buildings
+  - InteractiveNoColideGear
+  - ParticleKiller
+  - Player
+  - NoColidePlayer
+  - NPC
+  - Gear
+  - Container
+  - InteractiveProp
+  - Corpse
+  - Trigger
+  - SoundEmitter
+  - Weapon
+  - InteractiveNoColidePlayer
+  - TriggerIgnoreRaycast
+  - CharacterControllerColideOnly
+  - NPCBones
+  - GroundNoNavmesh
+  - InspectGear
+  - TriggerColideCapulse
+  - TrigerReverb
+  m_SortingLayers:
+  - name: Default
+    uniqueID: 0
+    locked: 0

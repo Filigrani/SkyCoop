@@ -1,0 +1,185 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!319 &31900000
+AvatarMask:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Melee
+  m_Mask: 00000000010000000100000000000000000000000100000001000000000000000000000000000000000000000000000000000000
+  m_Elements:
+  - m_Path: 
+    m_Weight: 1
+  - m_Path: hips
+    m_Weight: 0
+  - m_Path: hips/root
+    m_Weight: 0
+  - m_Path: hips/root/Spine1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/Neck
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/Neck/Head 1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/Neck/Head 1/Head_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/little_r_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/little_r_1/little_r_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/little_r_1/little_r_2/little_r_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/little_r_1/little_r_2/little_r_3/little_r_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/ring_r_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/ring_r_1/ring_r_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/ring_r_1/ring_r_2/ring_r_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/ring_r_1/ring_r_2/ring_r_3/ring_r_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/middle_r_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/middle_r_1/middle_r_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/middle_r_1/middle_r_2/middle_r_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/middle_r_1/middle_r_2/middle_r_3/middle_r_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/index_r_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/index_r_1/index_r_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/index_r_1/index_r_2/index_r_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/index_r_1/index_r_2/index_r_3/index_r_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/thumb_r_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/thumb_r_1/thumb_r_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/thumb_r_1/thumb_r_2/thumb_r_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_r/arms_r_01/arms_r_02/hand_r/thumb_r_1/thumb_r_2/thumb_r_3/thumb_r_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/little_l_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/little_l_1/little_l_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/little_l_1/little_l_2/little_l_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/little_l_1/little_l_2/little_l_3/little_l_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/ring_l_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/ring_l_1/ring_l_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/ring_l_1/ring_l_2/ring_l_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/ring_l_1/ring_l_2/ring_l_3/ring_l_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/middle_l_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/middle_l_1/middle_l_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/middle_l_1/middle_l_2/middle_l_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/middle_l_1/middle_l_2/middle_l_3/middle_l_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/index_l_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/index_l_1/index_l_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/index_l_1/index_l_2/index_l_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/index_l_1/index_l_2/index_l_3/index_l_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/thumb_l_1
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/thumb_l_1/thumb_l_2
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/thumb_l_1/thumb_l_2/thumb_l_3
+    m_Weight: 0
+  - m_Path: hips/root/Spine1/Spine2/Chest/chest_l/arms_l_01/arms_l_02/hand_l/thumb_l_1/thumb_l_2/thumb_l_3/thumb_l_3_end
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.R
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.R/Shin.R
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.R/Shin.R/Foot.R
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.R/Shin.R/Foot.R/Toe.R
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.R/Shin.R/Foot.R/Toe.R/Toe.R_end
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.L
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.L/Shin.L
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.L/Shin.L/Foot.L
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.L/Shin.L/Foot.L/Toe.L
+    m_Weight: 0
+  - m_Path: hips/root/Thigh.L/Shin.L/Foot.L/Toe.L/Toe.L_end
+    m_Weight: 0
+  - m_Path: hips/FOOT_IK_L_TARGET
+    m_Weight: 0
+  - m_Path: hips/FOOT_IK_L_TARGET/FOOT_IK_L_TARGET_end
+    m_Weight: 0
+  - m_Path: Boots2
+    m_Weight: 0
+  - m_Path: Head_item
+    m_Weight: 0
+  - m_Path: Pants2
+    m_Weight: 0
+  - m_Path: Arms_middle
+    m_Weight: 0
+  - m_Path: Shirt_03
+    m_Weight: 0
+  - m_Path: Arms_short
+    m_Weight: 0
+  - m_Path: Head
+    m_Weight: 0
+  - m_Path: Arms
+    m_Weight: 0
+  - m_Path: Armour
+    m_Weight: 0
+  - m_Path: Helmet_00
+    m_Weight: 0
+  - m_Path: Pants1
+    m_Weight: 0
+  - m_Path: Shirt_02
+    m_Weight: 0
+  - m_Path: Pants0
+    m_Weight: 0
+  - m_Path: Shirt_01
+    m_Weight: 0
+  - m_Path: Boots
+    m_Weight: 0
+  - m_Path: Shirt_00
+    m_Weight: 0
+  - m_Path: DefaultBrows
+    m_Weight: 0
+  - m_Path: DefaultHair
+    m_Weight: 0
