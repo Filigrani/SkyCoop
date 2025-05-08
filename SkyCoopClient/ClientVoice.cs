@@ -5,6 +5,7 @@ using OpenVoiceSharp;
 using System.Net;
 using SkyCoop;
 using UnityEngine;
+using Il2CppRewired;
 
 namespace SkyCoopClient
 {
@@ -20,12 +21,20 @@ namespace SkyCoopClient
         public BasicMicrophoneRecorder MicrophoneRecorder = new BasicMicrophoneRecorder(stereo: false);
         public int BufferSamples = VoiceUtilities.GetSampleSize(1) / 2;
         public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer = new Dictionary<int, CircularAudioBuffer<float>>();
+        public CircularAudioBuffer<float> m_AnnoncerBuffer = new CircularAudioBuffer<float>();
+
+        public AudioSource m_AnnoncerAudioSource = null;
 
         public ClientVoice()
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
+
+            m_AnnoncerBuffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
+
+            CreateAnnoncerAudioSource();
             StartRecording();
+
 
             m_Listener.NetworkErrorEvent += (fromPeer, error) =>
             {
@@ -109,6 +118,9 @@ namespace SkyCoopClient
                     case 1:
                         Welcome(dataReader);
                         break;
+                    case 2:
+                        ExecuteVoice(fromPeer, dataReader);
+                        break;
                 }
                 
 
@@ -141,6 +153,8 @@ namespace SkyCoopClient
             float[] samples = new float[decodedLength / 2];
             VoiceUtilities.Convert16BitToFloat(decodedData, samples);
 
+            //SkyCoop.Logger.Log("ExecuteVoice Recived " + samples.Length);
+
             if (VoiceBuffer.ContainsKey(clientId)) 
             {
                 CircularAudioBuffer<float> buffer = VoiceBuffer[clientId];
@@ -152,6 +166,27 @@ namespace SkyCoopClient
                 CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
                 buffer.PushChunk(samples);
                 VoiceBuffer.Add(clientId, buffer);
+            }
+        }
+
+        public void ExecuteAnnoncerAudio(NetDataReader Reader)
+        {
+            byte[] Data = new byte[Reader.GetInt()];
+            Reader.GetBytes(Data, Data.Length);
+
+            (byte[] decodedData, int decodedLength) = VoiceInterface.WhenDataReceived(Data, Data.Length);
+            float[] samples = new float[decodedLength / 2];
+            VoiceUtilities.Convert16BitToFloat(decodedData, samples);
+            m_AnnoncerBuffer.PushChunk(samples);
+        }
+
+        public void CreateAnnoncerAudioSource()
+        {
+            if(m_AnnoncerAudioSource == null)
+            {
+                GameObject Annon = new GameObject();
+                m_AnnoncerAudioSource = Annon.AddComponent<AudioSource>();
+                SceneManager.DontDestroyOnLoad(Annon);
             }
         }
 
@@ -229,6 +264,27 @@ namespace SkyCoopClient
 
                             VoiceBuffer[clientBuffer.Key] = buffer;
                         }
+                    }
+                }
+
+                if (m_AnnoncerBuffer.BufferFull)
+                {
+                    if (m_AnnoncerAudioSource.clip != null)
+                    {
+                        m_AnnoncerAudioSource.clip.SetData(m_AnnoncerBuffer.ReadAllBuffer(), 0);
+                        m_AnnoncerAudioSource.Play();
+                    }
+                    else
+                    {
+                        m_AnnoncerAudioSource.clip = AudioClip.Create(
+                            "Voice",
+                            m_AnnoncerBuffer.BufferLength,
+                            1,
+                            48000,
+                            true,
+                            false);
+                        m_AnnoncerAudioSource.clip.SetData(m_AnnoncerBuffer.ReadAllBuffer(), 0);
+                        m_AnnoncerAudioSource.Play();
                     }
                 }
             }

@@ -27,6 +27,15 @@ namespace SkyCoop
             {
                 Application.runInBackground = true; // Always running in bg
             }
+            GameManager.m_IsPaused = false;
+        }
+        [HarmonyLib.HarmonyPatch(typeof(InputManager), "PauseGame")]
+        public static class InputManager_DuckYOuPause
+        {
+            public static void Postfix()
+            {
+                GameManager.m_IsPaused = false;
+            }
         }
 
         [Obsolete]

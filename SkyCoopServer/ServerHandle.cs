@@ -60,5 +60,21 @@ namespace SkyCoopServer
         {
             ServerInstance.m_PlayersData.PlayerFire(Client.Id);
         }
+        public static void ClientDamageOtherClient(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            float Damage = Reader.GetFloat();
+            int PlayerID = Reader.GetInt();
+            int BodyPart = Reader.GetInt();
+            bool Melee = Reader.GetBool();
+            string MeleeName = Reader.GetString();
+            ServerSend.SendDamageToPlayer(ServerInstance.GetClient(PlayerID), Damage, PlayerID, BodyPart, Melee, MeleeName);
+        }
+        public static void ClientProjectile(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            Vector3 Pos = Reader.ReadVector3();
+            Quaternion Rot = Reader.ReadQuaternion();
+            string ProjectileName = Reader.GetString();
+            ServerSend.SendProjectile(Client, Pos, Rot, ProjectileName, ServerInstance);
+        }
     }
 }

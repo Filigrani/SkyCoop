@@ -140,5 +140,21 @@ namespace SkyCoop
                 Player.DoFire();
             }
         }
+        public static void ClientDamagesMe(NetDataReader Reader)
+        {
+            float Damage = Reader.GetFloat();
+            int PlayerID = Reader.GetInt();
+            Comps.PlayerDamageColider.DamageZone BodyPart = (Comps.PlayerDamageColider.DamageZone)Reader.GetInt();
+            bool Melee = Reader.GetBool();
+            string MeleeName = Reader.GetString();
+            PlayersManager.OtherPlayerDamageMe(Damage, PlayerID, BodyPart, Melee, MeleeName);
+        }
+        public static void ClientProjectile(NetDataReader Reader)
+        {
+            Vector3 Pos = Reader.ReadVector3Unity();
+            Quaternion Rot = Reader.ReadQuaternionUnity();
+            string ProjectileName = Reader.GetString();
+            PlayersManager.HandleProjectileSync(Pos, Rot, ProjectileName);
+        }
     }
 }

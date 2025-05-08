@@ -99,5 +99,43 @@ namespace SkyCoopServer
             writer.Put(FromClient);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+        public static void SendDamageToPlayer(NetPeer Client, float Damage, int PlayerID, int BodyPart, bool Melee, string MeleeWeapon = "")
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientDamageOtherClient);
+            writer.Put(Damage);
+            writer.Put(PlayerID);
+            writer.Put(BodyPart);
+            writer.Put(Melee);
+            writer.Put(MeleeWeapon);
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientProjectile);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            writer.Put(ProjectileName);
+
+            DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
+
+            foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
+            {
+                if(p.m_PlayerID != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    if(Shooter.m_Scene == p.m_Scene)
+                    {
+                        NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);
+                        if (Peer != null)
+                        {
+                            Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -4,10 +4,13 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Il2Cpp;
+using Il2CppTLD.Gear;
 using Il2CppTLD.UI;
 using MelonLoader;
 using SkyCoop;
 using UnityEngine;
+using static Il2Cpp.PlayerManager;
+using UnityEngine.AddressableAssets;
 
 namespace SkyCoopClient
 {
@@ -57,6 +60,14 @@ namespace SkyCoopClient
         private static class Panel_Log_Enable
         {
             private static bool Prefix(Panel_Log __instance)
+            {
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_RecipeBook), "Enable")]
+        private static class Panel_RecipeBook_Enable
+        {
+            private static bool Prefix(Panel_RecipeBook __instance)
             {
                 return false;
             }
@@ -182,7 +193,10 @@ namespace SkyCoopClient
                 {
                     //GameManager.m_WeatherTransition.enabled = false;
                     GameManager.m_WeatherTransition.m_DefaultStartWeather = WeatherStage.Clear;
-                    GameManager.m_WeatherTransition.m_CurrentWeatherSet.SetDirty();
+                    if (GameManager.m_WeatherTransition.m_CurrentWeatherSet)
+                    {
+                        GameManager.m_WeatherTransition.m_CurrentWeatherSet.SetDirty();
+                    }
                     GameManager.m_WeatherTransition.ActivateDefaultWeatherSet();
                     WeatherTransition.m_WeatherTransitionTimeScalar = 1;
                 }
@@ -237,15 +251,20 @@ namespace SkyCoopClient
                 RadialSpawnManager.m_RadialSpawnObjects.Clear();
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GearItem), "ManualStart")]
-        private static class GearItem_ManualStart
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "AllScenesLoaded")]
+        private static class GameManager_AllScenesLoaded
         {
-            private static void Prefix(GearItem __instance)
+            private static void Postfix(GameManager __instance)
             {
-                __instance.m_SpawnChance = 0;
-                if (__instance.m_RolledSpawnChance)
+                SkyCoop.Logger.Log(ConsoleColor.Cyan, "Scenes loaded");
+
+                for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
                 {
-                    UnityEngine.Object.Destroy(__instance.gameObject);
+                    GearItem item = GearManager.m_Gear[i];
+                    if (!item.m_HasBeenOwnedByPlayer && !item.m_BeenInPlayerInventory)
+                    {
+                        GearManager.DestroyGearObject(item);
+                    }
                 }
             }
         }
@@ -264,7 +283,7 @@ namespace SkyCoopClient
         {
             private static void Postfix(Hunger __instance)
             {
-                __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories;
+                __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories*0.9f;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Thirst), "Update")]
@@ -272,7 +291,7 @@ namespace SkyCoopClient
         {
             private static void Postfix(Thirst __instance)
             {
-                __instance.m_CurrentThirst = 0;
+                __instance.m_CurrentThirst = 15;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(EmergencyStim), "ApplyEmergencyStimExitEffects")]
@@ -292,7 +311,8 @@ namespace SkyCoopClient
             {
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
-                    return true;
+                    PlayersManager.RespawnMe();
+                    return false;
                 }
                 __instance.m_CurrentHP = 25f;
                 GameManager.GetBloodLossComponent().Cure();
@@ -319,27 +339,6 @@ namespace SkyCoopClient
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "CanUseFoodInventoryItem")]
-        private static class PlayerManager_CanUseFoodInventoryItem
-        {
-            private static bool Prefix(PlayerManager __instance)
-            {
-                return false;
-            }
-            private static void Postfix(PlayerManager __instance, bool __result)
-            {
-                __result = true;
-            }
-        }
-
-        public void Revive()
-        {
-            GameManager.GetBrokenBody().Cure(AfflictionOptions.None);
-            GameManager.m_Condition.m_CurrentHP = 25f;
-            GameManager.GetBloodLossComponent().Cure();
-            GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
-        }
-
         [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Awake")]
         private static class LoadScene_Awake
         {
@@ -361,6 +360,42 @@ namespace SkyCoopClient
             private static void Postfix(LoadingZone __instance)
             {
                 __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Hypothermia), "HypothermiaStart")]
+        private static class Hypothermia_HypothermiaStart
+        {
+            private static bool Prefix(Hypothermia __instance)
+            {
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Hypothermia), "Start")]
+        private static class Hypothermia_Start
+        {
+            private static void Postfix(Hypothermia __instance)
+            {
+                __instance.m_SuppressHypothermia = true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(StartGear), "AddAllToInventory")]
+        private static class StartGear_AddAllToInventory
+        {
+            private static bool Prefix(StartGear __instance)
+            {
+                GearItem Revolver = PlayersManager.GiveItemToPlayer("GEAR_Revolver");
+                Revolver.m_GunItem.FillClipAtCondition(100);
+
+                GearItem Rifle = PlayersManager.GiveItemToPlayer("GEAR_Rifle");
+                Rifle.m_GunItem.FillClipAtCondition(100);
+                GameManager.GetLifeAfterDeathManager().m_HeldItem = Rifle;
+
+                PlayersManager.GiveItemToPlayer("GEAR_HeavyBandage", 5);
+                PlayersManager.GiveItemToPlayer("GEAR_EmergencyStim");
+                PlayersManager.GiveItemToPlayer("GEAR_Knife");
+                PlayersManager.GiveItemToPlayer("GEAR_RifleAmmoSingle", 30);
+                PlayersManager.GiveItemToPlayer("GEAR_RevolverAmmoSingle", 30);
+                return false;
             }
         }
     }

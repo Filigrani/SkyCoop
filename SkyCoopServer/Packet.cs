@@ -22,6 +22,8 @@ namespace SkyCoopServer
             ClientCrouch,
             ClientAction,
             ClientFire,
+            ClientDamageOtherClient,
+            ClientProjectile,
         }
 
         public static void Write(this NetDataWriter Writer, string Message)

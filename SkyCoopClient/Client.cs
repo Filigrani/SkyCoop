@@ -11,8 +11,8 @@ namespace SkyCoop
 {
     public class Client
     {
-        public static int m_ConnectPort = 26950;
-        public static int m_LocalPort = 26951;
+        public static int m_ConnectPort = 37855;
+        public static int m_LocalPort = 37856;
         public static int m_Protocol = 1;
 
         public delegate void PacketHandler(NetDataReader Reader);
@@ -27,6 +27,8 @@ namespace SkyCoop
             { (int)Packet.Type.ClientCrouch, ClientHandle.ClientCrouch },
             { (int)Packet.Type.ClientAction, ClientHandle.ClientAction },
             { (int)Packet.Type.ClientFire, ClientHandle.ClientFire },
+            { (int)Packet.Type.ClientDamageOtherClient, ClientHandle.ClientDamagesMe },
+            { (int)Packet.Type.ClientProjectile, ClientHandle.ClientProjectile },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

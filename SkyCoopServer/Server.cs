@@ -5,7 +5,7 @@ namespace SkyCoopServer
 {
     public class Server
     {
-        public int m_Port = 26950;
+        public int m_Port = 37855;
 
         public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
         public EventBasedNetListener m_Listener;
@@ -28,6 +28,8 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientCrouch, ServerHandle.ClientCrouch },
             { (int)Packet.Type.ClientAction, ServerHandle.ClientAction },
             { (int)Packet.Type.ClientFire, ServerHandle.ClientFire },
+            { (int)Packet.Type.ClientDamageOtherClient, ServerHandle.ClientDamageOtherClient },
+            { (int)Packet.Type.ClientProjectile, ServerHandle.ClientProjectile },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

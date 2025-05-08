@@ -90,10 +90,26 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendVoice(byte[] VoiceSample)
+        public static void SendDamageToPlayer(float Damage, int PlayerID, Comps.PlayerDamageColider.DamageZone BodyPart, bool Melee, string MeleeWeapon = "")
         {
             NetDataWriter writer = new NetDataWriter();
-            writer.Put(VoiceSample);
+            writer.Put((int)Packet.Type.ClientDamageOtherClient);
+            writer.Put(Damage);
+            writer.Put(PlayerID);
+            writer.Put((int)BodyPart);
+            writer.Put(Melee);
+            writer.Put(MeleeWeapon);
+            SendToHost(writer);
+        }
+        public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName)
+        {
+            //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientProjectile);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            writer.Put(ProjectileName);
             SendToHost(writer);
         }
     }

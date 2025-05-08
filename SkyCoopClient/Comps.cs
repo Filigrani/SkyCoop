@@ -8,6 +8,8 @@ using Il2CppRewired;
 using UnityEngine.XR;
 using SkyCoopServer;
 using Il2CppSystem.Xml.Serialization;
+using MelonLoader;
+using Il2CppTLD.Interactions;
 
 namespace SkyCoop
 {
@@ -20,6 +22,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<UiButtonSettingHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayer>();
             ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerGear>();
+            ClassInjector.RegisterTypeInIl2Cpp<PlayerDamageColider>();
+            ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerBullet>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -47,6 +51,79 @@ namespace SkyCoop
             public OtherPlayerGear(IntPtr ptr) : base(ptr) { }
             public string m_GearName = "";
             public NetworkPlayer.GearHandPose m_HandPose = 0; 
+        }
+        public class OtherPlayerBullet : MonoBehaviour
+        {
+            public OtherPlayerBullet(IntPtr ptr) : base(ptr) { }
+        }
+
+        public class PlayerDamageColider : MonoBehaviour
+        {
+            public PlayerDamageColider(IntPtr ptr) : base(ptr) { }
+            public NetworkPlayer m_Player = null;
+            public float m_DamageScaler = 1;
+            public DamageZone m_DamageZone = PlayerDamageColider.DamageZone.Head;
+            public enum DamageZone
+            {
+                Head = 0,
+                Chest = 1,
+                RightArm = 2,
+                LeftArm = 3,
+                RightLeg = 4,
+                LeftLeg = 5,
+            }
+
+            public void Start()
+            {
+                gameObject.tag = "Flesh";
+
+                //AkSoundEngine.SetSwitch(SWITCHES.AUDIOMATERIALS.GROUP, SWITCHES.AUDIOMATERIALS.SWITCH.FLESH, GameAudioManager.GetSoundEmitterFromGameObject(m_Player.gameObject));
+
+                string ObjName = gameObject.name;
+                if (ObjName.StartsWith("Spine"))
+                {
+                    m_DamageScaler = 1;
+                    m_DamageZone = DamageZone.Chest;
+                }
+                else if (ObjName.StartsWith("arms") || ObjName.StartsWith("hand"))
+                {
+                    m_DamageScaler = 0.8f;
+                    if (ObjName.Contains("_l_"))
+                    {
+                        m_DamageZone = DamageZone.LeftArm;
+                    }
+                    else
+                    {
+                        m_DamageZone = DamageZone.RightArm;
+                    }
+                }
+                else if (ObjName == "Head")
+                {
+                    m_DamageScaler = 1.5f;
+                    m_DamageZone = DamageZone.Head;
+                }
+                else if (ObjName.StartsWith("Thigh") || ObjName.StartsWith("Shin") || ObjName.StartsWith("Foot"))
+                {
+                    m_DamageScaler = 0.5f;
+                    if (ObjName.Contains(".R"))
+                    {
+                        m_DamageZone = DamageZone.LeftLeg;
+                    }
+                    else
+                    {
+                        m_DamageZone = DamageZone.RightLeg;
+                    }
+                }
+            }
+            public void OnCollisionEnter(Collision col)
+            {
+                if (col.gameObject.GetComponent<ArrowItem>() != null)
+                {
+                    ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
+                    ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
+                    SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
+                }
+            }
         }
 
         public class NetworkPlayer : MonoBehaviour
@@ -188,6 +265,19 @@ namespace SkyCoop
                 }
             }
 
+            public void AddInteraction()
+            {
+                LocalizedString Str = new LocalizedString();
+                Str.m_LocalizationID = "Типок";
+                SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
+                SI.m_DefaultHoverText = Str;
+                SI.HoverText = "Типок";
+                SI.m_CanInteract = true;
+                InteractionEventEntry Event = new InteractionEventEntry();
+                Event.m_EventType = InteractionEventType.PerformInteraction;
+                SI.m_EventEntries.Add(Event);
+            }
+
             public void LoadEquipment()
             {
                 AddPlaceholderHoldingGear(this, "GEAR_Rifle", GearHandPose.Rifle);
@@ -216,6 +306,16 @@ namespace SkyCoop
                 //ModMain.AddPlaceholderHoldingGear(this, "GEAR_ClothSheet", false);
                 //ModMain.AddPlaceholderHoldingGear(this, "GEAR_FireAxe", false);
                 //ModMain.AddPlaceholderHoldingGear(this, "CORPSE_Human_Frozen4", false);
+            }
+
+            public void CreateColiders()
+            {
+                CapsuleCollider[] Coliders = gameObject.GetComponentsInChildren<CapsuleCollider>();
+                foreach (CapsuleCollider col in Coliders)
+                {
+                    PlayerDamageColider Col = col.gameObject.AddComponent<PlayerDamageColider>();
+                    Col.m_Player = this;
+                }
             }
 
             public void AddAudioSource()
@@ -292,6 +392,14 @@ namespace SkyCoop
                     m_Animator.SetFloat("DirectionX", Mathf.Lerp(PreviousDirectionX, Mathf.Clamp(Direction.x, -1, 1), m_Smoother));
                     m_Animator.SetFloat("DirectionY", Mathf.Lerp(PreviousDirectionY, Mathf.Clamp(Direction.z, -1, 1), m_Smoother));
                 }
+                //SkyCoop.Logger.Log("Player "+m_PlayerID+" Animator Params:");
+                //SkyCoop.Logger.Log("Speed "+ m_Animator.GetFloat("Speed"));
+                //SkyCoop.Logger.Log("Gear " + m_Animator.GetInteger("Gear"));
+                //SkyCoop.Logger.Log("Action " + m_Animator.GetInteger("Action"));
+                //SkyCoop.Logger.Log("IsMoving " + m_Animator.GetBool("IsMoving"));
+                //SkyCoop.Logger.Log("Crouch " + m_Animator.GetBool("Crouch"));
+                //SkyCoop.Logger.Log("DirectionX " + m_Animator.GetFloat("DirectionX"));
+                //SkyCoop.Logger.Log("DirectionY " + m_Animator.GetFloat("DirectionY"));
             }
 
             void Update()
