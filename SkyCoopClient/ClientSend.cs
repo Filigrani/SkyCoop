@@ -106,6 +106,7 @@ namespace SkyCoop
             //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
             NetDataWriter writer = new NetDataWriter();
 
+
             writer.Put((int)Packet.Type.ClientProjectile);
             writer.Write(Position);
             writer.Write(Rotation);

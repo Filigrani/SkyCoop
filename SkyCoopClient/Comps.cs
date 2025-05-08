@@ -10,6 +10,7 @@ using SkyCoopServer;
 using Il2CppSystem.Xml.Serialization;
 using MelonLoader;
 using Il2CppTLD.Interactions;
+using Il2CppAK;
 
 namespace SkyCoop
 {
@@ -77,7 +78,7 @@ namespace SkyCoop
             {
                 gameObject.tag = "Flesh";
 
-                //AkSoundEngine.SetSwitch(SWITCHES.AUDIOMATERIALS.GROUP, SWITCHES.AUDIOMATERIALS.SWITCH.FLESH, GameAudioManager.GetSoundEmitterFromGameObject(m_Player.gameObject));
+                //AkSoundEngine.SetSwitch(SWITCHES.MATERIALTAG.GROUP, SWITCHES.MATERIALTAG.SWITCH.FLESH, GameAudioManager.GetSoundEmitterFromGameObject(m_Player.gameObject));
 
                 string ObjName = gameObject.name;
                 if (ObjName.StartsWith("Spine"))
@@ -123,6 +124,13 @@ namespace SkyCoop
                     ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
                     SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
                 }
+                if (col.gameObject.GetComponent<FlareGunRoundItem>() != null)
+                {
+                    col.gameObject.layer = vp_Layer.Trigger;
+                    SkyCoop.Logger.Log("Flaregun shot colided other player, and dealing damage");
+                    ClientSend.SendDamageToPlayer(PlayersManager.GetDamageValueForPlayer(25, GunType.FlareGun), m_Player.m_PlayerID, m_DamageZone, false, "FlareGun");
+                    col.transform.SetParent(null);
+                }
             }
         }
 
@@ -141,6 +149,7 @@ namespace SkyCoop
             public Actions m_Action = Actions.None;
             public AudioSource m_AudioSource3D;
             public AudioSource m_AudioSource2D;
+            public List<Collider> m_PlayerColiders = new List<Collider>();
 
             public enum GearHandPose
             {
@@ -308,6 +317,14 @@ namespace SkyCoop
                 //ModMain.AddPlaceholderHoldingGear(this, "CORPSE_Human_Frozen4", false);
             }
 
+            public void SetIgnorePhysicsForObject(GameObject obj)
+            {
+                foreach (Collider col in m_PlayerColiders)
+                {
+                    UnityEngine.Physics.IgnoreCollision(obj.GetComponent<Collider>(), col, true);
+                }
+            }
+
             public void CreateColiders()
             {
                 CapsuleCollider[] Coliders = gameObject.GetComponentsInChildren<CapsuleCollider>();
@@ -316,6 +333,8 @@ namespace SkyCoop
                     PlayerDamageColider Col = col.gameObject.AddComponent<PlayerDamageColider>();
                     Col.m_Player = this;
                 }
+                GameAudioManager.SetMaterialSwitch("Flesh", gameObject);
+                m_PlayerColiders.AddRange(Coliders);
             }
 
             public void AddAudioSource()

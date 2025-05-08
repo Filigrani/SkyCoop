@@ -116,6 +116,7 @@ namespace SkyCoopServer
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientProjectile);
+            writer.Put(Client.Id);
             writer.Write(Position);
             writer.Write(Rotation);
             writer.Put(ProjectileName);

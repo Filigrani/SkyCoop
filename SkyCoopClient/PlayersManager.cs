@@ -15,6 +15,7 @@ using static Il2Cpp.PlayerManager;
 using UnityEngine.AddressableAssets;
 using static SkyCoop.Comps;
 using Il2CppRewired.Demos;
+using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoop
 {
@@ -281,19 +282,33 @@ namespace SkyCoop
 
             MeleeManager.MeleeDescripter DmgInfo;
 
-            if (Meele)
-            {
-                DmgInfo = MeleeManager.GetMeelePlayerInfo(MeleeWeapon);
-            }
-            else
+            if(MeleeWeapon == "FlareGun")
             {
                 DmgInfo = new MeleeManager.MeleeDescripter();
                 DmgInfo.m_PlayerDamage = damage;
                 DmgInfo.m_AnimalDamage = 0;
-                DmgInfo.m_BloodLoss = true;
+                DmgInfo.m_BloodLoss = false;
                 DmgInfo.m_ClothingTearing = true;
-                DmgInfo.m_Pain = false;
+                DmgInfo.m_Pain = true;
             }
+            else
+            {
+                if (Meele)
+                {
+                    DmgInfo = MeleeManager.GetMeelePlayerInfo(MeleeWeapon);
+                }
+                else
+                {
+                    DmgInfo = new MeleeManager.MeleeDescripter();
+                    DmgInfo.m_PlayerDamage = damage;
+                    DmgInfo.m_AnimalDamage = 0;
+                    DmgInfo.m_BloodLoss = true;
+                    DmgInfo.m_ClothingTearing = true;
+                    DmgInfo.m_Pain = false;
+                }
+            }
+
+
 
             string DamageCase = "Player";
             string Extra = " shoot you";
@@ -451,6 +466,11 @@ namespace SkyCoop
                 }
             }
 
+            if(MeleeWeapon == "FlareGun")
+            {
+                GameManager.GetBurnsComponent().BurnsStart(DamageCase, true, true, AfflictionOptions.PlayFX);
+            }
+
             GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Il2CppVoice.Priority.Critical, PlayerVoice.Options.None);
 
             Transform V3 = GameManager.GetPlayerTransform();
@@ -470,6 +490,10 @@ namespace SkyCoop
             if(Weapon == GunType.Revolver)
             {
                 return 30;
+            }
+            if (Weapon == GunType.FlareGun)
+            {
+                return 20;
             }
             return Damage;
         }
@@ -547,6 +571,18 @@ namespace SkyCoop
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(GunItem), "Fired")]
+        internal class GunItem_Fired
+        {
+            public static void Postfix(GunItem __instance)
+            {
+                if (__instance.m_GunType == GunType.FlareGun)
+                {
+                    Transform T = GameManager.GetVpFPSCamera().CurrentShooter.m_Camera.transform;
+                    ClientSend.SendProjectile(T.position, T.rotation, "GEAR_FlareGunAmmoSingle");
+                }
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(vp_Bullet), "SpawnImpactEffects")]
         private static class vp_Bullet_SpawnImpactEffects
         {
@@ -559,8 +595,6 @@ namespace SkyCoop
                     if (PlayerColider)
                     {
                         SkyCoop.Logger.Log("Bullet hits Player " + PlayerColider.m_Player.m_PlayerID + "  to the " + PlayerColider.m_DamageZone.ToString());
-
-
                         ClientSend.SendDamageToPlayer(GetDamageValueForPlayer(__instance.Damage, __instance.m_GunType) * PlayerColider.m_DamageScaler, PlayerColider.m_Player.m_PlayerID, PlayerColider.m_DamageZone, false);
                     }
                 }
@@ -623,7 +657,7 @@ namespace SkyCoop
             }
         }
 
-        public static void HandleProjectileSync(Vector3 Position, Quaternion Rotation, string ProjectileName)
+        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName)
         {
             SkyCoop.Logger.Log("HandleProjectileSync "+ ProjectileName);
             if(ProjectileName == "Rifle" || ProjectileName == "Revolver")
@@ -669,7 +703,20 @@ namespace SkyCoop
             }
             else if(ProjectileName == "GEAR_FlareGunAmmoSingle")
             {
-                FlareGunRoundItem.SpawnAndFire(AssetManager.GetAssetFromGame<GameObject>("GEAR_FlareGunAmmoSingle"), Position, Rotation);
+                GameObject FlareShot = FlareGunRoundItem.SpawnAndFire(AssetManager.GetAssetFromGame<GameObject>("GEAR_FlareGunAmmoSingle"), Position, Rotation);
+                NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
+                if (Player)
+                {
+                    Player.SetIgnorePhysicsForObject(FlareShot);
+                    GameObject localplayerColider = new GameObject();
+                    localplayerColider.name = "LocalPlayerColider";
+                    BoxCollider Colider = localplayerColider.AddComponent<BoxCollider>();
+                    Colider.center = new Vector3(0, 0.028f, 0f);
+                    Colider.size = new Vector3(0.45f, 0.45f, 0.11f);
+                    Colider.extents = new Vector3(0.225f, 0.225f, 0.55f);
+                    localplayerColider.transform.SetParent(FlareShot.transform);
+                    localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
+                }
             }
             if (Bullet)
             {
@@ -678,6 +725,7 @@ namespace SkyCoop
             if (SoundObj)
             {
                 UnityEngine.Object.Instantiate<GameObject>(SoundObj, Position, Rotation);
+                UnityEngine.Object.Destroy(SoundObj, 5);
             }
         }
 

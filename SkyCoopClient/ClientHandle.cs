@@ -151,10 +151,11 @@ namespace SkyCoop
         }
         public static void ClientProjectile(NetDataReader Reader)
         {
+            int ShooterID = Reader.GetInt();
             Vector3 Pos = Reader.ReadVector3Unity();
             Quaternion Rot = Reader.ReadQuaternionUnity();
             string ProjectileName = Reader.GetString();
-            PlayersManager.HandleProjectileSync(Pos, Rot, ProjectileName);
+            PlayersManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName);
         }
     }
 }
