@@ -1,11 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace SkyCoopServer
 {
@@ -66,8 +61,10 @@ namespace SkyCoopServer
             int PlayerID = Reader.GetInt();
             int BodyPart = Reader.GetInt();
             bool Melee = Reader.GetBool();
-            string MeleeName = Reader.GetString();
-            ServerSend.SendDamageToPlayer(ServerInstance.GetClient(PlayerID), Damage, PlayerID, BodyPart, Melee, MeleeName);
+            string GunType = Reader.GetString();
+            ServerSend.SendDamageToPlayer(ServerInstance.GetClient(PlayerID), Damage, PlayerID, BodyPart, Melee, GunType);
+
+            ServerInstance.m_PlayersData.m_Players[PlayerID].DealDamage(Client.Id, Damage, GunType);
         }
         public static void ClientProjectile(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {

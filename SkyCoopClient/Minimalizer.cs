@@ -1,16 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using Il2Cpp;
+﻿using Il2Cpp;
 using Il2CppTLD.Gear;
 using Il2CppTLD.UI;
-using MelonLoader;
 using SkyCoop;
 using UnityEngine;
-using static Il2Cpp.PlayerManager;
-using UnityEngine.AddressableAssets;
 
 namespace SkyCoopClient
 {

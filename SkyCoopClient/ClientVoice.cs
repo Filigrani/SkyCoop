@@ -5,7 +5,6 @@ using OpenVoiceSharp;
 using System.Net;
 using SkyCoop;
 using UnityEngine;
-using Il2CppRewired;
 
 namespace SkyCoopClient
 {

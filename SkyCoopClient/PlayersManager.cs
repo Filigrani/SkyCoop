@@ -1,21 +1,11 @@
 ﻿using Il2Cpp;
-using Il2CppTLD.Gameplay;
 using Il2CppTLD.Interactions;
 using Il2CppTLD.Stats;
-using MelonLoader;
 using SkyCoopClient;
-using SkyCoopServer;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using static Il2Cpp.PlayerManager;
 using UnityEngine.AddressableAssets;
 using static SkyCoop.Comps;
-using Il2CppRewired.Demos;
-using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoop
 {
@@ -282,33 +272,19 @@ namespace SkyCoop
 
             MeleeManager.MeleeDescripter DmgInfo;
 
-            if(MeleeWeapon == "FlareGun")
+            if (Meele)
+            {
+                DmgInfo = MeleeManager.GetMeelePlayerInfo(MeleeWeapon);
+            }
+            else
             {
                 DmgInfo = new MeleeManager.MeleeDescripter();
                 DmgInfo.m_PlayerDamage = damage;
                 DmgInfo.m_AnimalDamage = 0;
-                DmgInfo.m_BloodLoss = false;
+                DmgInfo.m_BloodLoss = true;
                 DmgInfo.m_ClothingTearing = true;
-                DmgInfo.m_Pain = true;
+                DmgInfo.m_Pain = false;
             }
-            else
-            {
-                if (Meele)
-                {
-                    DmgInfo = MeleeManager.GetMeelePlayerInfo(MeleeWeapon);
-                }
-                else
-                {
-                    DmgInfo = new MeleeManager.MeleeDescripter();
-                    DmgInfo.m_PlayerDamage = damage;
-                    DmgInfo.m_AnimalDamage = 0;
-                    DmgInfo.m_BloodLoss = true;
-                    DmgInfo.m_ClothingTearing = true;
-                    DmgInfo.m_Pain = false;
-                }
-            }
-
-
 
             string DamageCase = "Player";
             string Extra = " shoot you";
@@ -340,7 +316,6 @@ namespace SkyCoop
             }
 
 
-
             GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
             AfflictionBodyArea BodyArea = AfflictionBodyArea.Head;
 
@@ -364,6 +339,20 @@ namespace SkyCoop
                 case Comps.PlayerDamageColider.DamageZone.LeftLeg:
                     BodyArea = AfflictionBodyArea.LegLeft;
                     break;
+            }
+
+            switch (MeleeWeapon)
+            {
+                case "FlareGun":
+                    DmgInfo.m_BloodLoss = false;
+                    DmgInfo.m_Pain = true;
+                    GameManager.GetBurnsComponent().BurnsStart(DamageCase, true, true, AfflictionOptions.PlayFX);
+                    break;
+                case "Bow":
+                    DmgInfo.m_BloodLoss = false;
+                    AddArrowAffiction(BodyArea, DamageCase);
+                    break;
+
             }
 
             if (!HasArmor && !HasHelemet)
@@ -466,11 +455,6 @@ namespace SkyCoop
                 }
             }
 
-            if(MeleeWeapon == "FlareGun")
-            {
-                GameManager.GetBurnsComponent().BurnsStart(DamageCase, true, true, AfflictionOptions.PlayFX);
-            }
-
             GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Il2CppVoice.Priority.Critical, PlayerVoice.Options.None);
 
             Transform V3 = GameManager.GetPlayerTransform();
@@ -479,6 +463,20 @@ namespace SkyCoop
             GameAudioManager.SetMaterialSwitch("Flesh", Player);
             int num = (int)AkSoundEngine.PostEvent(Il2CppAK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
             GameAudioManager.SetAudioSourceTransform(Player, V3);
+        }
+
+        public static void AddArrowAffiction(AfflictionBodyArea Area, string Case)
+        {
+            BloodLoss bloodLossComponent = GameManager.GetBloodLossComponent();
+            bloodLossComponent.m_Locations.Add((int)Area);
+            bloodLossComponent.m_CausesLocIDs.Add("_ARROW_");
+            bloodLossComponent.m_ElapsedHoursList.Add(0.0f);
+            bloodLossComponent.m_DurationHoursList.Add(UnityEngine.Random.Range(bloodLossComponent.m_DurationHoursMin, bloodLossComponent.m_DurationHoursMax));
+
+            PlayerDamageEvent.SpawnDamageEvent("GAMEPLAY_ARROW", "GAMEPLAY_Affliction", "ico_ammo_arrow", InterfaceManager.m_FirstAidRedColor, true, 5f, 3f);
+
+            GameManager.GetLogComponent().AddAffliction(AfflictionType.BloodLoss, "_ARROW_");
+            GameManager.GetPlayerVoiceComponent().Play(bloodLossComponent.m_SoundToPlayBelowThreshold, Il2CppVoice.Priority.Critical);
         }
 
         public static float GetDamageValueForPlayer(float Damage, GunType Weapon)
@@ -595,7 +593,7 @@ namespace SkyCoop
                     if (PlayerColider)
                     {
                         SkyCoop.Logger.Log("Bullet hits Player " + PlayerColider.m_Player.m_PlayerID + "  to the " + PlayerColider.m_DamageZone.ToString());
-                        ClientSend.SendDamageToPlayer(GetDamageValueForPlayer(__instance.Damage, __instance.m_GunType) * PlayerColider.m_DamageScaler, PlayerColider.m_Player.m_PlayerID, PlayerColider.m_DamageZone, false);
+                        ClientSend.SendDamageToPlayer(GetDamageValueForPlayer(__instance.Damage, __instance.m_GunType) * PlayerColider.m_DamageScaler, PlayerColider.m_Player.m_PlayerID, PlayerColider.m_DamageZone, false, __instance.m_GunType.ToString());
                     }
                 }
             }
@@ -735,6 +733,70 @@ namespace SkyCoop
             private static void Postfix(BaseInteraction __instance)
             {
 
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(AfflictionButton), "SetCauseAndEffect")]
+        private static class AfflictionButton_SetCauseAndEffect
+        {
+            private static void Postfix(AfflictionButton __instance, string causeStr, AfflictionType affType, AfflictionBodyArea location, int index, string effectName, string spriteName)
+            {
+                if (!(causeStr == "_ARROW_"))
+                    return;
+                __instance.m_SpriteEffect.spriteName = "ico_ammo_arrow";
+                __instance.m_LabelEffect.text = Localization.Get("GAMEPLAY_Arrow");
+                __instance.m_LabelCause.text = "Player shot you";
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(AfflictionCoverflow), "SetAffliction")]
+        private static class AfflictionCoverflow_SetAffliction
+        {
+            private static void Postfix(AfflictionCoverflow __instance, Affliction affliction)
+            {
+                if (!(affliction.m_Cause == "_ARROW_"))
+                    return;
+                __instance.m_SpriteEffect.spriteName = "ico_ammo_arrow";
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Affliction), "UpdateSelectedAffliction", new Type[] { typeof(Affliction) })]
+        private static class Panel_Affliction_UpdateSelectedAffliction
+        {
+            private static void Postfix(Panel_Affliction __instance, Affliction affliction)
+            {
+                if (!(affliction.m_Cause == "_ARROW_"))
+                    return;
+                __instance.m_Label.text = Localization.Get("GAMEPLAY_Arrow");
+                __instance.m_LabelCause.text = "Player shot you";
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(BloodLoss), "BloodLossEnd")]
+        private static class BloodLoss_BloodLossEnd
+        {
+            private static bool Prefix(BloodLoss __instance, int index)
+            {
+                if (index < 0 || index >= __instance.m_CausesLocIDs.Count || !(__instance.m_CausesLocIDs[index] == "_ARROW_"))
+                    return true;
+                __instance.m_CausesLocIDs.RemoveAt(index);
+                __instance.m_Locations.RemoveAt(index);
+                __instance.m_ElapsedHoursList.RemoveAt(index);
+                __instance.m_DurationHoursList.RemoveAt(index);
+                PlayerDamageEvent.SpawnAfflictionEvent("GAMEPLAY_Arrow", "GAMEPLAY_Healed", "ico_ammo_arrow", InterfaceManager.m_FirstAidBuffColor);
+                Panel_FirstAid panelFirstAid;
+                if (InterfaceManager.TryGetPanel<Panel_FirstAid>(out panelFirstAid))
+                    panelFirstAid.UpdateDueToAfflictionHealed();
+                GameObject gameObject1 = Addressables.LoadAssetAsync<GameObject>("GEAR_Arrow").WaitForCompletion();
+                if (gameObject1)
+                {
+                    GameObject gameObject2 = GameObject.Instantiate<GameObject>(gameObject1, GameManager.GetPlayerTransform().position, GameManager.GetPlayerTransform().rotation);
+                    gameObject2.SetActive(true);
+                    GearItem component = gameObject2.GetComponent<GearItem>();
+                    component.CompleteSpawnFromCONSOLE();
+                    GameManager.GetPlayerManagerComponent().EnterInspectGearMode(component);
+                }
+                return false;
             }
         }
     }

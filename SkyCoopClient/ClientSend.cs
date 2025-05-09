@@ -1,13 +1,7 @@
 ﻿using LiteNetLib.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using SkyCoopServer;
 using UnityEngine;
 using static SkyCoopServer.Packet;
-using Il2Cpp;
 
 namespace SkyCoop
 {
@@ -90,7 +84,7 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendDamageToPlayer(float Damage, int PlayerID, Comps.PlayerDamageColider.DamageZone BodyPart, bool Melee, string MeleeWeapon = "")
+        public static void SendDamageToPlayer(float Damage, int PlayerID, Comps.PlayerDamageColider.DamageZone BodyPart, bool Melee, string GunType)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientDamageOtherClient);
@@ -98,7 +92,7 @@ namespace SkyCoop
             writer.Put(PlayerID);
             writer.Put((int)BodyPart);
             writer.Put(Melee);
-            writer.Put(MeleeWeapon);
+            writer.Put(GunType);
             SendToHost(writer);
         }
         public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName)

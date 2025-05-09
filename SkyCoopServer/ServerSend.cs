@@ -1,13 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Numerics;
-using System.Text;
-using System.Threading.Tasks;
-using static System.Formats.Asn1.AsnWriter;
-
 namespace SkyCoopServer
 {
     public class ServerSend
@@ -99,7 +92,7 @@ namespace SkyCoopServer
             writer.Put(FromClient);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
-        public static void SendDamageToPlayer(NetPeer Client, float Damage, int PlayerID, int BodyPart, bool Melee, string MeleeWeapon = "")
+        public static void SendDamageToPlayer(NetPeer Client, float Damage, int PlayerID, int BodyPart, bool Melee, string GunType)
         {
             NetDataWriter writer = new NetDataWriter();
 
@@ -108,7 +101,7 @@ namespace SkyCoopServer
             writer.Put(PlayerID);
             writer.Put(BodyPart);
             writer.Put(Melee);
-            writer.Put(MeleeWeapon);
+            writer.Put(GunType);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
         public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, Server ServerInstance)

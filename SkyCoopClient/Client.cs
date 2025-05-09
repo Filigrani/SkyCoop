@@ -1,11 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
-using MelonLoader;
-using System.Net;
 using SkyCoopServer;
-using MonoMod.Utils;
-using UnityEngine;
-using SkyCoopClient;
 
 namespace SkyCoop
 {

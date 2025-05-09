@@ -1,16 +1,9 @@
 ﻿
 using UnityEngine;
-using Il2CppCollections = Il2CppSystem.Collections.Generic;
 using Il2Cpp;
-using Il2CppInterop.Runtime.Attributes;
 using Il2CppInterop.Runtime.Injection;
-using Il2CppRewired;
-using UnityEngine.XR;
 using SkyCoopServer;
-using Il2CppSystem.Xml.Serialization;
-using MelonLoader;
 using Il2CppTLD.Interactions;
-using Il2CppAK;
 
 namespace SkyCoop
 {
@@ -123,6 +116,7 @@ namespace SkyCoop
                     ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
                     ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
                     SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
+                    ClientSend.SendDamageToPlayer(25f, m_Player.m_PlayerID, m_DamageZone, false, "Bow");
                 }
                 if (col.gameObject.GetComponent<FlareGunRoundItem>() != null)
                 {

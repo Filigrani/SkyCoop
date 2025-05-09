@@ -1,6 +1,5 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
-using System.Net;
 
 namespace SkyCoopServer
 {
