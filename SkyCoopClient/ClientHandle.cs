@@ -1,4 +1,5 @@
 ﻿using LiteNetLib.Utils;
+using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 
@@ -34,6 +35,7 @@ namespace SkyCoop
             Logger.Log(ConsoleColor.Cyan, "VoicePort: " + VoicePort);
 
             ModMain.Client.m_IsReady = true;
+            ModMain.Client.ProcessAllDelayedPackages();
             MenuHook.RemovePleaseWait();
             ModMain.SetupSurvivalSettings(GameMode, Seed, StartingRegion);
 
@@ -137,9 +139,8 @@ namespace SkyCoop
             float Damage = Reader.GetFloat();
             int PlayerID = Reader.GetInt();
             Comps.PlayerDamageColider.DamageZone BodyPart = (Comps.PlayerDamageColider.DamageZone)Reader.GetInt();
-            bool Melee = Reader.GetBool();
             string MeleeName = Reader.GetString();
-            PlayersManager.OtherPlayerDamageMe(Damage, PlayerID, BodyPart, Melee, MeleeName);
+            PlayersManager.OtherPlayerDamageMe(Damage, PlayerID, BodyPart, MeleeName);
         }
         public static void ClientProjectile(NetDataReader Reader)
         {
@@ -147,7 +148,29 @@ namespace SkyCoop
             Vector3 Pos = Reader.ReadVector3Unity();
             Quaternion Rot = Reader.ReadQuaternionUnity();
             string ProjectileName = Reader.GetString();
-            PlayersManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName);
+            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName);
+        }
+        public static void ClientProjectileThrow(NetDataReader Reader)
+        {
+            int ShooterID = Reader.GetInt();
+            Vector3 Pos = Reader.ReadVector3Unity();
+            Quaternion Rot = Reader.ReadQuaternionUnity();
+            string ProjectileName = Reader.GetString();
+            Vector3 Velocity = Reader.ReadVector3Unity();
+            Vector3 AngularVelocity = Reader.ReadVector3Unity();
+            float Fuse = Reader.GetFloat();
+            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, Velocity, AngularVelocity, Fuse);
+        }
+        public static void KillFeedMessage(NetDataReader Reader)
+        {
+            CanvasUI.AddKillFeedMessage(Reader.ReadKillFeedMessage());
+        }
+        public static void ClientName(NetDataReader Reader)
+        {
+            string ClientName = Reader.GetString();
+            int ClientID = Reader.GetInt();
+            Logger.Log(ConsoleColor.Cyan, "Player: " + ClientName+" with ID "+ClientID);
+            PlayersManager.SetPlayerName(ClientID, ClientName);
         }
     }
 }

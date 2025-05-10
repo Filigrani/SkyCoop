@@ -30,6 +30,15 @@ namespace SkyCoopServer
             return m_Players[Index];
         }
 
+        public void SetPlayerName(int Index, string Name)
+        {
+            DataStr.PlayerData Player = m_Players[Index];
+            if (Player != null)
+            {
+                Player.m_PlayerName = Name;
+            }
+        }
+
         public List<DataStr.PlayerData> GetPlayersOnScene(string Scene)
         {
             List<DataStr.PlayerData> ScenePlayers = new List<DataStr.PlayerData>();

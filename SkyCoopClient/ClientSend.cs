@@ -19,10 +19,9 @@ namespace SkyCoop
         {
             //TODO: Send here MAC address and nick name.
 
-            string Message = "I am connected!";
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.Welcome);
-            writer.Write(Message);
+            writer.Put(ModMain.GetNickName());
             SendToHost(writer);
         }
 
@@ -84,27 +83,53 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendDamageToPlayer(float Damage, int PlayerID, Comps.PlayerDamageColider.DamageZone BodyPart, bool Melee, string GunType)
+        public static void SendDamageToPlayer(float Damage, int Victim, Comps.PlayerDamageColider.DamageZone BodyPart, string Weapon, DataStr.DamageType DamageType, int Killer = -1)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientDamageOtherClient);
             writer.Put(Damage);
-            writer.Put(PlayerID);
+            writer.Put(Victim);
             writer.Put((int)BodyPart);
-            writer.Put(Melee);
-            writer.Put(GunType);
+            writer.Put(Weapon);
+            writer.Put((int)DamageType); // Only for server, this won't be send back to clients.
+            writer.Put(Killer);
             SendToHost(writer);
         }
         public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName)
         {
             //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
             NetDataWriter writer = new NetDataWriter();
-
-
             writer.Put((int)Packet.Type.ClientProjectile);
             writer.Write(Position);
             writer.Write(Rotation);
             writer.Put(ProjectileName);
+            SendToHost(writer);
+        }
+        public static void SendDeath(DataStr.DamageType DamageType, bool Knocked)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientDied);
+            writer.Put((int)DamageType);
+            writer.Put(Knocked);
+            SendToHost(writer);
+        }
+        public static void SendRevived(int Reviver)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRevived);
+            writer.Put(Reviver);
+            SendToHost(writer);
+        }
+        public static void SendProjectileThrow(Vector3 Position, Quaternion Rotation, string ProjectileName, Vector3 Velocity, Vector3 AngularVelocity, float fuseTime)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientProjectileThrow);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            writer.Put(ProjectileName);
+            writer.Write(Velocity);
+            writer.Write(AngularVelocity);
+            writer.Put(fuseTime);
             SendToHost(writer);
         }
     }

@@ -18,6 +18,11 @@ namespace SkyCoopServer
             ClientFire,
             ClientDamageOtherClient,
             ClientProjectile,
+            ClientDied,
+            ClientRevived,
+            KillFeedMessage,
+            ClientProjectileThrow,
+            ClientName,
         }
 
         public static void Write(this NetDataWriter Writer, string Message)
@@ -49,6 +54,37 @@ namespace SkyCoopServer
             Writer.Put(quat.Y);
             Writer.Put(quat.Z);
             Writer.Put(quat.W);
+        }
+
+        public static void Write(this NetDataWriter Writer, DataStr.KillFeedMessage Message)
+        {
+            Writer.Put(Message.m_Killer);
+            Writer.Put(Message.m_Victim);
+            Writer.Put(Message.m_Assist);
+            Writer.Put((int)Message.m_DeathReason);
+            Writer.Put(Message.m_Flags.Count);
+            foreach (DataStr.KillFeedFlag Flag in Message.m_Flags)
+            {
+                Writer.Put((int)Flag);
+            }
+        }
+
+        public static DataStr.KillFeedMessage ReadKillFeedMessage(this NetDataReader Reader)
+        {
+            DataStr.KillFeedMessage Message = new DataStr.KillFeedMessage();
+            Message.m_Killer = Reader.GetInt();
+            Message.m_Victim = Reader.GetInt();
+            Message.m_Assist = Reader.GetInt();
+            Message.m_DeathReason = (DataStr.DamageType)Reader.GetInt();
+            int Flags = Reader.GetInt();
+            if(Flags > 0)
+            {
+                for (int i = 0; i < Flags; i++)
+                {
+                    Message.m_Flags.Add((DataStr.KillFeedFlag)Reader.GetInt());
+                }
+            }
+            return Message;
         }
 
         public static Quaternion ReadQuaternion(this NetDataReader Reader)

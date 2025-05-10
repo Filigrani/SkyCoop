@@ -1,4 +1,5 @@
 ﻿using Il2Cpp;
+using Il2CppSteamworks;
 using Il2CppTLD.Gameplay;
 using Il2CppTLD.Scenes;
 using MelonLoader;
@@ -44,6 +45,7 @@ namespace SkyCoop
             Comps.RegisterComponents();
             AssetManager.PreloadMainBundle();
             AssetManager.RegisterIlegalGearsCommand();
+            WeaponsManager.InitDescriptors();
         }
 
         [Obsolete]
@@ -167,6 +169,11 @@ namespace SkyCoop
             GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
             GameManager.m_StartRegion = SelectedRegion;
             GameManager.m_Instance.LaunchSandbox();
+        }
+
+        public static string GetNickName()
+        {
+            return SteamFriends.GetPersonaName();
         }
     }
 }

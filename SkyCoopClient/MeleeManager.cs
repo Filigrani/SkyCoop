@@ -27,16 +27,6 @@ namespace SkyCoopClient
             "GEAR_Prybar",
         };
 
-        public class MeleeDescripter
-        {
-            public float m_PlayerDamage = 0;
-            public float m_AnimalDamage = 0;
-            public bool m_BloodLoss = false;
-            public bool m_Pain = false;
-            public bool m_ClothingTearing = false;
-            public float m_AttackSpeed = 1;
-        }
-
         public static bool IsMeleeWeapon(string GearName)
         {
             return s_MeleeWeapons.Contains(GearName);
@@ -58,52 +48,6 @@ namespace SkyCoopClient
             {
                 Mesh.SetActive(false);
             }
-        }
-        public static MeleeDescripter GetMeelePlayerInfo(string weapon)
-        {
-            MeleeDescripter Info = new MeleeDescripter();
-
-            if (weapon == "GEAR_Hatchet" || weapon == "GEAR_HatchetImprovised")
-            {
-                Info.m_PlayerDamage = 20;
-                Info.m_AnimalDamage = 45;
-                Info.m_BloodLoss = true;
-                Info.m_Pain = false;
-                Info.m_ClothingTearing = true;
-                Info.m_AttackSpeed = 1.1f;
-                return Info;
-            }
-            if (weapon == "GEAR_Hammer")
-            {
-                Info.m_PlayerDamage = 25;
-                Info.m_AnimalDamage = 55;
-                Info.m_BloodLoss = false;
-                Info.m_Pain = true;
-                Info.m_ClothingTearing = false;
-                Info.m_AttackSpeed = 1f;
-                return Info;
-            }
-            if (weapon == "GEAR_Prybar")
-            {
-                Info.m_PlayerDamage = 15;
-                Info.m_AnimalDamage = 40;
-                Info.m_BloodLoss = false;
-                Info.m_Pain = true;
-                Info.m_ClothingTearing = false;
-                Info.m_AttackSpeed = 1.2f;
-                return Info;
-            }
-            if (weapon == "GEAR_Knife" || weapon == "GEAR_KnifeImprovised" || weapon == "GEAR_JeremiahKnife" || weapon == "GEAR_KnifeScrapMetal")
-            {
-                Info.m_PlayerDamage = 17;
-                Info.m_AnimalDamage = 57;
-                Info.m_BloodLoss = true;
-                Info.m_Pain = false;
-                Info.m_ClothingTearing = true;
-                Info.m_AttackSpeed = 10f;
-                return Info;
-            }
-            return Info;
         }
 
         public static void AddViewModel(GameObject Mesh, string GearName)

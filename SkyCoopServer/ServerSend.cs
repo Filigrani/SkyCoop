@@ -92,16 +92,15 @@ namespace SkyCoopServer
             writer.Put(FromClient);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
-        public static void SendDamageToPlayer(NetPeer Client, float Damage, int PlayerID, int BodyPart, bool Melee, string GunType)
+        public static void SendDamageToPlayer(NetPeer Client, float Damage, int Killer, int BodyPart, string WeaponName)
         {
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientDamageOtherClient);
             writer.Put(Damage);
-            writer.Put(PlayerID);
+            writer.Put(Killer);
             writer.Put(BodyPart);
-            writer.Put(Melee);
-            writer.Put(GunType);
+            writer.Put(WeaponName);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
         public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, Server ServerInstance)
@@ -130,6 +129,61 @@ namespace SkyCoopServer
                     }
                 }
             }
+        }
+        public static void SendKillFeed(DataStr.KillFeedMessage Message, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.KillFeedMessage);
+            writer.Write(Message);
+            foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
+            {
+                NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);
+                if (Peer != null)
+                {
+                    Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                }
+            }
+        }
+        public static void SendProjectileThrow(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, Vector3 Velocity, Vector3 AngVelocity, float Fuse, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientProjectileThrow);
+            writer.Put(Client.Id);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            writer.Put(ProjectileName);
+            writer.Write(Velocity);
+            writer.Write(AngVelocity);
+            writer.Put(Fuse);
+
+            DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
+
+            foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
+            {
+                if (p.m_PlayerID != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    if (Shooter.m_Scene == p.m_Scene)
+                    {
+                        NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);
+                        if (Peer != null)
+                        {
+                            Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void SendClientName(NetPeer Client, int ClientID, string Name)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientName);
+            writer.Put(Name);
+            writer.Put(ClientID);
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
     }
 }

@@ -4,6 +4,8 @@ using Il2Cpp;
 using Il2CppInterop.Runtime.Injection;
 using SkyCoopServer;
 using Il2CppTLD.Interactions;
+using SkyCoopClient;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
 {
@@ -18,6 +20,9 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerGear>();
             ClassInjector.RegisterTypeInIl2Cpp<PlayerDamageColider>();
             ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerBullet>();
+            ClassInjector.RegisterTypeInIl2Cpp<StoneThrowHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerThrowHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerKillFeedHandle>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -49,6 +54,48 @@ namespace SkyCoop
         public class OtherPlayerBullet : MonoBehaviour
         {
             public OtherPlayerBullet(IntPtr ptr) : base(ptr) { }
+        }
+        public class NoiseMakerKillFeedHandle : MonoBehaviour
+        {
+            public NoiseMakerKillFeedHandle(IntPtr ptr) : base(ptr) { }
+            public int m_ThrowerID = -1;
+        }
+
+        public class StoneThrowHook : MonoBehaviour
+        {
+            public StoneThrowHook(IntPtr ptr) : base(ptr) { }
+            public StoneItem m_StoneItem;
+            void Update()
+            {
+                if(m_StoneItem == null)
+                {
+                    m_StoneItem = GetComponent<StoneItem>();
+                }
+                if (m_StoneItem && m_StoneItem.m_Thrown)
+                {
+                    Rigidbody Body = GetComponent<Rigidbody>();
+                    ClientSend.SendProjectileThrow(m_StoneItem.transform.position, m_StoneItem.transform.rotation, "GEAR_Stone", Body.velocity, Body.angularVelocity, 0);
+                    UnityEngine.Object.Destroy(this);
+                }
+            }
+        }
+        public class NoiseMakerThrowHook : MonoBehaviour
+        {
+            public NoiseMakerThrowHook(IntPtr ptr) : base(ptr) { }
+            public NoiseMakerItem m_NoiseMaker;
+            void Update()
+            {
+                if (m_NoiseMaker == null)
+                {
+                    m_NoiseMaker = GetComponent<NoiseMakerItem>();
+                }
+                if (m_NoiseMaker && m_NoiseMaker.m_Thrown)
+                {
+                    Rigidbody Body = GetComponent<Rigidbody>();
+                    ClientSend.SendProjectileThrow(m_NoiseMaker.transform.position, m_NoiseMaker.transform.rotation, "GEAR_NoiseMaker", Body.velocity, Body.angularVelocity, m_NoiseMaker.m_GearItem.GetNormalizedCondition());
+                    UnityEngine.Object.Destroy(this);
+                }
+            }
         }
 
         public class PlayerDamageColider : MonoBehaviour
@@ -116,14 +163,28 @@ namespace SkyCoop
                     ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
                     ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
                     SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
-                    ClientSend.SendDamageToPlayer(25f, m_Player.m_PlayerID, m_DamageZone, false, "Bow");
+                    WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor(col.gameObject.name);
+                    ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, col.gameObject.name, Descriptor.m_DamageType);
                 }
                 if (col.gameObject.GetComponent<FlareGunRoundItem>() != null)
                 {
                     col.gameObject.layer = vp_Layer.Trigger;
                     SkyCoop.Logger.Log("Flaregun shot colided other player, and dealing damage");
-                    ClientSend.SendDamageToPlayer(PlayersManager.GetDamageValueForPlayer(25, GunType.FlareGun), m_Player.m_PlayerID, m_DamageZone, false, "FlareGun");
+                    WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_FlareGun");
+                    ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, "GEAR_FlareGun", Descriptor.m_DamageType);
                     col.transform.SetParent(null);
+                }
+                if (col.gameObject.GetComponent<NoiseMakerItem>() != null && col.gameObject.GetComponent<Comps.OtherPlayerBullet>() == null)
+                {
+                    SkyCoop.Logger.Log("Noisemaker hits player and dealing damage");
+                    WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_NoiseMaker");
+                    ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, "GEAR_NoiseMaker", Descriptor.m_DamageType);
+                }
+                if (col.gameObject.GetComponent<StoneItem>() != null && col.gameObject.GetComponent<Comps.OtherPlayerBullet>() == null)
+                {
+                    SkyCoop.Logger.Log("Stone hits player and dealing damage");
+                    WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_Stone");
+                    ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, "GEAR_Stone", Descriptor.m_DamageType);
                 }
             }
         }
@@ -132,6 +193,7 @@ namespace SkyCoop
         {
             public NetworkPlayer(IntPtr ptr) : base(ptr) { }
             public int m_PlayerID = 0;
+            public string m_PlayerName = "";
             public Vector3 m_Position = Vector3.zero;
             public Quaternion m_Rotation = Quaternion.identity;
             public float m_SecondsBeforeHide = 5f;

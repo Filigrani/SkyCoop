@@ -2,6 +2,7 @@
 using Il2CppTLD.Gear;
 using Il2CppTLD.UI;
 using SkyCoop;
+using SkyCoopServer;
 using UnityEngine;
 
 namespace SkyCoopClient
@@ -301,11 +302,26 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Condition __instance)
             {
+                DataStr.DamageType DamageType = DataStr.DamageType.Unknown;
+
+                SkyCoop.Logger.Log("PlayerDeath Cause " + __instance.m_CauseOfDeath);
+
+                if (__instance.m_CauseOfDeath == DamageSource.BloodLoss)
+                {
+                    DamageType = DataStr.DamageType.BloodLoss;
+                }
+                else
+                {
+                    DamageType = PlayersManager.m_LastDamageType;
+                }
+                SkyCoop.Logger.Log("PlayerDeath DamageType " + DamageType);
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
-                    PlayersManager.RespawnMe();
+                    PlayersManager.RespawnMe(DamageType);
                     return false;
                 }
+                ClientSend.SendDeath(DamageType, true);
+                //PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
                 __instance.m_CurrentHP = 25f;
                 GameManager.GetBloodLossComponent().Cure();
                 GameManager.GetBloodLossComponent().BloodLossStartOverrideArea(AfflictionBodyArea.Chest, "Knocked down", true, AfflictionOptions.PlayFX);

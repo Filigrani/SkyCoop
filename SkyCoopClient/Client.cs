@@ -10,6 +10,18 @@ namespace SkyCoop
         public static int m_LocalPort = 37856;
         public static int m_Protocol = 1;
 
+        public class DelayedPackage
+        {
+            public int m_PackID = 0;
+            public NetDataReader m_Reader = null;
+
+            public DelayedPackage(int PackID, NetDataReader Reader)
+            {
+                m_PackID = PackID;
+                m_Reader = Reader;
+            }
+        }
+
         public delegate void PacketHandler(NetDataReader Reader);
         public static Dictionary<int, PacketHandler> s_packetHandlers = new Dictionary<int, PacketHandler>()
         {
@@ -24,11 +36,15 @@ namespace SkyCoop
             { (int)Packet.Type.ClientFire, ClientHandle.ClientFire },
             { (int)Packet.Type.ClientDamageOtherClient, ClientHandle.ClientDamagesMe },
             { (int)Packet.Type.ClientProjectile, ClientHandle.ClientProjectile },
+            { (int)Packet.Type.KillFeedMessage, ClientHandle.KillFeedMessage },
+            { (int)Packet.Type.ClientProjectileThrow, ClientHandle.ClientProjectileThrow },
+            { (int)Packet.Type.ClientName, ClientHandle.ClientName },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)
         {
             PacketHandler Handle;
+
             if (s_packetHandlers.TryGetValue(PacketID, out Handle))
             {
                 Handle(Reader);
@@ -40,8 +56,17 @@ namespace SkyCoop
         public NetManager m_Instance;
         public NetPeer m_HostEndPoint;
         public NetPeer m_MyEndPoint;
+        public List<DelayedPackage> m_DelayedPackage = new List<DelayedPackage> { };
 
         public bool m_IsReady = false;
+        public int GetMyId()
+        {
+            if (m_MyEndPoint == null)
+            {
+                return -1;
+            }
+            return m_MyEndPoint.RemoteId;
+        }
 
 
         public Client()
@@ -127,11 +152,38 @@ namespace SkyCoop
             {
                 m_HostEndPoint = fromPeer;
                 int PacketID = dataReader.GetInt();
-
-                ExecutePacketEvent(PacketID, dataReader);
-
-                dataReader.Recycle();
+                //SkyCoop.Logger.Log(ConsoleColor.Cyan, "PacketID " + PacketID);
+                if (m_IsReady)
+                {
+                    ExecutePacketEvent(PacketID, dataReader);
+                    dataReader.Recycle();
+                    return;
+                }
+                else
+                {
+                    if (PacketID == 0 || PacketID == 1)
+                    {
+                        ExecutePacketEvent(PacketID, dataReader);
+                        dataReader.Recycle();
+                    }
+                    else
+                    {
+                        m_DelayedPackage.Add(new DelayedPackage(PacketID, dataReader));
+                        SkyCoop.Logger.Log(ConsoleColor.Yellow, "Pushing "+PacketID+" to delay");
+                    }
+                }
             };
+        }
+
+        public void ProcessAllDelayedPackages()
+        {
+            for (int i = 0; i < m_DelayedPackage.Count; i++)
+            {
+                DelayedPackage Pack = m_DelayedPackage[i];
+                SkyCoop.Logger.Log(ConsoleColor.Green, "Processing delayed package " + Pack.m_PackID);
+                ExecutePacketEvent(Pack.m_PackID, Pack.m_Reader);
+            }
+            m_DelayedPackage.Clear();
         }
 
         public void SendToHost(NetDataWriter writer)

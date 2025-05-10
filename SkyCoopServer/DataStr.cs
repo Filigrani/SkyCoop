@@ -15,6 +15,7 @@ namespace SkyCoopServer
         }
         public class PlayerData
         {
+            public string m_PlayerName = "Player";
             public int m_PlayerID = 0;
             public PlayerVisualData m_VisualData = new PlayerVisualData();
 
@@ -30,45 +31,111 @@ namespace SkyCoopServer
                 m_PlayerID = PlayerID;
             }
 
-            public void DealDamage(int ClientID, float Damage, string DType)
+            public void DealDamage(int Killer, float Damage, DamageType DamageType)
             {
-                DamageType dType;
-                switch (DType)
+                for (int i = 0; i < m_Damagers.Count; i++)
                 {
-                    case "Revolver":
-                        dType = DamageType.Revolver; 
-                        break;
-                    case "Rifle":
-                        dType = DamageType.Rifle;
-                        break;
-                    case "Flaregun":
-                        dType = DamageType.Flaregun;
-                        break;
-                    case "Bow":
-                        dType = DamageType.Bow;
-                        break;
-                    default:
-                        dType = DamageType.Bloodloss;
-                        break;
+                    Damager damager = m_Damagers[i];
+                    if (damager.m_ClientID == Killer)
+                    {
+                        damager.m_Damage += Damage;
+                        damager.m_DamageType = DamageType;
+                        return;
+                    }
+                }
+                
+                m_Damagers.Add(new Damager(Killer, Damage, DamageType));
+            }
+            public void ConfirmKill(Server ServerInstance, DamageType DamageType, bool Knocked = false) 
+            {
+                DataStr.KillFeedMessage Message = new KillFeedMessage();
+                Message.m_Victim = m_PlayerID;
+                Message.m_DeathReason = DamageType;
+
+                if (Knocked)
+                {
+                    Message.m_Flags.Add(KillFeedFlag.Knocked);
                 }
 
-                m_Damagers.Add(new Damager(ClientID, Damage, dType));
-            }
-            public void ConfirmKill(int ClientID) 
-            {
+
+                
                 if(m_Damagers.Count > 0)
                 {
-                    m_Damagers.Sort();
-                    if (m_Damagers[0].m_ClientID == ClientID) 
+                    Damager LastDamager = m_Damagers[m_Damagers.Count - 1];
+
+
+                    // If player bleeds to death, or finish himself, confirm kill, only for last damager.
+                    if (DamageType == DamageType.BloodLoss)
                     {
-                        Console.WriteLine($"Player {m_Damagers[0].m_ClientID} and wepon is {m_Damagers[0].m_DamageType} with assistance {m_Damagers[1].m_ClientID} and wepon is {m_Damagers[1].m_DamageType} kill player {m_PlayerID}");
+                        Message.m_Killer = LastDamager.m_ClientID;
+                        if (!Knocked)
+                        {
+                            m_Damagers.Clear();
+                        }
+                        ServerSend.SendKillFeed(Message, ServerInstance);
+                        return;
+                    }
+                    else if(DamageType == DamageType.Unknown)
+                    {
+                        Message.m_Killer = LastDamager.m_ClientID;
+                        Message.m_Flags.Add(KillFeedFlag.HelpedToDie);
+                        if (!Knocked)
+                        {
+                            m_Damagers.Clear();
+                        }
+                        ServerSend.SendKillFeed(Message, ServerInstance);
+                        return;
+                    }
+                    m_Damagers.Sort();
+
+                    Damager HighestDamage = m_Damagers[0];
+
+                    if (m_Damagers.Count > 1)
+                    {
+                        if(HighestDamage.m_ClientID == LastDamager.m_ClientID)
+                        {
+                            Message.m_Killer = LastDamager.m_ClientID;
+                            Message.m_Assist = m_Damagers[1].m_ClientID;
+                        }
+                        else
+                        {
+                            Message.m_Killer = LastDamager.m_ClientID;
+                            Message.m_Assist = HighestDamage.m_ClientID;
+                        }
                     }
                     else
                     {
-                        Console.WriteLine($"Player {ClientID} and wepon is ? with assistance {m_Damagers[0].m_ClientID} and wepon is {m_Damagers[0].m_DamageType} kill player {m_PlayerID}");
+                        Message.m_Killer = LastDamager.m_ClientID;
                     }
-                    m_Damagers.Clear();
+
+                    if (!Knocked)
+                    {
+                        m_Damagers.Clear();
+                    }
+                    ServerSend.SendKillFeed(Message, ServerInstance);
                 }
+                else
+                {
+                    Message.m_Killer = m_PlayerID;
+                    Message.m_DeathReason = DamageType.Unknown;
+                    ServerSend.SendKillFeed(Message, ServerInstance);
+                }
+            }
+
+            public void Revived(int Reviver)
+            {
+                if(Reviver == m_PlayerID)
+                {
+                    Console.WriteLine($"Player {m_PlayerID} revived himself.");
+                }else if(Reviver == -1)
+                {
+                    Console.WriteLine($"Player {m_PlayerID} respawned.");
+                }else
+                {
+                    Console.WriteLine($"Player {m_PlayerID} revived by Player {Reviver}");
+                }
+
+                m_Damagers.Clear();
             }
         }
 
@@ -82,9 +149,9 @@ namespace SkyCoopServer
 
         public struct Damager : IComparable<Damager>
         {
-            public readonly int m_ClientID;
-            public readonly float m_Damage;
-            public readonly DamageType m_DamageType;
+            public int m_ClientID;
+            public float m_Damage;
+            public DamageType m_DamageType;
 
             public Damager(int ClientID, float Damage,  DamageType DamageType)
             {
@@ -99,13 +166,36 @@ namespace SkyCoopServer
             }
         }
 
+        public enum KillFeedFlag
+        {
+            HeadShot = 0,
+            Knocked = 1,
+            HelpedToDie = 2,
+        }
+
+        public class KillFeedMessage
+        {
+            public int m_Killer = -1;
+            public int m_Victim = -1;
+            public int m_Assist = -1;
+            public DamageType m_DeathReason = DamageType.Unknown;
+            public List<KillFeedFlag> m_Flags = new List<KillFeedFlag>();
+        }
+
         public enum DamageType
         {
+            Unknown,
             Revolver,
             Rifle,
-            Flaregun,
+            FlareGun,
             Bow,
-            Bloodloss
+            BloodLoss,
+            Hatchet,
+            Knife,
+            Prybar,
+            Hammer,
+            NoiseMaker,
+            Stone,
         }
     }
 }
