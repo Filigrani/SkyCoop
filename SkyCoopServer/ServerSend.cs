@@ -136,6 +136,19 @@ namespace SkyCoopServer
 
             writer.Put((int)Packet.Type.KillFeedMessage);
             writer.Write(Message);
+
+
+            Console.WriteLine("SendKillFeed");
+            Console.WriteLine("- m_Killer" + Message.m_Killer);
+            Console.WriteLine("- m_Victim" + Message.m_Victim);
+            Console.WriteLine("- m_Assist" + Message.m_Assist);
+            Console.WriteLine("- m_DeathReason" + Message.m_DeathReason.ToString());
+            Console.WriteLine("- m_Flags:");
+            foreach (DataStr.KillFeedFlag Flag in Message.m_Flags)
+            {
+                Console.WriteLine("-- Flag: "+Flag.ToString());
+            }
+
             foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
             {
                 NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);

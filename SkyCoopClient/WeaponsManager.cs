@@ -38,7 +38,7 @@ namespace SkyCoopClient
             AddDescriptor("GEAR_Revolver", Revolver);
 
             WeaponDescripter FlareGun = new WeaponDescripter();
-            FlareGun.m_PlayerDamage = 25;
+            FlareGun.m_PlayerDamage = 20;
             FlareGun.m_Burn = true;
             FlareGun.m_Pain = true;
             FlareGun.m_DamageType = DataStr.DamageType.FlareGun;
@@ -103,13 +103,13 @@ namespace SkyCoopClient
             AddDescriptor("GEAR_KnifeScrapMetal", Knife);
 
             WeaponDescripter Stone = new WeaponDescripter();
-            Stone.m_PlayerDamage = 10;
+            Stone.m_PlayerDamage = 5;
             Stone.m_Pain = true;
             Stone.m_DamageType = DataStr.DamageType.Stone;
             AddDescriptor("GEAR_Stone", Stone);
 
             WeaponDescripter NoiseMaker = new WeaponDescripter();
-            NoiseMaker.m_PlayerDamage = 15;
+            NoiseMaker.m_PlayerDamage = 10;
             NoiseMaker.m_Pain = true;
             NoiseMaker.m_DamageType = DataStr.DamageType.NoiseMaker;
             AddDescriptor("GEAR_NoiseMaker", NoiseMaker);
@@ -415,18 +415,18 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Start")] // Once
+        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Awake")] // Once
         internal class vp_FPSShooter_Start
         {
             public static void Postfix(vp_FPSShooter __instance)
             {
                 if (__instance != null && __instance.gameObject != null && __instance.ProjectilePrefab != null)
                 {
-                    if (__instance.gameObject.name == "Rifle" && __instance.ProjectilePrefab.name == "PistolBullet")
+                    if (__instance.ProjectilePrefab.name == "PistolBullet")
                     {
                         AssetManager.s_PistolBulletPrefab = __instance.ProjectilePrefab;
                     }
-                    if (__instance.gameObject.name == "Revolver" && __instance.ProjectilePrefab.name == "RevolverBullet")
+                    if (__instance.ProjectilePrefab.name == "RevolverBullet")
                     {
                         AssetManager.s_RevolverBulletPrefab = __instance.ProjectilePrefab;
                     }

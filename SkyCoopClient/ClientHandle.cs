@@ -2,6 +2,7 @@
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
+using static Il2CppParadoxNotion.Services.Logger;
 
 namespace SkyCoop
 {
@@ -163,7 +164,18 @@ namespace SkyCoop
         }
         public static void KillFeedMessage(NetDataReader Reader)
         {
-            CanvasUI.AddKillFeedMessage(Reader.ReadKillFeedMessage());
+            DataStr.KillFeedMessage Message = Reader.ReadKillFeedMessage();
+            SkyCoop.Logger.Log("KillFeedMessage");
+            SkyCoop.Logger.Log("- m_Killer" + Message.m_Killer);
+            SkyCoop.Logger.Log("- m_Victim" + Message.m_Victim);
+            SkyCoop.Logger.Log("- m_Assist" + Message.m_Assist);
+            SkyCoop.Logger.Log("- m_DeathReason" + Message.m_DeathReason.ToString());
+            SkyCoop.Logger.Log("- m_Flags:");
+            foreach (DataStr.KillFeedFlag Flag in Message.m_Flags)
+            {
+                SkyCoop.Logger.Log("-- Flag: " + Flag.ToString());
+            }
+            CanvasUI.AddKillFeedMessage(Message);
         }
         public static void ClientName(NetDataReader Reader)
         {

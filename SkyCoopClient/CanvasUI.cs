@@ -77,20 +77,13 @@ namespace SkyCoopClient
                     ExtraPart = " " + GetFontIcon("Knocked")+ " ";
                 }
 
-                if(Message.m_Killer != Message.m_Victim)
+                if (Message.m_Assist == -1)
                 {
-                    if(Message.m_Assist == -1)
-                    {
-                        FinalString = GetPlayerName(Message.m_Killer) + " " + GetFontIcon(Message.m_DeathReason) + ExtraPart + " " + GetPlayerName(Message.m_Victim);
-                    }
-                    else
-                    {
-                        FinalString = GetPlayerName(Message.m_Killer) + " + " + GetPlayerName(Message.m_Killer) + " " + GetFontIcon(Message.m_DeathReason) + ExtraPart + " " + GetPlayerName(Message.m_Victim);
-                    }
+                    FinalString = GetPlayerName(Message.m_Killer) + " " + GetFontIcon(Message.m_DeathReason) + ExtraPart + " " + GetPlayerName(Message.m_Victim);
                 }
                 else
                 {
-                    FinalString = GetPlayerName(Message.m_Killer) + " " + GetFontIcon(Message.m_DeathReason) + ExtraPart + " " + GetPlayerName(Message.m_Victim);
+                    FinalString = GetPlayerName(Message.m_Killer) + " + " + GetPlayerName(Message.m_Assist) + " " + GetFontIcon(Message.m_DeathReason) + ExtraPart + " " + GetPlayerName(Message.m_Victim);
                 }
             }
 

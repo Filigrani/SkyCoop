@@ -173,11 +173,32 @@ namespace SkyCoopClient
 
         public static void DoMeleeHit()
         {
+            Vector3 Position = GameManager.GetVpFPSCamera().transform.position;
+            Quaternion Rotation = GameManager.GetVpFPSCamera().transform.rotation;
 
+            if (AssetManager.s_PistolBulletPrefab)
+            {
+                GameObject Bullet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.s_PistolBulletPrefab, Position, Rotation);
+                if (Bullet)
+                {
+                    vp_Bullet Comp = Bullet.GetComponent<vp_Bullet>();
+                    if (Comp)
+                    {
+                        Comp.m_GunType = GunType.Camera;
+                        Comp.Range = 2.5f;
+                        Comp.m_ImpactAudio = "Play_StoneImpacts";
+                    }
+                }
+            }
+            else
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, "s_PistolBulletPrefab is null!");
+            }
         }
 
         public static void MeleeUnstove()
         {
+            
             if (GameManager.m_PlayerManager.m_ItemInHands && IsMeleeWeapon(GameManager.m_PlayerManager.m_ItemInHands.name))
             {
                 GearItem gi = GameManager.m_PlayerManager.m_ItemInHands;

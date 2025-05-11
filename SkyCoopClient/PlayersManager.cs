@@ -245,33 +245,49 @@ namespace SkyCoop
             {
                 SprainedAnkle Spr = GameManager.GetSprainedAnkleComponent();
 
+                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleAudioEvent, Il2CppVoice.Priority.Critical);
+                GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFXEvent, Spr.gameObject);
+                Spr.DoStumbleEffects();
+
+                for (int i = 0; i < Spr.m_Locations.Count; i++)
+                {
+                    if (Spr.m_Locations[i] == (int)location)
+                    {
+                        return;
+                    }
+                }
+
                 Spr.m_CausesLocIDs.Add(causeID);
                 Spr.m_Locations.Add((int)location);
                 Spr.m_ElapsedHoursList.Add(0.0f);
                 Spr.m_DurationHoursList.Add(UnityEngine.Random.Range(Spr.m_DurationHoursMin, Spr.m_DurationHoursMax));
                 Spr.m_ElapsedRestList.Add(0.0f);
                 Spr.m_SecondsSinceLastPainAudio = 0.0f;
-                Spr.DoStumbleEffects();
                 PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedAnkle", InterfaceManager.m_FirstAidRedColor, true, 5, 2);
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleAudioEvent, Il2CppVoice.Priority.Critical);
-                GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFXEvent, Spr.gameObject);
-
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedAnkle, causeID);
                 StatsManager.IncrementValue(StatID.Sprains_Ankle);
             }
             else
             {
                 SprainedWrist Spr = GameManager.GetSprainedWristComponent();
+                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedWristVO, Il2CppVoice.Priority.Critical);
+                GameAudioManager.PlaySound(Spr.m_SprainedWristSFX, Spr.gameObject);
+                Spr.DoStumbleEffects();
+
+                for (int i = 0; i < Spr.m_Locations.Count; i++)
+                {
+                    if (Spr.m_Locations[i] == (int)location)
+                    {
+                        return;
+                    }
+                }
 
                 Spr.m_CausesLocIDs.Add(causeID);
                 Spr.m_Locations.Add((int)location);
                 Spr.m_ElapsedHoursList.Add(0.0f);
                 Spr.m_DurationHoursList.Add(UnityEngine.Random.Range(Spr.m_DurationHoursMin, Spr.m_DurationHoursMax));
                 Spr.m_ElapsedRestList.Add(0.0f);
-                Spr.DoStumbleEffects();
                 PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedWrist", InterfaceManager.m_FirstAidRedColor, true, 5, 2);
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedWristVO, Il2CppVoice.Priority.Critical);
-                GameAudioManager.PlaySound(Spr.m_SprainedWristSFX, Spr.gameObject);
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedWrist, causeID);
                 StatsManager.IncrementValue(StatID.Sprains_Wrist);
             }
@@ -353,26 +369,29 @@ namespace SkyCoop
                 {
                     if (BodyArea == AfflictionBodyArea.Head)
                     {
-                        HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
-                        HeadacheData headacheData = new HeadacheData();
-                        headacheData.m_Cause = HeadacheCause.None;
-                        LocalizedString Case = new LocalizedString();
-                        Case.m_LocalizationID = DamageCase;
-                        headacheData.m_CausedByLocalizedId = Case;
-                        headacheData.m_TreatmentRequiredDescription = Stock.m_TreatmentRequiredDescription;
-                        headacheData.m_HoursRequiredOutdoorToGetAffliction = Stock.m_HoursRequiredOutdoorToGetAffliction;
-                        headacheData.m_HoursRequiredIndoorToExitAffliction = Stock.m_HoursRequiredIndoorToExitAffliction;
-                        headacheData.m_HealedAfflictionLocalizedId = Stock.m_HealedAfflictionLocalizedId;
-                        headacheData.m_HeadacheStartAudio = Stock.m_HeadacheStartAudio;
-                        headacheData.m_HeadachePulseFrequencyStart = Stock.m_HeadachePulseFrequencyStart;
-                        headacheData.m_HeadachePulseFrequencyEnd = Stock.m_HeadachePulseFrequencyEnd;
-                        headacheData.m_HeadachePulseEvent = Stock.m_HeadachePulseEvent;
-                        headacheData.m_HeadacheDurationHours = Stock.m_HeadacheDurationHours;
-                        headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
-                        headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
-                        headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
+                        if (!GameManager.GetHeadacheComponent().HasHeadache())
+                        {
+                            HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
+                            HeadacheData headacheData = new HeadacheData();
+                            headacheData.m_Cause = HeadacheCause.None;
+                            LocalizedString Case = new LocalizedString();
+                            Case.m_LocalizationID = DamageCase;
+                            headacheData.m_CausedByLocalizedId = Case;
+                            headacheData.m_TreatmentRequiredDescription = Stock.m_TreatmentRequiredDescription;
+                            headacheData.m_HoursRequiredOutdoorToGetAffliction = Stock.m_HoursRequiredOutdoorToGetAffliction;
+                            headacheData.m_HoursRequiredIndoorToExitAffliction = Stock.m_HoursRequiredIndoorToExitAffliction;
+                            headacheData.m_HealedAfflictionLocalizedId = Stock.m_HealedAfflictionLocalizedId;
+                            headacheData.m_HeadacheStartAudio = Stock.m_HeadacheStartAudio;
+                            headacheData.m_HeadachePulseFrequencyStart = Stock.m_HeadachePulseFrequencyStart;
+                            headacheData.m_HeadachePulseFrequencyEnd = Stock.m_HeadachePulseFrequencyEnd;
+                            headacheData.m_HeadachePulseEvent = Stock.m_HeadachePulseEvent;
+                            headacheData.m_HeadacheDurationHours = Stock.m_HeadacheDurationHours;
+                            headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
+                            headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
+                            headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
 
-                        GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
+                            GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
+                        }
                     }
                     else if (BodyArea == AfflictionBodyArea.ArmRight
                         || BodyArea == AfflictionBodyArea.ArmLeft
@@ -421,25 +440,28 @@ namespace SkyCoop
                 }
                 if (HasHelemet)
                 {
-                    HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
-                    HeadacheData headacheData = new HeadacheData();
-                    headacheData.m_Cause = HeadacheCause.None;
-                    LocalizedString Case = new LocalizedString();
-                    Case.m_LocalizationID = DamageCase;
-                    headacheData.m_CausedByLocalizedId = Case;
-                    headacheData.m_TreatmentRequiredDescription = Stock.m_TreatmentRequiredDescription;
-                    headacheData.m_HoursRequiredOutdoorToGetAffliction = Stock.m_HoursRequiredOutdoorToGetAffliction;
-                    headacheData.m_HoursRequiredIndoorToExitAffliction = Stock.m_HoursRequiredIndoorToExitAffliction;
-                    headacheData.m_HealedAfflictionLocalizedId = Stock.m_HealedAfflictionLocalizedId;
-                    headacheData.m_HeadacheStartAudio = Stock.m_HeadacheStartAudio;
-                    headacheData.m_HeadachePulseFrequencyStart = Stock.m_HeadachePulseFrequencyStart;
-                    headacheData.m_HeadachePulseFrequencyEnd = Stock.m_HeadachePulseFrequencyEnd;
-                    headacheData.m_HeadachePulseEvent = Stock.m_HeadachePulseEvent;
-                    headacheData.m_HeadacheDurationHours = Stock.m_HeadacheDurationHours;
-                    headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
-                    headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
-                    headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
-                    GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
+                    if (GameManager.GetHeadacheComponent().HasHeadache())
+                    {
+                        HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
+                        HeadacheData headacheData = new HeadacheData();
+                        headacheData.m_Cause = HeadacheCause.None;
+                        LocalizedString Case = new LocalizedString();
+                        Case.m_LocalizationID = DamageCase;
+                        headacheData.m_CausedByLocalizedId = Case;
+                        headacheData.m_TreatmentRequiredDescription = Stock.m_TreatmentRequiredDescription;
+                        headacheData.m_HoursRequiredOutdoorToGetAffliction = Stock.m_HoursRequiredOutdoorToGetAffliction;
+                        headacheData.m_HoursRequiredIndoorToExitAffliction = Stock.m_HoursRequiredIndoorToExitAffliction;
+                        headacheData.m_HealedAfflictionLocalizedId = Stock.m_HealedAfflictionLocalizedId;
+                        headacheData.m_HeadacheStartAudio = Stock.m_HeadacheStartAudio;
+                        headacheData.m_HeadachePulseFrequencyStart = Stock.m_HeadachePulseFrequencyStart;
+                        headacheData.m_HeadachePulseFrequencyEnd = Stock.m_HeadachePulseFrequencyEnd;
+                        headacheData.m_HeadachePulseEvent = Stock.m_HeadachePulseEvent;
+                        headacheData.m_HeadacheDurationHours = Stock.m_HeadacheDurationHours;
+                        headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
+                        headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
+                        headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
+                        GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
+                    }
                 }
             }
 
@@ -551,6 +573,9 @@ namespace SkyCoop
             {
                 GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
                 ConsoleManager.CONSOLE_afflictions_cure();
+                GameManager.GetSprainedAnkleComponent().Cure();
+                GameManager.GetSprainedWristComponent().Cure();
+                GameManager.GetHeadacheComponent().Cure();
                 GameManager.GetInventoryComponent().DestroyAllGear();
                 GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
                 GameObject SP = PlayerManager.PickRandomSpawnPoint();

@@ -25,6 +25,8 @@ namespace SkyCoopServer
             public string m_Scene = "";
 
             public List<Damager> m_Damagers = new List<Damager>();
+            public int m_LastDamager = -1;
+            public int m_PreLastDamager = -1;
 
             public PlayerData(int PlayerID)
             {
@@ -40,12 +42,24 @@ namespace SkyCoopServer
                     {
                         damager.m_Damage += Damage;
                         damager.m_DamageType = DamageType;
+                        m_Damagers.RemoveAt(i);
+                        m_Damagers.Add(damager);
                         return;
                     }
                 }
                 
                 m_Damagers.Add(new Damager(Killer, Damage, DamageType));
             }
+
+            public void KillFeedDebugLog(List<Damager> Damagers)
+            {
+                for(int i = 0;i < m_Damagers.Count; i++)
+                {
+                    Damager Dmg = m_Damagers[i];
+                    Console.WriteLine(i+". PlayerID " + Dmg.m_ClientID+" Damage: "+ Dmg.m_Damage +" Type "+Dmg.m_DamageType.ToString());
+                }
+            }
+
             public void ConfirmKill(Server ServerInstance, DamageType DamageType, bool Knocked = false) 
             {
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
@@ -56,13 +70,13 @@ namespace SkyCoopServer
                 {
                     Message.m_Flags.Add(KillFeedFlag.Knocked);
                 }
-
-
                 
                 if(m_Damagers.Count > 0)
                 {
                     Damager LastDamager = m_Damagers[m_Damagers.Count - 1];
-
+                    Damager[] Unordered = new Damager[m_Damagers.Count];
+                    m_Damagers.CopyTo(Unordered);
+                    m_Damagers.Sort();
 
                     // If player bleeds to death, or finish himself, confirm kill, only for last damager.
                     if (DamageType == DamageType.BloodLoss)
@@ -70,7 +84,12 @@ namespace SkyCoopServer
                         Message.m_Killer = LastDamager.m_ClientID;
                         if (!Knocked)
                         {
+                            KillFeedDebugLog(m_Damagers);
                             m_Damagers.Clear();
+                        }
+                        else
+                        {
+                            m_Damagers = Unordered.ToList();
                         }
                         ServerSend.SendKillFeed(Message, ServerInstance);
                         return;
@@ -81,12 +100,16 @@ namespace SkyCoopServer
                         Message.m_Flags.Add(KillFeedFlag.HelpedToDie);
                         if (!Knocked)
                         {
+                            KillFeedDebugLog(m_Damagers);
                             m_Damagers.Clear();
+                        }
+                        else
+                        {
+                            m_Damagers = Unordered.ToList();
                         }
                         ServerSend.SendKillFeed(Message, ServerInstance);
                         return;
                     }
-                    m_Damagers.Sort();
 
                     Damager HighestDamage = m_Damagers[0];
 
@@ -110,7 +133,12 @@ namespace SkyCoopServer
 
                     if (!Knocked)
                     {
+                        KillFeedDebugLog(m_Damagers);
                         m_Damagers.Clear();
+                    }
+                    else
+                    {
+                        m_Damagers = Unordered.ToList();
                     }
                     ServerSend.SendKillFeed(Message, ServerInstance);
                 }
@@ -119,6 +147,7 @@ namespace SkyCoopServer
                     Message.m_Killer = m_PlayerID;
                     Message.m_DeathReason = DamageType.Unknown;
                     ServerSend.SendKillFeed(Message, ServerInstance);
+                    Console.WriteLine("Suicide, nothing to log");
                 }
             }
 
