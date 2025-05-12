@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Text.Json;
+using Il2CppTLD.Scenes;
 
 namespace SkyCoopClient
 {
@@ -18,24 +19,20 @@ namespace SkyCoopClient
         public static List<Quaternion> m_Quaternions = new List<Quaternion>();
         public static List<GameObject> m_Visualizers = new List<GameObject>();
 
-
-        [Serializable]
-        public struct SpawnPoint
+        public class SpawnPoint
         {
-            public float posx;
-            public float posy;
-            public float posz;
+            public float posx { get; set; }
+            public float posy { get; set; }
+            public float posz { get; set; }
 
-            public float rotx;
-            public float roty;
-            public float rotz;
-            public float rotw;
+            public float rotx { get; set; }
+            public float roty { get; set; }
+            public float rotz { get; set; }
+            public float rotw { get; set; }
         }
-
-        [Serializable]
-        public struct SpawnPointSave
+        public class SpawnPointSave
         {
-            public List<SpawnPoint> points;
+            public List<SpawnPoint> points { get; set; }
         }
 
 
@@ -84,6 +81,16 @@ namespace SkyCoopClient
             GameManager.GetPlayerManagerComponent().TeleportPlayer(m_Vectors[Index], m_Quaternions[Index]);
         }
 
+        public static string GetFileName()
+        {
+            RegionSpecification spec = GameManager.TryGetCurrentRegion();
+            if (spec)
+            {
+                return spec.name;
+            }
+            return "unknown";
+        }
+
         public static void Save()
         {
             SpawnPointSave Save = new SpawnPointSave();
@@ -109,14 +116,36 @@ namespace SkyCoopClient
 
             Save.points = points;
 
-            string JSON = JsonSerializer.Serialize(Save);
+            string JSON = JsonSerializer.Serialize<SpawnPointSave>(Save);
             SkyCoop.Logger.Log(JSON);
+
+            string FileName = GetFileName();
+
+            // TODO: Save json file with content JSON with name of FileName
 
         }
 
-        public static void Load()
+        public static void LoadCurrentSceneFile()
         {
+            string FileName = GetFileName();
 
+            // TODO: Load json file here
+
+            // Load(StringFromFileStream)
+        }
+
+        public static void Load(string JSON)
+        {
+            m_Vectors.Clear();
+            m_Quaternions.Clear();
+            
+            SpawnPointSave Save = JsonSerializer.Deserialize<SpawnPointSave>(JSON);
+            for (int i = 0; i < Save.points.Count; i++)
+            {
+                SpawnPoint Point = Save.points[i];
+                m_Vectors.Add(new Vector3(Point.posx, Point.posy, Point.posz));
+                m_Quaternions.Add(new Quaternion(Point.rotx, Point.roty, Point.rotz, Point.rotw));
+            }
         }
 
         public static void ToggleSpawnPointEditor()
