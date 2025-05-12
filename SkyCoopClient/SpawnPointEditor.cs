@@ -1,15 +1,10 @@
-﻿using Harmony;
-using Il2Cpp;
+﻿using Il2Cpp;
 using SkyCoop;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Text.Json;
 using Il2CppTLD.Scenes;
+using System.Reflection;
 
 namespace SkyCoopClient
 {
@@ -18,7 +13,7 @@ namespace SkyCoopClient
         public static List<Vector3> m_Vectors = new List<Vector3>();
         public static List<Quaternion> m_Quaternions = new List<Quaternion>();
         public static List<GameObject> m_Visualizers = new List<GameObject>();
-
+        public static string SpawnPointsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/SpawnPoints";
         public class SpawnPoint
         {
             public float posx { get; set; }
@@ -121,17 +116,51 @@ namespace SkyCoopClient
 
             string FileName = GetFileName();
 
-            // TODO: Save json file with content JSON with name of FileName
-
+            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Saving SpawnPointsFile for region {FileName}");
+            try
+            {
+                if (!Directory.Exists(SpawnPointsDirectory))
+                    Directory.CreateDirectory(SpawnPointsDirectory);
+                File.WriteAllText($"{SpawnPointsDirectory}/{FileName}", JSON);
+                SkyCoop.Logger.Log(ConsoleColor.Green, $"Save was successful");
+            }
+            catch (Exception e) 
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file because has error: {e.Message}");
+            }
         }
 
         public static void LoadCurrentSceneFile()
         {
             string FileName = GetFileName();
+            string SpawnPoints;
 
-            // TODO: Load json file here
+            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Loading SpawnPointsFile for region {FileName}");
+            try
+            {
+                if (!Directory.Exists(SpawnPointsDirectory))
+                {
+                    SkyCoop.Logger.Log(ConsoleColor.Red, $"Directory {SpawnPointsDirectory} not exists");
+                    return;
+                }
+                SpawnPoints = File.ReadAllText($"{SpawnPointsDirectory}/{FileName}");
+                SkyCoop.Logger.Log(ConsoleColor.Green, $"Load was successful");
+            }
+            catch (Exception e)
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file because has error: {e.Message}");
+                return;
+            }
 
-            // Load(StringFromFileStream)
+            if (string.IsNullOrEmpty(SpawnPoints))
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"File {FileName} is empty");
+                return;
+            }
+            else
+            {
+                Load(SpawnPoints);
+            }
         }
 
         public static void Load(string JSON)
@@ -146,6 +175,7 @@ namespace SkyCoopClient
                 m_Vectors.Add(new Vector3(Point.posx, Point.posy, Point.posz));
                 m_Quaternions.Add(new Quaternion(Point.rotx, Point.roty, Point.rotz, Point.rotw));
             }
+            UpdateList();
         }
 
         public static void ToggleSpawnPointEditor()
