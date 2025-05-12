@@ -14,6 +14,7 @@ namespace SkyCoop
         public static List<Comps.NetworkPlayer> s_Players = new List<Comps.NetworkPlayer>();
         public static LocalPlayerData m_LocalPlayerData = new LocalPlayerData();
         public static DataStr.DamageType m_LastDamageType = DataStr.DamageType.Unknown;
+        public static Comps.PlayerDamageColider.DamageZone m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
         public class LocalPlayerData
         {
             public Vector3 m_LastSentPosition = Vector3.zero;
@@ -282,6 +283,12 @@ namespace SkyCoop
                     }
                 }
 
+                GearItem Item = GameManager.GetPlayerManagerComponent().m_ItemInHands;
+                if (Item)
+                {
+                    GameManager.GetPlayerManagerComponent().UnequipItemInHands();
+                }
+
                 Spr.m_CausesLocIDs.Add(causeID);
                 Spr.m_Locations.Add((int)location);
                 Spr.m_ElapsedHoursList.Add(0.0f);
@@ -333,6 +340,7 @@ namespace SkyCoop
             }
 
             m_LastDamageType = DmgInfo.m_DamageType;
+            m_LastDamageZone = bodypart;
             SkyCoop.Logger.Log("OtherPlayerDamageMe Damage " + damage + " from " + from + " to the " + bodypart.ToString()+" using "+Weapon+" dealing damage type "+ DmgInfo.m_DamageType);
             GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
             AfflictionBodyArea BodyArea = AfflictionBodyArea.Head;
@@ -538,7 +546,7 @@ namespace SkyCoop
             {
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
-                    RespawnMe(DataStr.DamageType.Unknown, true, true);
+                    RespawnMe(DataStr.DamageType.Unknown, Comps.PlayerDamageColider.DamageZone.Chest, true, true);
                 }
             }
         }
@@ -550,12 +558,13 @@ namespace SkyCoop
             return given;
         }
 
-        public static void RespawnMe(DataStr.DamageType DeathCase = DataStr.DamageType.Unknown, bool FromKnockedDownState = false, bool EmergencyStim = false)
+        public static void RespawnMe(DataStr.DamageType DeathCase = DataStr.DamageType.Unknown, Comps.PlayerDamageColider.DamageZone DamageZone = Comps.PlayerDamageColider.DamageZone.Chest, bool FromKnockedDownState = false, bool EmergencyStim = false)
         {
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
             GameManager.GetBrokenBody().Cure();
             GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
             PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
+            PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
 
             if (!EmergencyStim)
             {
@@ -580,7 +589,7 @@ namespace SkyCoop
                 GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
                 GameObject SP = PlayerManager.PickRandomSpawnPoint();
                 GameManager.GetPlayerManagerComponent().TeleportPlayer(SP.transform.position, SP.transform.rotation);
-                ClientSend.SendDeath(DeathCase, false);
+                ClientSend.SendDeath(DeathCase, false, DamageZone == Comps.PlayerDamageColider.DamageZone.Head);
             }
             else
             {

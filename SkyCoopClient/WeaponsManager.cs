@@ -219,9 +219,9 @@ namespace SkyCoopClient
 
         public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, Vector3 Velocity, Vector3 AngularVelocity, float Fuse)
         {
-            SkyCoop.Logger.Log("HandleProjectileSync " + ProjectileName);
-            SkyCoop.Logger.Log("HandleProjectileSync Body.velocity " + Velocity.ToString());
-            SkyCoop.Logger.Log("HandleProjectileSync Body.angularVelocity " + AngularVelocity.ToString());
+            //SkyCoop.Logger.Log("HandleProjectileSync " + ProjectileName);
+            //SkyCoop.Logger.Log("HandleProjectileSync Body.velocity " + Velocity.ToString());
+            //SkyCoop.Logger.Log("HandleProjectileSync Body.angularVelocity " + AngularVelocity.ToString());
             if (ProjectileName == "Rifle" || ProjectileName == "Revolver")
             {
                 GameObject LightFX = new GameObject();
@@ -357,6 +357,26 @@ namespace SkyCoopClient
                 rigidbody.angularVelocity = AngularVelocity;
                 rigidbody.angularDrag = 0.0f;
                 rigidbody.drag = 0.0f;
+            }else if(ProjectileName == "Melee")
+            {
+                if (AssetManager.s_PistolBulletPrefab)
+                {
+                    Bullet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.s_PistolBulletPrefab, Position, Rotation);
+                    if (Bullet)
+                    {
+                        vp_Bullet Comp = Bullet.GetComponent<vp_Bullet>();
+                        if (Comp)
+                        {
+                            Comp.m_GunType = GunType.Camera;
+                            Comp.Range = 2.5f;
+                            Comp.m_ImpactAudio = "Play_StoneImpacts";
+                        }
+                    }
+                }
+                else
+                {
+                    SkyCoop.Logger.Log(ConsoleColor.Red, "s_PistolBulletPrefab is null!");
+                }
             }
             if (Bullet)
             {
@@ -367,8 +387,15 @@ namespace SkyCoopClient
             }
             if (SoundObj)
             {
-                UnityEngine.Object.Instantiate<GameObject>(SoundObj, Position, Rotation);
-                UnityEngine.Object.Destroy(SoundObj, 5);
+                if (ModMain.s_AppFocus)
+                {
+                    GameObject SoundEmitter = UnityEngine.Object.Instantiate<GameObject>(SoundObj, Position, Rotation);
+                    if (SoundEmitter)
+                    {
+                        SoundEmitter.GetComponent<AudioSource>().Play();
+                        UnityEngine.Object.Destroy(SoundEmitter, 5);
+                    }
+                }
             }
         }
 
@@ -404,10 +431,18 @@ namespace SkyCoopClient
                     Comps.PlayerDamageColider PlayerColider = hit.collider.gameObject.gameObject.GetComponent<Comps.PlayerDamageColider>();
                     if (PlayerColider)
                     {
-                        SkyCoop.Logger.Log("Bullet hits Player " + PlayerColider.m_Player.m_PlayerID + "  to the " + PlayerColider.m_DamageZone.ToString());
-
-
-                        string WeaponName = GetGearNameByGunType(__instance.m_GunType);
+                        string WeaponName = "Unknown";
+                        Comps.MeleeBulletHandler Melee = __instance.GetComponent<Comps.MeleeBulletHandler>();
+                        if (Melee)
+                        {
+                            WeaponName = Melee.m_GearName;
+                            SkyCoop.Logger.Log("Melee hits Player " + PlayerColider.m_Player.m_PlayerID + "  to the " + PlayerColider.m_DamageZone.ToString());
+                        }
+                        else
+                        {
+                            WeaponName = GetGearNameByGunType(__instance.m_GunType);
+                            SkyCoop.Logger.Log("Bullet hits Player " + PlayerColider.m_Player.m_PlayerID + "  to the " + PlayerColider.m_DamageZone.ToString());
+                        }
                         WeaponDescripter weaponDescripter = GetDescriptor(WeaponName);
 
                         ClientSend.SendDamageToPlayer(weaponDescripter.m_PlayerDamage * PlayerColider.m_DamageScaler, PlayerColider.m_Player.m_PlayerID, PlayerColider.m_DamageZone, WeaponName, weaponDescripter.m_DamageType);

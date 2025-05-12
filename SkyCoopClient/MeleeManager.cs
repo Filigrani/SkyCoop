@@ -173,6 +173,15 @@ namespace SkyCoopClient
 
         public static void DoMeleeHit()
         {
+            string MeleeName = "GEAR_Knife";
+
+
+            if (GameManager.m_PlayerManager.m_ItemInHands)
+            {
+                MeleeName = GameManager.m_PlayerManager.m_ItemInHands.name;
+            }
+            
+            
             Vector3 Position = GameManager.GetVpFPSCamera().transform.position;
             Quaternion Rotation = GameManager.GetVpFPSCamera().transform.rotation;
 
@@ -187,7 +196,9 @@ namespace SkyCoopClient
                         Comp.m_GunType = GunType.Camera;
                         Comp.Range = 2.5f;
                         Comp.m_ImpactAudio = "Play_StoneImpacts";
+                        Bullet.gameObject.AddComponent<Comps.MeleeBulletHandler>().m_GearName = MeleeName;
                     }
+                    ClientSend.SendProjectile(Position, Rotation, "Melee");
                 }
             }
             else

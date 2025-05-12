@@ -1,4 +1,5 @@
-﻿using LiteNetLib.Utils;
+﻿using Il2Cpp;
+using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
@@ -43,6 +44,14 @@ namespace SkyCoop
             if(VoicePort != 0)
             {
                 Task.Run(() => { ModMain.Client.ConnectToServerVoice(VoicePort); });
+            }
+            GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
+            if (SoundPlayerPrefab)
+            {
+                GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
+                SoundPlayer.GetComponent<AudioSource>().Play();
+                SceneManager.DontDestroyOnLoad(SoundPlayer);
+                UnityEngine.Object.Destroy(SoundPlayer, 15);
             }
         }
 

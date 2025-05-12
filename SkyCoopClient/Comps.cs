@@ -23,6 +23,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<StoneThrowHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerThrowHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerKillFeedHandle>();
+            ClassInjector.RegisterTypeInIl2Cpp<MeleeBulletHandler>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -59,6 +60,12 @@ namespace SkyCoop
         {
             public NoiseMakerKillFeedHandle(IntPtr ptr) : base(ptr) { }
             public int m_ThrowerID = -1;
+        }
+
+        public class MeleeBulletHandler : MonoBehaviour
+        {
+            public MeleeBulletHandler(IntPtr ptr) : base(ptr) { }
+            public string m_GearName = "";
         }
 
         public class StoneThrowHook : MonoBehaviour
@@ -443,7 +450,7 @@ namespace SkyCoop
                 Vector3 Direction = transform.InverseTransformDirection(Speed);
                 m_LastPosition = gameObject.transform.position;
 
-                if (m_Animator)
+                if (m_Animator && ModMain.s_AppFocus)
                 {
                     float AnimatorSpeed = Speed.magnitude;
 

@@ -60,7 +60,7 @@ namespace SkyCoopServer
                 }
             }
 
-            public void ConfirmKill(Server ServerInstance, DamageType DamageType, bool Knocked = false) 
+            public void ConfirmKill(Server ServerInstance, DamageType DamageType, bool Knocked = false, bool HeadShot = false) 
             {
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
                 Message.m_Victim = m_PlayerID;
@@ -70,8 +70,12 @@ namespace SkyCoopServer
                 {
                     Message.m_Flags.Add(KillFeedFlag.Knocked);
                 }
-                
-                if(m_Damagers.Count > 0)
+                if (HeadShot)
+                {
+                    Message.m_Flags.Add(KillFeedFlag.HeadShot);
+                }
+
+                if (m_Damagers.Count > 0)
                 {
                     Damager LastDamager = m_Damagers[m_Damagers.Count - 1];
                     Damager[] Unordered = new Damager[m_Damagers.Count];

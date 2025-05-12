@@ -281,7 +281,7 @@ TextureImporter:
         width: 64
         height: 32
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -302,7 +302,7 @@ TextureImporter:
         width: 59
         height: 40
       alignment: 0
-      pivot: {x: 0, y: 0}
+      pivot: {x: 0.5, y: 0.5}
       border: {x: 0, y: 0, z: 0, w: 0}
       outline: []
       physicsShape: []
@@ -310,6 +310,90 @@ TextureImporter:
       bones: []
       spriteID: c5f03d3f071ed6640a1234b8d9e1b04d
       internalID: 1920234369
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Hammer
+      rect:
+        serializedVersion: 2
+        x: 7
+        y: 784
+        width: 67
+        height: 37
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 3fd5dc893d4d2874e94fdac80be20c59
+      internalID: 570855442
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Prybar
+      rect:
+        serializedVersion: 2
+        x: 97
+        y: 781
+        width: 74
+        height: 39
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 77e13b74764afc744a1f6946208fff8f
+      internalID: -194443654
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Knife
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 735
+        width: 102
+        height: 36
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 03cd3dc0c9e482a46bf6326924bae68c
+      internalID: -261472384
+      vertices: []
+      indices: 
+      edges: []
+      weights: []
+    - serializedVersion: 2
+      name: Hatchet
+      rect:
+        serializedVersion: 2
+        x: 1
+        y: 697
+        width: 83
+        height: 35
+      alignment: 0
+      pivot: {x: 0, y: 0}
+      border: {x: 0, y: 0, z: 0, w: 0}
+      outline: []
+      physicsShape: []
+      tessellationDetail: 0
+      bones: []
+      spriteID: 39143b5031b5a534383b8ee0c58ee20e
+      internalID: -1466023177
       vertices: []
       indices: 
       edges: []
@@ -326,16 +410,20 @@ TextureImporter:
     secondaryTextures: []
     nameFileIdTable:
       BloodLoss: 2091833806
+      Hammer: 570855442
       Stone: 590651376
       Knocked: 647088055
       KillFeed_1: 1823032616
       NoiseMaker: 1920234369
+      Prybar: -194443654
       HeadShot: 729729499
+      Knife: -261472384
       Rifle: -445311539
       Unknown: 1324770907
       KillFeed_4: 207813135
       FlareGun: -1264600553
       Bow: -326187223
+      Hatchet: -1466023177
       Revolver: 986384053
   spritePackingTag: 
   pSDRemoveMatte: 0

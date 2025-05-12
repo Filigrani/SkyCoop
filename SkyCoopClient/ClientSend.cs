@@ -105,12 +105,13 @@ namespace SkyCoop
             writer.Put(ProjectileName);
             SendToHost(writer);
         }
-        public static void SendDeath(DataStr.DamageType DamageType, bool Knocked)
+        public static void SendDeath(DataStr.DamageType DamageType, bool Knocked, bool HeadShot)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientDied);
             writer.Put((int)DamageType);
             writer.Put(Knocked);
+            writer.Put(HeadShot);
             SendToHost(writer);
         }
         public static void SendRevived(int Reviver)

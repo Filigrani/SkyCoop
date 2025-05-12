@@ -1,6 +1,8 @@
 ﻿using Il2Cpp;
+using Il2CppParadoxNotion.Services;
 using Il2CppSteamworks;
 using Il2CppTLD.Gameplay;
+using Il2CppTLD.SaveState;
 using Il2CppTLD.Scenes;
 using MelonLoader;
 using SkyCoopClient;
@@ -15,6 +17,8 @@ namespace SkyCoop
         public static Server Server;
         public static Client Client;
         public static ClientVoice ClientVoice;
+
+        public static bool s_AppFocus = true;
 
         public override void OnInitializeMelon()
         {
@@ -86,6 +90,17 @@ namespace SkyCoop
                     {
                       MeleeManager.TryToAttack();
                     }
+                }
+            }
+            if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.K))
+            {
+                SpawnPointEditor.ToggleSpawnPointEditor();
+            }
+            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.L))
+            {
+                if(CanvasUI.m_SpawnPointEditor && CanvasUI.m_SpawnPointEditor.activeSelf)
+                {
+                    SpawnPointEditor.AddSpawnPoint();
                 }
             }
         }
@@ -174,6 +189,17 @@ namespace SkyCoop
         public static string GetNickName()
         {
             return SteamFriends.GetPersonaName();
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]
+        public class GameManager_OnApplicationFocus
+        {
+            public static bool Prefix(GameManager __instance, bool focusStatus)
+            {
+                s_AppFocus = focusStatus;
+                SkyCoop.Logger.Log("OnApplicationFocus " + focusStatus);
+                return false;
+            }
         }
     }
 }

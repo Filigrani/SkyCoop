@@ -96,7 +96,8 @@ namespace SkyCoopServer
             DataStr.DamageType DamageType = (DataStr.DamageType)DamageI;
             Console.WriteLine("[GameServer] DamageI " + DamageI + " DamageType " + DamageType.ToString());
             bool Knocked = Reader.GetBool();
-            ServerInstance.GetPlayerDataByNetPeer(Client).ConfirmKill(ServerInstance, DamageType, Knocked);
+            bool HeadShot = Reader.GetBool();
+            ServerInstance.GetPlayerDataByNetPeer(Client).ConfirmKill(ServerInstance, DamageType, Knocked, HeadShot);
         }
         public static void ClientRevived(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {

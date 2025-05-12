@@ -317,10 +317,10 @@ namespace SkyCoopClient
                 SkyCoop.Logger.Log("PlayerDeath DamageType " + DamageType);
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
-                    PlayersManager.RespawnMe(DamageType);
+                    PlayersManager.RespawnMe(DamageType, PlayersManager.m_LastDamageZone);
                     return false;
                 }
-                ClientSend.SendDeath(DamageType, true);
+                ClientSend.SendDeath(DamageType, true, PlayersManager.m_LastDamageZone == Comps.PlayerDamageColider.DamageZone.Head);
                 //PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
                 __instance.m_CurrentHP = 25f;
                 GameManager.GetBloodLossComponent().Cure();
