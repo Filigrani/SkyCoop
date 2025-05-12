@@ -84,6 +84,9 @@ namespace SkyCoopClient
                     m_UIPanel = UIPanel;
                     m_KillFeedTransform = m_UIPanel.transform.GetChild(0);
                     m_SpawnPointEditor = m_UIPanel.transform.GetChild(1).gameObject;
+
+                    Action act = new Action(() => SpawnPointEditor.Save());
+                    m_UIPanel.transform.GetChild(1).GetChild(2).GetComponent<Button>().onClick.AddListener(act);
                     m_SpawnPointEditorScrollParnet = m_UIPanel.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(0);
                     SkyCoop.Logger.Log(ConsoleColor.Cyan, "Canvas UI created!");
                 }

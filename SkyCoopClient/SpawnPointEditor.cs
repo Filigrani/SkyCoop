@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Text.Json;
 
 namespace SkyCoopClient
 {
@@ -18,6 +19,26 @@ namespace SkyCoopClient
         public static List<GameObject> m_Visualizers = new List<GameObject>();
 
 
+        [Serializable]
+        public struct SpawnPoint
+        {
+            public float posx;
+            public float posy;
+            public float posz;
+
+            public float rotx;
+            public float roty;
+            public float rotz;
+            public float rotw;
+        }
+
+        [Serializable]
+        public struct SpawnPointSave
+        {
+            public List<SpawnPoint> points;
+        }
+
+
         public static void UpdateList()
         {
             for (int i = m_Visualizers.Count-1; i >= 0; i--)
@@ -26,7 +47,7 @@ namespace SkyCoopClient
             }
             for (int i = CanvasUI.m_SpawnPointEditorScrollParnet.childCount - 1; i >= 0; i--)
             {
-                UnityEngine.Object.Destroy(CanvasUI.m_SpawnPointEditorScrollParnet.GetChild(i).gameObject);
+                UnityEngine.Object.DestroyImmediate(CanvasUI.m_SpawnPointEditorScrollParnet.GetChild(i).gameObject);
             }
             m_Visualizers.Clear();
 
@@ -35,29 +56,61 @@ namespace SkyCoopClient
                 GameObject Viszualizer = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetPlayerManagerComponent().m_OscarPrefab, m_Vectors[i], m_Quaternions[i]);
                 m_Visualizers.Add(Viszualizer);
                 GameObject NewElemenet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>("SpawnPointEditorElement"), CanvasUI.m_SpawnPointEditorScrollParnet);
+                
+                int NewIndex = CanvasUI.m_SpawnPointEditorScrollParnet.transform.childCount - 1;
+                NewElemenet.name = NewIndex.ToString();
 
-                Action act = new Action(() => Delete(i));
+                Action act = new Action(() => Delete(NewElemenet));
                 NewElemenet.transform.GetChild(0).GetComponent<Button>().m_OnClick.AddListener(act);
 
-                Action act2 = new Action(() => Teleport(i));
+                Action act2 = new Action(() => Teleport(NewElemenet));
                 NewElemenet.transform.GetChild(1).GetComponent<Button>().m_OnClick.AddListener(act2);
             }
         }
 
-        public static void Delete(int i)
+        public static void Delete(GameObject Obj)
         {
-            m_Vectors.RemoveAt(i);
-            m_Quaternions.RemoveAt(i);
+            int Index = int.Parse(Obj.name);
+            SkyCoop.Logger.Log("Delete " + Index);
+            m_Vectors.RemoveAt(Index);
+            m_Quaternions.RemoveAt(Index);
             UpdateList();
         }
 
-        public static void Teleport(int i)
+        public static void Teleport(GameObject Obj)
         {
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(m_Vectors[i], m_Quaternions[i]);
+            int Index = int.Parse(Obj.name);
+            SkyCoop.Logger.Log("Teleport to index "+Index);
+            GameManager.GetPlayerManagerComponent().TeleportPlayer(m_Vectors[Index], m_Quaternions[Index]);
         }
 
         public static void Save()
         {
+            SpawnPointSave Save = new SpawnPointSave();
+            List<SpawnPoint> points = new List<SpawnPoint>();
+
+            for (int i = 0; i < m_Vectors.Count; i++)
+            {
+                Vector3 v3 = m_Vectors[i];
+                Quaternion quat = m_Quaternions[i];
+
+                SpawnPoint Point = new SpawnPoint();
+                Point.posx = v3.x;
+                Point.posy = v3.y;
+                Point.posz = v3.z;
+
+                Point.rotx = quat.x;
+                Point.roty = quat.y;
+                Point.rotz = quat.z;
+                Point.rotw = quat.w;
+
+                points.Add(Point);
+            }
+
+            Save.points = points;
+
+            string JSON = JsonSerializer.Serialize(Save);
+            SkyCoop.Logger.Log(JSON);
 
         }
 
