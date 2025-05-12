@@ -133,5 +133,11 @@ namespace SkyCoop
             writer.Put(fuseTime);
             SendToHost(writer);
         }
+        public static void SendRespawnRequest()
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRequestRespawn);
+            SendToHost(writer);
+        }
     }
 }

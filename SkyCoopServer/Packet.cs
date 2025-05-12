@@ -23,6 +23,7 @@ namespace SkyCoopServer
             KillFeedMessage,
             ClientProjectileThrow,
             ClientName,
+            ClientRequestRespawn,
         }
 
         public static void Write(this NetDataWriter Writer, string Message)

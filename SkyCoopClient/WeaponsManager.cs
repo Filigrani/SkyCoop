@@ -377,6 +377,22 @@ namespace SkyCoopClient
                 {
                     SkyCoop.Logger.Log(ConsoleColor.Red, "s_PistolBulletPrefab is null!");
                 }
+            } else if(ProjectileName == "GEAR_Arrow" || ProjectileName == "GEAR_ArrowHardened")
+            {
+                GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(ProjectileName), Position, Rotation);
+                NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
+                if (Player)
+                {
+                    Player.SetIgnorePhysicsForObject(gameObject);
+                }
+                GearItem component = gameObject.GetComponent<GearItem>();
+                gameObject.name = ProjectileName;
+                gameObject.transform.parent = (Transform)null;
+                component.m_InPlayerInventory = false;
+                component.m_StackableItem.m_Units = 1;
+                component.m_CurrentHP = 100;
+                component.m_ArrowItem.SetPlacementHelperEnabled(true);
+                component.m_ArrowItem.Fire(component.m_ArrowItem.m_BowDamageMultiplier);
             }
             if (Bullet)
             {
@@ -489,6 +505,21 @@ namespace SkyCoopClient
                 if (__instance.ProjectilePrefab.name == "GEAR_FlareGunAmmoSingle")
                 {
                     ClientSend.SendProjectile(__instance.m_Camera.transform.position, __instance.m_Camera.transform.rotation, "GEAR_FlareGunAmmoSingle");
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(BowItem), "ShootArrow")]
+        internal class BowItem_ShootArrow
+        {
+            public static void Prefix(BowItem __instance)
+            {
+                if (__instance.m_GearArrow)
+                {
+                    Transform transform = GameManager.GetPlayerAnimationComponent().m_ArrowFirePropPoint.transform;
+                    Transform playerTransform = GameManager.GetPlayerTransform();
+                    Vector3 Position = playerTransform.TransformPoint(transform.position);
+                    Quaternion Rotation = playerTransform.rotation * transform.rotation;
+                    ClientSend.SendProjectile(Position, Rotation, __instance.m_GearArrow.name);
                 }
             }
         }

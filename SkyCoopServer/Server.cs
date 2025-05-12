@@ -33,6 +33,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientDied, ServerHandle.ClientDied },
             { (int)Packet.Type.ClientRevived, ServerHandle.ClientRevived },
             { (int)Packet.Type.ClientProjectileThrow, ServerHandle.ClientProjectileThrow },
+            { (int)Packet.Type.ClientRequestRespawn, ServerHandle.ClientRequestRespawn },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

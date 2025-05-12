@@ -39,6 +39,7 @@ namespace SkyCoop
             { (int)Packet.Type.KillFeedMessage, ClientHandle.KillFeedMessage },
             { (int)Packet.Type.ClientProjectileThrow, ClientHandle.ClientProjectileThrow },
             { (int)Packet.Type.ClientName, ClientHandle.ClientName },
+            { (int)Packet.Type.ClientRequestRespawn, ClientHandle.ClientRequestRespawn },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

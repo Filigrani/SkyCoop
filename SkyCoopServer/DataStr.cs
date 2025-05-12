@@ -28,6 +28,15 @@ namespace SkyCoopServer
             public int m_LastDamager = -1;
             public int m_PreLastDamager = -1;
 
+            public GamePlayState m_GamePlayState = GamePlayState.Alive;
+
+            public enum GamePlayState
+            {
+                Alive,
+                Dead,
+                Spectator,
+            }
+
             public PlayerData(int PlayerID)
             {
                 m_PlayerID = PlayerID;
@@ -35,6 +44,10 @@ namespace SkyCoopServer
 
             public void DealDamage(int Killer, float Damage, DamageType DamageType)
             {
+                if(m_GamePlayState != GamePlayState.Alive)
+                {
+                    return;
+                }
                 for (int i = 0; i < m_Damagers.Count; i++)
                 {
                     Damager damager = m_Damagers[i];
@@ -62,6 +75,14 @@ namespace SkyCoopServer
 
             public void ConfirmKill(Server ServerInstance, DamageType DamageType, bool Knocked = false, bool HeadShot = false) 
             {
+                if (m_GamePlayState != GamePlayState.Alive)
+                {
+                    return;
+                }
+                if (!Knocked)
+                {
+                    m_GamePlayState = GamePlayState.Dead;
+                }
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
                 Message.m_Victim = m_PlayerID;
                 Message.m_DeathReason = DamageType;
@@ -157,15 +178,20 @@ namespace SkyCoopServer
 
             public void Revived(int Reviver)
             {
-                if(Reviver == m_PlayerID)
+                //if(Reviver == m_PlayerID)
+                //{
+                //    Console.WriteLine($"Player {m_PlayerID} revived himself.");
+                //}else if(Reviver == -1)
+                //{
+                //    Console.WriteLine($"Player {m_PlayerID} respawned.");
+                //}else
+                //{
+                //    Console.WriteLine($"Player {m_PlayerID} revived by Player {Reviver}");
+                //}
+
+                if(Reviver == -2)
                 {
-                    Console.WriteLine($"Player {m_PlayerID} revived himself.");
-                }else if(Reviver == -1)
-                {
-                    Console.WriteLine($"Player {m_PlayerID} respawned.");
-                }else
-                {
-                    Console.WriteLine($"Player {m_PlayerID} revived by Player {Reviver}");
+                    m_GamePlayState = GamePlayState.Alive;
                 }
 
                 m_Damagers.Clear();
@@ -229,6 +255,36 @@ namespace SkyCoopServer
             Hammer,
             NoiseMaker,
             Stone,
+        }
+
+        public class SpawnPoint
+        {
+            public float posx { get; set; }
+            public float posy { get; set; }
+            public float posz { get; set; }
+
+            public float rotx { get; set; }
+            public float roty { get; set; }
+            public float rotz { get; set; }
+            public float rotw { get; set; }
+        }
+        public class SpawnPointSave
+        {
+            public List<SpawnPoint> points { get; set; }
+        }
+
+        public class V3Quat
+        {
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+
+            public V3Quat(float posx, float posy, float posz, float rotx, float roty, float rotz, float rotw)
+            {
+                m_Position = new Vector3(posx, posy, posz);
+                m_Rotation = new Quaternion(rotx, roty, rotz, rotw);
+            }
+
+            public V3Quat() { }
         }
     }
 }

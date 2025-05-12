@@ -1,7 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
 using System.Numerics;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
@@ -79,9 +78,12 @@ namespace SkyCoopServer
                 Killer = Client.Id;
             }
 
-            ServerSend.SendDamageToPlayer(ServerInstance.GetClient(Victim), Damage, Killer, BodyPart, WeaponName);
+            if(ServerInstance.m_PlayersData.m_Players[Victim].m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
+            {
+                ServerSend.SendDamageToPlayer(ServerInstance.GetClient(Victim), Damage, Killer, BodyPart, WeaponName);
 
-            ServerInstance.m_PlayersData.m_Players[Victim].DealDamage(Killer, Damage, DamageType);
+                ServerInstance.m_PlayersData.m_Players[Victim].DealDamage(Killer, Damage, DamageType);
+            }
         }
         public static void ClientProjectile(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
@@ -113,6 +115,16 @@ namespace SkyCoopServer
             Vector3 AngularVelocity = Reader.ReadVector3();
             float Fuse = Reader.GetFloat();
             ServerSend.SendProjectileThrow(Client, Pos, Rot, ProjectileName, Velocity, AngularVelocity, Fuse, ServerInstance);
+        }
+        public static void ClientRequestRespawn(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            if (ServerInstance.m_PlayersData.m_Players[Client.Id].m_GamePlayState == DataStr.PlayerData.GamePlayState.Dead)
+            {
+                string FileName = ServerInstance.m_PlayersData.m_Players[Client.Id].m_Scene;
+
+                DataStr.V3Quat Point = PlayersDataManager.GetSpawnPoint(FileName);
+                ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation);
+            }
         }
     }
 }

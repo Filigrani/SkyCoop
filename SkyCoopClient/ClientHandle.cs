@@ -45,14 +45,14 @@ namespace SkyCoop
             {
                 Task.Run(() => { ModMain.Client.ConnectToServerVoice(VoicePort); });
             }
-            GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
-            if (SoundPlayerPrefab)
-            {
-                GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
-                SoundPlayer.GetComponent<AudioSource>().Play();
-                SceneManager.DontDestroyOnLoad(SoundPlayer);
-                UnityEngine.Object.Destroy(SoundPlayer, 15);
-            }
+            //GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
+            //if (SoundPlayerPrefab)
+            //{
+            //    GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
+            //    SoundPlayer.GetComponent<AudioSource>().Play();
+            //    SceneManager.DontDestroyOnLoad(SoundPlayer);
+            //    UnityEngine.Object.Destroy(SoundPlayer, 15);
+            //}
         }
 
         public static void ClientPosition(NetDataReader Reader)
@@ -192,6 +192,13 @@ namespace SkyCoop
             int ClientID = Reader.GetInt();
             Logger.Log(ConsoleColor.Cyan, "Player: " + ClientName+" with ID "+ClientID);
             PlayersManager.SetPlayerName(ClientID, ClientName);
+        }
+        public static void ClientRequestRespawn(NetDataReader Reader)
+        {
+            Vector3 Position = Reader.ReadVector3Unity();
+            Quaternion Quaternion = Reader.ReadQuaternionUnity();
+
+            PlayersManager.RespawnOnPoint(Position, Quaternion);
         }
     }
 }

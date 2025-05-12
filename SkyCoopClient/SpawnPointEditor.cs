@@ -5,6 +5,7 @@ using UnityEngine.UI;
 using System.Text.Json;
 using Il2CppTLD.Scenes;
 using System.Reflection;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopClient
 {
@@ -14,22 +15,6 @@ namespace SkyCoopClient
         public static List<Quaternion> m_Quaternions = new List<Quaternion>();
         public static List<GameObject> m_Visualizers = new List<GameObject>();
         public static string SpawnPointsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/SpawnPoints";
-        public class SpawnPoint
-        {
-            public float posx { get; set; }
-            public float posy { get; set; }
-            public float posz { get; set; }
-
-            public float rotx { get; set; }
-            public float roty { get; set; }
-            public float rotz { get; set; }
-            public float rotw { get; set; }
-        }
-        public class SpawnPointSave
-        {
-            public List<SpawnPoint> points { get; set; }
-        }
-
 
         public static void UpdateList()
         {
@@ -78,12 +63,7 @@ namespace SkyCoopClient
 
         public static string GetFileName()
         {
-            RegionSpecification spec = GameManager.TryGetCurrentRegion();
-            if (spec)
-            {
-                return spec.name;
-            }
-            return "unknown";
+            return ModMain.GetCurrentSceneName();
         }
 
         public static void Save()

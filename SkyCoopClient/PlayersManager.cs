@@ -6,6 +6,7 @@ using UnityEngine;
 using static Il2Cpp.PlayerManager;
 using UnityEngine.AddressableAssets;
 using SkyCoopServer;
+using static SkyCoop.Comps.PlayerDamageColider;
 
 namespace SkyCoop
 {
@@ -113,6 +114,14 @@ namespace SkyCoop
 
         public static Comps.NetworkPlayer.Actions GetCurrentAction()
         {
+            if (GameManager.GetConditionComponent().IsConsideredDead())
+            {
+                return Comps.NetworkPlayer.Actions.Death;
+            }
+            if (GameManager.GetBrokenBody().HasAffliction)
+            {
+                return Comps.NetworkPlayer.Actions.Knocked;
+            }
             Panel_BreakDown bk = InterfaceManager.GetPanel<Panel_BreakDown>();
             if (bk && bk.IsBreakingDown())
             {
@@ -546,7 +555,7 @@ namespace SkyCoop
             {
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
-                    RespawnMe(DataStr.DamageType.Unknown, Comps.PlayerDamageColider.DamageZone.Chest, true, true);
+                    RevivedViaEmergencyStim();
                 }
             }
         }
@@ -558,44 +567,62 @@ namespace SkyCoop
             return given;
         }
 
-        public static void RespawnMe(DataStr.DamageType DeathCase = DataStr.DamageType.Unknown, Comps.PlayerDamageColider.DamageZone DamageZone = Comps.PlayerDamageColider.DamageZone.Chest, bool FromKnockedDownState = false, bool EmergencyStim = false)
+        public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation)
         {
-            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
-            GameManager.GetBrokenBody().Cure();
+            GameManager.GetEmergencyStimComponent().ResetEmergencyStim();
+            GameManager.GetDiminishedState().Cure();
             GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
+            GameManager.GetPlayerMovementComponent().AddSprintStamina(GameManager.GetPlayerMovementComponent().DefaultMaxStamina);
             PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
             PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
+            GameManager.GetBrokenBody().Cure();
+            GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
+            ConsoleManager.CONSOLE_afflictions_cure();
+            GameManager.GetSprainedAnkleComponent().Cure();
+            GameManager.GetSprainedWristComponent().Cure();
+            GameManager.GetHeadacheComponent().Cure();
+            GameManager.GetInventoryComponent().DestroyAllGear();
+            GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
+            GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
+            GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
+            GameManager.GetBloodLossComponent().Cure();
+            ClientSend.SendRevived(-2);
+            MenuHook.RemovePleaseWait();
+            InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
+        }
 
-            if (!EmergencyStim)
+        public static void RevivedViaEmergencyStim()
+        {
+            PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
+            PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+            GameManager.GetBrokenBody().Cure();
+            GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
+            GameManager.GetDiminishedState().Cure();
+            if (ModMain.Client != null && ModMain.Client.m_MyEndPoint != null)
             {
-                GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
+                ClientSend.SendRevived(ModMain.Client.GetMyId());
             }
-            else
-            {
-                GameManager.GetDiminishedState().Cure();
-                if(ModMain.Client != null && ModMain.Client.m_MyEndPoint != null)
-                {
-                    ClientSend.SendRevived(ModMain.Client.GetMyId());
-                }
-            }
-            if (!FromKnockedDownState)
-            {
-                GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
-                ConsoleManager.CONSOLE_afflictions_cure();
-                GameManager.GetSprainedAnkleComponent().Cure();
-                GameManager.GetSprainedWristComponent().Cure();
-                GameManager.GetHeadacheComponent().Cure();
-                GameManager.GetInventoryComponent().DestroyAllGear();
-                GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
-                GameObject SP = PlayerManager.PickRandomSpawnPoint();
-                GameManager.GetPlayerManagerComponent().TeleportPlayer(SP.transform.position, SP.transform.rotation);
-                ClientSend.SendDeath(DeathCase, false, DamageZone == Comps.PlayerDamageColider.DamageZone.Head);
-            }
-            else
-            {
-                GameManager.GetConditionComponent().m_CurrentHP = 30;
-                ClientSend.SendRevived(-1);
-            }
+        }
+
+        public static void ToKnockedState(DataStr.DamageType DeathCase = DataStr.DamageType.Unknown, Comps.PlayerDamageColider.DamageZone DamageZone = Comps.PlayerDamageColider.DamageZone.Chest)
+        {
+            PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
+            PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+            GameManager.GetConditionComponent().m_CurrentHP = 30;
+            GameManager.GetBloodLossComponent().Cure();
+            GameManager.GetBloodLossComponent().BloodLossStartOverrideArea(AfflictionBodyArea.Chest, "Knocked down", true, AfflictionOptions.PlayFX);
+            GameManager.GetBrokenBody().ApplyBrokenBody(AfflictionOptions.None);
+            GameManager.GetDiminishedState().Apply(2, AfflictionOptions.None);
+            GameManager.GetPlayerMovementComponent().SetForceCrouch(true);
+
+            ClientSend.SendDeath(DeathCase, true, DamageZone == Comps.PlayerDamageColider.DamageZone.Head);
+            ClientSend.SendRevived(-1);
+        }
+
+        public static void Death(DataStr.DamageType DeathCase = DataStr.DamageType.Unknown, Comps.PlayerDamageColider.DamageZone DamageZone = Comps.PlayerDamageColider.DamageZone.Chest)
+        {
+            ClientSend.SendDeath(DeathCase, false, DamageZone == Comps.PlayerDamageColider.DamageZone.Head);
         }
 
         [HarmonyLib.HarmonyPatch(typeof(BaseInteraction), "InitializeInteraction")]

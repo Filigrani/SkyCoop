@@ -198,5 +198,15 @@ namespace SkyCoopServer
             writer.Put(ClientID);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendPlayerRespawn(NetPeer Client, Vector3 Position, Quaternion Rotation)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRequestRespawn);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

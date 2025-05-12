@@ -1,4 +1,5 @@
 ﻿using Il2Cpp;
+using Il2CppTLD.Gameplay;
 using Il2CppTLD.Gear;
 using Il2CppTLD.UI;
 using SkyCoop;
@@ -306,29 +307,16 @@ namespace SkyCoopClient
 
                 SkyCoop.Logger.Log("PlayerDeath Cause " + __instance.m_CauseOfDeath);
 
-                if (__instance.m_CauseOfDeath == DamageSource.BloodLoss)
-                {
-                    DamageType = DataStr.DamageType.BloodLoss;
-                }
-                else
-                {
-                    DamageType = PlayersManager.m_LastDamageType;
-                }
+                DamageType = PlayersManager.m_LastDamageType;
                 SkyCoop.Logger.Log("PlayerDeath DamageType " + DamageType);
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
-                    PlayersManager.RespawnMe(DamageType, PlayersManager.m_LastDamageZone);
-                    return false;
+                    PlayersManager.Death(DamageType, PlayersManager.m_LastDamageZone);
+                    return true;
                 }
-                ClientSend.SendDeath(DamageType, true, PlayersManager.m_LastDamageZone == Comps.PlayerDamageColider.DamageZone.Head);
+                PlayersManager.ToKnockedState(DamageType, PlayersManager.m_LastDamageZone);
                 //PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
-                __instance.m_CurrentHP = 25f;
-                GameManager.GetBloodLossComponent().Cure();
-                GameManager.GetBloodLossComponent().BloodLossStartOverrideArea(AfflictionBodyArea.Chest, "Knocked down", true, AfflictionOptions.PlayFX);
-                GameManager.GetBrokenBody().ApplyBrokenBody(AfflictionOptions.None);
-                GameManager.GetDiminishedState().Apply(2, AfflictionOptions.None);
-                GameManager.GetPlayerMovementComponent().SetForceCrouch(true);
-                __instance.PlayPlayerDeathAudio();
+
                 return false;
             }
         }
@@ -403,6 +391,63 @@ namespace SkyCoopClient
                 PlayersManager.GiveItemToPlayer("GEAR_Knife");
                 PlayersManager.GiveItemToPlayer("GEAR_RifleAmmoSingle", 30);
                 PlayersManager.GiveItemToPlayer("GEAR_RevolverAmmoSingle", 30);
+                PlayersManager.GiveItemToPlayer("GEAR_Stone", 30);
+                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
+                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
+                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
+                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
+                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
+                PlayersManager.GiveItemToPlayer("GEAR_Bow");
+                PlayersManager.GiveItemToPlayer("GEAR_Arrow", 5);
+                PlayersManager.GiveItemToPlayer("GEAR_ArrowHardened", 5);
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_LifeAfterDeath), "Enable")]
+        private static class Panel_LifeAfterDeath_Enable
+        {
+            private static void Postfix(Panel_LifeAfterDeath __instance)
+            {
+                __instance.m_CampfireGrid.gameObject.SetActive(false);
+                UILocalize RespawnButton = __instance.m_CheatDeathButtonWidget.transform.GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
+                RespawnButton.key = "Respawn";
+                RespawnButton.OnLocalize();
+
+                UILocalize QuitButton = __instance.m_CheatDeathButtonWidget.transform.parent.GetChild(1).GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
+                QuitButton.key = "Rage Quit!";
+                QuitButton.OnLocalize();
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_LifeAfterDeath), "HandleOnLeftButtonPressed")]
+        private static class Panel_LifeAfterDeath_HandleOnLeftButtonPressed
+        {
+            private static bool Prefix(Panel_LifeAfterDeath __instance)
+            {
+                GameManager.GetConditionComponent().ResetAudio();
+                ClientSend.SendRespawnRequest();
+                MenuHook.RemovePleaseWait();
+                MenuHook.DoPleaseWait("Да блин, жди что ли...", "Грузим шпингалены...");
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Condition), "PlayDeathMusic")]
+        private static class Condition_PlayDeathMusic
+        {
+            private static bool Prefix(Condition __instance)
+            {
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_LifeAfterDeath), "HandleOnRightButtonPressed")]
+        private static class Panel_LifeAfterDeath_HandleOnRightButtonPressed
+        {
+            private static bool Prefix(Panel_LifeAfterDeath __instance)
+            {
+                if (ModMain.Client != null)
+                {
+                    ModMain.Client.m_Instance.Stop();
+                    Application.Quit();
+                }
                 return false;
             }
         }

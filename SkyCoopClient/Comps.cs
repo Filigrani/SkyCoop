@@ -231,6 +231,8 @@ namespace SkyCoop
                 PistolAim = 2,
                 RifleAim = 3,
                 Igniting = 4,
+                Death = 5,
+                Knocked = 6,
             }
 
             public DataStr.PlayerVisualData m_VisualData = new DataStr.PlayerVisualData();
