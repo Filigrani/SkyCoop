@@ -1,6 +1,8 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
+using System;
 using System.Numerics;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -78,9 +80,10 @@ namespace SkyCoopServer
                 Killer = Client.Id;
             }
 
-            if(ServerInstance.m_PlayersData.m_Players[Victim].m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
+            if (ServerInstance.m_PlayersData.m_Players[Victim].m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
             {
                 ServerSend.SendDamageToPlayer(ServerInstance.GetClient(Victim), Damage, Killer, BodyPart, WeaponName);
+                ServerSend.SendGettingDamage(Victim, ServerInstance);
 
                 ServerInstance.m_PlayersData.m_Players[Victim].DealDamage(Killer, Damage, DamageType);
             }
@@ -90,7 +93,8 @@ namespace SkyCoopServer
             Vector3 Pos = Reader.ReadVector3();
             Quaternion Rot = Reader.ReadQuaternion();
             string ProjectileName = Reader.GetString();
-            ServerSend.SendProjectile(Client, Pos, Rot, ProjectileName, ServerInstance);
+            float ExtaFloat = Reader.GetFloat();
+            ServerSend.SendProjectile(Client, Pos, Rot, ProjectileName, ExtaFloat, ServerInstance);
         }
         public static void ClientDied(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
@@ -105,6 +109,10 @@ namespace SkyCoopServer
         {
             int Reviver = Reader.GetInt();
             ServerInstance.GetPlayerDataByNetPeer(Client).Revived(Reviver);
+            if(Reviver == -2)
+            {
+                ServerSend.SendRemoveAllInjectedItem(Client.Id, ServerInstance);
+            }
         }
         public static void ClientProjectileThrow(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
@@ -125,6 +133,98 @@ namespace SkyCoopServer
                 DataStr.V3Quat Point = PlayersDataManager.GetSpawnPoint(FileName);
                 ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation);
             }
+        }
+
+        public static void ClientInjectedItem(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            int PlayerID = Reader.GetInt();
+            string GearName = Reader.GetString();
+            int ObjectID = Reader.GetInt();
+            int DamageZone = Reader.GetInt();
+            Vector3 Position = Reader.ReadVector3();
+            Quaternion Rotation = Reader.ReadQuaternion();
+
+            DataStr.InjectedItem injectedItem = new DataStr.InjectedItem();
+            injectedItem.m_GearName = GearName;
+            injectedItem.m_ObjectID = ObjectID;
+            injectedItem.m_DamageZone = DamageZone;
+            injectedItem.m_Position = Position;
+            injectedItem.m_Rotation = Rotation;
+
+            ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID)).m_VisualData.m_InjectedItems.Add(injectedItem);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList)
+            {
+                if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    ServerSend.SendInjectedItem(Peer, PlayerID, GearName, ObjectID, Position, Rotation);
+                }
+            }
+        }
+
+        public static void ClientRemoveInjectedItem(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            int PlayerID = Reader.GetInt();
+            string GearName = Reader.GetString();
+            int DamageZone = Reader.GetInt();
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList)
+            {
+                if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    ServerSend.SendRemoveInjectedItem(Peer, PlayerID, GearName, DamageZone);
+                }
+            }
+
+            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID));
+
+            for (int i = 0; i < Data.m_VisualData.m_InjectedItems.Count; i++)
+            {
+                if (Data.m_VisualData.m_InjectedItems[i].m_GearName == GearName && Data.m_VisualData.m_InjectedItems[i].m_DamageZone == DamageZone)
+                {
+                    Data.m_VisualData.m_InjectedItems.RemoveAt(i);
+                    break;
+                }
+            }
+        }
+        public static void ClientEraceAllInjectedItems(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            ServerSend.SendRemoveAllInjectedItem(Client.Id, ServerInstance);
+        }
+
+        public static void ClientSendGear(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GearName = Reader.GetString();
+            Vector3 Position = Reader.ReadVector3();
+            Quaternion Rotation = Reader.ReadQuaternion();
+            string JSON = Reader.GetString();
+
+            ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON);
+        }
+
+        public static void ClientPickUpGear(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+
+            DataStr.GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID, true);
+
+            if(GearData == null)
+            {
+                ServerSend.SendPickUpGearFailed(Client);
+            }
+            else
+            {
+                ServerSend.SendPickUpGear(Client, GearData.m_Visual.m_GearName, GearData.m_Data.m_JSON);
+            }
+        }
+
+        public static void ClientLoadedScene(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string SceneName = Reader.GetString();
+            ServerInstance.m_ScenesData.SendAllGears(SceneName, Client);
+
+            DataStr.V3Quat Point = PlayersDataManager.GetSpawnPoint(SceneName);
+            ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
         }
     }
 }

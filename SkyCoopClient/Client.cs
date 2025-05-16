@@ -40,6 +40,12 @@ namespace SkyCoop
             { (int)Packet.Type.ClientProjectileThrow, ClientHandle.ClientProjectileThrow },
             { (int)Packet.Type.ClientName, ClientHandle.ClientName },
             { (int)Packet.Type.ClientRequestRespawn, ClientHandle.ClientRequestRespawn },
+            { (int)Packet.Type.ClientInjectedItem, ClientHandle.ClientInjectedItem },
+            { (int)Packet.Type.ClientRemoveInjectedItem, ClientHandle.ClientRemoveInjectedItem },
+            { (int)Packet.Type.ClientGettingDamage, ClientHandle.ClientGettingDamage },
+            { (int)Packet.Type.ClientSendGear, ClientHandle.ClientSendGear },
+            { (int)Packet.Type.ClientPickUpGear, ClientHandle.ClientPickUpGear },
+            { (int)Packet.Type.ClientRemoveGear, ClientHandle.ClientRemoveGear },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

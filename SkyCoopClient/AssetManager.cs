@@ -121,6 +121,17 @@ namespace SkyCoop
             }
         }
 
+        public static void DumpLocalizationKeysList()
+        {
+            foreach (StringTableData Data in Localization.s_CurrentLanguageStringTable.m_DataFiles)
+            {
+                foreach (StringTableData.Entry Entry in Data.m_Entries)
+                {
+                    Logger.Log(ConsoleColor.Magenta, $"{Data.name} Key {Entry.m_Key}");
+                }
+            }
+        }
+
         public static void RegisterIlegalGearsCommand()
         {
             uConsole.RegisterCommand("give", new Action(GiveIlegalGear));

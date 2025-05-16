@@ -16,6 +16,7 @@ namespace SkyCoop
         public static LocalPlayerData m_LocalPlayerData = new LocalPlayerData();
         public static DataStr.DamageType m_LastDamageType = DataStr.DamageType.Unknown;
         public static Comps.PlayerDamageColider.DamageZone m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+
         public class LocalPlayerData
         {
             public Vector3 m_LastSentPosition = Vector3.zero;
@@ -545,6 +546,7 @@ namespace SkyCoop
             private static void Postfix()
             {
                 GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
+                ClientSend.SendEraceAllInjectedItems();
             }
         }
 
@@ -567,27 +569,33 @@ namespace SkyCoop
             return given;
         }
 
-        public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation)
+        public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation, bool RespawnAnim)
         {
-            GameManager.GetEmergencyStimComponent().ResetEmergencyStim();
-            GameManager.GetDiminishedState().Cure();
-            GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
-            GameManager.GetPlayerMovementComponent().AddSprintStamina(GameManager.GetPlayerMovementComponent().DefaultMaxStamina);
-            PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
-            PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
-            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
-            GameManager.GetBrokenBody().Cure();
-            GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
-            ConsoleManager.CONSOLE_afflictions_cure();
-            GameManager.GetSprainedAnkleComponent().Cure();
-            GameManager.GetSprainedWristComponent().Cure();
-            GameManager.GetHeadacheComponent().Cure();
-            GameManager.GetInventoryComponent().DestroyAllGear();
-            GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
             GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
-            GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
-            GameManager.GetBloodLossComponent().Cure();
-            ClientSend.SendRevived(-2);
+
+            if (RespawnAnim)
+            {
+                GameManager.GetEmergencyStimComponent().ResetEmergencyStim();
+                GameManager.GetDiminishedState().Cure();
+                GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
+                GameManager.GetPlayerMovementComponent().AddSprintStamina(GameManager.GetPlayerMovementComponent().DefaultMaxStamina);
+                PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
+                PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
+                GameManager.GetBrokenBody().Cure();
+                GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
+                ConsoleManager.CONSOLE_afflictions_cure();
+                GameManager.GetSprainedAnkleComponent().Cure();
+                GameManager.GetSprainedWristComponent().Cure();
+                GameManager.GetHeadacheComponent().Cure();
+                GameManager.GetInventoryComponent().DestroyAllGear();
+                GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
+
+                GameManager.GetBloodLossComponent().Cure();
+                GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
+                ClientSend.SendRevived(-2);
+            }
+
             MenuHook.RemovePleaseWait();
             InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
         }
@@ -610,7 +618,7 @@ namespace SkyCoop
             PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
             PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
             GameManager.GetConditionComponent().m_CurrentHP = 30;
-            GameManager.GetBloodLossComponent().Cure();
+            //GameManager.GetBloodLossComponent().Cure();
             GameManager.GetBloodLossComponent().BloodLossStartOverrideArea(AfflictionBodyArea.Chest, "Knocked down", true, AfflictionOptions.PlayFX);
             GameManager.GetBrokenBody().ApplyBrokenBody(AfflictionOptions.None);
             GameManager.GetDiminishedState().Apply(2, AfflictionOptions.None);
@@ -625,13 +633,9 @@ namespace SkyCoop
             ClientSend.SendDeath(DeathCase, false, DamageZone == Comps.PlayerDamageColider.DamageZone.Head);
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(BaseInteraction), "InitializeInteraction")]
-        private static class BaseInteraction_InitializeInteraction
+        public static void EmptyFn()
         {
-            private static void Postfix(BaseInteraction __instance)
-            {
 
-            }
         }
 
         [HarmonyLib.HarmonyPatch(typeof(AfflictionButton), "SetCauseAndEffect")]
@@ -702,6 +706,7 @@ namespace SkyCoop
 
 
                 string Cause = __instance.m_CausesLocIDs[index];
+                int Location = __instance.m_Locations[index];
 
                 if(Cause != "_ARROW_" && Cause != "_ARROW2_")
                 {
@@ -740,6 +745,35 @@ namespace SkyCoop
                     GearItem component = GearObject.GetComponent<GearItem>();
                     component.CompleteSpawnFromCONSOLE();
                     GameManager.GetPlayerManagerComponent().EnterInspectGearMode(component);
+                    AfflictionBodyArea BodyArea = (AfflictionBodyArea)Location;
+                    Comps.PlayerDamageColider.DamageZone DamageZone = DamageZone.Head;
+
+                    switch (BodyArea)
+                    {
+                        case AfflictionBodyArea.Head:
+                            DamageZone = DamageZone.Head;
+                            break;
+                        case AfflictionBodyArea.Chest:
+                            DamageZone = DamageZone.Chest;
+                            break;
+                        case AfflictionBodyArea.ArmRight:
+                            DamageZone = DamageZone.RightArm;
+                            break;
+                        case AfflictionBodyArea.ArmLeft:
+                            DamageZone = DamageZone.LeftArm;
+                            break;
+                        case AfflictionBodyArea.LegRight:
+                            DamageZone = DamageZone.RightLeg;
+                            break;
+                        case AfflictionBodyArea.LegLeft:
+                            DamageZone = DamageZone.LeftLeg;
+                            break;
+                    }
+
+                    if(ModMain.Client != null && ModMain.Client.m_MyEndPoint != null)
+                    {
+                        ClientSend.SendRemoveInjectedItem(ModMain.Client.GetMyId(), GearName, DamageZone);
+                    }
                 }
                 return false;
             }

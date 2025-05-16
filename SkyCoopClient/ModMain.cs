@@ -56,6 +56,7 @@ namespace SkyCoop
         public override void OnLevelWasInitialized(int level)
         {
             MeleeManager.ReintilizeViewModels();
+            //AssetManager.DumpLocalizationKeysList();
         }
 
         public static void OnGameBoot()
@@ -155,7 +156,7 @@ namespace SkyCoop
             return true;
         }
 
-        public static void SetupSurvivalSettings(string GameMode, int Seed, string Region)
+        public static void SetupSurvivalSettings(string GameMode, int Seed, string Region, string SceneToSpawn = "")
         {
             ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
             GameModeConfig SelectedMode = null;
@@ -183,6 +184,7 @@ namespace SkyCoop
             EMM.SetGameModeConfig(SelectedMode);
             GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
             GameManager.m_StartRegion = SelectedRegion;
+            Minimalizer.s_SceneSpawnOverride = SceneToSpawn;
             GameManager.m_Instance.LaunchSandbox();
         }
 

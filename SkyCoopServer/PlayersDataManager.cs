@@ -309,7 +309,7 @@ namespace SkyCoopServer
             }
             catch (Exception e)
             {
-                Console.WriteLine($"Cant save file because has error: {e.Message}");
+                Console.WriteLine($"Cant save file, error: {e.Message}");
                 return new V3Quat();
             }
 

@@ -15,6 +15,7 @@ namespace SkyCoopServer
 
         // Data Sync Instances
         public PlayersDataManager m_PlayersData;
+        public ScenesDataManager m_ScenesData;
 
 
         public delegate void PacketHandler(NetPeer Client, NetDataReader Reader, Server ServerInstance);
@@ -34,6 +35,12 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientRevived, ServerHandle.ClientRevived },
             { (int)Packet.Type.ClientProjectileThrow, ServerHandle.ClientProjectileThrow },
             { (int)Packet.Type.ClientRequestRespawn, ServerHandle.ClientRequestRespawn },
+            { (int)Packet.Type.ClientInjectedItem, ServerHandle.ClientInjectedItem },
+            { (int)Packet.Type.ClientRemoveInjectedItem, ServerHandle.ClientRemoveInjectedItem },
+            { (int)Packet.Type.ClientEraceAllInjectedItems, ServerHandle.ClientEraceAllInjectedItems },
+            { (int)Packet.Type.ClientSendGear, ServerHandle.ClientSendGear },
+            { (int)Packet.Type.ClientPickUpGear, ServerHandle.ClientPickUpGear },
+            { (int)Packet.Type.ClientLoadedScene, ServerHandle.ClientLoadedScene },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -55,6 +62,7 @@ namespace SkyCoopServer
 
             // Data Sync Instances
             m_PlayersData = new PlayersDataManager(this);
+            m_ScenesData = new ScenesDataManager(this);
 
             Timer timer1 = new Timer(EverySecond, null, 1000, 1000);
         }

@@ -26,6 +26,7 @@ namespace SkyCoop
             string StartingRegion = Reader.ReadString();
             string GameMode = Reader.ReadString();
             int VoicePort = Reader.GetInt();
+            string SpawnScene = Reader.GetString();
 
             PlayersManager.InitilizePlayers(PlayersMax);
 
@@ -35,11 +36,12 @@ namespace SkyCoop
             Logger.Log(ConsoleColor.Cyan, "StartingRegion: "+ StartingRegion);
             Logger.Log(ConsoleColor.Cyan, "GameMode: " + GameMode);
             Logger.Log(ConsoleColor.Cyan, "VoicePort: " + VoicePort);
+            Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + SpawnScene);
 
             ModMain.Client.m_IsReady = true;
             ModMain.Client.ProcessAllDelayedPackages();
             MenuHook.RemovePleaseWait();
-            ModMain.SetupSurvivalSettings(GameMode, Seed, StartingRegion);
+            ModMain.SetupSurvivalSettings(GameMode, Seed, StartingRegion, SpawnScene);
 
             if(VoicePort != 0)
             {
@@ -158,7 +160,8 @@ namespace SkyCoop
             Vector3 Pos = Reader.ReadVector3Unity();
             Quaternion Rot = Reader.ReadQuaternionUnity();
             string ProjectileName = Reader.GetString();
-            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName);
+            float ExtraFloat = Reader.GetFloat();
+            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, ExtraFloat);
         }
         public static void ClientProjectileThrow(NetDataReader Reader)
         {
@@ -197,8 +200,66 @@ namespace SkyCoop
         {
             Vector3 Position = Reader.ReadVector3Unity();
             Quaternion Quaternion = Reader.ReadQuaternionUnity();
+            bool RespawnAnim = Reader.GetBool();
 
-            PlayersManager.RespawnOnPoint(Position, Quaternion);
+            PlayersManager.RespawnOnPoint(Position, Quaternion, RespawnAnim);
+        }
+
+        public static void ClientInjectedItem(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            string GearName = Reader.GetString();
+            int ObjectID = Reader.GetInt();
+            Vector3 Position = Reader.ReadVector3Unity();
+            Quaternion Rotation = Reader.ReadQuaternionUnity();
+
+            PlayersManager.GetPlayer(PlayerID).AddInjectedItem(GearName, ObjectID, Position, Rotation);
+        }
+        public static void ClientRemoveInjectedItem(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            string GearName = Reader.GetString();
+            int DamageZone = Reader.GetInt();
+
+            PlayersManager.GetPlayer(PlayerID).RemoveInjectedItem(GearName, (Comps.PlayerDamageColider.DamageZone)DamageZone);
+        }
+
+        public static void ClientGettingDamage(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+
+            PlayersManager.GetPlayer(PlayerID).DoGetDamage();
+        }
+
+        public static void ClientSendGear(NetDataReader Reader)
+        {
+            DataStr.GearDataVisual Visual = Reader.ReadGearVisual();
+
+            GearsSync.HandleGearDropped(Visual);
+        }
+
+        public static void ClientPickUpGear(NetDataReader Reader)
+        {
+            bool GotGear = Reader.GetBool();
+
+            if (GotGear)
+            {
+                string GearName = Reader.GetString();
+                string JSON = Reader.GetString();
+                GearsSync.HandleGearPickUp(GearName, JSON);
+            }
+            else
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, "ClientPickUpGear, gear no longer exist.");
+                GearsSync.PickUpFailed();
+            }
+        }
+
+        public static void ClientRemoveGear(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+
+            GearsSync.HandleGearRemove(GUID);
         }
     }
 }

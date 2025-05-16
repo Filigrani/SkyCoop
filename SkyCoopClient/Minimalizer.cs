@@ -8,8 +8,10 @@ using UnityEngine;
 
 namespace SkyCoopClient
 {
-    internal class Minimalizer
+    public class Minimalizer
     {
+        public static string s_SceneSpawnOverride = "";
+        
         [HarmonyLib.HarmonyPatch(typeof(MiniTopNav), "Update")]
         private static class MiniTopNav_Update
         {
@@ -260,6 +262,7 @@ namespace SkyCoopClient
                         GearManager.DestroyGearObject(item);
                     }
                 }
+                ClientSend.SendNewScene(ModMain.GetCurrentSceneName());
             }
         }
 
@@ -449,6 +452,14 @@ namespace SkyCoopClient
                     Application.Quit();
                 }
                 return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen", new System.Type[] { typeof(string) })]
+        private static class GameManager_LoadSceneWithLoadingScreen
+        {
+            private static void Prefix(GameManager __instance, out string sceneName)
+            {
+                sceneName = s_SceneSpawnOverride;
             }
         }
     }

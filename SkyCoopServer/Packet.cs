@@ -24,6 +24,14 @@ namespace SkyCoopServer
             ClientProjectileThrow,
             ClientName,
             ClientRequestRespawn,
+            ClientInjectedItem,
+            ClientRemoveInjectedItem,
+            ClientEraceAllInjectedItems,
+            ClientGettingDamage,
+            ClientSendGear,
+            ClientPickUpGear,
+            ClientRemoveGear,
+            ClientLoadedScene,
         }
 
         public static void Write(this NetDataWriter Writer, string Message)
@@ -94,10 +102,24 @@ namespace SkyCoopServer
             return quat;
         }
 
-        public static Quaternion ReadVoice(this NetDataReader Reader)
+        public static void Write(this NetDataWriter Writer, DataStr.GearDataVisual Visual)
         {
-            Quaternion quat = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
-            return quat;
+            Writer.Put(Visual.m_GearName);
+            Writer.Write(Visual.m_Position);
+            Writer.Write(Visual.m_Rotation);
+            Writer.Put(Visual.m_GUID);
+        }
+
+        public static DataStr.GearDataVisual ReadGearVisual(this NetDataReader Reader)
+        {
+            DataStr.GearDataVisual Visual = new DataStr.GearDataVisual();
+
+            Visual.m_GearName = Reader.GetString();
+            Visual.m_Position = Reader.ReadVector3();
+            Visual.m_Rotation = Reader.ReadQuaternion();
+            Visual.m_GUID = Reader.GetString();
+
+            return Visual;
         }
     }
 }

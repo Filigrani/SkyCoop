@@ -6,6 +6,7 @@ using SkyCoopServer;
 using Il2CppTLD.Interactions;
 using SkyCoopClient;
 using static SkyCoopServer.DataStr;
+using Harmony;
 
 namespace SkyCoop
 {
@@ -24,6 +25,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerThrowHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerKillFeedHandle>();
             ClassInjector.RegisterTypeInIl2Cpp<MeleeBulletHandler>();
+            ClassInjector.RegisterTypeInIl2Cpp<ArrowHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<DroppedGearVisual>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -67,22 +70,83 @@ namespace SkyCoop
             public MeleeBulletHandler(IntPtr ptr) : base(ptr) { }
             public string m_GearName = "";
         }
+        public class ArrowHook : MonoBehaviour
+        {
+            public ArrowHook(IntPtr ptr) : base(ptr) { }
+            public bool m_InflictedDamageOnce = false;
+            public bool m_Broken = false;
+
+            void Update()
+            {
+                Comps.OtherPlayerBullet Other = GetComponent<Comps.OtherPlayerBullet>();
+                Rigidbody Body = GetComponent<Rigidbody>();
+                if (Body && Body.isKinematic)
+                {
+                    if (Other)
+                    {
+                        UnityEngine.Object.Destroy(gameObject);
+                    }
+                    else
+                    {
+                        if (!m_Broken)
+                        {
+                            GearsSync.SendDropItem(gameObject.GetComponent<GearItem>(), 0, 0, true);
+                        }
+                        UnityEngine.Object.Destroy(gameObject);
+                    }
+                }
+            }
+        }
+
+        public class DroppedGearVisual : MonoBehaviour
+        {
+            public DroppedGearVisual(IntPtr ptr) : base(ptr) { }
+            public string m_GUID = "";
+            public string m_LocalizedName = "GearItem";
+
+            void Start()
+            {
+                string PrefabName = gameObject.name;
+                m_LocalizedName = Localization.Get(PrefabName.Replace("GEAR", "GAMEPLAY"));
+
+                LocalizedString Str = new LocalizedString();
+                Str.m_LocalizationID = m_LocalizedName;
+                SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
+                SI.m_DefaultHoverText = Str;
+                SI.HoverText = m_LocalizedName;
+                SI.m_CanInteract = true;
+            }
+        }
 
         public class StoneThrowHook : MonoBehaviour
         {
             public StoneThrowHook(IntPtr ptr) : base(ptr) { }
             public StoneItem m_StoneItem;
+            public bool m_CanDamage = true;
+            public bool m_SendThrown = false;
             void Update()
             {
                 if(m_StoneItem == null)
                 {
                     m_StoneItem = GetComponent<StoneItem>();
                 }
-                if (m_StoneItem && m_StoneItem.m_Thrown)
+
+                if (m_StoneItem)
                 {
-                    Rigidbody Body = GetComponent<Rigidbody>();
-                    ClientSend.SendProjectileThrow(m_StoneItem.transform.position, m_StoneItem.transform.rotation, "GEAR_Stone", Body.velocity, Body.angularVelocity, 0);
-                    UnityEngine.Object.Destroy(this);
+                    if (m_StoneItem.m_Thrown && !m_SendThrown)
+                    {
+                        m_SendThrown = true;
+                        Rigidbody Body = GetComponent<Rigidbody>();
+                        ClientSend.SendProjectileThrow(m_StoneItem.transform.position, m_StoneItem.transform.rotation, "GEAR_Stone", Body.velocity, Body.angularVelocity, 0);
+                    }
+                    if (m_StoneItem.m_RigidBody && m_StoneItem.m_RigidBody.isKinematic)
+                    {
+                        if(m_SendThrown && GetComponent<OtherPlayerBullet>() == null)
+                        {
+                            GearsSync.SendDropItem(GetComponent<GearItem>(), 0, 0, true);
+                        }
+                        UnityEngine.Object.Destroy(gameObject);
+                    }
                 }
             }
         }
@@ -111,6 +175,9 @@ namespace SkyCoop
             public NetworkPlayer m_Player = null;
             public float m_DamageScaler = 1;
             public DamageZone m_DamageZone = PlayerDamageColider.DamageZone.Head;
+            public int m_ColiderIndex = 0;
+            public List<GameObject> m_InjectedItems = new List<GameObject>();
+
             public enum DamageZone
             {
                 Head = 0,
@@ -167,11 +234,22 @@ namespace SkyCoop
             {
                 if (col.gameObject.GetComponent<ArrowItem>() != null)
                 {
-                    ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
-                    ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
-                    SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
-                    WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor(col.gameObject.name);
-                    ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, col.gameObject.name, Descriptor.m_DamageType);
+                    if (col.gameObject.GetComponent<Comps.OtherPlayerBullet>() == null)
+                    {
+                        Comps.ArrowHook Hook = col.gameObject.GetComponent<Comps.ArrowHook>();
+
+                        if(Hook && !Hook.m_InflictedDamageOnce)
+                        {
+                            ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
+                            ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
+                            SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
+                            WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor(col.gameObject.name);
+                            ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, col.gameObject.name, Descriptor.m_DamageType);
+                            ClientSend.SendInjectedItem(m_Player.m_PlayerID, col.gameObject.name, m_ColiderIndex, m_DamageZone, col.gameObject.transform.localPosition, col.gameObject.transform.localRotation);
+                            Hook.m_InflictedDamageOnce = true;
+                        }
+                    }
+                    UnityEngine.Object.Destroy(col.gameObject);
                 }
                 if (col.gameObject.GetComponent<FlareGunRoundItem>() != null)
                 {
@@ -187,11 +265,50 @@ namespace SkyCoop
                 }
                 if (col.gameObject.GetComponent<StoneItem>() != null && col.gameObject.GetComponent<Comps.OtherPlayerBullet>() == null)
                 {
-                    WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_Stone");
-                    ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage * m_DamageScaler, m_Player.m_PlayerID, m_DamageZone, "GEAR_Stone", Descriptor.m_DamageType);
-                    UnityEngine.Object.Destroy(col.gameObject.GetComponent<StoneItem>());
-                    UnityEngine.Object.Destroy(col.gameObject, 5);
+                    Comps.StoneThrowHook StoneHook = col.gameObject.GetComponent<Comps.StoneThrowHook>();
+                    if (StoneHook.m_CanDamage)
+                    {
+                        WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_Stone");
+                        ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage * m_DamageScaler, m_Player.m_PlayerID, m_DamageZone, "GEAR_Stone", Descriptor.m_DamageType);
+                        StoneHook.m_CanDamage = false;
+                    }
                 }
+            }
+
+            public void InjectItem(string GearName, Vector3 Position, Quaternion Rotation)
+            {
+                GameObject Reference = AssetManager.CreateBogusGear(GearName);
+                if (Reference)
+                {
+                    GameObject Item = Instantiate<GameObject>(Reference, transform);
+                    if (Item)
+                    {
+                        Item.transform.SetLocalPositionAndRotation(Position, Rotation);
+                        Item.layer = vp_Layer.Decoration;
+                    }
+                    Item.name = GearName;
+                    m_InjectedItems.Add(Item);
+                }
+            }
+
+            public bool RemoveInjectedItem(string GearName)
+            {
+                if(m_InjectedItems.Count == 0)
+                {
+                    return false;
+                }
+
+                for (int i = 0; i < m_InjectedItems.Count; i++)
+                {
+                    GameObject Item = m_InjectedItems[i];
+                    if(Item.name == GearName)
+                    {
+                        m_InjectedItems.RemoveAt(0);
+                        Destroy(Item);
+                        return true;
+                    }
+                }
+                return false;
             }
         }
 
@@ -286,6 +403,30 @@ namespace SkyCoop
                 }
             }
 
+            public void DoHit()
+            {
+                if (m_Animator)
+                {
+                    m_Animator.SetTrigger("Hit");
+                }
+            }
+
+            public void DoThrow()
+            {
+                if (m_Animator)
+                {
+                    m_Animator.SetTrigger("Throw");
+                }
+            }
+
+            public void DoGetDamage()
+            {
+                if (m_Animator)
+                {
+                    m_Animator.SetTrigger("Damaged");
+                }
+            }
+
             public void SetGear(string GearName, int GearVariant)
             {
                 m_VisualData.m_GearInHands = GearName;
@@ -338,6 +479,34 @@ namespace SkyCoop
                 }
             }
 
+            public void AddInjectedItem(string GearName, int ObjectID, Vector3 Positon, Quaternion Rotation)
+            {
+                Collider Col = m_PlayerColiders[ObjectID];
+                if (Col)
+                {
+                    Col.GetComponent<Comps.PlayerDamageColider>().InjectItem(GearName, Positon, Rotation);
+                }
+            }
+
+            public void RemoveInjectedItem(string GearName, Comps.PlayerDamageColider.DamageZone DamageZone)
+            {
+                foreach (Collider col in m_PlayerColiders)
+                {
+                    if (col)
+                    {
+                        Comps.PlayerDamageColider Comp = col.GetComponent<Comps.PlayerDamageColider>();
+
+                        if(Comp.m_DamageZone == DamageZone)
+                        {
+                            if(Comp.RemoveInjectedItem(GearName) == true)
+                            {
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
             public void AddInteraction()
             {
                 LocalizedString Str = new LocalizedString();
@@ -353,13 +522,13 @@ namespace SkyCoop
 
             public void LoadEquipment()
             {
-                AddPlaceholderHoldingGear(this, "GEAR_Rifle", GearHandPose.Rifle);
-                AddPlaceholderHoldingGear(this, "GEAR_Revolver", GearHandPose.Pistol);
+                AddPlaceholderHoldingGear(this, "GEAR_Rifle", new Vector3(-0.23f, 0.32f, -0.047f), new Vector3(75, 90, 0), GearHandPose.Rifle);
+                AddPlaceholderHoldingGear(this, "GEAR_Revolver", new Vector3(0, 0.15f, -0.06f), new Vector3(90, 0, 0), GearHandPose.Pistol);
                 AddPlaceholderHoldingGear(this, "GEAR_Bow");
-                AddPlaceholderHoldingGear(this, "GEAR_FlareGun", GearHandPose.Pistol);
+                AddPlaceholderHoldingGear(this, "GEAR_FlareGun", new Vector3(0.05f, 0.14f, -0.07f), new Vector3(90, 0, 0), GearHandPose.Pistol);
 
-                AddPlaceholderHoldingGear(this, "GEAR_Stone");
-                AddPlaceholderHoldingGear(this, "GEAR_NoiseMaker");
+                AddPlaceholderHoldingGear(this, "GEAR_Stone", new Vector3(0, 0.095f, -0.053f), new Vector3(0, 0, 0));
+                AddPlaceholderHoldingGear(this, "GEAR_NoiseMaker", new Vector3(0.03f, 0.08f, -0.05f), new Vector3(-30, 0, 0));
 
                 AddPlaceholderHoldingGear(this, "GEAR_SprayPaintCanGlyphA");
 
@@ -371,7 +540,16 @@ namespace SkyCoop
                 AddPlaceholderHoldingGear(this, "GEAR_FlareA");
                 AddPlaceholderHoldingGear(this, "GEAR_Torch");
 
-                AddPlaceholderHoldingGear(this, "GEAR_EmergencyStim");
+                AddPlaceholderHoldingGear(this, "GEAR_EmergencyStim", new Vector3(0.01f, 0.07f, -0.047f), new Vector3(0, 6, 0), GearHandPose.GenericHold);
+
+                AddPlaceholderHoldingGear(this, "GEAR_Hatchet", new Vector3(0.1f, 0.135f, -0.05f), new Vector3(90, 180, 180));
+                AddPlaceholderHoldingGear(this, "GEAR_HatchetImprovised", new Vector3(0.05f, 0.09f, -0.05f), new Vector3(90, 180, 180), GearHandPose.GenericHold);
+                AddPlaceholderHoldingGear(this, "GEAR_Knife", new Vector3(0.09f, 0.11f, -0.061f), new Vector3(75, 0, 0), GearHandPose.GenericHold);
+                AddPlaceholderHoldingGear(this, "GEAR_KnifeImprovised", new Vector3(0.09f, 0.11f, -0.061f), new Vector3(75, 0, 0));
+                AddPlaceholderHoldingGear(this, "GEAR_JeremiahKnife", new Vector3(0.09f, 0.11f, -0.061f), new Vector3(75, 0, 0));
+                AddPlaceholderHoldingGear(this, "GEAR_KnifeScrapMetal", new Vector3(0.08f, 0.11f, -0.051f), new Vector3(0, 270, 300));
+                AddPlaceholderHoldingGear(this, "GEAR_Hammer", new Vector3(0.09f, 0.11f, -0.1f), new Vector3(80, 0, 0));
+                AddPlaceholderHoldingGear(this, "GEAR_Prybar", new Vector3(0.09f, 0.1f, -0.02f), new Vector3(350, 0, 0));
 
 
                 //ModMain.AddPlaceholderHoldingGear(this, "DarkWalker_Death", false);
@@ -392,10 +570,12 @@ namespace SkyCoop
             public void CreateColiders()
             {
                 CapsuleCollider[] Coliders = gameObject.GetComponentsInChildren<CapsuleCollider>();
-                foreach (CapsuleCollider col in Coliders)
+
+                for (int i = 0; i < Coliders.Length; i++)
                 {
-                    PlayerDamageColider Col = col.gameObject.AddComponent<PlayerDamageColider>();
+                    PlayerDamageColider Col = Coliders[i].gameObject.AddComponent<PlayerDamageColider>();
                     Col.m_Player = this;
+                    Col.m_ColiderIndex = i;
                 }
                 GameAudioManager.SetMaterialSwitch("Flesh", gameObject);
                 m_PlayerColiders.AddRange(Coliders);
@@ -409,6 +589,11 @@ namespace SkyCoop
 
             public static void AddPlaceholderHoldingGear(Comps.NetworkPlayer Player, string GearName, GearHandPose HandPose = GearHandPose.None, bool Bogus = true)
             {
+                AddPlaceholderHoldingGear(Player, GearName, Vector3.zero, Vector3.zero, HandPose, Bogus);
+            }
+
+            public static void AddPlaceholderHoldingGear(Comps.NetworkPlayer Player, string GearName, Vector3 LocalPosition, Vector3 LocalRotation, GearHandPose HandPose = GearHandPose.None, bool Bogus = true)
+            {
                 Transform RightHand = GetBone(Player.m_Animator, HumanBodyBones.RightHand);
                 if (RightHand)
                 {
@@ -419,7 +604,8 @@ namespace SkyCoop
                         if (Gear)
                         {
                             Gear.transform.SetParent(RightHand);
-                            Gear.transform.localPosition = Vector3.zero;
+                            Gear.transform.localPosition = LocalPosition;
+                            Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
                         }
                         Gear.SetActive(false);
                     } else
@@ -429,7 +615,8 @@ namespace SkyCoop
                         if (Gear)
                         {
                             Gear.transform.SetParent(RightHand);
-                            Gear.transform.localPosition = Vector3.zero;
+                            Gear.transform.localPosition = LocalPosition;
+                            Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
                         }
                         Gear.SetActive(true);
                     }

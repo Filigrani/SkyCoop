@@ -37,7 +37,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 0, y: 0}
-  m_AnchoredPosition: {x: 228.24, y: 0}
+  m_AnchoredPosition: {x: 237.13, y: 0}
   m_SizeDelta: {x: 0, y: 50}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &7107224925876872989
@@ -68,7 +68,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Jane Doe <sprite name="HeadShot"> Joan Doe
+  m_text: Jane Doe <sprite name="Unknown"> Joan Doe
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
@@ -87,7 +87,7 @@ MonoBehaviour:
     bottomLeft: {r: 1, g: 1, b: 1, a: 1}
     bottomRight: {r: 1, g: 1, b: 1, a: 1}
   m_fontColorGradientPreset: {fileID: 0}
-  m_spriteAsset: {fileID: 11400000, guid: 124b08dfcec919144a4c021d22f735d1, type: 2}
+  m_spriteAsset: {fileID: 11400000, guid: fc7b0e542bee487428be58667b7479e3, type: 2}
   m_tintAllSprites: 0
   m_StyleSheet: {fileID: 0}
   m_TextStyleHashCode: -1183493901

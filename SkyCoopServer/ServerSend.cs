@@ -22,6 +22,7 @@ namespace SkyCoopServer
             writer.Write(CFG.m_StartingRegion);
             writer.Write(CFG.m_GameMode);
             writer.Put(CFG.m_VoicePort);
+            writer.Put(CFG.m_SceneToSpawn);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
@@ -103,7 +104,7 @@ namespace SkyCoopServer
             writer.Put(WeaponName);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
-        public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, Server ServerInstance)
+        public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtaFloat, Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
 
@@ -112,6 +113,7 @@ namespace SkyCoopServer
             writer.Write(Position);
             writer.Write(Rotation);
             writer.Put(ProjectileName);
+            writer.Put(ExtaFloat);
 
             DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
 
@@ -199,14 +201,129 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendPlayerRespawn(NetPeer Client, Vector3 Position, Quaternion Rotation)
+        public static void SendPlayerRespawn(NetPeer Client, Vector3 Position, Quaternion Rotation, bool RespawnAnim = true)
         {
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientRequestRespawn);
             writer.Write(Position);
             writer.Write(Rotation);
+            writer.Put(RespawnAnim);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendInjectedItem(NetPeer Client, int PlayerID, string GearName, int ObjectIndex, Vector3 Position, Quaternion Rotation)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientInjectedItem);
+
+            writer.Put(PlayerID);
+            writer.Put(GearName);
+            writer.Put(ObjectIndex);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendRemoveInjectedItem(NetPeer Client, int PlayerID, string GearName, int DamageZone)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRemoveInjectedItem);
+
+            writer.Put(PlayerID);
+            writer.Put(GearName);
+            writer.Put(DamageZone);
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendRemoveAllInjectedItem(int PlayerID, Server ServerInstance)
+        {
+            DataStr.PlayerData Data = ServerInstance.m_PlayersData.GetPlayer(PlayerID);
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    for (int i = 0; i < Data.m_VisualData.m_InjectedItems.Count; i++)
+                    {
+                        DataStr.InjectedItem Item = Data.m_VisualData.m_InjectedItems[i];
+                        ServerSend.SendRemoveInjectedItem(Peer, PlayerID, Item.m_GearName, Item.m_DamageZone);
+                    }
+                }
+            }
+            Data.m_VisualData.m_InjectedItems.Clear();
+        }
+
+        public static void SendGettingDamage(int PlayerID, Server ServerInstance)
+        {
+            DataStr.PlayerData Data = ServerInstance.m_PlayersData.GetPlayer(PlayerID);
+
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientGettingDamage);
+            writer.Put(PlayerID);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                }
+            }
+        }
+        public static void SendGearVisual(DataStr.GearDataVisual Visual, string SceneName, Server ServerInstance)
+        {
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    SendGearVisual(Visual, Peer);
+                }
+            }
+        }
+
+        public static void SendGearVisual(DataStr.GearDataVisual Visual, NetPeer Client)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientSendGear);
+            writer.Write(Visual);
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientPickUpGear);
+
+            writer.Put(true); // First bool here because ClientPickUpGear also re-use failed pickup packet, so, if client reads first bool as false, it's indicated this is failed pickup package.
+            writer.Put(GearName);
+            writer.Put(JSON);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPickUpGearFailed(NetPeer Client)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientPickUpGear);
+
+            writer.Put(false); // Read about it in SendPickUpGear method.
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendGearRemoved(string GUID, string SceneName, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRemoveGear);
+
+            writer.Put(GUID);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                }
+            }
         }
     }
 }

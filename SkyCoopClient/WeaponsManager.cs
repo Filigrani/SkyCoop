@@ -212,9 +212,9 @@ namespace SkyCoopClient
             }
         }
 
-        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName)
+        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtraFloat)
         {
-            HandleProjectileSync(ShooterID, Position, Rotation, ProjectileName, Vector3.zero, Vector3.zero, 0);
+            HandleProjectileSync(ShooterID, Position, Rotation, ProjectileName, Vector3.zero, Vector3.zero, ExtraFloat);
         }
 
         public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, Vector3 Velocity, Vector3 AngularVelocity, float Fuse)
@@ -294,6 +294,11 @@ namespace SkyCoopClient
                     //Colider.extents = new Vector3(0.225f, 0.225f, 0.55f);
                     //localplayerColider.transform.SetParent(Noise.transform);
                     //localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
+
+                    if(Fuse > 0)
+                    {
+                        Player.DoThrow();
+                    }
                 }
                 float throwForce = GameManager.m_PlayerManager.m_ThrowForce;
                 float num = GameManager.m_PlayerManager.m_ThrowTorque;
@@ -345,6 +350,8 @@ namespace SkyCoopClient
                     //Colider.extents = new Vector3(0.225f, 0.225f, 0.55f);
                     //localplayerColider.transform.SetParent(Stone.transform);
                     //localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
+
+                    Player.DoThrow();
                 }
                 GearItem component = Stone.GetComponent<GearItem>();
                 Stone.AddComponent<Comps.OtherPlayerBullet>();
@@ -372,6 +379,11 @@ namespace SkyCoopClient
                             Comp.m_ImpactAudio = "Play_StoneImpacts";
                         }
                     }
+                    NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
+                    if (Player)
+                    {
+                        Player.DoHit();
+                    }
                 }
                 else
                 {
@@ -379,15 +391,16 @@ namespace SkyCoopClient
                 }
             } else if(ProjectileName == "GEAR_Arrow" || ProjectileName == "GEAR_ArrowHardened")
             {
-                GameObject gameObject = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(ProjectileName), Position, Rotation);
+                Bullet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(ProjectileName), Position, Rotation);
                 NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
                 if (Player)
                 {
-                    Player.SetIgnorePhysicsForObject(gameObject);
+                    Player.SetIgnorePhysicsForObject(Bullet);
                 }
-                GearItem component = gameObject.GetComponent<GearItem>();
-                gameObject.name = ProjectileName;
-                gameObject.transform.parent = (Transform)null;
+                GearItem component = Bullet.GetComponent<GearItem>();
+                component.SetNormalizedHP(Fuse);
+                Bullet.name = ProjectileName;
+                Bullet.transform.parent = (Transform)null;
                 component.m_InPlayerInventory = false;
                 component.m_StackableItem.m_Units = 1;
                 component.m_CurrentHP = 100;
@@ -519,7 +532,7 @@ namespace SkyCoopClient
                     Transform playerTransform = GameManager.GetPlayerTransform();
                     Vector3 Position = playerTransform.TransformPoint(transform.position);
                     Quaternion Rotation = playerTransform.rotation * transform.rotation;
-                    ClientSend.SendProjectile(Position, Rotation, __instance.m_GearArrow.name);
+                    ClientSend.SendProjectile(Position, Rotation, __instance.m_GearArrow.name, __instance.m_GearArrow.GetNormalizedCondition());
                 }
             }
         }
@@ -627,6 +640,51 @@ namespace SkyCoopClient
                         ClientSend.SendDamageToPlayer(__instance.m_PlayerDamageInflictionInRadius, ModMain.Client.GetMyId(), PlayerDamageColider.DamageZone.Chest, "GEAR_NoiseMaker", DataStr.DamageType.NoiseMaker, handle.m_ThrowerID);
                     }
                 }
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "Fire")] // Once
+        public class ArrowItem_Fire
+        {
+            public static void Prefix(ArrowItem __instance)
+            {
+                __instance.gameObject.AddComponent<Comps.ArrowHook>();
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "Break")] // Once
+        public class ArrowItem_Break
+        {
+            public static bool Prefix(ArrowItem __instance)
+            {
+                Comps.ArrowHook Hook = __instance.gameObject.AddComponent<Comps.ArrowHook>();
+                bool Other = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>() != null;
+                if (Hook)
+                {
+                    Hook.m_Broken = true;
+                }
+                GameObject BrokenArrow = UnityEngine.Object.Instantiate<GameObject>(__instance.m_BrokenArrow, __instance.transform.position, __instance.transform.rotation);
+                if (BrokenArrow)
+                {
+                    BrokenArrow.name = __instance.m_BrokenArrow.name;
+                    Rigidbody component = BrokenArrow.GetComponent<Rigidbody>();
+                    component.AddForce(__instance.m_Rigidbody.velocity, ForceMode.VelocityChange);
+                    component.mass = __instance.m_Rigidbody.mass;
+                    component.drag = __instance.m_Rigidbody.drag;
+                    component.angularDrag = __instance.m_Rigidbody.angularDrag;
+                    BrokenArrow.GetComponent<GearItem>().m_CurrentHP = 0.0025f;
+
+                    if (Other)
+                    {
+                        BrokenArrow.AddComponent<Comps.OtherPlayerBullet>();
+                    }
+
+                    BrokenArrow.AddComponent<Comps.ArrowHook>();
+
+                    Utils.SetIsKinematic(component, false);
+                    GameAudioManager.Play3DSound("Play_ArrowBreak", BrokenArrow);
+                }
+                UnityEngine.Object.Destroy(__instance.gameObject);
+
                 return false;
             }
         }

@@ -12,6 +12,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 37850;
             public int m_VoicePort = 0;
             public string m_GameMode = "Stalker";
+            public string m_SceneToSpawn = "BlackrockPrisonSurvivalZone";
         }
         public class PlayerData
         {
@@ -27,6 +28,7 @@ namespace SkyCoopServer
             public List<Damager> m_Damagers = new List<Damager>();
             public int m_LastDamager = -1;
             public int m_PreLastDamager = -1;
+
 
             public GamePlayState m_GamePlayState = GamePlayState.Alive;
 
@@ -204,6 +206,32 @@ namespace SkyCoopServer
             public string m_GearInHands = "";
             public int m_GearVariant = 0;
             public int m_LatAction = 0;
+            public List<InjectedItem> m_InjectedItems = new List<InjectedItem>();
+        }
+
+        public class GearDataVisual
+        {
+            public string m_GearName = "";
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
+            public string m_GUID = "";
+        }
+        public class GearData
+        {
+            public string m_GUID = "";
+            public string m_JSON = "";
+        }
+
+        public class GearDataContainer
+        {
+            public GearDataVisual m_Visual = new GearDataVisual();
+            public GearData m_Data = new GearData();
+        }
+
+        public class SceneData
+        {
+            public string m_SceneName = "";
+            public Dictionary<string, GearDataContainer> m_Gears = new Dictionary<string, GearDataContainer>();
         }
 
         public struct Damager : IComparable<Damager>
@@ -285,6 +313,15 @@ namespace SkyCoopServer
             }
 
             public V3Quat() { }
+        }
+
+        public class InjectedItem
+        {
+            public string m_GearName = "";
+            public int m_DamageZone = 0;
+            public int m_ObjectID = 0;
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
         }
     }
 }

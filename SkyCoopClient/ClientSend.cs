@@ -95,7 +95,7 @@ namespace SkyCoop
             writer.Put(Killer);
             SendToHost(writer);
         }
-        public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName)
+        public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtaFloat = 1)
         {
             //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
             NetDataWriter writer = new NetDataWriter();
@@ -103,6 +103,7 @@ namespace SkyCoop
             writer.Write(Position);
             writer.Write(Rotation);
             writer.Put(ProjectileName);
+            writer.Put(ExtaFloat);
             SendToHost(writer);
         }
         public static void SendDeath(DataStr.DamageType DamageType, bool Knocked, bool HeadShot)
@@ -137,6 +138,77 @@ namespace SkyCoop
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientRequestRespawn);
+            SendToHost(writer);
+        }
+
+        public static void SendInjectedItem(int PlayerID, string GearName, int ObjectIndex, Comps.PlayerDamageColider.DamageZone DamageZone, Vector3 Position, Quaternion Rotation)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientInjectedItem);
+
+            writer.Put(PlayerID);
+            writer.Put(GearName);
+            writer.Put(ObjectIndex);
+            writer.Put((int)DamageZone);
+            writer.Write(Position);
+            writer.Write(Rotation);
+
+            SendToHost(writer);
+        }
+        public static void SendRemoveInjectedItem(int PlayerID, string GearName, Comps.PlayerDamageColider.DamageZone DamageZone)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRemoveInjectedItem);
+
+            writer.Put(PlayerID);
+            writer.Put(GearName);
+            writer.Put((int)DamageZone);
+
+            SendToHost(writer);
+        }
+
+        public static void SendEraceAllInjectedItems()
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientEraceAllInjectedItems);
+            SendToHost(writer);
+        }
+
+        public static void SendGear(string GearName, Vector3 Position, Quaternion Rotation, string JSON)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientSendGear);
+
+            writer.Put(GearName);
+            writer.Write(Position);
+            writer.Write(Rotation);
+            writer.Put(JSON);
+
+
+            //SkyCoop.Logger.Log(ConsoleColor.Green, $"ClientSend.SendGear {GearName}");
+            //SkyCoop.Logger.Log(ConsoleColor.Green, $"JSON: {JSON}");
+
+            SendToHost(writer);
+        }
+
+        public static void SendGearPickUp(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientPickUpGear);
+
+            writer.Put(GUID);
+
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"ClientSend.SendGearPickUp {GUID}");
+
+            SendToHost(writer);
+        }
+        public static void SendNewScene(string SceneName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientLoadedScene);
+
+            writer.Put(SceneName);
+
             SendToHost(writer);
         }
     }
