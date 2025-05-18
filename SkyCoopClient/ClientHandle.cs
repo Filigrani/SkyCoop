@@ -22,8 +22,10 @@ namespace SkyCoop
         public static void ServerConfig(NetDataReader Reader)
         {
             DataStr.ServerConfig CFG = Reader.GetConfig();
+            DataStr.GameRules Rules = Reader.GetRules();
 
             ModMain.Client.m_Config = CFG;
+            ModMain.Client.m_Rules = Rules;
 
             PlayersManager.InitilizePlayers(CFG.m_MaxPlayers);
 
@@ -267,6 +269,14 @@ namespace SkyCoop
             bool AllowAudio = Reader.GetBool();
 
             OpenablesSync.HandleOpenableSync(GUID, OpenState, AllowAudio);
+        }
+
+        public static void ClientClothing(NetDataReader Reader)
+        {
+            int ClothingRegion = Reader.GetInt();
+            string GearName = Reader.GetString();
+
+            // Handle sync
         }
     }
 }

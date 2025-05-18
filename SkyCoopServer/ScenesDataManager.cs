@@ -45,7 +45,7 @@ namespace SkyCoopServer
                     }
                     else
                     {
-                        return SpawnPoints[new Random(new Guid().GetHashCode()).Next(0, SpawnPoints.Count)];
+                        return SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, SpawnPoints.Count)];
                     }
                 }
             }
@@ -113,6 +113,17 @@ namespace SkyCoopServer
                 else
                 {
                     SceneData.m_Openables.Add(GUID, OpenState);
+                }
+            }
+        }
+
+        public void ChangeGameMode(string GameMode)
+        {
+            foreach (string Key in m_LoadedScenes.Keys.ToList())
+            {
+                if (m_LoadedScenes.ContainsKey(Key))
+                {
+                    m_LoadedScenes[Key].m_SpawnPoints = FilesManager.GetSpawnPoints(GameMode, Key);
                 }
             }
         }

@@ -25,6 +25,8 @@ namespace SkyCoop
 
             public string m_GearName = "";
             public int m_GearVariant = 0;
+            public string m_HeadGear = "";
+            public string m_BodyGear = "";
 
             public bool m_LastSentCrouch = false;
             public Comps.NetworkPlayer.Actions m_LastSentAction = Comps.NetworkPlayer.Actions.None;
@@ -177,6 +179,30 @@ namespace SkyCoop
             return Comps.NetworkPlayer.Actions.None;
         }
 
+        public static string GetClothForSlot(ClothingRegion s, ClothingLayer l)
+        {
+            if(GameManager.m_PlayerManager)
+            {
+                GearItem gi = GameManager.GetPlayerManagerComponent().GetClothingInSlot(s, l);
+                if (gi != null)
+                {
+                    string dummyN = gi.name;
+                    string finalN = "";
+                    if (dummyN.Contains("(Clone)")) //If it has ugly (Clone), cutting it.
+                    {
+                        int L = dummyN.Length - 7;
+                        finalN = dummyN.Remove(L, 7);
+                    }
+                    else
+                    {
+                        finalN = dummyN;
+                    }
+                    return finalN;
+                }
+            }
+            return "";
+        }
+
         public static void UpdateLocalPlayer()
         {
             if(!GameManager.s_IsGameplaySuspended)
@@ -220,6 +246,12 @@ namespace SkyCoop
                             }
                         }
                     }
+                }
+                string HeadGear = GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid);
+                if(m_LocalPlayerData.m_HeadGear != HeadGear)
+                {
+                    m_LocalPlayerData.m_HeadGear = HeadGear;
+                    ClientSend.SendClothing(0, HeadGear);
                 }
 
                 if (m_LocalPlayerData.m_LastSentScene != Scene)
@@ -342,11 +374,11 @@ namespace SkyCoop
 
             if (bodypart == Comps.PlayerDamageColider.DamageZone.Head) // If Head
             {
-                //if (GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid) == "GEAR_CookingPot")
-                //{
-                //    damage = (20 * damage) / 100;
-                //    HasHelemet = true;
-                //}
+                if (GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid) == "GEAR_CookingPot")
+                {
+                    damage = (20 * damage) / 100;
+                    HasHelemet = true;
+                }
             }
 
             m_LastDamageType = DmgInfo.m_DamageType;
@@ -564,9 +596,49 @@ namespace SkyCoop
 
         public static GearItem GiveItemToPlayer(string GearName, int units = 1)
         {
-            GearItem gearItem = Addressables.LoadAssetAsync<GameObject>(GearName).WaitForCompletion().GetComponent<GearItem>();
-            GearItem given = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory(gearItem, units, 1f, InventoryInstantiateFlags.None);
-            return given;
+            GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
+            if (reference)
+            {
+                GearItem gearItem = reference.GetComponent<GearItem>();
+                if (gearItem)
+                {
+                    GearItem given = GameManager.GetPlayerManagerComponent().InstantiateItemInPlayerInventory(gearItem, units, 1f, InventoryInstantiateFlags.None);
+                    if (given)
+                    {
+                        return given;
+                    }
+                    else
+                    {
+                        GameObject GearObj = UnityEngine.Object.Instantiate<GameObject>(reference);
+                        if (GearObj)
+                        {
+                            given = GearObj.GetComponent<GearItem>();
+                            if (given)
+                            {
+                                GameManager.GetPlayerManagerComponent().ProcessPickupItemInteraction(given, false, false, true);
+                            }
+                            else
+                            {
+                                SkyCoop.Logger.Log(ConsoleColor.Red, $"GiveItemToPlayer can't give {GearName}, it has no GearItem component. [Instantiated variant]");
+                                UnityEngine.Object.Destroy(GearObj);
+                            }
+                        }
+                        else
+                        {
+                            SkyCoop.Logger.Log(ConsoleColor.Red, $"GiveItemToPlayer can't give {GearName}, wasn't able to instantiate in inventory.");
+                        }
+                    }
+                }
+                else
+                {
+                    SkyCoop.Logger.Log(ConsoleColor.Red, $"GiveItemToPlayer can't give {GearName}, it has no GearItem component.");
+                }
+            }
+            else
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"GiveItemToPlayer can't give {GearName} it not exist.");
+            }
+            return null;
         }
 
         public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation, bool RespawnAnim)

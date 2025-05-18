@@ -3,6 +3,7 @@ using LiteNetLib.Utils;
 using System;
 using System.Numerics;
 using static SkyCoopServer.DataStr;
+using static SkyCoopServer.DataStr.PlayerData;
 
 namespace SkyCoopServer
 {
@@ -13,7 +14,7 @@ namespace SkyCoopServer
             string PlayerName = Reader.GetString();
             Console.WriteLine("[GameServer] Сlient " + Client.Id+ " connected under name: " + PlayerName);
             ServerInstance.m_PlayersData.SetPlayerName(Client.Id, PlayerName);
-            ServerSend.ServerConfig(Client, ServerInstance.m_Config);
+            ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
 
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
             {
@@ -80,6 +81,11 @@ namespace SkyCoopServer
                 Killer = Client.Id;
             }
 
+            if (!ServerInstance.m_Rules.m_PVP && Killer != Victim)
+            {
+                return;
+            }
+
             if (ServerInstance.m_PlayersData.m_Players[Victim].m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
             {
                 ServerSend.SendDamageToPlayer(ServerInstance.GetClient(Victim), Damage, Killer, BodyPart, WeaponName);
@@ -100,9 +106,9 @@ namespace SkyCoopServer
         {
             int DamageI = Reader.GetInt();
             DataStr.DamageType DamageType = (DataStr.DamageType)DamageI;
-            Console.WriteLine("[GameServer] DamageI " + DamageI + " DamageType " + DamageType.ToString());
             bool Knocked = Reader.GetBool();
             bool HeadShot = Reader.GetBool();
+            Console.WriteLine("[GameServer] ClientDied " + DamageType.ToString() + " Knocked "+ Knocked+ " HeadShot "+ HeadShot);
             ServerInstance.GetPlayerDataByNetPeer(Client).ConfirmKill(ServerInstance, DamageType, Knocked, HeadShot);
         }
         public static void ClientRevived(NetPeer Client, NetDataReader Reader, Server ServerInstance)
@@ -126,9 +132,10 @@ namespace SkyCoopServer
         }
         public static void ClientRequestRespawn(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
+            Console.WriteLine("ClientRequestRespawn PlayerID " + Client.Id + " m_GamePlayState: " + ServerInstance.GetPlayerDataByNetPeer(Client).m_GamePlayState.ToString());
             if (ServerInstance.m_PlayersData.m_Players[Client.Id].m_GamePlayState == DataStr.PlayerData.GamePlayState.Dead)
             {
-                DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(ServerInstance.m_PlayersData.m_Players[Client.Id].m_Scene);
+                DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene);
                 ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation);
             }
         }
@@ -141,6 +148,11 @@ namespace SkyCoopServer
             int DamageZone = Reader.GetInt();
             Vector3 Position = Reader.GetVector3();
             Quaternion Rotation = Reader.GetQuaternion();
+
+            if(!ServerInstance.m_Rules.m_PVP && Client.Id != PlayerID)
+            {
+                return;
+            }
 
             DataStr.InjectedItem injectedItem = new DataStr.InjectedItem();
             injectedItem.m_GearName = GearName;
@@ -239,6 +251,22 @@ namespace SkyCoopServer
                 }
             }
             ServerInstance.m_ScenesData.AddOpenableState(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID, OpenState);
+        }
+
+        public static void ClientClothing(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            int ClothingRegion = Reader.GetInt();
+            string GearName = Reader.GetString();
+            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+            if(ClothingRegion == 0)
+            {
+                Data.m_VisualData.m_HeadGear = GearName;
+            }else if(ClothingRegion == 1)
+            {
+                Data.m_VisualData.m_BodyGear = GearName;
+            }
+
+            // TODO: Send to other clients.
         }
     }
 }

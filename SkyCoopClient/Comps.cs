@@ -563,7 +563,10 @@ namespace SkyCoop
             {
                 foreach (Collider col in m_PlayerColiders)
                 {
-                    UnityEngine.Physics.IgnoreCollision(obj.GetComponent<Collider>(), col, true);
+                    foreach (Collider col2 in obj.GetComponentsInChildren<Collider>())
+                    {
+                        UnityEngine.Physics.IgnoreCollision(col2, col, true);
+                    }
                 }
             }
 

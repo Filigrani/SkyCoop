@@ -1,4 +1,5 @@
-﻿using Il2Cpp;
+﻿using AssetsTools.NET.Extra;
+using Il2Cpp;
 using Il2CppTLD.Gameplay;
 using SkyCoop;
 using UnityEngine;
@@ -57,7 +58,7 @@ namespace SkyCoopClient
             //SkyCoop.Logger.Log("AddViewModel " + GearName+" "+Mesh.name);
         }
 
-        public static void AssignExistingViewModel(Transform Parnet, string MeshName, string GearName)
+        public static GameObject AssignExistingViewModel(Transform Parnet, string MeshName, string GearName)
         {
             //SkyCoop.Logger.Log("AssignExistingViewModel "+MeshName);
             if (Parnet)
@@ -66,8 +67,27 @@ namespace SkyCoopClient
                 if (T)
                 {
                     AddViewModel(T.gameObject, GearName);
+                    return T.gameObject;
                 }
             }
+            return null;
+        }
+
+        public static GameObject AssignBogusViewModel(Transform Parnet, string PrefabName, string GearName, Vector3 Position, Vector3 Rotation)
+        {
+            //SkyCoop.Logger.Log("AssignExistingViewModel "+MeshName);
+            if (Parnet)
+            {
+                GameObject Bogus = AssetManager.CreateBogusGear(PrefabName, Parnet);
+                if (Bogus)
+                {
+                    AddViewModel(Bogus, GearName);
+                    Bogus.transform.localPosition = Position;
+                    Bogus.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
+                }
+                return Bogus;
+            }
+            return null;
         }
 
         public static void ReintilizeViewModels()
@@ -80,11 +100,39 @@ namespace SkyCoopClient
             {
                 AssignExistingViewModel(ParnetObject.transform, "mesh_hatchet", "GEAR_Hatchet");
                 AssignExistingViewModel(ParnetObject.transform, "mesh_Hatchet_improvised", "GEAR_HatchetImprovised");
-                AssignExistingViewModel(ParnetObject.transform, "mesh_knife", "GEAR_Knife");
+                GameObject KnifeMesh = AssignExistingViewModel(ParnetObject.transform, "mesh_knife", "GEAR_Knife");
                 AssignExistingViewModel(ParnetObject.transform, "mesh_knife_improvised", "GEAR_KnifeImprovised");
                 AssignExistingViewModel(ParnetObject.transform, "mesh_prybar", "GEAR_Prybar");
                 AssignExistingViewModel(ParnetObject.transform, "mesh_hammer", "GEAR_Hammer");
                 AssignExistingViewModel(ParnetObject.transform, "FPH_Brand(Clone)", "GEAR_Brand");
+
+                if(AssignExistingViewModel(ParnetObject.transform, "mesh_scrapknife", "GEAR_KnifeScrapMetal") == null)
+                {
+                    GameObject KnifeScrap = AssignBogusViewModel(ParnetObject.transform, "GEAR_KnifeScrapMetal", "GEAR_KnifeScrapMetal", new Vector3(0, 0.05f, 0), new Vector3(90, -30, 0));
+                    KnifeScrap.name = "mesh_scrapknife";
+                    KnifeScrap.SetActive(false);
+                }
+                if(AssignExistingViewModel(ParnetObject.transform, "mesh_jeremiahknife", "GEAR_JeremiahKnife") == null)
+                {
+                    if (KnifeMesh)
+                    {
+                        GameObject KnifeMeshClone = UnityEngine.Object.Instantiate<GameObject>(KnifeMesh, KnifeMesh.transform.parent);
+                        if (KnifeMeshClone)
+                        {
+                            KnifeMeshClone.transform.position = KnifeMesh.transform.position;
+                            KnifeMeshClone.transform.rotation = KnifeMesh.transform.rotation;
+                            KnifeMeshClone.name = "mesh_jeremiahknife";
+
+                            GameObject Bogus = AssetManager.CreateBogusGear("GEAR_JeremiahKnife");
+                            if (Bogus)
+                            {
+                                KnifeMeshClone.GetComponent<MeshRenderer>().material = Bogus.transform.GetChild(0).GetComponent<MeshRenderer>().material;
+                            }
+                            UnityEngine.Object.Destroy(Bogus); // This one was needed, just to grab texture.
+                            AddViewModel(KnifeMeshClone, "GEAR_JeremiahKnife");
+                        }
+                    }
+                }
                 FindDummy();
             }
         }

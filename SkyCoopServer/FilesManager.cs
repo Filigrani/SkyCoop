@@ -12,6 +12,8 @@ namespace SkyCoopServer
     public class FilesManager
     {
         public static string s_SpawnPointsDirectory = "SpawnPoints";
+        public static string s_StartingGearFileName = "StartingGear";
+        public static string s_RulesFileName = "Rules";
         public static string s_DataDirectory = "";
 
         public static void SetDataDirectory(string Path)
@@ -19,10 +21,38 @@ namespace SkyCoopServer
             s_DataDirectory = Path;
         }
 
+        public static GameRules GetRules(string GameMode)
+        {
+            GameRules Rules = new GameRules();
+            string Path = $"{s_DataDirectory}/{GameMode}/{s_RulesFileName}";
+            string JSON = "";
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"FilesManager failed to load {Path}: {e.Message}");
+                    return Rules;
+                }
+            }
+            if (string.IsNullOrEmpty(JSON))
+            {
+                return Rules;
+            }
+            GameRulesSave Save = JsonSerializer.Deserialize<GameRulesSave>(JSON);
+            Rules.m_PlayerCanBeKnocked = Save.Knockdowns;
+            Rules.m_PVP = Save.PVP;
+            Rules.m_StartingItems = Save.StartingGear;
+            return Rules;
+        }
+
         public static List<V3Quat> GetSpawnPoints(string GameMode, string Scene)
         {
             List<V3Quat> Points = new List<V3Quat>();
-            string Path = $"{s_DataDirectory}/{s_SpawnPointsDirectory}/{GameMode}/{Scene}";
+            string Path = $"{s_DataDirectory}/{GameMode}/{s_SpawnPointsDirectory}/{Scene}";
             string JSON = "";
             if (File.Exists(Path))
             {

@@ -33,6 +33,7 @@ namespace SkyCoopServer
             ClientRemoveGear,
             ClientLoadedScene,
             ClientOpenableInteraction,
+            ClientClothing,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -137,6 +138,69 @@ namespace SkyCoopServer
             CFG.m_GameMode = Reader.GetString();
 
             return CFG;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.GameRules Rules)
+        {
+            Writer.Put(Rules.m_PlayerCanBeKnocked);
+            Writer.Put(Rules.m_PVP);
+            Writer.Put(Rules.m_StartingItems);
+        }
+
+        public static DataStr.GameRules GetRules(this NetDataReader Reader)
+        {
+            DataStr.GameRules Rules = new DataStr.GameRules();
+
+            Rules.m_PlayerCanBeKnocked = Reader.GetBool();
+            Rules.m_PVP = Reader.GetBool();
+            Rules.m_StartingItems = Reader.GetStartingGearList();
+
+            return Rules;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.StartingGearData GearData)
+        {
+            Writer.Put(GearData.Variants.Count);
+
+            foreach (string GearVariant in GearData.Variants)
+            {
+                Writer.Put(GearVariant);
+            }
+            Writer.Put(GearData.Units);
+        }
+
+        public static DataStr.StartingGearData GetStartingGear(this NetDataReader Reader)
+        {
+            DataStr.StartingGearData GearData = new DataStr.StartingGearData();
+            int Count = Reader.GetInt();
+            GearData.Variants = new List<string>();
+            for (int i = 0; i < Count; i++)
+            {
+                GearData.Variants.Add(Reader.GetString());
+            }
+            GearData.Units = Reader.GetInt();
+            return GearData;
+        }
+
+        public static void Put(this NetDataWriter Writer, List<DataStr.StartingGearData> GearDataList)
+        {
+            Writer.Put(GearDataList.Count);
+
+            foreach (DataStr.StartingGearData GearData in GearDataList)
+            {
+                Writer.Put(GearData);
+            }
+        }
+
+        public static List<DataStr.StartingGearData> GetStartingGearList(this NetDataReader Reader)
+        {
+            List<DataStr.StartingGearData> GearDataList = new List<DataStr.StartingGearData> ();
+            int Count = Reader.GetInt();
+            for (int i = 0; i < Count; i++)
+            {
+                GearDataList.Add(Reader.GetStartingGear());
+            }
+            return GearDataList;
         }
     }
 }

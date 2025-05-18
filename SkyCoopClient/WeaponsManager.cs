@@ -9,9 +9,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static MelonLoader.Modules.MelonModule;
 using static SkyCoop.Comps;
-using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoopClient
 {
@@ -269,7 +267,6 @@ namespace SkyCoopClient
                 NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
                 if (Player)
                 {
-                    Player.SetIgnorePhysicsForObject(FlareShot);
                     GameObject localplayerColider = new GameObject();
                     localplayerColider.name = "LocalPlayerColider";
                     BoxCollider Colider = localplayerColider.AddComponent<BoxCollider>();
@@ -278,6 +275,7 @@ namespace SkyCoopClient
                     Colider.extents = new Vector3(0.225f, 0.225f, 0.55f);
                     localplayerColider.transform.SetParent(FlareShot.transform);
                     localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
+                    Player.SetIgnorePhysicsForObject(FlareShot);
                 }
             }else if(ProjectileName == "GEAR_NoiseMaker")
             {

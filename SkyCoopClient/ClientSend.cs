@@ -85,6 +85,14 @@ namespace SkyCoop
 
         public static void SendDamageToPlayer(float Damage, int Victim, Comps.PlayerDamageColider.DamageZone BodyPart, string Weapon, DataStr.DamageType DamageType, int Killer = -1)
         {
+            if(ModMain.Client != null && !ModMain.Client.m_Rules.m_PVP)
+            {
+                if(ModMain.Client.GetMyId() != Victim)
+                {
+                    return;
+                }
+            }
+            
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientDamageOtherClient);
             writer.Put(Damage);
@@ -110,6 +118,7 @@ namespace SkyCoop
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientDied);
+
             writer.Put((int)DamageType);
             writer.Put(Knocked);
             writer.Put(HeadShot);
@@ -143,6 +152,13 @@ namespace SkyCoop
 
         public static void SendInjectedItem(int PlayerID, string GearName, int ObjectIndex, Comps.PlayerDamageColider.DamageZone DamageZone, Vector3 Position, Quaternion Rotation)
         {
+            if (ModMain.Client != null && !ModMain.Client.m_Rules.m_PVP)
+            {
+                if (ModMain.Client.GetMyId() != PlayerID)
+                {
+                    return;
+                }
+            }
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientInjectedItem);
 
@@ -219,6 +235,19 @@ namespace SkyCoop
 
             writer.Put(GUID);
             writer.Put(OpenState);
+
+            SkyCoop.Logger.Log($"SendOpenableState {GUID} {OpenState}");
+
+            SendToHost(writer);
+        }
+
+        public static void SendClothing(int ClothingRegion, string GearName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientClothing);
+
+            writer.Put(ClothingRegion);
+            writer.Put(GearName);
 
             SendToHost(writer);
         }

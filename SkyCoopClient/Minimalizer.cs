@@ -312,15 +312,25 @@ namespace SkyCoopClient
 
                 DamageType = PlayersManager.m_LastDamageType;
                 SkyCoop.Logger.Log("PlayerDeath DamageType " + DamageType);
-                if (GameManager.GetBrokenBody().HasAffliction)
+
+
+                if(ModMain.Client != null && ModMain.Client.m_Rules.m_PlayerCanBeKnocked)
+                {
+                    if (GameManager.GetBrokenBody().HasAffliction)
+                    {
+                        PlayersManager.Death(DamageType, PlayersManager.m_LastDamageZone);
+                        return true;
+                    }
+                    PlayersManager.ToKnockedState(DamageType, PlayersManager.m_LastDamageZone);
+                    //PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
+
+                    return false;
+                }
+                else
                 {
                     PlayersManager.Death(DamageType, PlayersManager.m_LastDamageZone);
-                    return true;
                 }
-                PlayersManager.ToKnockedState(DamageType, PlayersManager.m_LastDamageZone);
-                //PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
-
-                return false;
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UseFirstAidItem")]
@@ -382,27 +392,31 @@ namespace SkyCoopClient
         {
             private static bool Prefix(StartGear __instance)
             {
-                GearItem Revolver = PlayersManager.GiveItemToPlayer("GEAR_Revolver");
-                Revolver.m_GunItem.FillClipAtCondition(100);
+                List<DataStr.StartingGearData> StartingGear = new List<DataStr.StartingGearData>();
 
-                GearItem Rifle = PlayersManager.GiveItemToPlayer("GEAR_Rifle");
-                Rifle.m_GunItem.FillClipAtCondition(100);
-                GameManager.GetLifeAfterDeathManager().m_HeldItem = Rifle;
+                if (ModMain.Client != null)
+                {
+                    StartingGear = ModMain.Client.m_Rules.m_StartingItems;
+                }
 
-                PlayersManager.GiveItemToPlayer("GEAR_HeavyBandage", 5);
-                PlayersManager.GiveItemToPlayer("GEAR_EmergencyStim");
-                PlayersManager.GiveItemToPlayer("GEAR_Knife");
-                PlayersManager.GiveItemToPlayer("GEAR_RifleAmmoSingle", 30);
-                PlayersManager.GiveItemToPlayer("GEAR_RevolverAmmoSingle", 30);
-                PlayersManager.GiveItemToPlayer("GEAR_Stone", 30);
-                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
-                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
-                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
-                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
-                PlayersManager.GiveItemToPlayer("GEAR_NoiseMaker");
-                PlayersManager.GiveItemToPlayer("GEAR_Bow");
-                PlayersManager.GiveItemToPlayer("GEAR_Arrow", 5);
-                PlayersManager.GiveItemToPlayer("GEAR_ArrowHardened", 5);
+                if(StartingGear.Count == 0)
+                {
+                    return true;
+                }
+
+                foreach (DataStr.StartingGearData Gear in StartingGear)
+                {
+                    string GearName = Gear.Get();
+
+                    if (!string.IsNullOrEmpty(GearName))
+                    {
+                        GearItem GearItem = PlayersManager.GiveItemToPlayer(GearName, Gear.Units);
+                        if (GearItem && GearItem.m_GunItem)
+                        {
+                            GearItem.m_GunItem.FillClipAtCondition(100);
+                        }
+                    }
+                }
                 return false;
             }
         }
@@ -429,7 +443,7 @@ namespace SkyCoopClient
                 GameManager.GetConditionComponent().ResetAudio();
                 ClientSend.SendRespawnRequest();
                 MenuHook.RemovePleaseWait();
-                MenuHook.DoPleaseWait("Да блин, жди что ли...", "Грузим шпингалены...");
+                MenuHook.DoPleaseWait("Да блин, жди что ли...", "Грузим шпингалеты...");
                 return false;
             }
         }

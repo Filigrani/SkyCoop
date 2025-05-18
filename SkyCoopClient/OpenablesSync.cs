@@ -37,52 +37,36 @@ namespace SkyCoopClient
                 {
                     if(!Openable.IsOpen() && OpenState)
                     {
-                        Openable.Open(true);
+                        string AudioName = Openable.m_OpenAudio;
+                        Openable.m_OpenAudio = ""; // Sloppy fix, so Open() won't make a sound. 
+                        Openable.Open(!AllowAudio);
+                        Openable.m_OpenAudio = AudioName;
                         if (AllowAudio)
                         {
-                            MaybePlayerAudio(Openable.m_OpenAudio, Openable.gameObject);
+                            MaybePlayerAudio(AudioName, Openable.gameObject);
                         }
                     }else if(Openable.IsOpen() && !OpenState)
                     {
-                        Openable.Close(true);
+                        string AudioName = Openable.m_CloseAudio;
+                        Openable.Close(!AllowAudio);
+                        Openable.m_CloseAudio = AudioName;
                         if (AllowAudio)
                         {
-                            MaybePlayerAudio(Openable.m_CloseAudio, Openable.gameObject);
+                            MaybePlayerAudio(AudioName, Openable.gameObject);
                         }
                     }
                 }
             }
         }
-
-        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Open", new System.Type[] { typeof(bool), typeof(bool) })]
-        internal static class OpenClose_Open
+        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "PerformInteraction")]
+        internal static class PlayerManager_PerformInteraction
         {
-            private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
+            private static void Postfix(OpenClose __instance)
             {
-                if (isImmediate == true)
+                ObjectGuid GUIDObj = __instance.GetComponent<ObjectGuid>();
+                if (GUIDObj)
                 {
-                    return;
-                }
-
-                if (__instance.gameObject.GetComponent<ObjectGuid>() != null)
-                {
-                    ClientSend.SendOpenableState(__instance.gameObject.GetComponent<ObjectGuid>().Get(), false);
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(OpenClose), "Close", new System.Type[] { typeof(bool), typeof(bool) })]
-        internal static class OpenClose_Close
-        {
-            private static void Postfix(OpenClose __instance, bool isImmediate, bool fromLink)
-            {
-                if (isImmediate == true)
-                {
-                    return;
-                }
-
-                if (__instance.gameObject.GetComponent<ObjectGuid>() != null)
-                {
-                    ClientSend.SendOpenableState(__instance.gameObject.GetComponent<ObjectGuid>().Get(), true);
+                    ClientSend.SendOpenableState(GUIDObj.Get(), __instance.IsOpen());
                 }
             }
         }

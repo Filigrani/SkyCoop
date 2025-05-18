@@ -13,11 +13,12 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void ServerConfig(NetPeer Client, DataStr.ServerConfig CFG)
+        public static void ServerConfig(NetPeer Client, DataStr.ServerConfig CFG, DataStr.GameRules Rules)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.CFG);
             writer.Put(CFG);
+            writer.Put(Rules);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

@@ -15,6 +15,53 @@ namespace SkyCoopServer
             public string m_SceneToSpawn = "BlackrockPrisonSurvivalZone";
             public string m_GameMode = "DM";
         }
+
+        public class GameRulesSave
+        {
+            public bool Knockdowns { get; set; }
+            public bool PVP { get; set; }
+            public List<StartingGearData> StartingGear { get; set; }
+        }
+
+        public class GameRules
+        {
+            public bool m_PlayerCanBeKnocked = false;
+            public bool m_PVP = true;
+            public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
+        }
+
+        public class StartingGearData
+        {
+            public List<string> Variants { get; set; }
+            public int Units { get; set; }
+
+            public string Get()
+            {
+                int Count = Variants.Count;
+                if (Count == 0)
+                {
+                    return "";
+                }
+                else if (Count == 1)
+                {
+                    return Variants[0];
+                }
+                else
+                {
+                    return Variants[new Random(Guid.NewGuid().GetHashCode()).Next(0, Count)];
+                }
+            }
+            public StartingGearData() { }
+            public StartingGearData(string GearName, int Units = 1)
+            {
+                Variants = new List<string> { GearName };
+                this.Units = Units;
+            }
+            public StartingGearData(List<string> GearVariants)
+            {
+                Variants = GearVariants;
+            }
+        }
         public class PlayerData
         {
             public string m_PlayerName = "Player";
@@ -85,6 +132,7 @@ namespace SkyCoopServer
                 if (!Knocked)
                 {
                     m_GamePlayState = GamePlayState.Dead;
+                    Console.WriteLine("PlayerID " + m_PlayerID + " m_GamePlayState: " + m_GamePlayState.ToString());
                 }
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
                 Message.m_Victim = m_PlayerID;
@@ -208,6 +256,9 @@ namespace SkyCoopServer
             public int m_GearVariant = 0;
             public int m_LatAction = 0;
             public List<InjectedItem> m_InjectedItems = new List<InjectedItem>();
+            public string m_HeadGear = "";
+            public string m_BodyGear = "";
+
         }
 
         public class GearDataVisual

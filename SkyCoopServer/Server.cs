@@ -8,6 +8,7 @@ namespace SkyCoopServer
         public int m_Port = 37855;
 
         public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
+        public DataStr.GameRules m_Rules = new DataStr.GameRules();
         public EventBasedNetListener m_Listener;
         public NetManager m_Instance;
         public bool m_IsReady = false;
@@ -42,6 +43,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientPickUpGear, ServerHandle.ClientPickUpGear },
             { (int)Packet.Type.ClientLoadedScene, ServerHandle.ClientLoadedScene },
             { (int)Packet.Type.ClientOpenableInteraction, ServerHandle.ClientOpenableInteraction },
+            { (int)Packet.Type.ClientClothing, ServerHandle.ClientClothing },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -127,9 +129,17 @@ namespace SkyCoopServer
             }
         }
 
+        public void ChangeGameMode(string GameMode)
+        {
+            m_Config.m_GameMode = GameMode;
+            m_Rules = FilesManager.GetRules(GameMode);
+            m_ScenesData.ChangeGameMode(GameMode);
+        }
+
         public void StartServer()
         {
             StartServer(m_Port, m_Config.m_MaxPlayers);
+            ChangeGameMode(m_Config.m_GameMode);
         }
 
         public void StartServer(int port, int maxPlayers, string key = "key")

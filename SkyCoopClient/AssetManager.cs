@@ -35,25 +35,26 @@ namespace SkyCoop
             T Asset = Addressables.LoadAssetAsync<T>(AssetName).WaitForCompletion();
             if (Asset == null)
             {
-                Logger.Log(System.ConsoleColor.Red, "Can't load "+AssetName+" from game assets!");
-                Logger.Log(System.ConsoleColor.DarkMagenta, "Fine...lets try old way");
+                //Logger.Log(System.ConsoleColor.Yellow, "Can't load "+AssetName+" from game assets!");
+                //Logger.Log(System.ConsoleColor.DarkMagenta, "Fine...lets try old way");
                 Asset = GetAssetFromResources_OLD<T>(AssetName);
                 if(Asset == null)
                 {
-                    Logger.Log(System.ConsoleColor.DarkMagenta, "Na, bogus.");
+                    Logger.Log(System.ConsoleColor.Yellow, "Can't load " + AssetName + " from game assets!");
                 }
             }
             return Asset;
         }
 
-        public static GameObject CreateBogusGear(string GearName)
+        public static GameObject CreateBogusGear(string GearName, Transform parent = null)
         {
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
             if (Prefab)
             {
-                GameObject GearObject = UnityEngine.Object.Instantiate(Prefab);
+                GameObject GearObject = UnityEngine.Object.Instantiate(Prefab, parent);
                 if (GearObject)
                 {
+                    GearObject.name = GearName;
                     foreach (Component Com in GearObject.GetComponents<Component>())
                     {
                         string ComName = Com.GetIl2CppType().Name;
