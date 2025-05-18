@@ -21,31 +21,29 @@ namespace SkyCoop
 
         public static void ServerConfig(NetDataReader Reader)
         {
-            int PlayersMax = Reader.GetInt();
-            int Seed = Reader.GetInt();
-            string StartingRegion = Reader.ReadString();
-            string GameMode = Reader.ReadString();
-            int VoicePort = Reader.GetInt();
-            string SpawnScene = Reader.GetString();
+            DataStr.ServerConfig CFG = Reader.GetConfig();
 
-            PlayersManager.InitilizePlayers(PlayersMax);
+            ModMain.Client.m_Config = CFG;
+
+            PlayersManager.InitilizePlayers(CFG.m_MaxPlayers);
 
             Logger.Log(ConsoleColor.Cyan, "Server config");
-            Logger.Log(ConsoleColor.Cyan, "PlayersMax: " + PlayersMax);
-            Logger.Log(ConsoleColor.Cyan, "Seed: " + Seed);
-            Logger.Log(ConsoleColor.Cyan, "StartingRegion: "+ StartingRegion);
-            Logger.Log(ConsoleColor.Cyan, "GameMode: " + GameMode);
-            Logger.Log(ConsoleColor.Cyan, "VoicePort: " + VoicePort);
-            Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + SpawnScene);
+            Logger.Log(ConsoleColor.Cyan, "PlayersMax: " + CFG.m_MaxPlayers);
+            Logger.Log(ConsoleColor.Cyan, "Seed: " + CFG.m_Seed);
+            Logger.Log(ConsoleColor.Cyan, "StartingRegion: "+ CFG.m_StartingRegion);
+            Logger.Log(ConsoleColor.Cyan, "ExperienceMode: " + CFG.m_ExperienceMode);
+            Logger.Log(ConsoleColor.Cyan, "VoicePort: " + CFG.m_VoicePort);
+            Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + CFG.m_SceneToSpawn);
+            Logger.Log(ConsoleColor.Cyan, "GameMode: " + CFG.m_GameMode);
 
             ModMain.Client.m_IsReady = true;
             ModMain.Client.ProcessAllDelayedPackages();
             MenuHook.RemovePleaseWait();
-            ModMain.SetupSurvivalSettings(GameMode, Seed, StartingRegion, SpawnScene);
+            ModMain.SetupSurvivalSettings(CFG.m_ExperienceMode, CFG.m_Seed, CFG.m_StartingRegion, CFG.m_SceneToSpawn);
 
-            if(VoicePort != 0)
+            if(CFG.m_VoicePort != 0)
             {
-                Task.Run(() => { ModMain.Client.ConnectToServerVoice(VoicePort); });
+                Task.Run(() => { ModMain.Client.ConnectToServerVoice(CFG.m_VoicePort); });
             }
             //GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
             //if (SoundPlayerPrefab)
@@ -60,7 +58,7 @@ namespace SkyCoop
         public static void ClientPosition(NetDataReader Reader)
         {
             int PlayerID = Reader.GetInt();
-            Vector3 Position = Reader.ReadVector3Unity();
+            Vector3 Position = Reader.GetVector3Unity();
 
             Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
             if(Player)
@@ -72,7 +70,7 @@ namespace SkyCoop
         public static void ClientRotation(NetDataReader Reader)
         {
             int PlayerID = Reader.GetInt();
-            Quaternion Rotation = Reader.ReadQuaternionUnity();
+            Quaternion Rotation = Reader.GetQuaternionUnity();
 
             Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
             if (Player)
@@ -108,7 +106,7 @@ namespace SkyCoop
         public static void ClientHoldingGear(NetDataReader Reader)
         {
             int PlayerID = Reader.GetInt();
-            string GearName = Reader.ReadString();
+            string GearName = Reader.GetString();
             int GearVariant = Reader.GetInt();
             Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
             if (Player)
@@ -157,8 +155,8 @@ namespace SkyCoop
         public static void ClientProjectile(NetDataReader Reader)
         {
             int ShooterID = Reader.GetInt();
-            Vector3 Pos = Reader.ReadVector3Unity();
-            Quaternion Rot = Reader.ReadQuaternionUnity();
+            Vector3 Pos = Reader.GetVector3Unity();
+            Quaternion Rot = Reader.GetQuaternionUnity();
             string ProjectileName = Reader.GetString();
             float ExtraFloat = Reader.GetFloat();
             WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, ExtraFloat);
@@ -166,17 +164,17 @@ namespace SkyCoop
         public static void ClientProjectileThrow(NetDataReader Reader)
         {
             int ShooterID = Reader.GetInt();
-            Vector3 Pos = Reader.ReadVector3Unity();
-            Quaternion Rot = Reader.ReadQuaternionUnity();
+            Vector3 Pos = Reader.GetVector3Unity();
+            Quaternion Rot = Reader.GetQuaternionUnity();
             string ProjectileName = Reader.GetString();
-            Vector3 Velocity = Reader.ReadVector3Unity();
-            Vector3 AngularVelocity = Reader.ReadVector3Unity();
+            Vector3 Velocity = Reader.GetVector3Unity();
+            Vector3 AngularVelocity = Reader.GetVector3Unity();
             float Fuse = Reader.GetFloat();
             WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, Velocity, AngularVelocity, Fuse);
         }
         public static void KillFeedMessage(NetDataReader Reader)
         {
-            DataStr.KillFeedMessage Message = Reader.ReadKillFeedMessage();
+            DataStr.KillFeedMessage Message = Reader.GetKillFeedMessage();
             SkyCoop.Logger.Log("KillFeedMessage");
             SkyCoop.Logger.Log("- m_Killer" + Message.m_Killer);
             SkyCoop.Logger.Log("- m_Victim" + Message.m_Victim);
@@ -198,8 +196,8 @@ namespace SkyCoop
         }
         public static void ClientRequestRespawn(NetDataReader Reader)
         {
-            Vector3 Position = Reader.ReadVector3Unity();
-            Quaternion Quaternion = Reader.ReadQuaternionUnity();
+            Vector3 Position = Reader.GetVector3Unity();
+            Quaternion Quaternion = Reader.GetQuaternionUnity();
             bool RespawnAnim = Reader.GetBool();
 
             PlayersManager.RespawnOnPoint(Position, Quaternion, RespawnAnim);
@@ -210,8 +208,8 @@ namespace SkyCoop
             int PlayerID = Reader.GetInt();
             string GearName = Reader.GetString();
             int ObjectID = Reader.GetInt();
-            Vector3 Position = Reader.ReadVector3Unity();
-            Quaternion Rotation = Reader.ReadQuaternionUnity();
+            Vector3 Position = Reader.GetVector3Unity();
+            Quaternion Rotation = Reader.GetQuaternionUnity();
 
             PlayersManager.GetPlayer(PlayerID).AddInjectedItem(GearName, ObjectID, Position, Rotation);
         }
@@ -233,7 +231,7 @@ namespace SkyCoop
 
         public static void ClientSendGear(NetDataReader Reader)
         {
-            DataStr.GearDataVisual Visual = Reader.ReadGearVisual();
+            DataStr.GearDataVisual Visual = Reader.GetGearVisual();
 
             GearsSync.HandleGearDropped(Visual);
         }
@@ -260,6 +258,15 @@ namespace SkyCoop
             string GUID = Reader.GetString();
 
             GearsSync.HandleGearRemove(GUID);
+        }
+
+        public static void ClientOpenableInteraction(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+            bool OpenState = Reader.GetBool();
+            bool AllowAudio = Reader.GetBool();
+
+            OpenablesSync.HandleOpenableSync(GUID, OpenState, AllowAudio);
         }
     }
 }

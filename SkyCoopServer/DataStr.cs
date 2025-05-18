@@ -11,8 +11,9 @@ namespace SkyCoopServer
             public int m_Seed = 777777;
             //public int m_VoicePort = 37850;
             public int m_VoicePort = 0;
-            public string m_GameMode = "Stalker";
+            public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "BlackrockPrisonSurvivalZone";
+            public string m_GameMode = "DM";
         }
         public class PlayerData
         {
@@ -232,6 +233,9 @@ namespace SkyCoopServer
         {
             public string m_SceneName = "";
             public Dictionary<string, GearDataContainer> m_Gears = new Dictionary<string, GearDataContainer>();
+            public Dictionary<string, bool> m_Openables = new Dictionary<string, bool>();
+
+            public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
         }
 
         public struct Damager : IComparable<Damager>

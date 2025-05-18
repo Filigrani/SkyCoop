@@ -1,4 +1,6 @@
-﻿using Il2Cpp;
+﻿using HarmonyLib;
+using Il2Cpp;
+using Il2CppRewired.HID;
 using Il2CppTLD.Gear;
 using Il2CppTLD.PDID;
 using MelonLoader;
@@ -87,30 +89,48 @@ namespace SkyCoopClient
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
-        internal class PlayerManager_GetInteractiveObjectUnderCrosshairs
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
+        //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs
+        //{
+            //internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
+            //{
+                //int layerMask = vp_Layer.Gear | vp_Layer.NoCollidePlayer;
+                //RaycastHit hit;
+                //if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, layerMask))
+                //{
+                    //if (hit.collider.gameObject != null)
+                    //{
+                        //GameObject hitObj = hit.collider.transform.gameObject;
+                        //if (hitObj.GetComponent<Comps.DroppedGearVisual>() != null)
+                        //{
+                            //__result = hitObj;
+                        //}
+                    //}
+                //}
+
+                //s_InteractiveObjectUnderCrosshair = __result;
+                ////if (s_InteractiveObjectUnderCrosshair)
+                ////{
+                ////    SkyCoop.Logger.Log($"GetInteractiveObjectUnderCrosshairs __result {s_InteractiveObjectUnderCrosshair.name}");
+                ////}
+            //}
+        //}
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "FindInteractiveObject", new System.Type[] { typeof(RaycastHit), typeof(GearItem), typeof(GameObject) }, new ArgumentType[] {ArgumentType.Normal, ArgumentType.Ref, ArgumentType.Ref})]
+        internal class PlayerManager_FindInteractiveObject
         {
-            internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
+            internal static void Postfix(PlayerManager __instance, RaycastHit hit, ref GearItem gi, ref GameObject interactiveObj)
             {
-                int layerMask = vp_Layer.Gear | vp_Layer.NoCollidePlayer;
-                RaycastHit hit;
-                if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, layerMask))
+                if (hit.collider && hit.collider.gameObject)
                 {
-                    if (hit.collider.gameObject != null)
+                    GameObject hitObj = hit.collider.transform.gameObject;
+                    if (hitObj.GetComponent<Comps.DroppedGearVisual>() != null)
                     {
-                        GameObject hitObj = hit.collider.transform.gameObject;
-                        if (hitObj.GetComponent<Comps.DroppedGearVisual>() != null)
-                        {
-                            __result = hitObj;
-                        }
+                        interactiveObj = hitObj;
+                        gi = null;
                     }
                 }
-
-                s_InteractiveObjectUnderCrosshair = __result;
-                //if (s_InteractiveObjectUnderCrosshair)
-                //{
-                //    SkyCoop.Logger.Log($"GetInteractiveObjectUnderCrosshairs __result {s_InteractiveObjectUnderCrosshair.name}");
-                //}
+                s_InteractiveObjectUnderCrosshair = interactiveObj;
             }
         }
 

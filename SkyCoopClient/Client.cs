@@ -46,6 +46,7 @@ namespace SkyCoop
             { (int)Packet.Type.ClientSendGear, ClientHandle.ClientSendGear },
             { (int)Packet.Type.ClientPickUpGear, ClientHandle.ClientPickUpGear },
             { (int)Packet.Type.ClientRemoveGear, ClientHandle.ClientRemoveGear },
+            { (int)Packet.Type.ClientOpenableInteraction, ClientHandle.ClientOpenableInteraction },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)
@@ -64,6 +65,7 @@ namespace SkyCoop
         public NetPeer m_HostEndPoint;
         public NetPeer m_MyEndPoint;
         public List<DelayedPackage> m_DelayedPackage = new List<DelayedPackage> { };
+        public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
 
         public bool m_IsReady = false;
         public int GetMyId()
@@ -80,6 +82,7 @@ namespace SkyCoop
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
+            m_Config = new DataStr.ServerConfig();
 
             m_Listener.NetworkErrorEvent += (fromPeer, error) =>
             {

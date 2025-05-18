@@ -7,7 +7,7 @@ namespace SkyCoop
 {
     public static class Extensions
     {
-        public static void Write(this NetDataWriter Writer, UnityEngine.Quaternion quat)
+        public static void Put(this NetDataWriter Writer, UnityEngine.Quaternion quat)
         {
             Writer.Put(quat.x);
             Writer.Put(quat.y);
@@ -15,20 +15,20 @@ namespace SkyCoop
             Writer.Put(quat.w);
         }
 
-        public static void Write(this NetDataWriter Writer, UnityEngine.Vector3 v3)
+        public static void Put(this NetDataWriter Writer, UnityEngine.Vector3 v3)
         {
             Writer.Put(v3.x);
             Writer.Put(v3.y);
             Writer.Put(v3.z);
         }
 
-        public static UnityEngine.Vector3 ReadVector3Unity(this NetDataReader Reader)
+        public static UnityEngine.Vector3 GetVector3Unity(this NetDataReader Reader)
         {
             UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return v3;
         }
 
-        public static UnityEngine.Quaternion ReadQuaternionUnity(this NetDataReader Reader)
+        public static UnityEngine.Quaternion GetQuaternionUnity(this NetDataReader Reader)
         {
             UnityEngine.Quaternion quat = new UnityEngine.Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return quat;

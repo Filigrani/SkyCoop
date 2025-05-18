@@ -14,7 +14,7 @@ namespace SkyCoopClient
         public static List<Vector3> m_Vectors = new List<Vector3>();
         public static List<Quaternion> m_Quaternions = new List<Quaternion>();
         public static List<GameObject> m_Visualizers = new List<GameObject>();
-        public static string SpawnPointsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/SpawnPoints";
+        public static string SpawnPointsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/Editor/SpawnPoints";
 
         public static void UpdateList()
         {

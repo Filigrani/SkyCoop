@@ -9,6 +9,7 @@ using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using System.Reflection;
 
 namespace SkyCoop
 {
@@ -22,6 +23,7 @@ namespace SkyCoop
 
         public override void OnInitializeMelon()
         {
+            FilesManager.SetDataDirectory($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData");
             Server = new Server();
             Client = new Client();
         }
@@ -156,14 +158,14 @@ namespace SkyCoop
             return true;
         }
 
-        public static void SetupSurvivalSettings(string GameMode, int Seed, string Region, string SceneToSpawn = "")
+        public static void SetupSurvivalSettings(string ExperienceMode, int Seed, string Region, string SceneToSpawn = "")
         {
             ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
             GameModeConfig SelectedMode = null;
             RegionSpecification SelectedRegion = null;
             foreach (GameModeConfig Mode in EMM.m_AvailableGameModes)
             {
-                if(GameMode == Mode.name)
+                if(ExperienceMode == Mode.name)
                 {
                     SelectedMode = Mode;
                     break;

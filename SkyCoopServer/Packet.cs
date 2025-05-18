@@ -32,32 +32,23 @@ namespace SkyCoopServer
             ClientPickUpGear,
             ClientRemoveGear,
             ClientLoadedScene,
+            ClientOpenableInteraction,
         }
 
-        public static void Write(this NetDataWriter Writer, string Message)
-        {
-            Writer.Put(Message.Length);
-            Writer.Put(Message);
-        }
-        public static string ReadString(this NetDataReader Reader)
-        {
-            return Reader.GetString(Reader.GetInt());
-        }
-
-        public static void Write(this NetDataWriter Writer, Vector3 v3)
+        public static void Put(this NetDataWriter Writer, Vector3 v3)
         {
             Writer.Put(v3.X);
             Writer.Put(v3.Y);
             Writer.Put(v3.Z);
         }
 
-        public static Vector3 ReadVector3(this NetDataReader Reader)
+        public static Vector3 GetVector3(this NetDataReader Reader)
         {
             Vector3 v3 = new Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return v3;
         }
 
-        public static void Write(this NetDataWriter Writer, Quaternion quat)
+        public static void Put(this NetDataWriter Writer, Quaternion quat)
         {
             Writer.Put(quat.X);
             Writer.Put(quat.Y);
@@ -65,7 +56,7 @@ namespace SkyCoopServer
             Writer.Put(quat.W);
         }
 
-        public static void Write(this NetDataWriter Writer, DataStr.KillFeedMessage Message)
+        public static void Put(this NetDataWriter Writer, DataStr.KillFeedMessage Message)
         {
             Writer.Put(Message.m_Killer);
             Writer.Put(Message.m_Victim);
@@ -78,7 +69,7 @@ namespace SkyCoopServer
             }
         }
 
-        public static DataStr.KillFeedMessage ReadKillFeedMessage(this NetDataReader Reader)
+        public static DataStr.KillFeedMessage GetKillFeedMessage(this NetDataReader Reader)
         {
             DataStr.KillFeedMessage Message = new DataStr.KillFeedMessage();
             Message.m_Killer = Reader.GetInt();
@@ -96,30 +87,56 @@ namespace SkyCoopServer
             return Message;
         }
 
-        public static Quaternion ReadQuaternion(this NetDataReader Reader)
+        public static Quaternion GetQuaternion(this NetDataReader Reader)
         {
             Quaternion quat = new Quaternion(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return quat;
         }
 
-        public static void Write(this NetDataWriter Writer, DataStr.GearDataVisual Visual)
+        public static void Put(this NetDataWriter Writer, DataStr.GearDataVisual Visual)
         {
             Writer.Put(Visual.m_GearName);
-            Writer.Write(Visual.m_Position);
-            Writer.Write(Visual.m_Rotation);
+            Writer.Put(Visual.m_Position);
+            Writer.Put(Visual.m_Rotation);
             Writer.Put(Visual.m_GUID);
         }
 
-        public static DataStr.GearDataVisual ReadGearVisual(this NetDataReader Reader)
+        public static DataStr.GearDataVisual GetGearVisual(this NetDataReader Reader)
         {
             DataStr.GearDataVisual Visual = new DataStr.GearDataVisual();
 
             Visual.m_GearName = Reader.GetString();
-            Visual.m_Position = Reader.ReadVector3();
-            Visual.m_Rotation = Reader.ReadQuaternion();
+            Visual.m_Position = Reader.GetVector3();
+            Visual.m_Rotation = Reader.GetQuaternion();
             Visual.m_GUID = Reader.GetString();
 
             return Visual;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.ServerConfig CFG)
+        {
+            Writer.Put(CFG.m_MaxPlayers);
+            Writer.Put(CFG.m_StartingRegion);
+            Writer.Put(CFG.m_Seed);
+            Writer.Put(CFG.m_VoicePort);
+            Writer.Put(CFG.m_ExperienceMode);
+            Writer.Put(CFG.m_SceneToSpawn);
+            Writer.Put(CFG.m_GameMode);
+        }
+
+        public static DataStr.ServerConfig GetConfig(this NetDataReader Reader)
+        {
+            DataStr.ServerConfig CFG = new DataStr.ServerConfig();
+
+            CFG.m_MaxPlayers = Reader.GetInt();
+            CFG.m_StartingRegion = Reader.GetString();
+            CFG.m_Seed = Reader.GetInt();
+            CFG.m_VoicePort = Reader.GetInt();
+            CFG.m_ExperienceMode = Reader.GetString();
+            CFG.m_SceneToSpawn = Reader.GetString();
+            CFG.m_GameMode = Reader.GetString();
+
+            return CFG;
         }
     }
 }

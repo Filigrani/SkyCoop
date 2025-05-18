@@ -25,9 +25,31 @@ namespace SkyCoopServer
             {
                 //TODO load from file.
                 SceneData sceneData = new SceneData();
+                sceneData.m_SpawnPoints = FilesManager.GetSpawnPoints(m_ServerInstance.m_Config.m_GameMode, SceneName);
                 sceneData.m_SceneName = SceneName;
                 m_LoadedScenes.Add(SceneName, sceneData);
             }
+        }
+
+        public V3Quat GetSpawnPoint(string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                List<V3Quat> SpawnPoints = m_LoadedScenes[SceneName].m_SpawnPoints;
+                if(SpawnPoints.Count > 0)
+                {
+                    if(SpawnPoints.Count == 1)
+                    {
+                        return SpawnPoints[0];
+                    }
+                    else
+                    {
+                        return SpawnPoints[new Random(new Guid().GetHashCode()).Next(0, SpawnPoints.Count)];
+                    }
+                }
+            }
+            return new V3Quat();
         }
 
         public void AddGear(string SceneName, GearDataContainer DataContainer)
@@ -76,6 +98,37 @@ namespace SkyCoopServer
             DataContainer.m_Visual.m_Rotation = Rotation;
 
             AddGear(SceneName, DataContainer);
+        }
+
+        public void AddOpenableState(string SceneName, string GUID, bool OpenState)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_Openables.ContainsKey(GUID))
+                {
+                    SceneData.m_Openables[GUID] = OpenState;
+                }
+                else
+                {
+                    SceneData.m_Openables.Add(GUID, OpenState);
+                }
+            }
+        }
+
+        public void SendAllOpenables(string SceneName, NetPeer Client)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+
+                foreach (string GUID in SceneData.m_Openables.Keys.ToList())
+                {
+                    ServerSend.SendOpenableState(Client, GUID, SceneData.m_Openables[GUID], false);
+                }
+            }
         }
 
         public void SendAllGears(string SceneName, NetPeer Client)

@@ -41,6 +41,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientSendGear, ServerHandle.ClientSendGear },
             { (int)Packet.Type.ClientPickUpGear, ServerHandle.ClientPickUpGear },
             { (int)Packet.Type.ClientLoadedScene, ServerHandle.ClientLoadedScene },
+            { (int)Packet.Type.ClientOpenableInteraction, ServerHandle.ClientOpenableInteraction },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

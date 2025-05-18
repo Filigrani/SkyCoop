@@ -29,7 +29,7 @@ namespace SkyCoop
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientPosition);
-            writer.Write(Position);
+            writer.Put(Position);
             SendToHost(writer);
         }
 
@@ -38,7 +38,7 @@ namespace SkyCoop
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientRotation);
-            writer.Write(Rotation);
+            writer.Put(Rotation);
             SendToHost(writer);
         }
 
@@ -47,7 +47,7 @@ namespace SkyCoop
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientScene);
-            writer.Write(Scene);
+            writer.Put(Scene);
 
             SendToHost(writer);
         }
@@ -57,7 +57,7 @@ namespace SkyCoop
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientHoldigGear);
-            writer.Write(GearName);
+            writer.Put(GearName);
             writer.Put(GearVariant);
             SendToHost(writer);
         }
@@ -100,8 +100,8 @@ namespace SkyCoop
             //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientProjectile);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             writer.Put(ProjectileName);
             writer.Put(ExtaFloat);
             SendToHost(writer);
@@ -126,11 +126,11 @@ namespace SkyCoop
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientProjectileThrow);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             writer.Put(ProjectileName);
-            writer.Write(Velocity);
-            writer.Write(AngularVelocity);
+            writer.Put(Velocity);
+            writer.Put(AngularVelocity);
             writer.Put(fuseTime);
             SendToHost(writer);
         }
@@ -150,8 +150,8 @@ namespace SkyCoop
             writer.Put(GearName);
             writer.Put(ObjectIndex);
             writer.Put((int)DamageZone);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
 
             SendToHost(writer);
         }
@@ -180,8 +180,8 @@ namespace SkyCoop
             writer.Put((int)Packet.Type.ClientSendGear);
 
             writer.Put(GearName);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             writer.Put(JSON);
 
 
@@ -208,6 +208,17 @@ namespace SkyCoop
             writer.Put((int)Packet.Type.ClientLoadedScene);
 
             writer.Put(SceneName);
+
+            SendToHost(writer);
+        }
+
+        public static void SendOpenableState(string GUID, bool OpenState)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientOpenableInteraction);
+
+            writer.Put(GUID);
+            writer.Put(OpenState);
 
             SendToHost(writer);
         }

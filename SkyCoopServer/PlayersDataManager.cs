@@ -13,8 +13,6 @@ namespace SkyCoopServer
 
         public bool m_RecursiveDebug = false;
 
-        public static string SpawnPointsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/SpawnPoints";
-
         private Server s_Server;
 
         public PlayersDataManager(Server ServerInstance) 
@@ -289,48 +287,6 @@ namespace SkyCoopServer
                         }
                     }
                 }
-            }
-        }
-
-        public static V3Quat GetSpawnPoint(string FileName)
-        {
-            string SpawnPoints;
-
-            Console.WriteLine($"Loading SpawnPointsFile for scene {FileName}");
-            try
-            {
-                if (!Directory.Exists(SpawnPointsDirectory))
-                {
-                    Console.WriteLine($"Directory {SpawnPointsDirectory} not exists");
-                    return new V3Quat();
-                }
-                SpawnPoints = File.ReadAllText($"{SpawnPointsDirectory}/{FileName}");
-                Console.WriteLine($"Load was successful");
-            }
-            catch (Exception e)
-            {
-                Console.WriteLine($"Cant save file, error: {e.Message}");
-                return new V3Quat();
-            }
-
-            if (string.IsNullOrEmpty(SpawnPoints))
-            {
-                Console.WriteLine($"File {FileName} is empty");
-                return new V3Quat();
-            }
-            else
-            {
-                List<V3Quat> Points = new List<V3Quat>();
-                
-                SpawnPointSave Save = JsonSerializer.Deserialize<SpawnPointSave>(SpawnPoints);
-                for (int i = 0; i < Save.points.Count; i++)
-                {
-                    SpawnPoint Point = Save.points[i];
-                    Points.Add(new V3Quat(Point.posx, Point.posy, Point.posz, Point.rotx, Point.roty, Point.rotz, Point.rotw));
-                }
-
-                int RandomPointIndex = new Random().Next(0, Points.Count);
-                return Points[RandomPointIndex];
             }
         }
     }

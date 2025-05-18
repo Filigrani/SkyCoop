@@ -17,12 +17,8 @@ namespace SkyCoopServer
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.CFG);
-            writer.Put(CFG.m_MaxPlayers);
-            writer.Put(CFG.m_Seed);
-            writer.Write(CFG.m_StartingRegion);
-            writer.Write(CFG.m_GameMode);
-            writer.Put(CFG.m_VoicePort);
-            writer.Put(CFG.m_SceneToSpawn);
+            writer.Put(CFG);
+
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
@@ -31,7 +27,7 @@ namespace SkyCoopServer
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientPosition);
             writer.Put(FromClient);
-            writer.Write(Position);
+            writer.Put(Position);
             Client.Send(writer, DeliveryMethod.Unreliable);
         }
 
@@ -41,7 +37,7 @@ namespace SkyCoopServer
 
             writer.Put((int)Packet.Type.ClientRotation);
             writer.Put(FromClient);
-            writer.Write(Rotation);
+            writer.Put(Rotation);
             Client.Send(writer, DeliveryMethod.Unreliable);
         }
 
@@ -61,7 +57,7 @@ namespace SkyCoopServer
 
             writer.Put((int)Packet.Type.ClientHoldigGear);
             writer.Put(FromClient);
-            writer.Write(GearName);
+            writer.Put(GearName);
             writer.Put(GearVariant);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -110,8 +106,8 @@ namespace SkyCoopServer
 
             writer.Put((int)Packet.Type.ClientProjectile);
             writer.Put(Client.Id);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             writer.Put(ProjectileName);
             writer.Put(ExtaFloat);
 
@@ -137,7 +133,7 @@ namespace SkyCoopServer
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.KillFeedMessage);
-            writer.Write(Message);
+            writer.Put(Message);
 
 
             Console.WriteLine("SendKillFeed");
@@ -166,11 +162,11 @@ namespace SkyCoopServer
 
             writer.Put((int)Packet.Type.ClientProjectileThrow);
             writer.Put(Client.Id);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             writer.Put(ProjectileName);
-            writer.Write(Velocity);
-            writer.Write(AngVelocity);
+            writer.Put(Velocity);
+            writer.Put(AngVelocity);
             writer.Put(Fuse);
 
             DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
@@ -206,8 +202,8 @@ namespace SkyCoopServer
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientRequestRespawn);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             writer.Put(RespawnAnim);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -220,8 +216,8 @@ namespace SkyCoopServer
             writer.Put(PlayerID);
             writer.Put(GearName);
             writer.Put(ObjectIndex);
-            writer.Write(Position);
-            writer.Write(Rotation);
+            writer.Put(Position);
+            writer.Put(Rotation);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
@@ -284,7 +280,7 @@ namespace SkyCoopServer
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientSendGear);
-            writer.Write(Visual);
+            writer.Put(Visual);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
@@ -324,6 +320,17 @@ namespace SkyCoopServer
                     Peer.Send(writer, DeliveryMethod.ReliableOrdered);
                 }
             }
+        }
+        public static void SendOpenableState(NetPeer Client, string GUID, bool OpenState, bool AllowAudio = true)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientOpenableInteraction);
+
+            writer.Put(GUID);
+            writer.Put(OpenState);
+            writer.Put(AllowAudio);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
     }
 }
