@@ -26,8 +26,52 @@ namespace SkyCoopServer
                 //TODO load from file.
                 SceneData sceneData = new SceneData();
                 sceneData.m_SpawnPoints = FilesManager.GetSpawnPoints(m_ServerInstance.m_Config.m_GameMode, SceneName);
+
+                DataStr.DangerCircleConfig ZoneCFG = FilesManager.GetZoneConfig(m_ServerInstance.m_Config.m_GameMode, SceneName);
+                if(ZoneCFG != null)
+                {
+                    sceneData.m_ActiveZone = new DangerCircleData(ZoneCFG, SceneName, m_ServerInstance);
+                    sceneData.m_ActiveZone.Start();
+                }
+
                 sceneData.m_SceneName = SceneName;
                 m_LoadedScenes.Add(SceneName, sceneData);
+            }
+        }
+
+        public void UnloadScene(string SceneName)
+        {
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                //TODO flag WipeSave, to delete save file.
+                SceneData Data = m_LoadedScenes[SceneName];
+
+                if (Data != null && Data.m_ActiveZone != null)
+                {
+                    Data.m_ActiveZone.Destory();
+                }
+
+                m_LoadedScenes.Remove(SceneName);
+            }
+        }
+
+        public void UnloadSceneNobodyOn(Server ServerInstance)
+        {
+            foreach (string LoadedSceneName in m_LoadedScenes.Keys.ToArray())
+            {
+                bool CanUnload = true;
+                foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                {
+                    if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == LoadedSceneName)
+                    {
+                        CanUnload = false;
+                        break;
+                    }
+                }
+                if (CanUnload)
+                {
+                    UnloadScene(LoadedSceneName);
+                }
             }
         }
 
@@ -124,6 +168,19 @@ namespace SkyCoopServer
                 if (m_LoadedScenes.ContainsKey(Key))
                 {
                     m_LoadedScenes[Key].m_SpawnPoints = FilesManager.GetSpawnPoints(GameMode, Key);
+                }
+            }
+        }
+
+        public void SendZone(string SceneName, NetPeer Client)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_ActiveZone != null)
+                {
+                    ServerSend.SendZoneUpdate(Client, SceneName, SceneData.m_ActiveZone.m_Config.ActualCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
                 }
             }
         }

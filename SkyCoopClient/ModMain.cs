@@ -58,6 +58,7 @@ namespace SkyCoop
         public override void OnLevelWasInitialized(int level)
         {
             MeleeManager.ReintilizeViewModels();
+            GameModeHUD.Reintilize();
             //AssetManager.DumpLocalizationKeysList();
         }
 
@@ -106,6 +107,7 @@ namespace SkyCoop
                     SpawnPointEditor.AddSpawnPoint();
                 }
             }
+            DangerCircleManager.Update();
         }
 
         public static void ReimplementConsole()
@@ -158,6 +160,14 @@ namespace SkyCoop
             return true;
         }
 
+        public static void ChangeMap()
+        {
+            DataStr.ServerConfig CFG = Client.m_Config;
+            EmptyScene.s_SceneLoadFromEmpty = Client.m_Config.m_SceneToSpawn;
+            Minimalizer.s_SceneSpawnOverride = Client.m_Config.m_SceneToSpawn;
+            SceneManager.LoadEmptyScene();
+        }
+
         public static void SetupSurvivalSettings(string ExperienceMode, int Seed, string Region, string SceneToSpawn = "")
         {
             ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
@@ -172,22 +182,30 @@ namespace SkyCoop
                 }
             }
 
-            Panel_SelectRegion_Map Panel_Regions = InterfaceManager.GetPanel<Panel_SelectRegion_Map>();
+            Panel_SelectRegion_Map Panel_Regions = null;
 
-            foreach (SelectRegionItem R in Panel_Regions.m_Items)
+            if(InterfaceManager.TryGetPanel<Panel_SelectRegion_Map>(out Panel_Regions))
             {
-                if(R.name == Region)
+                foreach (SelectRegionItem R in Panel_Regions.m_Items)
                 {
-                    SelectedRegion = R.m_RegionSpec;
-                    break;
+                    if (R.name == Region)
+                    {
+                        SelectedRegion = R.m_RegionSpec;
+                        break;
+                    }
                 }
+                GameManager.m_StartRegion = SelectedRegion;
             }
 
             EMM.SetGameModeConfig(SelectedMode);
-            GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
-            GameManager.m_StartRegion = SelectedRegion;
             Minimalizer.s_SceneSpawnOverride = SceneToSpawn;
             GameManager.m_Instance.LaunchSandbox();
+            GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
+            Panel_Loading Panel = null;
+            if(InterfaceManager.TryGetPanel<Panel_Loading>(out Panel))
+            {
+                Panel.m_ShowQuoteAfterLoad = false;
+            }
         }
 
         public static string GetNickName()

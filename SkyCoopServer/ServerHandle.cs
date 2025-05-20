@@ -16,7 +16,7 @@ namespace SkyCoopServer
             ServerInstance.m_PlayersData.SetPlayerName(Client.Id, PlayerName);
             ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 ServerSend.SendClientName(Client, Peer.Id, ServerInstance.m_PlayersData.GetPlayer(Peer.Id).m_PlayerName);
                 if(Peer.Id != Client.Id)
@@ -163,7 +163,7 @@ namespace SkyCoopServer
 
             ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID)).m_VisualData.m_InjectedItems.Add(injectedItem);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList)
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -178,7 +178,7 @@ namespace SkyCoopServer
             string GearName = Reader.GetString();
             int DamageZone = Reader.GetInt();
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList)
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -233,7 +233,20 @@ namespace SkyCoopServer
             string SceneName = Reader.GetString();
             ServerInstance.m_ScenesData.SendAllGears(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllOpenables(SceneName, Client);
+            ServerInstance.m_ScenesData.SendZone(SceneName, Client);
 
+            if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+            {
+                PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+                ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
+                ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
+                ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
+            }
+
+            if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_Time > 0)
+            {
+                ServerSend.ClientGameModeTimer(ServerInstance.m_Rules.m_Time, ServerInstance);
+            }
             DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(SceneName);
             ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
         }
@@ -243,7 +256,7 @@ namespace SkyCoopServer
             string GUID = Reader.GetString();
             bool OpenState = Reader.GetBool();
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if (Peer.Id != Client.Id)
                 {

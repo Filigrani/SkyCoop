@@ -111,6 +111,10 @@ namespace SkyCoopClient
             NoiseMaker.m_Pain = true;
             NoiseMaker.m_DamageType = DataStr.DamageType.NoiseMaker;
             AddDescriptor("GEAR_NoiseMaker", NoiseMaker);
+
+            WeaponDescripter Zone = new WeaponDescripter();
+            Zone.m_DamageType = DataStr.DamageType.Unknown;
+            AddDescriptor("ZONE", Zone);
         }
 
         public static void AddDescriptor(string WeaponName, WeaponDescripter Descriptor)

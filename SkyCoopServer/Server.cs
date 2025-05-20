@@ -1,5 +1,7 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
+using Microsoft.VisualBasic;
+using System;
 
 namespace SkyCoopServer
 {
@@ -13,10 +15,13 @@ namespace SkyCoopServer
         public NetManager m_Instance;
         public bool m_IsReady = false;
         public ServerVoice m_VoiceServer = null;
+        public int m_PendingGameModeOverTimer = 0;
 
         // Data Sync Instances
         public PlayersDataManager m_PlayersData;
         public ScenesDataManager m_ScenesData;
+
+        private Timer s_EverySecondTimer = null;
 
 
         public delegate void PacketHandler(NetPeer Client, NetDataReader Reader, Server ServerInstance);
@@ -67,7 +72,7 @@ namespace SkyCoopServer
             m_PlayersData = new PlayersDataManager(this);
             m_ScenesData = new ScenesDataManager(this);
 
-            Timer timer1 = new Timer(EverySecond, null, 1000, 1000);
+            s_EverySecondTimer = new Timer(EverySecond, null, 1000, 1000);
         }
 
         public List<int> GetClientsIndexs()
@@ -75,7 +80,7 @@ namespace SkyCoopServer
             List<int> Indexes = new List<int>();
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList)
+                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
                 {
                     Indexes.Add(Peer.Id);
                 }
@@ -87,13 +92,7 @@ namespace SkyCoopServer
         {
             if (m_Instance != null)
             {
-                foreach (NetPeer _Peer in m_Instance.ConnectedPeerList)
-                {
-                    if (_Peer.Address == Peer.Address)
-                    {
-                        return m_PlayersData.GetPlayer(_Peer.Id);
-                    }
-                }
+                return m_PlayersData.GetPlayer(Peer.Id);
             }
             return null;
         }
@@ -102,7 +101,7 @@ namespace SkyCoopServer
         {
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList)
+                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
                 {
                     if(Peer.Id == Index)
                     {
@@ -125,15 +124,50 @@ namespace SkyCoopServer
         {
             if (m_PlayersData != null)
             {
-                m_PlayersData.SceneAlign();
+                //m_PlayersData.SceneAlign(); Na, I did not like it, rewrite it someday.
             }
+            if(m_Rules != null && m_Rules.m_Time > 0)
+            {
+                m_Rules.m_Time = m_Rules.m_Time - 1;
+                ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
+                if (m_Rules.m_Time == 0)
+                {
+                    m_PendingGameModeOverTimer = 25;
+
+                    foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                    {
+                        ServerSend.SendFreeze(Peer);
+                        m_PlayersData.GetPlayer(Peer.Id).m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
+                        ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), FilesManager.GetVictoryPosition(m_Config.m_GameMode, m_Config.m_SceneToSpawn), this);
+                    }
+                }
+            }
+            if(m_PendingGameModeOverTimer > 0)
+            {
+                m_PendingGameModeOverTimer--;
+                if(m_PendingGameModeOverTimer == 0)
+                {
+                    ChangeGameMode(m_Config.m_GameMode);
+                    m_PlayersData.ResetFrags();
+                }
+            }
+            m_ScenesData.UnloadSceneNobodyOn(this);
+        }
+
+        public string GetRandomSceneForGameMode(string GameMode)
+        {
+            return FilesManager.GetRandomSceneForGameMode(GameMode);
         }
 
         public void ChangeGameMode(string GameMode)
         {
             m_Config.m_GameMode = GameMode;
+            m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
+            m_Config.m_SceneToSpawn = GetRandomSceneForGameMode(m_Config.m_GameMode);
             m_Rules = FilesManager.GetRules(GameMode);
             m_ScenesData.ChangeGameMode(GameMode);
+            ServerSend.SendConfigUpdated(this);
+            ServerSend.SendChangeMap(this);
         }
 
         public void StartServer()

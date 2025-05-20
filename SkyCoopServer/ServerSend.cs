@@ -1,5 +1,7 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
+using Microsoft.VisualBasic;
+using System;
 using System.Numerics;
 namespace SkyCoopServer
 {
@@ -113,24 +115,33 @@ namespace SkyCoopServer
             writer.Put(ExtaFloat);
 
             DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
-
-            foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
-                if(p.m_PlayerID != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                if(Peer.Id != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
-                    if(Shooter.m_Scene == p.m_Scene)
+                    if(Shooter.m_Scene == ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene)
                     {
-                        NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);
-                        if (Peer != null)
-                        {
-                            Peer.Send(writer, DeliveryMethod.ReliableOrdered);
-                        }
+                        Peer.Send(writer, DeliveryMethod.ReliableOrdered);
                     }
                 }
             }
         }
         public static void SendKillFeed(DataStr.KillFeedMessage Message, Server ServerInstance)
         {
+            if(Message.m_Killer != Message.m_Victim)
+            {
+                ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).AddKill(ServerInstance);
+            }
+            else
+            {
+                ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
+            }
+            ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddDeath(ServerInstance);
+            if(Message.m_Assist != Message.m_Victim)
+            {
+                ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddAssist(ServerInstance);
+            }
+
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.KillFeedMessage);
@@ -148,13 +159,9 @@ namespace SkyCoopServer
                 Console.WriteLine("-- Flag: "+Flag.ToString());
             }
 
-            foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
-                NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);
-                if (Peer != null)
-                {
-                    Peer.Send(writer, DeliveryMethod.ReliableOrdered);
-                }
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
         }
         public static void SendProjectileThrow(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, Vector3 Velocity, Vector3 AngVelocity, float Fuse, Server ServerInstance)
@@ -172,13 +179,12 @@ namespace SkyCoopServer
 
             DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
 
-            foreach (DataStr.PlayerData p in ServerInstance.m_PlayersData.m_Players)
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
-                if (p.m_PlayerID != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                if (Peer.Id != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
-                    if (Shooter.m_Scene == p.m_Scene)
+                    if (Shooter.m_Scene == ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene)
                     {
-                        NetPeer Peer = ServerInstance.GetClient(p.m_PlayerID);
                         if (Peer != null)
                         {
                             Peer.Send(writer, DeliveryMethod.ReliableOrdered);
@@ -236,7 +242,7 @@ namespace SkyCoopServer
         public static void SendRemoveAllInjectedItem(int PlayerID, Server ServerInstance)
         {
             DataStr.PlayerData Data = ServerInstance.m_PlayersData.GetPlayer(PlayerID);
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -258,7 +264,7 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientGettingDamage);
             writer.Put(PlayerID);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -268,7 +274,7 @@ namespace SkyCoopServer
         }
         public static void SendGearVisual(DataStr.GearDataVisual Visual, string SceneName, Server ServerInstance)
         {
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
@@ -314,7 +320,7 @@ namespace SkyCoopServer
 
             writer.Put(GUID);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
@@ -332,6 +338,115 @@ namespace SkyCoopServer
             writer.Put(AllowAudio);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendZoneUpdate(NetPeer Client, string SceneName, DataStr.DangerCircleCenter Center, float Radius, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientZoneUpdated);
+
+            writer.Put(Center.x);
+            writer.Put(Center.y);
+            writer.Put(Center.z);
+            writer.Put(Radius);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendZoneUpdate(string SceneName, DataStr.DangerCircleCenter Center, float Radius, Server ServerInstance)
+        {
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    SendZoneUpdate(Peer, SceneName, Center, Radius, ServerInstance);
+                }
+            }
+        }
+
+        public static void ClientGameModeTimer(int Seconds, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientGameModeTimer);
+
+            writer.Put(Seconds);
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
+        public static void SendHUDSideBar(NetPeer Client, int SideBarIndex, string Icon, string Prefix, string Afix, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientHUDSideBar);
+
+            writer.Put(SideBarIndex);
+            writer.Put(Icon);
+            writer.Put(Prefix);
+            writer.Put(Afix);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendHUDSideBarUpdate(NetPeer Client, int SideBarIndex, string Afix, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientHUDSideBarUpdate);
+
+            writer.Put(SideBarIndex);
+            writer.Put(Afix);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendFreeze(NetPeer Client)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientFreeze);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendConfigUpdated(Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerConfigUpdated);
+
+            writer.Put(ServerInstance.m_Config);
+            writer.Put(ServerInstance.m_Rules);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
+        public static void SendChangeMap(Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerChangesMap);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
+        public static void SendLeaders(List<int> Leaders, Vector3 Position ,Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerLeaders);
+
+            writer.Put(Leaders.Count);
+
+            for (int i = 0; i < Leaders.Count; i++)
+            {
+                writer.Put(Leaders[i]);
+            }
+
+            writer.Put(Position);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
         }
     }
 }

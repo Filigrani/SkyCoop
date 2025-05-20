@@ -34,6 +34,14 @@ namespace SkyCoopServer
             ClientLoadedScene,
             ClientOpenableInteraction,
             ClientClothing,
+            ClientZoneUpdated,
+            ClientGameModeTimer,
+            ClientHUDSideBar,
+            ClientHUDSideBarUpdate,
+            ClientFreeze,
+            ServerConfigUpdated,
+            ServerChangesMap,
+            ServerLeaders,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -145,6 +153,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_PlayerCanBeKnocked);
             Writer.Put(Rules.m_PVP);
             Writer.Put(Rules.m_StartingItems);
+            Writer.Put(Rules.m_HUDMode);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -154,6 +163,7 @@ namespace SkyCoopServer
             Rules.m_PlayerCanBeKnocked = Reader.GetBool();
             Rules.m_PVP = Reader.GetBool();
             Rules.m_StartingItems = Reader.GetStartingGearList();
+            Rules.m_HUDMode = Reader.GetString();
 
             return Rules;
         }

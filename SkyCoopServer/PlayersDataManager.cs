@@ -289,5 +289,38 @@ namespace SkyCoopServer
                 }
             }
         }
+
+        public List<int> GetDMLeaders()
+        {
+            List<int> Leaders = new List<int>();
+            List<DataStr.DMScore> Scores = new List<DMScore>();
+
+            foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+            {
+                DataStr.PlayerData Player = GetPlayer(Peer.Id);
+                Player.m_Kills = 0;
+                Player.m_Deaths = 0;
+                Player.m_Assists = 0;
+                Scores.Add(new DataStr.DMScore(Player.m_PlayerID, Player.m_Kills, Player.m_Assists, Player.m_Deaths));
+            }
+            Scores.Sort();
+
+            for (int i = 0; i < (Scores.Count < 3 ? Scores.Count : 3); i++)
+            {
+                Leaders.Add(Scores[i].PlayerID);
+            }
+
+            return Leaders;
+        }
+
+        public void ResetFrags()
+        {
+            foreach (DataStr.PlayerData Player in m_Players)
+            {
+                Player.m_Kills = 0;
+                Player.m_Deaths = 0;
+                Player.m_Assists = 0;
+            }
+        }
     }
 }

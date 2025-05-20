@@ -1,4 +1,8 @@
-﻿using System.Numerics;
+﻿using LiteNetLib;
+using Microsoft.VisualBasic;
+using System;
+using System.Numerics;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -12,7 +16,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 37850;
             public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "BlackrockPrisonSurvivalZone";
+            public string m_SceneToSpawn = "LakeRegion";
             public string m_GameMode = "DM";
         }
 
@@ -21,6 +25,8 @@ namespace SkyCoopServer
             public bool Knockdowns { get; set; }
             public bool PVP { get; set; }
             public List<StartingGearData> StartingGear { get; set; }
+            public int Time { get; set; }
+            public string HUDMode { get; set; }
         }
 
         public class GameRules
@@ -28,6 +34,8 @@ namespace SkyCoopServer
             public bool m_PlayerCanBeKnocked = false;
             public bool m_PVP = true;
             public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
+            public int m_Time = 0;
+            public string m_HUDMode = "";
         }
 
         public class StartingGearData
@@ -77,11 +85,16 @@ namespace SkyCoopServer
             public int m_LastDamager = -1;
             public int m_PreLastDamager = -1;
 
+            public int m_Kills = 0;
+            public int m_Deaths = 0;
+            public int m_Assists = 0;
 
-            public GamePlayState m_GamePlayState = GamePlayState.Alive;
+
+            public GamePlayState m_GamePlayState = GamePlayState.Unassigned;
 
             public enum GamePlayState
             {
+                Unassigned,
                 Alive,
                 Dead,
                 Spectator,
@@ -247,6 +260,42 @@ namespace SkyCoopServer
 
                 m_Damagers.Clear();
             }
+
+            public void AddKill(Server ServerInstance)
+            {
+                m_Kills++;
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                {
+                    ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, m_Kills.ToString(), ServerInstance);
+                }
+            }
+
+            public void RemoveKill(Server ServerInstance)
+            {
+                m_Kills--;
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                {
+                    ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, m_Kills.ToString(), ServerInstance);
+                }
+            }
+
+            public void AddDeath(Server ServerInstance)
+            {
+                m_Deaths++;
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                {
+                    ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 1, m_Deaths.ToString(), ServerInstance);
+                }
+            }
+
+            public void AddAssist(Server ServerInstance)
+            {
+                m_Assists++;
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                {
+                    ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 2, m_Assists.ToString(), ServerInstance);
+                }
+            }
         }
 
         public class PlayerVisualData
@@ -287,6 +336,36 @@ namespace SkyCoopServer
             public Dictionary<string, bool> m_Openables = new Dictionary<string, bool>();
 
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
+            public DataStr.DangerCircleData m_ActiveZone = null;
+        }
+
+        public struct DMScore : IComparable<DMScore>
+        {
+            public int PlayerID;
+            
+            public int Kills;
+            public int Assits;
+            public int Deaths;
+            public int Bonus;
+
+            public DMScore(int ID, int kills, int assists, int deaths, int bonus = 0)
+            {
+                PlayerID = ID;
+                Kills = kills;
+                Assits = assists;
+                Deaths = deaths;
+                Bonus = 0;
+            }
+
+            public int GetFinalScore()
+            {
+                return Kills + ((int)MathF.Floor(Assits * 0.5f)) - Deaths + Bonus;
+            }
+
+            public int CompareTo(DMScore other)
+            {
+                return other.GetFinalScore().CompareTo(GetFinalScore());
+            }
         }
 
         public struct Damager : IComparable<Damager>
@@ -377,6 +456,167 @@ namespace SkyCoopServer
             public int m_ObjectID = 0;
             public Vector3 m_Position = new Vector3(0, 0, 0);
             public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
+        }
+
+        public class ShrinkStage
+        {
+            public float ShrinkSpeed { get; set; }
+            public float DamagePerSecond { get; set; }
+            public int StageTime { get; set; }
+        }
+
+        public class DangerCircleData
+        {
+            public DangerCircleConfig m_Config = new DangerCircleConfig();
+            public int m_CurrentStage = 0;
+            public float m_CurrentRadius = 0;
+            public float m_TargetRadius = 0;
+
+            private float s_NextStageIn = 0;
+            private bool s_Started = false;
+            private bool s_Finished = false;
+            private bool s_Static = false;
+            private Timer s_StageTimer;
+            private Timer s_SyncTimer;
+            private Timer s_DamageTimer;
+            private string s_SceneName = "";
+            private Server s_ServerInstance;
+
+            public DataStr.ShrinkStage GetCurrentStage()
+            {
+                return m_Config.Stages[m_CurrentStage];
+            }
+
+            public DangerCircleData(){}
+
+            public DangerCircleData(DangerCircleConfig Config, string SceneName, Server Server)
+            {
+                m_Config = Config;
+                s_SceneName = SceneName;
+                s_ServerInstance = Server;
+            }
+
+            public void Start()
+            {
+                if (!s_Started)
+                {
+                    DoNextStage();
+                    s_Started = true;
+                    s_DamageTimer = new Timer(DamageCheck, null, 1000, 1000);
+                    if (!s_Static)
+                    {
+                        s_SyncTimer = new Timer(Update, null, 500, 500);
+                    }
+                }
+            }
+
+            public void Update(object obj)
+            {
+                if (s_Started)
+                {
+                    if(m_CurrentRadius > m_TargetRadius)
+                    {
+                        m_CurrentRadius -= GetCurrentStage().ShrinkSpeed;
+                        if(m_CurrentRadius <= m_TargetRadius)
+                        {
+                            m_CurrentRadius = m_TargetRadius;
+                            if (s_StageTimer != null)
+                            {
+                                s_StageTimer.Dispose();
+                            }
+                            s_StageTimer = new Timer(OnNextStage, null, GetCurrentStage().StageTime * 1000, GetCurrentStage().StageTime * 1000);
+                        }
+                        ServerSend.SendZoneUpdate(s_SceneName, m_Config.ActualCenter, m_CurrentRadius, s_ServerInstance);
+                    }
+                }
+            }
+
+            public void DamageCheck(object obj)
+            {
+                foreach (NetPeer Peer in s_ServerInstance.m_Instance.ConnectedPeerList.ToList())
+                {
+                    PlayerData PlayerData = s_ServerInstance.GetPlayerDataByNetPeer(Peer);
+                    if(PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                    {
+                        float Distance = Vector3.Distance(PlayerData.m_Position, new Vector3(m_Config.ActualCenter.x, m_Config.ActualCenter.y, m_Config.ActualCenter.z)) * 100;
+                        if (Distance > m_CurrentRadius)
+                        {
+                            ServerSend.SendDamageToPlayer(Peer, GetCurrentStage().DamagePerSecond, Peer.Id, 1, "ZONE");
+                        }
+                    }
+                }
+            }
+
+            void DoNextStage()
+            {
+                if(m_CurrentStage == 0)
+                {
+                    m_CurrentRadius = m_Config.StartingRadius;
+                    m_TargetRadius = m_Config.StartingRadius;
+                    if (s_StageTimer != null)
+                    {
+                        s_StageTimer.Dispose();
+                    }
+                    s_Static = GetCurrentStage().StageTime <= 0;
+                    if (!s_Static)
+                    {
+                        s_StageTimer = new Timer(OnNextStage, null, GetCurrentStage().StageTime * 1000, GetCurrentStage().StageTime * 1000);
+                    }
+                }
+                else
+                {
+                    int Stage = m_CurrentStage+1;
+                    int MaxStage = m_Config.Stages.Count;
+                    m_TargetRadius = m_Config.StartingRadius-(m_Config.StartingRadius*Stage/MaxStage);
+                    if (s_StageTimer != null)
+                    {
+                        s_StageTimer.Dispose();
+                    }
+                }
+            }
+
+            void OnNextStage(object obj)
+            {
+                if(m_CurrentStage == m_Config.Stages.Count-1)
+                {
+                    s_Finished = true;
+                }
+                else
+                {
+                    m_CurrentStage++;
+                    DoNextStage();
+                }
+            }
+
+            public void Destory()
+            {
+                if(s_StageTimer != null)
+                {
+                    s_StageTimer.Dispose();
+                }
+                if(s_SyncTimer != null)
+                {
+                    s_SyncTimer.Dispose();
+                }
+                if(s_DamageTimer != null)
+                {
+                    s_DamageTimer.Dispose();
+                }
+            }
+        }
+
+        public class DangerCircleCenter
+        {
+            public float x { get; set; }
+            public float y { get; set; }
+            public float z { get; set; }
+        }
+
+        public class DangerCircleConfig
+        {
+            public DangerCircleCenter ActualCenter { get; set; }
+            public float StartingRadius { get; set; }
+            public List<ShrinkStage> Stages { get; set; }
         }
     }
 }

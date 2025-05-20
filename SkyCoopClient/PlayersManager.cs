@@ -525,6 +525,15 @@ namespace SkyCoop
                 AddArrowAffiction(BodyArea, DamageCase, Weapon);
             }
 
+            if(Weapon == "ZONE")
+            {
+                CanvasUI.DoZoneDamageOverlay();
+                SprainedAnkle Spr = GameManager.GetSprainedAnkleComponent();
+                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleAudioEvent, Il2CppVoice.Priority.Critical);
+                GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFXEvent, Spr.gameObject);
+                GameManager.GetPlayerAnimationComponent().Trigger_WolfPassBite();
+            }
+
             GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Il2CppVoice.Priority.Critical, PlayerVoice.Options.None);
 
             Transform V3 = GameManager.GetPlayerTransform();
@@ -665,8 +674,9 @@ namespace SkyCoop
 
                 GameManager.GetBloodLossComponent().Cure();
                 GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
-                ClientSend.SendRevived(-2);
             }
+
+            ClientSend.SendRevived(-2);
 
             MenuHook.RemovePleaseWait();
             InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);

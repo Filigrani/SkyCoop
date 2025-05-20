@@ -24,7 +24,11 @@ namespace SkyCoopClient
         public static GameObject s_KillfeedKillOrAssistClone;
         public static GameObject s_KillfeedDeadClone;
 
+        public static Animator s_ZoneDamageOverlay;
+        public static GameObject s_DarkwalkerHUDClone;
+
         private static Transform s_Parent;
+
 
         [HarmonyLib.HarmonyPatch(typeof(uConsole), "Start")]
         private static class uConsole_Start
@@ -72,6 +76,14 @@ namespace SkyCoopClient
             }
         }
 
+        public static void DoZoneDamageOverlay()
+        {
+            if (s_ZoneDamageOverlay)
+            {
+                s_ZoneDamageOverlay.SetTrigger("Damage");
+            }
+        }
+
         public static void CreateUI(Transform Parent)
         {
             s_Parent = Parent;
@@ -90,6 +102,7 @@ namespace SkyCoopClient
                     m_UIPanel.transform.GetChild(1).GetChild(2).GetComponent<Button>().onClick.AddListener(act);
                     m_UIPanel.transform.GetChild(1).GetChild(3).GetComponent<Button>().onClick.AddListener(act2);
                     m_SpawnPointEditorScrollParnet = m_UIPanel.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(0);
+                    s_ZoneDamageOverlay = m_UIPanel.transform.GetChild(2).GetComponent<Animator>();
                     SkyCoop.Logger.Log(ConsoleColor.Cyan, "Canvas UI created!");
                 }
             }

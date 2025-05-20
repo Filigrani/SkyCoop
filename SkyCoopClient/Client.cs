@@ -48,6 +48,14 @@ namespace SkyCoop
             { (int)Packet.Type.ClientRemoveGear, ClientHandle.ClientRemoveGear },
             { (int)Packet.Type.ClientOpenableInteraction, ClientHandle.ClientOpenableInteraction },
             { (int)Packet.Type.ClientClothing, ClientHandle.ClientClothing },
+            { (int)Packet.Type.ClientZoneUpdated, ClientHandle.ClientZoneUpdated },
+            { (int)Packet.Type.ClientGameModeTimer, ClientHandle.ClientGameModeTimer },
+            { (int)Packet.Type.ClientHUDSideBar, ClientHandle.ClientHUDSideBar },
+            { (int)Packet.Type.ClientHUDSideBarUpdate, ClientHandle.ClientHUDSideBarUpdate },
+            { (int)Packet.Type.ClientFreeze, ClientHandle.ClientFreeze },
+            { (int)Packet.Type.ServerConfigUpdated, ClientHandle.ServerConfigUpdated },
+            { (int)Packet.Type.ServerChangesMap, ClientHandle.ServerChangesMap },
+            { (int)Packet.Type.ServerLeaders, ClientHandle.ServerLeaders },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

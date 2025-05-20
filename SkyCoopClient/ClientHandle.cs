@@ -1,4 +1,5 @@
 ﻿using Il2Cpp;
+using Il2CppTMPro;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
@@ -19,24 +20,33 @@ namespace SkyCoop
             //MenuHook.DoOKMessage("Connected!", Message);
         }
 
+        public static void ApplyConfig(DataStr.ServerConfig CFG)
+        {
+            ModMain.Client.m_Config = CFG;
+            Logger.Log(ConsoleColor.Cyan, "Server config");
+            Logger.Log(ConsoleColor.Cyan, "PlayersMax: " + CFG.m_MaxPlayers);
+            Logger.Log(ConsoleColor.Cyan, "Seed: " + CFG.m_Seed);
+            Logger.Log(ConsoleColor.Cyan, "StartingRegion: " + CFG.m_StartingRegion);
+            Logger.Log(ConsoleColor.Cyan, "ExperienceMode: " + CFG.m_ExperienceMode);
+            Logger.Log(ConsoleColor.Cyan, "VoicePort: " + CFG.m_VoicePort);
+            Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + CFG.m_SceneToSpawn);
+            Logger.Log(ConsoleColor.Cyan, "GameMode: " + CFG.m_GameMode);
+        }
+
+        public static void ApplyRules(DataStr.GameRules Rules)
+        {
+            ModMain.Client.m_Rules = Rules;
+        }
+
         public static void ServerConfig(NetDataReader Reader)
         {
             DataStr.ServerConfig CFG = Reader.GetConfig();
             DataStr.GameRules Rules = Reader.GetRules();
 
-            ModMain.Client.m_Config = CFG;
-            ModMain.Client.m_Rules = Rules;
+            ApplyConfig(CFG);
+            ApplyRules(Rules);
 
             PlayersManager.InitilizePlayers(CFG.m_MaxPlayers);
-
-            Logger.Log(ConsoleColor.Cyan, "Server config");
-            Logger.Log(ConsoleColor.Cyan, "PlayersMax: " + CFG.m_MaxPlayers);
-            Logger.Log(ConsoleColor.Cyan, "Seed: " + CFG.m_Seed);
-            Logger.Log(ConsoleColor.Cyan, "StartingRegion: "+ CFG.m_StartingRegion);
-            Logger.Log(ConsoleColor.Cyan, "ExperienceMode: " + CFG.m_ExperienceMode);
-            Logger.Log(ConsoleColor.Cyan, "VoicePort: " + CFG.m_VoicePort);
-            Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + CFG.m_SceneToSpawn);
-            Logger.Log(ConsoleColor.Cyan, "GameMode: " + CFG.m_GameMode);
 
             ModMain.Client.m_IsReady = true;
             ModMain.Client.ProcessAllDelayedPackages();
@@ -55,6 +65,21 @@ namespace SkyCoop
             //    SceneManager.DontDestroyOnLoad(SoundPlayer);
             //    UnityEngine.Object.Destroy(SoundPlayer, 15);
             //}
+        }
+
+        public static void ServerConfigUpdated(NetDataReader Reader)
+        {
+            DataStr.ServerConfig CFG = Reader.GetConfig();
+            DataStr.GameRules Rules = Reader.GetRules();
+
+            ApplyConfig(CFG);
+            ApplyRules(Rules);
+        }
+
+        public static void ServerChangesMap(NetDataReader Reader)
+        {
+            DataStr.ServerConfig CFG = ModMain.Client.m_Config;
+            ModMain.ChangeMap();
         }
 
         public static void ClientPosition(NetDataReader Reader)
@@ -277,6 +302,101 @@ namespace SkyCoop
             string GearName = Reader.GetString();
 
             // Handle sync
+        }
+
+        public static void ClientZoneUpdated(NetDataReader Reader)
+        {
+            Vector3 Center = Reader.GetVector3Unity();
+            float Radius = Reader.GetFloat();
+
+            DangerCircleManager.HandleDangerCircleSync(Center, Radius);
+        }
+
+        public static void ClientGameModeTimer(NetDataReader Reader)
+        {
+            int Seconds = Reader.GetInt();
+
+            GameModeHUD.UpdateGameModeTimer(Seconds);
+        }
+
+        public static void ClientHUDSideBar(NetDataReader Reader)
+        {
+            int SideBarIndex = Reader.GetInt();
+            string Icon = Reader.GetString();
+            string Prefix = Reader.GetString();
+            string Afix = Reader.GetString();
+
+            GameModeHUD.SetSideIcon(SideBarIndex, Icon);
+            GameModeHUD.SetSideLablePrefix(SideBarIndex, Prefix);
+            GameModeHUD.SetSideLable(SideBarIndex, $" {Afix}");
+        }
+
+        public static void ClientHUDSideBarUpdate(NetDataReader Reader)
+        {
+            int SideBarIndex = Reader.GetInt();
+            string Afix = Reader.GetString();
+            GameModeHUD.SetSideLable(SideBarIndex, $" {Afix}");
+        }
+
+        public static void ClientFreeze(NetDataReader Reader)
+        {
+            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+            PlayerManager playerManagerComponent = GameManager.GetPlayerManagerComponent();
+            if (playerManagerComponent.m_ItemInHands)
+            {
+                if (playerManagerComponent.m_ItemInHands.m_CantDropItem)
+                {
+                    GameManager.GetPlayerAnimationComponent().DropCurrentItemInHand();
+                    if (playerManagerComponent.m_ItemInHands)
+                    {
+                        playerManagerComponent.m_ItemInHands.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
+                    }
+                }
+                else
+                {
+                    GameManager.GetPlayerManagerComponent().UnequipImmediate(false);
+                }
+            }
+            if (playerManagerComponent.m_ItemInHands && (playerManagerComponent.m_ItemInHands.IsLitLamp() || playerManagerComponent.m_ItemInHands.IsLitFlashlight()))
+            {
+                playerManagerComponent.m_ItemInHands.Drop(1, false, true);
+            }
+            AnimatedInteraction.InterruptAnyInProgressAnimations();
+            playerManagerComponent.ResetPickup();
+            GameManager.GetVpFPSPlayer().CancelZoom();
+            InterfaceManager.TrySetPanelEnabled<Panel_Inventory>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_Inventory_Examine>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
+            PlayersManager.RespawnOnPoint(Vector3.zero, Quaternion.identity, false);
+        }
+
+        public static void ServerLeaders(NetDataReader Reader)
+        {
+            int Count = Reader.GetInt();
+            string Str = "";
+            List<string> WinnersNames = new List<string>();
+            for (int i = 0; i < Count; i++)
+            {
+                WinnersNames.Add(PlayersManager.GetPlayerName(Reader.GetInt()));
+            }
+            Vector3 Position = Reader.GetVector3Unity();
+
+            GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("Victory");
+            if (Reference)
+            {
+                GameObject Obj = UnityEngine.Object.Instantiate(Reference, Position, Quaternion.identity);
+                if (Obj)
+                {
+                    for (int i = 0; i < Count;i++)
+                    {
+                        Obj.transform.GetChild(i).gameObject.SetActive(true);
+                        Obj.transform.GetChild(i).GetComponent<Animator>().SetInteger("VictoryPlace", i+1);
+                        Obj.transform.GetChild(i+3).gameObject.SetActive(true);
+                        Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(WinnersNames[i]);
+                    }
+                    Obj.transform.FindChild("Camera").GetComponent<Animator>().enabled = true;
+                }
+            }
         }
     }
 }

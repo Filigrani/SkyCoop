@@ -1,6 +1,7 @@
 ﻿using Il2Cpp;
 using Il2CppTLD.Gameplay;
 using Il2CppTLD.Gear;
+using Il2CppTLD.Scenes;
 using Il2CppTLD.UI;
 using SkyCoop;
 using SkyCoopServer;
@@ -468,12 +469,47 @@ namespace SkyCoopClient
                 return false;
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(SafehouseManager), "MaybeToggleCustomizing")]
+        private static class SafehouseManager_Enable
+        {
+            private static bool Prefix(SafehouseManager __instance)
+            {
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SafehouseManager), "InCustomizableSafehouse")]
+        private static class SafehouseManager_InCustomizableSafehouse
+        {
+            private static void Postfix(SafehouseManager __instance, ref bool __result)
+            {
+                __result = false;
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen", new System.Type[] { typeof(string) })]
         private static class GameManager_LoadSceneWithLoadingScreen
         {
-            private static void Prefix(GameManager __instance, out string sceneName)
+            private static bool Prefix(GameManager __instance, string sceneName)
             {
-                sceneName = s_SceneSpawnOverride;
+                SkyCoop.Logger.Log("LoadSceneWithLoadingScreen");
+                if (string.IsNullOrEmpty(s_SceneSpawnOverride))
+                {
+                    return true;
+                }
+                SkyCoop.Logger.Log("s_SceneSpawnOverride "+ s_SceneSpawnOverride);
+                InterfaceManager.CloseOverlaysDueToSceneLoad();
+                SaveGameSystem.ResetForSceneLoad();
+                if (GameManager.IsMainMenuActive() || GameManager.IsActiveScene("Empty"))
+                {
+                    GameManager.LoadSceneAsynchronously(s_SceneSpawnOverride);
+                    s_SceneSpawnOverride = "";
+                    GameManager.SetPhysicsAutoSimulationEnabled(false);
+                    return false;
+                }
+                EmptyScene.s_SceneLoadFromEmpty = s_SceneSpawnOverride;
+                s_SceneSpawnOverride = "";
+                GameManager.ResetLists();
+                SceneManager.LoadScene("Empty", 0);
+                return false;
             }
         }
     }
