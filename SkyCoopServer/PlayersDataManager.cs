@@ -112,7 +112,7 @@ namespace SkyCoopServer
 
         public void SceneAlign()
         {
-            Console.WriteLine("[GameServer] SceneAlign");
+            Logger.Log("[PlayersDataManager] SceneAlign");
             List<int> PlayerIndexes = s_Server.GetClientsIndexs();
 
             foreach (int PlayerID in PlayerIndexes)

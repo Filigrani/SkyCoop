@@ -100,7 +100,7 @@ namespace SkyCoopServer
 
         public void StartServer(int port, int maxPlayers, string key = "voice")
         {
-            Console.WriteLine("[VoiceServer] Starting voice server");
+            Logger.Log("[ServerVoice] Starting voice server");
             m_Instance.Start(port);
 
             m_Listener.ConnectionRequestEvent += request =>
@@ -113,19 +113,19 @@ namespace SkyCoopServer
 
             m_Listener.PeerConnectedEvent += peer =>
             {
-                Console.WriteLine("[VoiceServer] We got connection: {0}", peer + " assigned them as " + peer.Id);
+                Logger.Log($"[ServerVoice] We got connection: {peer} assigned them as {peer.Id}");
 
                 SendWelcomeToClient(peer);
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
-                Console.WriteLine("[VoiceServer] Voice Client", peer.Id + " disconnected " + message.Reason.ToString());
+                Logger.Log($"[ServerVoice] Voice Client {peer.Id} disconnected {message.Reason.ToString()}");
             };
 
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
             {
-                //Console.WriteLine("[VoiceServer] Ping to Client "+peer.Id+": " + ping);
+                //Logger.Log("[ServerVoice] Ping to Client {peer.Id}: {ping}");
             };
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
@@ -135,7 +135,7 @@ namespace SkyCoopServer
             };
 
             m_IsReady = true;
-            Console.WriteLine($"[VoiceServer] Voice server is started port={port}");
+            Logger.Log($"[ServerVoice] Voice server is started port={port}");
 
             Task.Run(() => {
                 while (m_GameServer.m_IsReady) 

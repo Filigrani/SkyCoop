@@ -1,8 +1,5 @@
 ﻿using LiteNetLib;
-using Microsoft.VisualBasic;
-using System;
 using System.Numerics;
-using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -129,10 +126,10 @@ namespace SkyCoopServer
 
             public void KillFeedDebugLog(List<Damager> Damagers)
             {
-                for(int i = 0;i < m_Damagers.Count; i++)
+                for (int i = 0; i < m_Damagers.Count; i++)
                 {
                     Damager Dmg = m_Damagers[i];
-                    Console.WriteLine(i+". PlayerID " + Dmg.m_ClientID+" Damage: "+ Dmg.m_Damage +" Type "+Dmg.m_DamageType.ToString());
+                    Logger.Log("[DataStr] "+i+". PlayerID " + Dmg.m_ClientID+" Damage: "+ Dmg.m_Damage +" Type "+Dmg.m_DamageType.ToString());
                 }
             }
 
@@ -145,7 +142,7 @@ namespace SkyCoopServer
                 if (!Knocked)
                 {
                     m_GamePlayState = GamePlayState.Dead;
-                    Console.WriteLine("PlayerID " + m_PlayerID + " m_GamePlayState: " + m_GamePlayState.ToString());
+                    Logger.Log("[DataStr] PlayerID " + m_PlayerID + " m_GamePlayState: " + m_GamePlayState.ToString());
                 }
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
                 Message.m_Victim = m_PlayerID;
@@ -236,7 +233,7 @@ namespace SkyCoopServer
                     Message.m_Killer = m_PlayerID;
                     Message.m_DeathReason = DamageType.Unknown;
                     ServerSend.SendKillFeed(Message, ServerInstance);
-                    Console.WriteLine("Suicide, nothing to log");
+                    Logger.Log("[DataStr] Suicide, nothing to log");
                 }
             }
 
@@ -244,16 +241,16 @@ namespace SkyCoopServer
             {
                 //if(Reviver == m_PlayerID)
                 //{
-                //    Console.WriteLine($"Player {m_PlayerID} revived himself.");
+                //    Logger.log($"[DataStr] Player {m_PlayerID} revived himself.");
                 //}else if(Reviver == -1)
                 //{
-                //    Console.WriteLine($"Player {m_PlayerID} respawned.");
+                //    Logger.log($"[DataStr] Player {m_PlayerID} respawned.");
                 //}else
                 //{
-                //    Console.WriteLine($"Player {m_PlayerID} revived by Player {Reviver}");
+                //    Logger.log($"[DataStr] Player {m_PlayerID} revived by Player {Reviver}");
                 //}
 
-                if(Reviver == -2)
+                if (Reviver == -2)
                 {
                     m_GamePlayState = GamePlayState.Alive;
                 }
@@ -465,7 +462,7 @@ namespace SkyCoopServer
             public int StageTime { get; set; }
         }
 
-        public class DangerCircleData
+        public class DangerCircleData : IDisposable
         {
             public DangerCircleConfig m_Config = new DangerCircleConfig();
             public int m_CurrentStage = 0;
@@ -587,18 +584,17 @@ namespace SkyCoopServer
                     DoNextStage();
                 }
             }
-
-            public void Destory()
+            public void Dispose()
             {
-                if(s_StageTimer != null)
+                if (s_StageTimer != null)
                 {
                     s_StageTimer.Dispose();
                 }
-                if(s_SyncTimer != null)
+                if (s_SyncTimer != null)
                 {
                     s_SyncTimer.Dispose();
                 }
-                if(s_DamageTimer != null)
+                if (s_DamageTimer != null)
                 {
                     s_DamageTimer.Dispose();
                 }

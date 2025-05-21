@@ -23,7 +23,6 @@ namespace SkyCoop
 
         public override void OnInitializeMelon()
         {
-            FilesManager.SetDataDirectory($"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData");
             Server = new Server();
             Client = new Client();
         }
@@ -84,6 +83,13 @@ namespace SkyCoop
             if(Server != null && Server.m_IsReady)
             {
                 Server.Update();
+
+                if(SkyCoopServer.Logger.Logsbuffer.Count > 0)
+                {
+                    SkyCoopServer.Logger.LogData log = SkyCoopServer.Logger.Logsbuffer[0];
+                    SkyCoopServer.Logger.Logsbuffer.Remove(log);
+                    Logger.Log(log.m_Color, log.m_Message);
+                }
             }
 
             if (InputManager.GetFirePressed(InputManager.m_CurrentContext))

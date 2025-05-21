@@ -12,7 +12,7 @@ namespace SkyCoopServer
         public static void Welcome(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string PlayerName = Reader.GetString();
-            Console.WriteLine("[GameServer] Сlient " + Client.Id+ " connected under name: " + PlayerName);
+            Logger.Log(ConsoleColor.Green, $"[ServerHandle] Сlient {Client.Id} connected under name: {PlayerName}");
             ServerInstance.m_PlayersData.SetPlayerName(Client.Id, PlayerName);
             ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
 
@@ -41,7 +41,7 @@ namespace SkyCoopServer
         public static void ClientScene(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string Scene = Reader.GetString();
-            Console.WriteLine("[GameServer] (ClientScene) Client " + Client.Id + " sent Scene "+Scene);
+            Logger.Log($"[ServerHandle] (ClientScene) Client {Client.Id} sent Scene {Scene}");
             ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, Scene);
         }
 
@@ -108,7 +108,7 @@ namespace SkyCoopServer
             DataStr.DamageType DamageType = (DataStr.DamageType)DamageI;
             bool Knocked = Reader.GetBool();
             bool HeadShot = Reader.GetBool();
-            Console.WriteLine("[GameServer] ClientDied " + DamageType.ToString() + " Knocked "+ Knocked+ " HeadShot "+ HeadShot);
+            Logger.Log($"[ServerHandle] ClientDied {DamageType.ToString()} Knocked {Knocked} HeadShot {HeadShot}");
             ServerInstance.GetPlayerDataByNetPeer(Client).ConfirmKill(ServerInstance, DamageType, Knocked, HeadShot);
         }
         public static void ClientRevived(NetPeer Client, NetDataReader Reader, Server ServerInstance)
@@ -132,7 +132,7 @@ namespace SkyCoopServer
         }
         public static void ClientRequestRespawn(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
-            Console.WriteLine("ClientRequestRespawn PlayerID " + Client.Id + " m_GamePlayState: " + ServerInstance.GetPlayerDataByNetPeer(Client).m_GamePlayState.ToString());
+            Logger.Log($"[ServerHandle] ClientRequestRespawn PlayerID {Client.Id} m_GamePlayState: {ServerInstance.GetPlayerDataByNetPeer(Client).m_GamePlayState.ToString()}");
             if (ServerInstance.m_PlayersData.m_Players[Client.Id].m_GamePlayState == DataStr.PlayerData.GamePlayState.Dead)
             {
                 DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene);

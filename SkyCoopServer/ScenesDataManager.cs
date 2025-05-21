@@ -48,7 +48,7 @@ namespace SkyCoopServer
 
                 if (Data != null && Data.m_ActiveZone != null)
                 {
-                    Data.m_ActiveZone.Destory();
+                    Data.m_ActiveZone.Dispose();
                 }
 
                 m_LoadedScenes.Remove(SceneName);

@@ -1,13 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Numerics;
+﻿using System.Numerics;
 using System.Reflection;
-using System.Text;
 using System.Text.Json;
-using System.Threading.Tasks;
 using static SkyCoopServer.DataStr;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
@@ -18,18 +12,15 @@ namespace SkyCoopServer
         public static string s_StartingGearFileName = "StartingGear";
         public static string s_VictoryPlaceDirectory = "Victory";
         public static string s_RulesFileName = "Rules";
-        public static string s_DataDirectory = "";
-
-        public static void SetDataDirectory(string Path)
-        {
-            s_DataDirectory = Path;
-        }
+        public static string s_DataDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData";
 
         public static GameRules GetRules(string GameMode)
         {
             GameRules Rules = new GameRules();
             string Path = $"{s_DataDirectory}/{GameMode}/{s_RulesFileName}";
             string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_RulesFileName}");
             if (File.Exists(Path))
             {
                 try
@@ -38,12 +29,18 @@ namespace SkyCoopServer
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"FilesManager failed to load {Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return Rules;
                 }
             }
+            else
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_RulesFileName} not exist");
+            }
+
             if (string.IsNullOrEmpty(JSON))
             {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_RulesFileName} is empty");
                 return Rules;
             }
             GameRulesSave Save = JsonSerializer.Deserialize<GameRulesSave>(JSON);
@@ -81,6 +78,8 @@ namespace SkyCoopServer
             List<V3Quat> Points = new List<V3Quat>();
             string Path = $"{s_DataDirectory}/{GameMode}/{s_SpawnPointsDirectory}/{Scene}";
             string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_SpawnPointsDirectory}/{Scene}");
             if (File.Exists(Path))
             {
                 try
@@ -89,12 +88,18 @@ namespace SkyCoopServer
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"FilesManager failed to load {Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return Points;
                 }
             }
+            else
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} not exist");
+            }
+
             if (string.IsNullOrEmpty(JSON))
             {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} is empty");
                 return Points;
             }
             SpawnPointSave Save = JsonSerializer.Deserialize<SpawnPointSave>(JSON);
@@ -110,6 +115,8 @@ namespace SkyCoopServer
         {
             string Path = $"{s_DataDirectory}/{GameMode}/{s_ZoneConfigDirectory}/{Scene}";
             string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_ZoneConfigDirectory}/{Scene}");
             if (File.Exists(Path))
             {
                 try
@@ -118,16 +125,19 @@ namespace SkyCoopServer
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"FilesManager failed to load {Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return null;
                 }
             }
             else
             {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_ZoneConfigDirectory}/{Scene} not exist");
                 return null;
             }
+
             if (string.IsNullOrEmpty(JSON))
             {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_ZoneConfigDirectory}/{Scene} is empty");
                 return null;
             }
             DangerCircleConfig CFG = JsonSerializer.Deserialize<DangerCircleConfig>(JSON);
@@ -139,6 +149,8 @@ namespace SkyCoopServer
             Vector3 Position = new Vector3(0,0,0);
             string Path = $"{s_DataDirectory}/{GameMode}/{s_VictoryPlaceDirectory}/{SceneName}";
             string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_VictoryPlaceDirectory}/{SceneName}");
             if (File.Exists(Path))
             {
                 try
@@ -147,12 +159,18 @@ namespace SkyCoopServer
                 }
                 catch (Exception e)
                 {
-                    Console.WriteLine($"FilesManager failed to load {Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return Position;
                 }
             }
+            else
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_VictoryPlaceDirectory}/{SceneName} not exist");
+            }
+
             if (string.IsNullOrEmpty(JSON))
             {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_VictoryPlaceDirectory}/{SceneName} is empty");
                 return Position;
             }
             DangerCircleCenter Save = JsonSerializer.Deserialize<DangerCircleCenter>(JSON);

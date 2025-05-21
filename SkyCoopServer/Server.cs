@@ -140,6 +140,7 @@ namespace SkyCoopServer
                         m_PlayersData.GetPlayer(Peer.Id).m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
                         ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), FilesManager.GetVictoryPosition(m_Config.m_GameMode, m_Config.m_SceneToSpawn), this);
                     }
+                    m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
                 }
             }
             if(m_PendingGameModeOverTimer > 0)
@@ -162,7 +163,7 @@ namespace SkyCoopServer
         public void ChangeGameMode(string GameMode)
         {
             m_Config.m_GameMode = GameMode;
-            m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
+            //m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
             m_Config.m_SceneToSpawn = GetRandomSceneForGameMode(m_Config.m_GameMode);
             m_Rules = FilesManager.GetRules(GameMode);
             m_ScenesData.ChangeGameMode(GameMode);
@@ -179,7 +180,7 @@ namespace SkyCoopServer
         public void StartServer(int port, int maxPlayers, string key = "key")
         {
             m_PlayersData.InitilizePlayers(maxPlayers);
-            Console.WriteLine("[GameServer] Starting server");
+            Logger.Log(ConsoleColor.Green, "[Server] Starting server");
             m_Instance.Start(port);
 
             m_Listener.ConnectionRequestEvent += request =>
@@ -192,18 +193,18 @@ namespace SkyCoopServer
 
             m_Listener.PeerConnectedEvent += peer =>
             {
-                Console.WriteLine("[GameServer] We got connection: {0}", peer+" assigned them as "+ peer.Id);
+                Logger.Log(ConsoleColor.Green, $"[Server] We got connection: {peer} assigned them as {peer.Id}");
                 ServerSend.Welcome(peer, peer.Id);
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
-                Console.WriteLine("[GameServer] Client", peer.Id + " disconnected " + message.Reason.ToString());
+                Logger.Log(ConsoleColor.Red, $"[GameServer] Client {peer.Id} disconnected {message.Reason.ToString()}");
             };
 
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
             {
-                //Console.WriteLine("[GameServer] Ping to Client "+peer.Id+": " + ping);
+                //Logger.Log(ConsoleColor.Gray, $"[Server] Ping to Client {peer.Id}: {ping}");
             };
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
@@ -215,7 +216,7 @@ namespace SkyCoopServer
             };
 
             m_IsReady = true;
-            Console.WriteLine($"[GameServer] Server is started port={port}");
+            Logger.Log(ConsoleColor.Green,$"[Server] Server is started port={port}");
 
             if(m_Config.m_VoicePort != 0)
             {
