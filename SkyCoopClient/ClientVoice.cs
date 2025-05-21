@@ -5,6 +5,7 @@ using OpenVoiceSharp;
 using System.Net;
 using SkyCoop;
 using UnityEngine;
+using Il2CppRewired;
 
 namespace SkyCoopClient
 {
@@ -20,7 +21,7 @@ namespace SkyCoopClient
         public BasicMicrophoneRecorder MicrophoneRecorder = new BasicMicrophoneRecorder(stereo: false);
         public int BufferSamples = VoiceUtilities.GetSampleSize(1) / 2;
         public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer = new Dictionary<int, CircularAudioBuffer<float>>();
-        public CircularAudioBuffer<float> m_AnnoncerBuffer = new CircularAudioBuffer<float>();
+        public CircularAudioBuffer<float> m_AnnouncerBuffer = new CircularAudioBuffer<float>();
 
         public AudioSource m_AnnoncerAudioSource = null;
 
@@ -29,7 +30,7 @@ namespace SkyCoopClient
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
 
-            m_AnnoncerBuffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
+            m_AnnouncerBuffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
 
             CreateAnnoncerAudioSource();
             StartRecording();
@@ -176,7 +177,7 @@ namespace SkyCoopClient
             (byte[] decodedData, int decodedLength) = VoiceInterface.WhenDataReceived(Data, Data.Length);
             float[] samples = new float[decodedLength / 2];
             VoiceUtilities.Convert16BitToFloat(decodedData, samples);
-            m_AnnoncerBuffer.PushChunk(samples);
+            m_AnnouncerBuffer.PushChunk(samples);
         }
 
         public void CreateAnnoncerAudioSource()
@@ -230,60 +231,40 @@ namespace SkyCoopClient
         {
             m_Instance.PollEvents();
 
-            if (m_IsReady && VoiceBuffer.Count > 0)
+            if (m_IsReady)
             {
-                foreach (var clientBuffer in VoiceBuffer.ToList()) 
+                if (VoiceBuffer.Count > 0)
                 {
-                    CircularAudioBuffer<float> buffer = clientBuffer.Value;
-
-                    if (buffer.BufferFull)
+                    foreach (var clientBuffer in VoiceBuffer.ToList())
                     {
-                        Comps.NetworkPlayer player = PlayersManager.GetPlayer(clientBuffer.Key);
-                        if (player.m_AudioSource3D.clip != null)
+                        //SkyCoop.Logger.Log(ConsoleColor.Magenta, $"VoiceBuffer id:{clientBuffer.Key} has {clientBuffer.Value.ChunksAvailable} chunck");
+                        if (clientBuffer.Value.ChunksAvailable > 0)
                         {
-                            //SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
-                            player.m_AudioSource3D.clip.SetData(buffer.ReadAllBuffer(), 0);
-                            player.m_AudioSource3D.Play();
+                            Comps.NetworkPlayer player = PlayersManager.GetPlayer(clientBuffer.Key);
+                            if (!player.m_AudioSource3D.isPlaying)
+                            {
+                                CircularAudioBuffer<float> buffer = clientBuffer.Value;
+                                AudioClip clip = AudioClip.Create("Voice", buffer.BufferLength, 1, 48000, true, false);
+                                float[] voice = buffer.ReadAllBuffer();
+                                voice[voice.Length - 1] = 0f;
+                                clip.SetData(voice, 0);
+                                player.m_AudioSource3D.PlayOneShot(clip);
 
-                            VoiceBuffer[clientBuffer.Key] = buffer;
-
-                        }
-                        else
-                        {
-                            player.m_AudioSource3D.clip = AudioClip.Create(                
-                                "Voice",
-                                buffer.BufferLength,                
-                                1,
-                                48000,                
-                                true,
-                                false);
-                            //SkyCoop.Logger.Log(ConsoleColor.Green, $"Playing VoicePlayback from {clientBuffer.Key}");
-                            player.m_AudioSource3D.clip.SetData(buffer.ReadAllBuffer(), 0);
-                            player.m_AudioSource3D.Play();
-
-                            VoiceBuffer[clientBuffer.Key] = buffer;
+                                VoiceBuffer[clientBuffer.Key] = buffer;
+                            }
                         }
                     }
                 }
 
-                if (m_AnnoncerBuffer.BufferFull)
+                if (m_AnnouncerBuffer.ChunksAvailable > 0)
                 {
-                    if (m_AnnoncerAudioSource.clip != null)
+                    if (!m_AnnoncerAudioSource.isPlaying)
                     {
-                        m_AnnoncerAudioSource.clip.SetData(m_AnnoncerBuffer.ReadAllBuffer(), 0);
-                        m_AnnoncerAudioSource.Play();
-                    }
-                    else
-                    {
-                        m_AnnoncerAudioSource.clip = AudioClip.Create(
-                            "Voice",
-                            m_AnnoncerBuffer.BufferLength,
-                            1,
-                            48000,
-                            true,
-                            false);
-                        m_AnnoncerAudioSource.clip.SetData(m_AnnoncerBuffer.ReadAllBuffer(), 0);
-                        m_AnnoncerAudioSource.Play();
+                        AudioClip clip = AudioClip.Create("Announce", m_AnnouncerBuffer.BufferLength, 1, 48000, true, false);
+                        float[] voice = m_AnnouncerBuffer.ReadAllBuffer();
+                        voice[voice.Length - 1] = 0f;
+                        clip.SetData(voice, 0);
+                        m_AnnoncerAudioSource.PlayOneShot(clip);
                     }
                 }
             }
