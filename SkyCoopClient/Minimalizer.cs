@@ -90,28 +90,94 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_ActionsRadial __instance)
             {
-                List<Panel_ActionsRadial.RadialInfo> Save = new List<Panel_ActionsRadial.RadialInfo>();
                 Panel_ActionsRadial.RadialInfo Empty = new Panel_ActionsRadial.RadialInfo();
                 Empty.m_RadialElement = Panel_ActionsRadial.RadialType.Empty;
                 Empty.m_SpriteName = "";
                 for (int i = __instance.m_PrimaryRadial.Count - 1; i >= 0; i--)
                 {
                     Panel_ActionsRadial.RadialInfo Info = __instance.m_PrimaryRadial[i];
-                    if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Weapons || Info.m_RadialElement == Panel_ActionsRadial.RadialType.FirstAid || Info.m_RadialElement == Panel_ActionsRadial.RadialType.Status || Info.m_RadialElement == Panel_ActionsRadial.RadialType.Food)
+                    if (Info.m_RadialElement != Panel_ActionsRadial.RadialType.Weapons 
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.FirstAid 
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Status 
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Food 
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Clothing
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Tools
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.LightSources
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Drink
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Inventory)
                     {
-                        Save.Add(Info);
-                    }
-                    else
-                    {
-                        Save.Add(Empty);
+                        if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Decoy)
+                        {
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Tools;
+                            Info.m_GreyOutSpriteName = "ico_Radial_tools";
+                            Info.m_SpriteName = "ico_Radial_tools";
+                            Info.m_SpriteNameHover = "ico_Radial_tools";
+                        }
+                        else if(Info.m_RadialElement == Panel_ActionsRadial.RadialType.Navigation)
+                        {
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Clothing;
+                            Info.m_GreyOutSpriteName = "ico_inv_clothing";
+                            Info.m_SpriteName = "ico_inv_clothing";
+                            Info.m_SpriteNameHover = "ico_inv_clothing";
+                        }
+                        else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.PlaceItem)
+                        {
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Inventory;
+                            Info.m_GreyOutSpriteName = "ico_Radial_pack";
+                            Info.m_SpriteName = "ico_Radial_pack";
+                            Info.m_SpriteNameHover = "ico_Radial_pack";
+                        }
+                        else
+                        {
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Empty;
+                            Info.m_SpriteName = "";
+                        }
                     }
                 }
-                foreach (Panel_ActionsRadial.RadialInfo Info in Save)
-                {
-                    __instance.m_PrimaryRadial = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Panel_ActionsRadial.RadialInfo>(Save.ToArray());
-                }
+                __instance.m_ToolsRadialOrder = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(MeleeManager.s_MeleeWeapons.ToArray());
             }
         }
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "GetDelegateForRadial")]
+        //private static class Panel_ActionsRadial_GetDelegateForRadial
+        //{
+        //    private static void Postfix(Panel_ActionsRadial __instance, Panel_ActionsRadial.RadialType radialType, Il2CppSystem.Action __result)
+        //    {
+        //        if(radialType == Panel_ActionsRadial.RadialType.Clothing)
+        //        {
+        //            __result = new System.Action(OpenClothing);
+        //        }
+        //    }
+        //}
+
+        private static Il2CppSystem.Collections.Generic.List<GearItem> GetClothingItemsInInventory()
+        {
+            Il2CppSystem.Collections.Generic.List<GearItem> Gears = new Il2CppSystem.Collections.Generic.List<GearItem>();
+            for (int i = 0; i < GameManager.GetInventoryComponent().m_Items.Count; i++)
+            {
+                GearItem gearItem = GameManager.GetInventoryComponent().m_Items[i];
+                if (gearItem && gearItem.m_ClothingItem)
+                {
+                    Gears.Add(gearItem);
+                }
+            }
+            return Gears;
+        }
+
+        public static void ShowNoClothing()
+        {
+            HUDMessage.AddMessage(Localization.Get("GAMEPLAY_None"), false, false);
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "StartClothingUI")]
+        private static class Panel_ActionsRadial_StartClothingUI
+        {
+            private static void Postfix(Panel_ActionsRadial __instance)
+            {
+                __instance.m_Queue.Add(new Action(__instance.StartClothingUI));
+                __instance.ShowGearRadial(GetClothingItemsInInventory(), new Action(ShowNoClothing));
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_FirstAid), "Enable")]
         private static class Panel_FirstAid_Start
         {

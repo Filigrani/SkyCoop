@@ -175,6 +175,54 @@ namespace SkyCoopClient
             }
         }
 
+        public static void CookpotHelmetPatch(GearItem __instance)
+        {
+            if (__instance.m_CookingPotItem)
+            {
+                __instance.m_CookingPotItem = null;
+            }
+            if (__instance.name == "GEAR_CookingPot" && __instance.m_ClothingItem == null)
+            {
+                ClothingItem CLTH = __instance.gameObject.AddComponent<ClothingItem>();
+                CLTH.m_Region = ClothingRegion.Head;
+                CLTH.m_MinLayer = ClothingLayer.Mid;
+                CLTH.m_MaxLayer = ClothingLayer.Mid;
+                CLTH.m_DailyHPDecayWhenWornInside = 0;
+                CLTH.m_DailyHPDecayWhenWornOutside = 0;
+                CLTH.m_Warmth = -5f;
+                CLTH.m_WarmthWhenWet = -10f;
+                CLTH.m_Windproof = 50;
+                CLTH.m_Toughness = 25;
+                CLTH.m_SprintBarReductionPercent = 0;
+                CLTH.m_Waterproofness = 1;
+                CLTH.m_DryPercentPerHour = 0;
+                CLTH.m_DryPercentPerHourNoFire = 0;
+                CLTH.m_FreezePercentPerHour = 0;
+                CLTH.m_DryBonusWhenNotWorn = 0;
+                CLTH.m_PaperDollTextureName = "PaperDoll_POT";
+                CLTH.m_PaperDollBlendmapName = "";
+                CLTH.m_EquippedLayer = ClothingLayer.Mid;
+                __instance.m_ClothingItem = CLTH;
+                CLTH.m_GearItem = __instance;
+            }
+        }
+
+        public static void GearManualPatch(GearItem __instance)
+        {
+            MeleeManager.MeeleWeaponPatch(__instance);
+            CookpotHelmetPatch(__instance);
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "ManualStart")]
+        private static class GearItem_ManualStart
+        {
+            private static void Postfix(GearItem __instance)
+            {
+                GearManualPatch(__instance);
+            }
+        }
+
         public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0, GameObject Around = null)
         {
             if (gear != null && gear.gameObject != null)
@@ -284,8 +332,8 @@ namespace SkyCoopClient
                 GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(JSON);
                 GearItem Gi = GearObject.GetComponent<GearItem>();
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
-
                 Gi.Deserialize(DataProxy, true);
+                GearManualPatch(Gi);
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Gear deserialized!");
                 GameManager.GetPlayerManagerComponent().EnterInspectGearMode(Gi);
             }

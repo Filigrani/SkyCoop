@@ -152,45 +152,25 @@ namespace SkyCoopClient
             }
         }
 
-
-        [HarmonyLib.HarmonyPatch(typeof(GearItem), "ManualStart")]
-        private static class GearItem_ManualStart
+        public static void MeeleWeaponPatch(GearItem __instance)
         {
-            private static void Postfix(GearItem __instance)
+            if (IsMeleeWeapon(__instance.name) && __instance.gameObject.GetComponent<FirstPersonItem>() == null)
             {
-                if (IsMeleeWeapon(__instance.name) && __instance.gameObject.GetComponent<FirstPersonItem>() == null)
-                {
-                    FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
 
-                    FPI.m_FirstPersonObjectName = "Revolver";
-                    
-                    GameObject reference = AssetManager.GetAssetFromGame<GameObject>("GEAR_Stone");
-                    if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
-                    {
-                        FirstPersonItem rFPI = reference.GetComponent<FirstPersonItem>();
-                        FPI.m_PlayerStateTransitions = rFPI.m_PlayerStateTransitions;
+                FPI.m_FirstPersonObjectName = "Revolver";
 
-                        FPI.m_ItemData = s_DummyFPSItem;
-                        FPI.m_UnwieldAudioEvent = rFPI.m_UnwieldAudioEvent;
-                        FPI.m_WieldAudioEvent = rFPI.m_WieldAudioEvent;
-                    }
-                    __instance.m_FirstPersonItem = FPI;
-                }
-                if (__instance.m_FoodItem)
+                GameObject reference = AssetManager.GetAssetFromGame<GameObject>("GEAR_Stone");
+                if (reference != null && reference.GetComponent<FirstPersonItem>() != null)
                 {
-                    __instance.m_FoodItem.m_MustConsumeAll = true;
-                    //if (__instance.m_ConditionOverTimeBuff == null)
-                    //{
-                    //    __instance.m_ConditionOverTimeBuff = __instance.gameObject.AddComponent<ConditionOverTimeBuff>();
-                    //
-                    //    float Cal = __instance.m_FoodItem.m_CaloriesTotal;
-                    //
-                    //    float TotalRegen = 120f * Cal / 1500f;
-                    //
-                    //    __instance.m_ConditionOverTimeBuff.m_NumHours = 0.5f;
-                    //    __instance.m_ConditionOverTimeBuff.m_ConditionIncreasePerHour = TotalRegen;
-                    //}
+                    FirstPersonItem rFPI = reference.GetComponent<FirstPersonItem>();
+                    FPI.m_PlayerStateTransitions = rFPI.m_PlayerStateTransitions;
+
+                    FPI.m_ItemData = s_DummyFPSItem;
+                    FPI.m_UnwieldAudioEvent = rFPI.m_UnwieldAudioEvent;
+                    FPI.m_WieldAudioEvent = rFPI.m_WieldAudioEvent;
                 }
+                __instance.m_FirstPersonItem = FPI;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "GetEquipButtonLocalizationId")] // Once
@@ -203,6 +183,9 @@ namespace SkyCoopClient
                     if (IsMeleeWeapon(gi.name))
                     {
                         __result = "GAMEPLAY_Use";
+                    }else if(gi.name == "GEAR_CookingPot" || gi.name == "GEAR_BallisticVest")
+                    {
+                        __result = "GAMEPLAY_Wear";
                     }
                 }
             }
