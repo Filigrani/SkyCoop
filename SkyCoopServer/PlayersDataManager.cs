@@ -50,11 +50,16 @@ namespace SkyCoopServer
             {
                 return ScenePlayers;
             }
-            foreach (DataStr.PlayerData Player in m_Players)
+
+            if(s_Server != null)
             {
-                if(Player.m_Scene == Scene)
+                foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
                 {
-                    ScenePlayers.Add(Player);
+                    DataStr.PlayerData Data = s_Server.GetPlayerDataByNetPeer(Peer);
+                    if (Data != null && Data.m_Scene == Scene)
+                    {
+                        ScenePlayers.Add(Data);
+                    }
                 }
             }
             return ScenePlayers;
@@ -158,6 +163,21 @@ namespace SkyCoopServer
                                 }
                             }
                         }
+                    }
+                }
+            }
+        }
+
+        public void SendAllPlayersOnScene(NetPeer Client, string SceneName)
+        {
+            if (s_Server != null)
+            {
+                foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
+                {
+                    if (OtherPlayerID != Client.Id || m_RecursiveDebug)
+                    {
+                        DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+                        ServerSend.SendPlayerSceneNotification(Client, OtherPlayer.m_Scene == SceneName, OtherPlayerID);
                     }
                 }
             }
@@ -286,6 +306,19 @@ namespace SkyCoopServer
                             }
                         }
                     }
+                }
+            }
+        }
+
+        public void OnPlayerDisconnect(int PlayerID)
+        {
+            m_Players[PlayerID] = new PlayerData(PlayerID);
+
+            foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (Peer.Id != PlayerID)
+                {
+                    ServerSend.SendPlayerSceneNotification(Peer, false, PlayerID);
                 }
             }
         }

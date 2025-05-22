@@ -1,6 +1,5 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
-using Microsoft.VisualBasic;
 using System;
 
 namespace SkyCoopServer
@@ -122,10 +121,6 @@ namespace SkyCoopServer
 
         public void EverySecond(object obj)
         {
-            if (m_PlayersData != null)
-            {
-                //m_PlayersData.SceneAlign(); Na, I did not like it, rewrite it someday.
-            }
             if(m_Rules != null && m_Rules.m_Time > 0)
             {
                 m_Rules.m_Time = m_Rules.m_Time - 1;
@@ -200,6 +195,8 @@ namespace SkyCoopServer
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
                 Logger.Log(ConsoleColor.Red, $"[GameServer] Client {peer.Id} disconnected {message.Reason.ToString()}");
+
+                m_PlayersData.OnPlayerDisconnect(peer.Id);
             };
 
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>

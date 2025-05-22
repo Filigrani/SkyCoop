@@ -128,19 +128,27 @@ namespace SkyCoopServer
         }
         public static void SendKillFeed(DataStr.KillFeedMessage Message, Server ServerInstance)
         {
-            if(Message.m_Killer != Message.m_Victim)
+            if(Message.m_Killer != -1 && Message.m_Victim != -1)
             {
-                ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).AddKill(ServerInstance);
+                if (Message.m_Killer != Message.m_Victim)
+                {
+                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).AddKill(ServerInstance);
+                }
+                else
+                {
+                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
+                }
+                ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddDeath(ServerInstance);
             }
-            else
+
+            if(Message.m_Assist != -1)
             {
-                ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
+                if (Message.m_Assist != Message.m_Victim)
+                {
+                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Assist).AddAssist(ServerInstance);
+                }
             }
-            ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddDeath(ServerInstance);
-            if(Message.m_Assist != Message.m_Victim)
-            {
-                ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddAssist(ServerInstance);
-            }
+
 
             NetDataWriter writer = new NetDataWriter();
 

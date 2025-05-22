@@ -6,7 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using UnityEngine.SocialPlatforms.Impl;
 
 namespace SkyCoopClient
 {

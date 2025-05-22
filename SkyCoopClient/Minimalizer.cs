@@ -97,7 +97,7 @@ namespace SkyCoopClient
                 for (int i = __instance.m_PrimaryRadial.Count - 1; i >= 0; i--)
                 {
                     Panel_ActionsRadial.RadialInfo Info = __instance.m_PrimaryRadial[i];
-                    if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Weapons || Info.m_RadialElement == Panel_ActionsRadial.RadialType.FirstAid || Info.m_RadialElement == Panel_ActionsRadial.RadialType.Status)
+                    if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Weapons || Info.m_RadialElement == Panel_ActionsRadial.RadialType.FirstAid || Info.m_RadialElement == Panel_ActionsRadial.RadialType.Status || Info.m_RadialElement == Panel_ActionsRadial.RadialType.Food)
                     {
                         Save.Add(Info);
                     }
@@ -348,6 +348,20 @@ namespace SkyCoopClient
                 return true;
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "CanUseFoodInventoryItem")]
+        private static class PlayerManager_CanUseFoodInventoryItem
+        {
+            private static bool Prefix(PlayerManager __instance)
+            {
+                if (GameManager.GetBrokenBody().HasAffliction)
+                {
+                    HUDMessage.AddMessage("You can't do this while knocked down", true, true);
+                    GameAudioManager.PlayGUIError();
+                    return false;
+                }
+                return true;
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Awake")]
         private static class LoadScene_Awake
@@ -510,6 +524,23 @@ namespace SkyCoopClient
                 GameManager.ResetLists();
                 SceneManager.LoadScene("Empty", 0);
                 return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "EatingComplete_Internal")]
+        private static class PlayerManager_EatingComplete_Internal
+        {
+            private static void Postfix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            {
+                if(success && !playerCancel && __instance.m_FoodItemEaten)
+                {
+                    float Cal = __instance.m_FoodItemEaten.m_FoodItem.m_CaloriesTotal;
+
+                    float Health = 60 * Cal / 1500f;
+
+                    GameManager.GetConditionComponent().AddHealth(Health, DamageSource.FirstAid);
+
+                    PlayerDamageEvent.SpawnAfflictionEvent($"+{Math.Round(Health).ToString()} {Localization.Get("GAMEPLAY_PlayerHealthPercent")}", "GAMEPLAY_Food", "ico_status_hunger1", Color.cyan);
+                }
             }
         }
     }

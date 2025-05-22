@@ -145,7 +145,7 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(AssetReferenceGearItem), typeof(int) })] // Once
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(AssetReferenceGearItem), typeof(int) })]
         internal static class PlayerManager_InstantiateItemAtPlayersFeet2
         {
             private static void Postfix(AssetReferenceGearItem assetReference, int numUnits, GearItem __result)
@@ -154,6 +154,24 @@ namespace SkyCoopClient
                 {
                     SendDropItem(__result, 0, 0, false);
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(GearItem), typeof(int), typeof(Vector3), typeof(bool) })]
+        internal static class PlayerManager_InstantiateItemAtLocation
+        {
+            private static void Postfix(PlayerManager __instance, GearItem gearItemPrefab, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
+            {
+                SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} numUnits {numUnits}");
+                SendDropItem(__result, 0, 0, true);
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(AssetReferenceGearItem), typeof(int), typeof(Vector3), typeof(bool) })]
+        internal static class PlayerManager_InstantiateItemAtLocation2
+        {
+            private static void Postfix(PlayerManager __instance, AssetReferenceGearItem assetReference, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
+            {
+                SkyCoop.Logger.Log($"InstantiateItemAtLocation GUID {assetReference.AssetGUID} numUnits {numUnits}");
+                SendDropItem(__result, 0, 0, true);
             }
         }
 
@@ -206,6 +224,10 @@ namespace SkyCoopClient
                         gear.m_StackableItem.m_Units = total - nums;
                         GameManager.GetInventoryComponent().AddGear(obj.GetComponent<GearItem>());
                     }
+                    else
+                    {
+                        UnityEngine.Object.Destroy(obj);
+                    }
                 }
             }
         }
@@ -213,7 +235,8 @@ namespace SkyCoopClient
         public static void HandleGearDropped(DataStr.GearDataVisual Visual)
         {
             //SkyCoop.Logger.Log(ConsoleColor.Green, $"HandleGearSync {Visual.m_GearName}");
-            GameObject GearObject = AssetManager.CreateBogusGear(Visual.m_GearName);
+            string LocalizedGearName = "InvalidGearName";
+            GameObject GearObject = AssetManager.CreateLocalizedBogusGear(Visual.m_GearName, out LocalizedGearName);
             if (GearObject != null)
             {
                 //SkyCoop.Logger.Log(ConsoleColor.Green, $"Bogus created!");
@@ -228,6 +251,7 @@ namespace SkyCoopClient
                 }
                 Comps.DroppedGearVisual VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
                 VisualComp.m_GUID = Visual.m_GUID;
+                VisualComp.m_LocalizedName = LocalizedGearName;
 
                 PdidTable.RuntimeRegister(GUIDObj, Visual.m_GUID);
             }

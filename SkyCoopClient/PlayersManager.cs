@@ -653,7 +653,11 @@ namespace SkyCoop
         public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation, bool RespawnAnim)
         {
             GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
-
+            if (GameManager.GetPlayerInVehicle().m_VehicleDoorUsed)
+            {
+                GameManager.GetPlayerInVehicle().m_VehicleDoorUsed = null;
+                GameManager.GetPlayerInVehicle().ExitVehicleAfterFadeOut();
+            }
             if (RespawnAnim)
             {
                 GameManager.GetEmergencyStimComponent().ResetEmergencyStim();

@@ -449,8 +449,30 @@ namespace SkyCoopClient
                     }
                     ClientSend.SendProjectile(__instance.transform.position, __instance.transform.rotation, ProjectileName);
                 }
+                Comps.BulletWallBangHook BWH = __instance.gameObject.GetComponent<Comps.BulletWallBangHook>();
+                if(BWH == null)
+                {
+                    BWH = __instance.gameObject.AddComponent<Comps.BulletWallBangHook>();
+                    BWH.m_ShootPosition = __instance.transform.position;
+                    BWH.m_ShootRotation = __instance.transform.rotation;
+                    BWH.m_ShootDirection = __instance.transform.forward;
+                }
             }
         }
+
+        public static void CreateHitMarker(Vector3 Point, Quaternion Rotation, Color C)
+        {
+            GameObject hitmark = GameObject.CreatePrimitive(PrimitiveType.Cube);
+            if (hitmark)
+            {
+                hitmark.transform.position = Point;
+                hitmark.transform.rotation = Rotation;
+                hitmark.transform.localScale = new Vector3(0.1f, 0.1f, 0.1f);
+                hitmark.GetComponent<Collider>().enabled = false;
+                hitmark.GetComponent<Renderer>().material.color = C;
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(vp_Bullet), "SpawnImpactEffects")]
         private static class vp_Bullet_SpawnImpactEffects
         {
@@ -477,6 +499,37 @@ namespace SkyCoopClient
                         WeaponDescripter weaponDescripter = GetDescriptor(WeaponName);
 
                         ClientSend.SendDamageToPlayer(weaponDescripter.m_PlayerDamage * PlayerColider.m_DamageScaler, PlayerColider.m_Player.m_PlayerID, PlayerColider.m_DamageZone, WeaponName, weaponDescripter.m_DamageType);
+                    }
+                }
+                string materialTagForObjectAtPosition = Utils.GetMaterialTagForObjectAtPosition(hit.collider.gameObject, hit.point);
+                SkyCoop.Logger.Log("Bullet hit surface " + materialTagForObjectAtPosition);
+
+                Comps.BulletWallBangHook BWH = __instance.gameObject.GetComponent<Comps.BulletWallBangHook>();
+                //CreateHitMarker(hit.point, BWH.m_ShootRotation, Color.magenta);
+                if (materialTagForObjectAtPosition == "Glass")
+                {
+
+                    if (BWH && BWH.m_WallBangs > 0)
+                    {
+                        BWH.m_WallBangs--;
+                        Vector3 impactPosition = hit.point;
+                        Vector3 bulletDirection = BWH.m_ShootDirection;
+                        float wallBangDistance = 0.15f;
+                        Vector3 spawnPosition = impactPosition + (bulletDirection * wallBangDistance);
+                        //CreateHitMarker(spawnPosition, BWH.m_ShootRotation, Color.green);
+                        GameObject NewBullet = UnityEngine.Object.Instantiate<GameObject>(__instance.gameObject, spawnPosition, BWH.m_ShootRotation);
+                        if (OPB && NewBullet.GetComponent<Comps.OtherPlayerBullet>() == null)
+                        {
+                            NewBullet.AddComponent<Comps.OtherPlayerBullet>();
+                        }
+                        Comps.BulletWallBangHook NewBWH = NewBullet.GetComponent<Comps.BulletWallBangHook>();
+                        if (NewBullet == null)
+                        {
+                            NewBWH = NewBullet.gameObject.AddComponent<Comps.BulletWallBangHook>();
+                        }
+                        NewBWH.m_ShootPosition = NewBWH.transform.position;
+                        NewBWH.m_ShootRotation = NewBWH.transform.rotation;
+                        NewBWH.m_WallBangs = BWH.m_WallBangs;
                     }
                 }
             }
@@ -574,7 +627,6 @@ namespace SkyCoopClient
                         {
                             m_Throw.gameObject.AddComponent<Comps.NoiseMakerKillFeedHandle>().m_ThrowerID = ModMain.Client.GetMyId();
                         }
-                        
                     }
                 }
             }

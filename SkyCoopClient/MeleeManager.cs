@@ -176,6 +176,21 @@ namespace SkyCoopClient
                     }
                     __instance.m_FirstPersonItem = FPI;
                 }
+                if (__instance.m_FoodItem)
+                {
+                    __instance.m_FoodItem.m_MustConsumeAll = true;
+                    //if (__instance.m_ConditionOverTimeBuff == null)
+                    //{
+                    //    __instance.m_ConditionOverTimeBuff = __instance.gameObject.AddComponent<ConditionOverTimeBuff>();
+                    //
+                    //    float Cal = __instance.m_FoodItem.m_CaloriesTotal;
+                    //
+                    //    float TotalRegen = 120f * Cal / 1500f;
+                    //
+                    //    __instance.m_ConditionOverTimeBuff.m_NumHours = 0.5f;
+                    //    __instance.m_ConditionOverTimeBuff.m_ConditionIncreasePerHour = TotalRegen;
+                    //}
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "GetEquipButtonLocalizationId")] // Once

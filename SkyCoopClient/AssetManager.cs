@@ -46,6 +46,52 @@ namespace SkyCoop
             return Asset;
         }
 
+        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, Transform parent = null)
+        {
+            string LN = "Invalid";
+            GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
+            if (Prefab)
+            {
+                GameObject GearObject = UnityEngine.Object.Instantiate(Prefab, parent);
+                if (GearObject)
+                {
+                    GearObject.name = GearName;
+                    
+                    GearItem gi = GearObject.GetComponent<GearItem>();
+                    if (gi)
+                    {
+                        LN = gi.DisplayName;
+                    }
+                    foreach (Component Com in GearObject.GetComponents<Component>())
+                    {
+                        string ComName = Com.GetIl2CppType().Name;
+                        if (ComName != Il2CppType.Of<BoxCollider>().Name
+                            && ComName != Il2CppType.Of<SphereCollider>().Name
+                            && ComName != Il2CppType.Of<CapsuleCollider>().Name
+                            && ComName != Il2CppType.Of<MeshCollider>().Name
+                            && ComName != Il2CppType.Of<PhysicMaterial>().Name
+                            && ComName != Il2CppType.Of<MeshFilter>().Name
+                            && ComName != Il2CppType.Of<LODGroup>().Name
+                            && ComName != Il2CppType.Of<Transform>().Name
+                            && ComName != Il2CppType.Of<Rigidbody>().Name
+                            && ComName != Il2CppType.Of<MeshRenderer>().Name
+                            && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
+                        {
+                            UnityEngine.Object.Destroy(Com);
+                        }
+                    }
+                    LocalizedName = LN;
+                    return GearObject;
+                }
+                else
+                {
+                    Logger.Log(ConsoleColor.Red, "Can't instantiate " + Prefab.name);
+                }
+            }
+            LocalizedName = LN;
+            return null;
+        }
+
         public static GameObject CreateBogusGear(string GearName, Transform parent = null)
         {
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);

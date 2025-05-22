@@ -27,6 +27,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<MeleeBulletHandler>();
             ClassInjector.RegisterTypeInIl2Cpp<ArrowHook>();
             ClassInjector.RegisterTypeInIl2Cpp<DroppedGearVisual>();
+            ClassInjector.RegisterTypeInIl2Cpp<BulletWallBangHook>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -106,9 +107,6 @@ namespace SkyCoop
 
             void Start()
             {
-                string PrefabName = gameObject.name;
-                m_LocalizedName = Localization.Get(PrefabName.Replace("GEAR", "GAMEPLAY"));
-
                 LocalizedString Str = new LocalizedString();
                 Str.m_LocalizationID = m_LocalizedName;
                 SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
@@ -167,6 +165,15 @@ namespace SkyCoop
                     UnityEngine.Object.Destroy(this);
                 }
             }
+        }
+
+        public class BulletWallBangHook : MonoBehaviour
+        {
+            public BulletWallBangHook(IntPtr ptr) : base(ptr) { }
+            public int m_WallBangs = 3;
+            public Quaternion m_ShootRotation = Quaternion.identity;
+            public Vector3 m_ShootPosition = Vector3.zero;
+            public Vector3 m_ShootDirection = Vector3.zero;
         }
 
         public class PlayerDamageColider : MonoBehaviour

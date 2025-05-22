@@ -3,7 +3,6 @@ using LiteNetLib.Utils;
 using System;
 using System.Numerics;
 using static SkyCoopServer.DataStr;
-using static SkyCoopServer.DataStr.PlayerData;
 
 namespace SkyCoopServer
 {
@@ -234,8 +233,9 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendAllGears(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllOpenables(SceneName, Client);
             ServerInstance.m_ScenesData.SendZone(SceneName, Client);
+            ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
 
-            if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+            if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
             {
                 PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
                 ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
