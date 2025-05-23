@@ -451,5 +451,35 @@ namespace SkyCoopServer
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
         }
+        public static void SendInteractResult(NetPeer Client, bool Success)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientTryInteract);
+
+            writer.Put(Success);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPlayerInVehicle(NetPeer Client, bool State, int FromClient)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientInVehicle);
+            writer.Put(FromClient);
+            writer.Put(State);
+            Client.Send(writer, DeliveryMethod.Unreliable);
+        }
+
+        public static void SendClothing(NetPeer Client, int Region, string GearName, int FromID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientClothing);
+            writer.Put(Region);
+            writer.Put(GearName);
+            writer.Put(FromID);
+            Client.Send(writer, DeliveryMethod.Unreliable);
+        }
     }
 }

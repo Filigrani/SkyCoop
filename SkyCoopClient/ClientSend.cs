@@ -251,5 +251,31 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+        public static void SendTryInteract(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientTryInteract);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+        public static void SendVehicleSeat(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientVehicleSeat);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+
+        public static void SendInVehicle(bool InVehicle)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientInVehicle);
+            writer.Put(InVehicle);
+            SendToHost(writer);
+        }
     }
 }

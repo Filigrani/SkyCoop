@@ -1,5 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
+using Microsoft.VisualBasic;
 using System;
 using System.Numerics;
 using static SkyCoopServer.DataStr;
@@ -279,7 +280,57 @@ namespace SkyCoopServer
                 Data.m_VisualData.m_BodyGear = GearName;
             }
 
-            // TODO: Send to other clients.
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (Peer.Id != Client.Id || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                {
+                    ServerSend.SendClothing(Peer, ClothingRegion, GearName, Client.Id);
+                }
+            }
+        }
+        public static void ClientTryInteract(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Peer);
+                if (Peer.Id != Client.Id)
+                {
+                    if(Data.m_CarSeat == GUID)
+                    {
+                        ServerSend.SendInteractResult(Client, false);
+                        return;
+                    }
+                }
+            }
+            ServerSend.SendInteractResult(Client, true);
+        }
+        public static void ClientVehicleSeat(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (!string.IsNullOrEmpty(GUID))
+            {
+                foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                {
+                    PlayerData OtherData = ServerInstance.GetPlayerDataByNetPeer(Peer);
+
+                    if (Peer.Id != Client.Id)
+                    {
+                        if (OtherData.m_CarSeat == GUID)
+                        {
+                            return;
+                        }
+                    }
+                }
+            }
+            Data.m_CarSeat = GUID;
+        }
+        public static void ClientInVehicle(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            bool IsInVehicle = Reader.GetBool();
+            ServerInstance.m_PlayersData.PlayerChangeVehicleState(Client.Id, IsInVehicle);
         }
     }
 }

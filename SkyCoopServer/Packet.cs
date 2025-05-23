@@ -42,6 +42,9 @@ namespace SkyCoopServer
             ServerConfigUpdated,
             ServerChangesMap,
             ServerLeaders,
+            ClientTryInteract,
+            ClientVehicleSeat,
+            ClientInVehicle,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

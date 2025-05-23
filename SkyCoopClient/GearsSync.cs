@@ -2,6 +2,7 @@
 using Il2Cpp;
 using Il2CppRewired.HID;
 using Il2CppTLD.Gear;
+using Il2CppTLD.Interactions;
 using Il2CppTLD.PDID;
 using MelonLoader;
 using SkyCoop;
@@ -19,6 +20,7 @@ namespace SkyCoopClient
     {
         public static GameObject s_InteractiveObjectUnderCrosshair = null;
         public static PlayerControlMode s_ControlModeBeforePickingUp = PlayerControlMode.Normal;
+        public static bool s_PlaceModeAfterPickup = false;
 
         [HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")]
         public class GearItem_Drop
@@ -78,43 +80,40 @@ namespace SkyCoopClient
         {
             internal static void Postfix(PlayerManager __instance)
             {
-                if (s_InteractiveObjectUnderCrosshair)
+                if (__instance.ActiveInteraction != null)
                 {
-                    Comps.DroppedGearVisual Visual = s_InteractiveObjectUnderCrosshair.GetComponent<Comps.DroppedGearVisual>();
-                    if (Visual)
+                    GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
+                    if (OBJ)
                     {
-                        TryPickUp(Visual.m_GUID);
+                        Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
+                        if (Visual)
+                        {
+                            TryPickUp(Visual.m_GUID, false);
+                        }
                     }
                 }
             }
         }
-
-        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetInteractiveObjectUnderCrosshairs")]
-        //internal class PlayerManager_GetInteractiveObjectUnderCrosshairs
-        //{
-            //internal static void Postfix(PlayerManager __instance, float maxRange, ref GameObject __result)
-            //{
-                //int layerMask = vp_Layer.Gear | vp_Layer.NoCollidePlayer;
-                //RaycastHit hit;
-                //if (Physics.Raycast(GameManager.GetMainCamera().transform.position, GameManager.GetMainCamera().transform.forward, out hit, maxRange, layerMask))
-                //{
-                    //if (hit.collider.gameObject != null)
-                    //{
-                        //GameObject hitObj = hit.collider.transform.gameObject;
-                        //if (hitObj.GetComponent<Comps.DroppedGearVisual>() != null)
-                        //{
-                            //__result = hitObj;
-                        //}
-                    //}
-                //}
-
-                //s_InteractiveObjectUnderCrosshair = __result;
-                ////if (s_InteractiveObjectUnderCrosshair)
-                ////{
-                ////    SkyCoop.Logger.Log($"GetInteractiveObjectUnderCrosshairs __result {s_InteractiveObjectUnderCrosshair.name}");
-                ////}
-            //}
-        //}
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessAltFire")]
+        public class PlayerManager_InteractiveObjectsProcessAltFire
+        {
+            internal static void Postfix(PlayerManager __instance)
+            {
+                SkyCoop.Logger.Log("InteractiveObjectsProcessAltFire");
+                if (__instance.ActiveInteraction != null)
+                {
+                    GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
+                    if (OBJ)
+                    {
+                        Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
+                        if (Visual)
+                        {
+                            TryPickUp(Visual.m_GUID, true);
+                        }
+                    }
+                }
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "FindInteractiveObject", new System.Type[] { typeof(RaycastHit), typeof(GearItem), typeof(GameObject) }, new ArgumentType[] {ArgumentType.Normal, ArgumentType.Ref, ArgumentType.Ref})]
         internal class PlayerManager_FindInteractiveObject
@@ -130,7 +129,6 @@ namespace SkyCoopClient
                         gi = null;
                     }
                 }
-                s_InteractiveObjectUnderCrosshair = interactiveObj;
             }
         }
 
@@ -175,6 +173,63 @@ namespace SkyCoopClient
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "RestoreTransform")] // Once
+        private static class PlayerManager_RestoreTransform
+        {
+            private static GameObject saveObj;
+            internal static void Prefix(PlayerManager __instance)
+            {
+                saveObj = __instance.m_ObjectToPlace;
+            }
+            internal static void Postfix(PlayerManager __instance)
+            {
+                if (saveObj)
+                {
+                    GearItem gi = saveObj.GetComponent<GearItem>();
+                    if (gi)
+                    {
+                        SendDropItem(gi, 0, 0, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "PlaceMeshInWorld")] // Once
+        private static class PlayerManager_PlaceMeshInWorld
+        {
+            private static GameObject saveObj;
+            internal static void Prefix(PlayerManager __instance)
+            {
+                saveObj = __instance.m_ObjectToPlace;
+            }
+            internal static void Postfix(PlayerManager __instance)
+            {
+                if (saveObj)
+                {
+                    GearItem gi = saveObj.GetComponent<GearItem>();
+                    if (gi)
+                    {
+                        SendDropItem(gi, 0, 0, true);
+                    }
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")] // Once
+        private static class PlayerManager_ExitInspectGearMode
+        {
+            private static GearItem gear;
+            internal static void Prefix(PlayerManager __instance)
+            {
+                gear = __instance.m_Gear;
+            }
+            internal static void Postfix(PlayerManager __instance)
+            {
+                if (gear && !gear.m_InPlayerInventory && !gear.m_InsideContainer)
+                {
+                    SendDropItem(gear, 0, 0, true);
+                }
+            }
+        }
+
         public static void CookpotHelmetPatch(GearItem __instance)
         {
             if (__instance.m_CookingPotItem)
@@ -211,6 +266,7 @@ namespace SkyCoopClient
         {
             MeleeManager.MeeleWeaponPatch(__instance);
             CookpotHelmetPatch(__instance);
+            SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
         }
 
 
@@ -219,6 +275,7 @@ namespace SkyCoopClient
         {
             private static void Postfix(GearItem __instance)
             {
+                SkyCoop.Logger.Log($"ManualStart {__instance.name}");
                 GearManualPatch(__instance);
             }
         }
@@ -327,6 +384,7 @@ namespace SkyCoopClient
             if (reference)
             {
                 GameObject GearObject = UnityEngine.Object.Instantiate(reference);
+                GearObject.name = GearName;
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Going to deserialize...");
 
                 GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(JSON);
@@ -335,7 +393,15 @@ namespace SkyCoopClient
                 Gi.Deserialize(DataProxy, true);
                 GearManualPatch(Gi);
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Gear deserialized!");
-                GameManager.GetPlayerManagerComponent().EnterInspectGearMode(Gi);
+
+                if (s_PlaceModeAfterPickup)
+                {
+                    GameManager.GetPlayerManagerComponent().StartPlaceMesh(Gi.gameObject, PlaceMeshFlags.None);
+                }
+                else
+                {
+                    GameManager.GetPlayerManagerComponent().EnterInspectGearMode(Gi);
+                }
             }
         }
 
@@ -352,7 +418,7 @@ namespace SkyCoopClient
         public static void PickUpFailed()
         {
             GameAudioManager.PlayGUIError();
-            HUDMessage.AddMessage("Picking gear failed, it no longer exist!", true, true);
+            HUDMessage.AddMessage("Failed, gear no longer exist!", true, true);
             CanclePickingUp();
         }
 
@@ -362,7 +428,7 @@ namespace SkyCoopClient
             CanclePickingUp();
         }
 
-        public static void TryPickUp(string GUID)
+        public static void TryPickUp(string GUID, bool PlaceMode = false)
         {
             Panel_HUD Panel;
             if(InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
@@ -371,6 +437,7 @@ namespace SkyCoopClient
                 GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
                 Panel.StartItemProgressBar(10, "Picking Up...", null, new System.Action(PickUpFailedSilent));
             }
+            s_PlaceModeAfterPickup = PlaceMode;
             ClientSend.SendGearPickUp(GUID);
         }
     }

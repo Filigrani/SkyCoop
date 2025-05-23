@@ -1,10 +1,12 @@
 ﻿using Il2Cpp;
+using Il2CppRewired;
 using Il2CppTMPro;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using static Il2CppParadoxNotion.Services.Logger;
+using static SkyCoop.Comps.PlayerDamageColider;
 
 namespace SkyCoop
 {
@@ -300,8 +302,9 @@ namespace SkyCoop
         {
             int ClothingRegion = Reader.GetInt();
             string GearName = Reader.GetString();
+            int FromID = Reader.GetInt();
 
-            // Handle sync
+            PlayersManager.GetPlayer(FromID).SetClothing(ClothingRegion, GearName);
         }
 
         public static void ClientZoneUpdated(NetDataReader Reader)
@@ -396,6 +399,23 @@ namespace SkyCoop
                     }
                     Obj.transform.FindChild("Camera").GetComponent<Animator>().enabled = true;
                 }
+            }
+        }
+
+        public static void ClientTryInteract(NetDataReader Reader)
+        {
+            bool Result = Reader.GetBool();
+            PlayersManager.HandleTryInteract(Result);
+        }
+
+        public static void ClientInVehicle(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            bool InVechicle = Reader.GetBool();
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.SetInVehicle(InVechicle);
             }
         }
     }

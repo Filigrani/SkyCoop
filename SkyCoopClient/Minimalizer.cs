@@ -606,6 +606,21 @@ namespace SkyCoopClient
                     GameManager.GetConditionComponent().AddHealth(Health, DamageSource.FirstAid);
 
                     PlayerDamageEvent.SpawnAfflictionEvent($"+{Math.Round(Health).ToString()} {Localization.Get("GAMEPLAY_PlayerHealthPercent")}", "GAMEPLAY_Food", "ico_status_hunger1", Color.cyan);
+                    if (__instance.m_FoodItemEaten.m_StackableItem)
+                    {
+                        if(__instance.m_FoodItemEaten.m_StackableItem.m_Units == 1)
+                        {
+                            UnityEngine.Object.Destroy(__instance.m_FoodItemEaten.gameObject);
+                        }
+                        else
+                        {
+                            __instance.m_FoodItemEaten.m_StackableItem.m_Units--;
+                        }
+                    }
+                    else
+                    {
+                        UnityEngine.Object.Destroy(__instance.m_FoodItemEaten.gameObject);
+                    }
                 }
             }
         }

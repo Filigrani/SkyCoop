@@ -7,6 +7,7 @@ using Il2CppTLD.Interactions;
 using SkyCoopClient;
 using static SkyCoopServer.DataStr;
 using Harmony;
+using Il2CppRewired;
 
 namespace SkyCoop
 {
@@ -197,11 +198,14 @@ namespace SkyCoop
 
             public void Start()
             {
-                gameObject.tag = "Flesh";
-
                 //AkSoundEngine.SetSwitch(SWITCHES.MATERIALTAG.GROUP, SWITCHES.MATERIALTAG.SWITCH.FLESH, GameAudioManager.GetSoundEmitterFromGameObject(m_Player.gameObject));
 
                 string ObjName = gameObject.name;
+
+                if (ObjName != "GEAR_CookingPot")
+                {
+                    gameObject.tag = "Flesh";
+                }
                 if (ObjName.StartsWith("Spine"))
                 {
                     m_DamageScaler = 1;
@@ -219,7 +223,7 @@ namespace SkyCoop
                         m_DamageZone = DamageZone.RightArm;
                     }
                 }
-                else if (ObjName == "Head")
+                else if (ObjName == "Head" || ObjName == "GEAR_CookingPot")
                 {
                     m_DamageScaler = 1.5f;
                     m_DamageZone = DamageZone.Head;
@@ -336,6 +340,7 @@ namespace SkyCoop
             public AudioSource m_AudioSource3D;
             public AudioSource m_AudioSource2D;
             public List<Collider> m_PlayerColiders = new List<Collider>();
+            public GameObject m_Helmet = null;
 
             public enum GearHandPose
             {
@@ -468,6 +473,19 @@ namespace SkyCoop
                 m_VisualData.m_Crouch = IsCrouching;
             }
 
+            public void SetInVehicle(bool InVehicle)
+            {
+                m_VisualData.m_InVehicle = InVehicle;
+            }
+
+            public void SetClothing(int Region, string GearName)
+            {
+                if(Region == 0)
+                {
+                    m_Helmet.SetActive(GearName == "GEAR_CookingPot");
+                }
+            }
+
             public static Transform GetBone(Animator Animator, HumanBodyBones Bone)
             {
                 if (Animator.isHuman)
@@ -558,6 +576,10 @@ namespace SkyCoop
                 AddPlaceholderHoldingGear(this, "GEAR_Hammer", new Vector3(0.09f, 0.11f, -0.1f), new Vector3(80, 0, 0));
                 AddPlaceholderHoldingGear(this, "GEAR_Prybar", new Vector3(0.09f, 0.1f, -0.02f), new Vector3(350, 0, 0));
 
+                m_Helmet = AddCookpot(new Vector3(0f, 0.245f, 0f), new Vector3(0, 180, 180), 1.03f);
+
+                AddColider(m_Helmet);
+
 
                 //ModMain.AddPlaceholderHoldingGear(this, "DarkWalker_Death", false);
                 //ModMain.AddPlaceholderHoldingGear(this, "GEAR_Shovel", false);
@@ -577,18 +599,27 @@ namespace SkyCoop
                 }
             }
 
+            public void AddColider(GameObject Obj)
+            {
+                PlayerDamageColider Col = Obj.AddComponent<PlayerDamageColider>();
+                Col.m_Player = this;
+                Col.m_ColiderIndex = m_PlayerColiders.Count;
+                m_PlayerColiders.Add(Obj.GetComponent<Collider>());
+            }
+
             public void CreateColiders()
             {
                 CapsuleCollider[] Coliders = gameObject.GetComponentsInChildren<CapsuleCollider>();
 
                 for (int i = 0; i < Coliders.Length; i++)
                 {
-                    PlayerDamageColider Col = Coliders[i].gameObject.AddComponent<PlayerDamageColider>();
-                    Col.m_Player = this;
-                    Col.m_ColiderIndex = i;
+                    //PlayerDamageColider Col = Coliders[i].gameObject.AddComponent<PlayerDamageColider>();
+                    //Col.m_Player = this;
+                    //Col.m_ColiderIndex = i;
+                    AddColider(Coliders[i].gameObject);
                 }
                 GameAudioManager.SetMaterialSwitch("Flesh", gameObject);
-                m_PlayerColiders.AddRange(Coliders);
+                //m_PlayerColiders.AddRange(Coliders);
             }
 
             public void AddAudioSource()
@@ -634,6 +665,21 @@ namespace SkyCoop
                 }
             }
 
+            public GameObject AddCookpot(Vector3 Position, Vector3 Rotation, float Scale)
+            {
+                Transform Head = GetBone(m_Animator, HumanBodyBones.Head);
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_CookingPot");
+                if (Gear)
+                {
+                    Gear.transform.SetParent(Head);
+                    Gear.transform.localPosition = Position;
+                    Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
+                    Gear.transform.localScale = new Vector3(Scale, Scale, Scale);
+                }
+                Gear.SetActive(false);
+                return Gear;
+            }
+
             public static void AddVisualGear(string GearName, GameObject Obj, GearHandPose HandPose, Comps.NetworkPlayer Player)
             {
                 Comps.OtherPlayerGear Gear = Obj.AddComponent<Comps.OtherPlayerGear>();
@@ -669,6 +715,7 @@ namespace SkyCoop
                     float PreviousDirectionY = m_Animator.GetFloat("DirectionY");
                     m_Animator.SetBool("IsMoving", Direction.magnitude > m_MinimalSpeed);
                     m_Animator.SetBool("Crouch", m_VisualData.m_Crouch);
+                    m_Animator.SetBool("Vehicle", m_VisualData.m_InVehicle);
                     m_Animator.SetFloat("DirectionX", Mathf.Lerp(PreviousDirectionX, Mathf.Clamp(Direction.x, -1, 1), m_Smoother));
                     m_Animator.SetFloat("DirectionY", Mathf.Lerp(PreviousDirectionY, Mathf.Clamp(Direction.z, -1, 1), m_Smoother));
                 }

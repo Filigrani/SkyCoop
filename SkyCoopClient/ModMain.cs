@@ -219,6 +219,28 @@ namespace SkyCoop
             return SteamFriends.GetPersonaName();
         }
 
+        public static string GenerateSeededGUID(int gameSeed, Vector3 v3)
+        {
+            int _x = (int)v3.x;
+            int _y = (int)v3.y;
+            int _z = (int)v3.z;
+            int v3Int = _x + _y + _z;
+            int newSeed = gameSeed + v3Int;
+            string _chars = "abcdefghijklmnopqrstuvwxyz1234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            System.Random newRNG = new System.Random(newSeed);
+            string newGUID = "";
+            for (int i = 1; i < 36; i++)
+            {
+                if (i == 9 || i == 14 || i == 19 || i == 24)
+                {
+                    newGUID = newGUID + "-";
+                }
+                int charIndex = newRNG.Next(0, _chars.Length);
+                newGUID = newGUID + _chars[charIndex];
+            }
+            return newGUID;
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]
         public class GameManager_OnApplicationFocus
         {

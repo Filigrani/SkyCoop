@@ -86,6 +86,8 @@ namespace SkyCoopServer
             public int m_Deaths = 0;
             public int m_Assists = 0;
 
+            public string m_CarSeat = "";
+
 
             public GamePlayState m_GamePlayState = GamePlayState.Unassigned;
 
@@ -298,6 +300,7 @@ namespace SkyCoopServer
         public class PlayerVisualData
         {
             public bool m_Crouch = false;
+            public bool m_InVehicle = false;
             public string m_GearInHands = "";
             public int m_GearVariant = 0;
             public int m_LatAction = 0;

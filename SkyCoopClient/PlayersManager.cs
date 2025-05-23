@@ -7,6 +7,7 @@ using static Il2Cpp.PlayerManager;
 using UnityEngine.AddressableAssets;
 using SkyCoopServer;
 using static SkyCoop.Comps.PlayerDamageColider;
+using Il2CppTLD.PDID;
 
 namespace SkyCoop
 {
@@ -16,6 +17,7 @@ namespace SkyCoop
         public static LocalPlayerData m_LocalPlayerData = new LocalPlayerData();
         public static DataStr.DamageType m_LastDamageType = DataStr.DamageType.Unknown;
         public static Comps.PlayerDamageColider.DamageZone m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+        public static GameObject s_LastTryInteractionObject = null;
 
         public class LocalPlayerData
         {
@@ -29,6 +31,7 @@ namespace SkyCoop
             public string m_BodyGear = "";
 
             public bool m_LastSentCrouch = false;
+            public bool m_LastSentInVehicle = false;
             public Comps.NetworkPlayer.Actions m_LastSentAction = Comps.NetworkPlayer.Actions.None;
         }
 
@@ -45,10 +48,10 @@ namespace SkyCoop
 
                     Comps.NetworkPlayer NP = Player.AddComponent<Comps.NetworkPlayer>();
                     NP.m_Animator = Player.GetComponent<Animator>();
+                    NP.CreateColiders();
                     NP.LoadEquipment();
                     NP.AddInteraction();
                     NP.AddAudioSource();
-                    NP.CreateColiders();
 
                     NP.m_PlayerID = PlayerID;
 
@@ -237,6 +240,11 @@ namespace SkyCoop
                             {
                                 m_LocalPlayerData.m_LastSentCrouch = PM.PlayerIsCrouched();
                                 ClientSend.SendCrouch(m_LocalPlayerData.m_LastSentCrouch);
+                            }
+                            if (m_LocalPlayerData.m_LastSentInVehicle != GameManager.GetPlayerInVehicle().m_InVehicle)
+                            {
+                                m_LocalPlayerData.m_LastSentInVehicle = GameManager.GetPlayerInVehicle().m_InVehicle;
+                                ClientSend.SendInVehicle(m_LocalPlayerData.m_LastSentInVehicle);
                             }
                             Comps.NetworkPlayer.Actions Action = GetCurrentAction();
                             if(m_LocalPlayerData.m_LastSentAction != Action)
@@ -657,6 +665,7 @@ namespace SkyCoop
             {
                 GameManager.GetPlayerInVehicle().m_VehicleDoorUsed = null;
                 GameManager.GetPlayerInVehicle().ExitVehicleAfterFadeOut();
+                ClientSend.SendVehicleSeat("");
             }
             if (RespawnAnim)
             {
@@ -722,6 +731,36 @@ namespace SkyCoop
         public static void EmptyFn()
         {
 
+        }
+
+        public static void HandleTryInteract(bool Result)
+        {
+            if (s_LastTryInteractionObject)
+            {
+                if (Result)
+                {
+                    VehicleDoor Door = s_LastTryInteractionObject.GetComponent<VehicleDoor>();
+                    if (Door)
+                    {
+                        if (GameManager.GetPlayerInVehicle().IsInside())
+                        {
+                            GameManager.GetPlayerInVehicle().ExitVehicle(Door);
+                        }
+                        else
+                        {
+                            GameManager.GetPlayerInVehicle().EnterVehicle(Door);
+                        }
+                    }
+                }
+                else
+                {
+                    HUDMessage.AddMessage("Failed, interaction blocked by other player!", true, true);
+                }
+            }
+            else
+            {
+                HUDMessage.AddMessage("Failed, interaction object no longer exist!", true, true);
+            }
         }
 
         [HarmonyLib.HarmonyPatch(typeof(AfflictionButton), "SetCauseAndEffect")]
@@ -862,6 +901,72 @@ namespace SkyCoop
                     }
                 }
                 return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(VehicleDoor), "Awake")]
+        private static class VehicleDoor_Awake
+        {
+            private static void Postfix(VehicleDoor __instance)
+            {
+                ObjectGuid ObjGUID = __instance.GetComponent<ObjectGuid>();
+                if (ObjGUID == null)
+                {
+                    ObjGUID = __instance.gameObject.AddComponent<ObjectGuid>();
+                }
+                PdidTable.RuntimeRegister(ObjGUID, ModMain.GenerateSeededGUID(0, __instance.m_ExitPoint.transform.position));
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(TimedHoldInteraction), "PerformHold")]
+        private static class TimedHoldInteraction_PerformHold
+        {
+            private static bool Prefix(TimedHoldInteraction __instance)
+            {
+                VehicleDoor door = __instance.GetComponent<VehicleDoor>();
+                if (door)
+                {
+                    string DoorGUID = "";
+                    ObjectGuid ObjGUID = __instance.GetComponent<ObjectGuid>();
+                    if (ObjGUID)
+                    {
+                        DoorGUID = ObjGUID.Get();
+                    }
+                    s_LastTryInteractionObject = __instance.gameObject;
+                    SkyCoop.Logger.Log($"VehicleDoor PerformHold {DoorGUID}");
+
+                    ClientSend.SendTryInteract(DoorGUID);
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerInVehicle), "EnterVehicle")]
+        private static class PlayerInVehicle_EnterVehicle
+        {
+            private static void Postfix(PlayerInVehicle __instance, VehicleDoor vd)
+            {
+                string DoorGUID = "";
+                ObjectGuid ObjGUID = vd.GetComponent<ObjectGuid>();
+                if (ObjGUID)
+                {
+                    DoorGUID = ObjGUID.Get();
+                }
+                SkyCoop.Logger.Log($"VehicleDoor EnterVehicle {DoorGUID}");
+                ClientSend.SendVehicleSeat(DoorGUID);
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PlayerInVehicle), "ExitVehicle")]
+        private static class PlayerInVehicle_ExitVehicle
+        {
+            private static void Postfix(PlayerInVehicle __instance, VehicleDoor vd)
+            {
+                string DoorGUID = "";
+                ObjectGuid ObjGUID = vd.GetComponent<ObjectGuid>();
+                if (ObjGUID)
+                {
+                    DoorGUID = ObjGUID.Get();
+                }
+                SkyCoop.Logger.Log($"VehicleDoor ExitVehicle {DoorGUID}");
+                ClientSend.SendVehicleSeat("");
             }
         }
     }

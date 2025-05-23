@@ -234,6 +234,34 @@ namespace SkyCoopServer
             }
         }
 
+        public void PlayerChangeVehicleState(int Index, bool InVehicle, bool Broadcast = true)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player != null)
+            {
+                Player.m_VisualData.m_InVehicle = InVehicle;
+
+                if (Broadcast)
+                {
+                    if (s_Server != null)
+                    {
+                        foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
+                        {
+                            if (OtherPlayerID != Index || m_RecursiveDebug)
+                            {
+                                DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
+
+                                if (OtherPlayer.m_Scene == Player.m_Scene)
+                                {
+                                    ServerSend.SendPlayerInVehicle(s_Server.GetClient(OtherPlayerID), InVehicle, Index);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public bool PlayerCanHearOtherPlayer(int SpeakerID, int ListenerID)
         {
             if(SpeakerID == ListenerID)
