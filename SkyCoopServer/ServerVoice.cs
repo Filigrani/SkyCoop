@@ -3,9 +3,10 @@ using LiteNetLib.Utils;
 
 namespace SkyCoopServer
 {
-    public class ServerVoice
+    public class ServerVoice : IDisposable
     {
         public int m_Port = 37850;
+        public NetworkHelper m_NetworkHelper;
 
         public EventBasedNetListener m_Listener;
         public const float c_MaxProximityChatDistance = 30; // Voice3d AudioSource has it set to 25, but keep it a bit higher, to catch up with movement sync.
@@ -136,6 +137,7 @@ namespace SkyCoopServer
 
             m_IsReady = true;
             Logger.Log($"[ServerVoice] Voice server is started port={port}");
+            m_NetworkHelper = new NetworkHelper(m_Port, "SkyCoopServerVoice");
 
             Task.Run(() => {
                 while (m_GameServer.m_IsReady) 
@@ -143,6 +145,15 @@ namespace SkyCoopServer
                     Update(); 
                 } 
             });
+        }
+
+        public void Dispose()
+        {
+            Logger.Log(ConsoleColor.Red, "[ServerVoice] Stopping VoiceServer");
+
+            m_IsReady = false;
+            m_Instance.Stop();
+            m_NetworkHelper.Dispose();
         }
     }
 }
