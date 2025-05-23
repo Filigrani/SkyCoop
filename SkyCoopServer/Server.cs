@@ -4,9 +4,10 @@ using System;
 
 namespace SkyCoopServer
 {
-    public class Server
+    public class Server : IDisposable
     {
         public int m_Port = 37855;
+        public NetworkHelper m_NetworkHelper;
 
         public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
         public DataStr.GameRules m_Rules = new DataStr.GameRules();
@@ -170,6 +171,8 @@ namespace SkyCoopServer
         {
             StartServer(m_Port, m_Config.m_MaxPlayers);
             ChangeGameMode(m_Config.m_GameMode);
+
+            m_NetworkHelper = new NetworkHelper(m_Port, "SkyCoopServer");
         }
 
         public void StartServer(int port, int maxPlayers, string key = "key")
@@ -226,6 +229,18 @@ namespace SkyCoopServer
             m_VoiceServer = new ServerVoice(this);
             m_VoiceServer.m_Port = m_Config.m_VoicePort;
             m_VoiceServer.StartServer();
+        }
+
+        public void Dispose()
+        {
+            Logger.Log(ConsoleColor.Red, "[Server] Stopping Server");
+
+            m_IsReady = false;
+            if (m_VoiceServer != null)
+                m_VoiceServer.Dispose();
+            m_NetworkHelper.Dispose();
+            m_Instance.Stop();
+            GC.Collect();
         }
     }
 }
