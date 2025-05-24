@@ -341,6 +341,14 @@ namespace SkyCoop
             public AudioSource m_AudioSource2D;
             public List<Collider> m_PlayerColiders = new List<Collider>();
             public GameObject m_Helmet = null;
+            public Transform m_BottomLip = null;
+            public float m_MouthMinY = 0.03f;
+            public float m_MouthMaxY = 0.053f;
+            public float m_MouthLerpScaler = 10;
+            public float m_MouthLerpSmoother = 0;
+            public AudioClip m_LastVoiceSample = null;
+            public float m_SampleVoiceSeek = 0;
+            public int m_SampleVoiceWindow = 64;
 
             public enum GearHandPose
             {
@@ -626,6 +634,7 @@ namespace SkyCoop
             {
                 m_AudioSource3D = gameObject.transform.FindChild("Voice3D").GetComponent<AudioSource>();
                 m_AudioSource2D = gameObject.transform.FindChild("Voice2D").GetComponent<AudioSource>();
+                m_BottomLip = m_Animator.GetBoneTransform(HumanBodyBones.Head).FindChild("Lip_Bottom");
             }
 
             public static void AddPlaceholderHoldingGear(Comps.NetworkPlayer Player, string GearName, GearHandPose HandPose = GearHandPose.None, bool Bogus = true)
@@ -688,6 +697,72 @@ namespace SkyCoop
                 Player.m_VisualGears.Add(Gear);
             }
 
+            public float GetVoicePeak(float PlayTime, AudioClip AudioClip)
+            {
+                int SeekPosition = (int)(PlayTime * AudioClip.frequency);
+
+                if (SeekPosition >= AudioClip.samples)
+                {
+                    return 0;
+                }
+                int StartIndex = SeekPosition - 64;
+                if (StartIndex < 0)
+                {
+                    return 0;
+                }
+
+                Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<float> floatData = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<float>(m_SampleVoiceWindow);
+                AudioClip.GetData(floatData, StartIndex);
+
+                float Peak = 0;
+                for (int i = 0; i < m_SampleVoiceWindow; i++)
+                {
+                    float F = floatData[i];
+                    Peak += Mathf.Abs(F);
+                }
+                float Average = (float)Peak / m_SampleVoiceWindow;
+                return Average;
+            }
+
+            public void AnimateMouth()
+            {
+                if (m_BottomLip)
+                {
+                    float PeakVal = 0;
+                    if (m_LastVoiceSample)
+                    {
+                        PeakVal = GetVoicePeak(m_SampleVoiceSeek, m_LastVoiceSample);
+                        SkyCoop.Logger.Log(ConsoleColor.Cyan, $"AnimateMouth m_SampleVoiceSeek {m_SampleVoiceSeek}/{m_LastVoiceSample.length} => PeakVal {PeakVal}");
+                    }
+                    float InvertedVal = 1 - (PeakVal * m_MouthLerpScaler);
+                    Vector3 TargetPosition = new Vector3 (m_BottomLip.localPosition.x, Mathf.Lerp(m_MouthMinY, m_MouthMaxY, InvertedVal), m_BottomLip.localPosition.z);
+
+                    if(m_MouthLerpSmoother != 0)
+                    {
+                        m_BottomLip.localPosition = Vector3.Lerp(m_BottomLip.localPosition, TargetPosition, Time.deltaTime * m_MouthLerpSmoother);
+                    }
+                    else
+                    {
+                        m_BottomLip.localPosition = TargetPosition;
+                    }
+                }
+                if(m_LastVoiceSample)
+                {
+                    m_SampleVoiceSeek += Time.deltaTime;
+                    if(m_SampleVoiceSeek > m_LastVoiceSample.length)
+                    {
+                        m_SampleVoiceSeek = 0;
+                        m_LastVoiceSample = null;
+                    }
+                }
+            }
+
+            public void SetVoiceSampleForAnimation(AudioClip Clip)
+            {
+                m_LastVoiceSample = Clip;
+                m_SampleVoiceSeek = 0;
+            }
+
             public void UpdateAnimations()
             {
                 Vector3 Speed = (gameObject.transform.position - m_LastPosition) / Time.deltaTime;
@@ -719,6 +794,7 @@ namespace SkyCoop
                     m_Animator.SetFloat("DirectionX", Mathf.Lerp(PreviousDirectionX, Mathf.Clamp(Direction.x, -1, 1), m_Smoother));
                     m_Animator.SetFloat("DirectionY", Mathf.Lerp(PreviousDirectionY, Mathf.Clamp(Direction.z, -1, 1), m_Smoother));
                 }
+
                 //SkyCoop.Logger.Log("Player "+m_PlayerID+" Animator Params:");
                 //SkyCoop.Logger.Log("Speed "+ m_Animator.GetFloat("Speed"));
                 //SkyCoop.Logger.Log("Gear " + m_Animator.GetInteger("Gear"));
@@ -727,6 +803,11 @@ namespace SkyCoop
                 //SkyCoop.Logger.Log("Crouch " + m_Animator.GetBool("Crouch"));
                 //SkyCoop.Logger.Log("DirectionX " + m_Animator.GetFloat("DirectionX"));
                 //SkyCoop.Logger.Log("DirectionY " + m_Animator.GetFloat("DirectionY"));
+            }
+
+            void LateUpdate()
+            {
+                AnimateMouth();
             }
 
             void Update()

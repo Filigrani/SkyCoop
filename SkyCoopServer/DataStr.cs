@@ -10,8 +10,8 @@ namespace SkyCoopServer
             public int m_MaxPlayers = 4;
             public string m_StartingRegion = "ForlornMuskeg";
             public int m_Seed = 777777;
-            //public int m_VoicePort = 37850;
-            public int m_VoicePort = 0;
+            public int m_VoicePort = 37850;
+            //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "LakeRegion";
             public string m_GameMode = "DM";

@@ -248,8 +248,8 @@ namespace SkyCoopClient
                                 float[] voice = buffer.ReadAllBuffer();
                                 voice[voice.Length - 1] = 0f;
                                 clip.SetData(voice, 0);
-                                player.m_AudioSource3D.PlayOneShot(clip);
-
+                                player.m_AudioSource3D.PlayOneShot(clip, 3);
+                                player.SetVoiceSampleForAnimation(clip);
                                 VoiceBuffer[clientBuffer.Key] = buffer;
                             }
                         }
