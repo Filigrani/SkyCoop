@@ -266,7 +266,7 @@ namespace SkyCoopClient
         {
             MeleeManager.MeeleWeaponPatch(__instance);
             CookpotHelmetPatch(__instance);
-            SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
+            //SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
         }
 
 
@@ -275,7 +275,7 @@ namespace SkyCoopClient
         {
             private static void Postfix(GearItem __instance)
             {
-                SkyCoop.Logger.Log($"ManualStart {__instance.name}");
+                //SkyCoop.Logger.Log($"ManualStart {__instance.name}");
                 GearManualPatch(__instance);
             }
         }

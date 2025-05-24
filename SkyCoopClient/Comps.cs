@@ -732,7 +732,7 @@ namespace SkyCoop
                     if (m_LastVoiceSample)
                     {
                         PeakVal = GetVoicePeak(m_SampleVoiceSeek, m_LastVoiceSample);
-                        SkyCoop.Logger.Log(ConsoleColor.Cyan, $"AnimateMouth m_SampleVoiceSeek {m_SampleVoiceSeek}/{m_LastVoiceSample.length} => PeakVal {PeakVal}");
+                        //SkyCoop.Logger.Log(ConsoleColor.Cyan, $"AnimateMouth m_SampleVoiceSeek {m_SampleVoiceSeek}/{m_LastVoiceSample.length} => PeakVal {PeakVal}");
                     }
                     float InvertedVal = 1 - (PeakVal * m_MouthLerpScaler);
                     Vector3 TargetPosition = new Vector3 (m_BottomLip.localPosition.x, Mathf.Lerp(m_MouthMinY, m_MouthMaxY, InvertedVal), m_BottomLip.localPosition.z);
