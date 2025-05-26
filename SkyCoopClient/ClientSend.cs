@@ -241,13 +241,19 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendClothing(int ClothingRegion, string GearName)
+        public static void SendClothing(DataStr.ClothingData Data)
         {
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"m_Hat1 {Data.m_Hat1} {Data.m_Hat1Damage}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"m_Hat2 {Data.m_Hat2} {Data.m_Hat2Damage}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"m_Body {Data.m_Body} {Data.m_BodyDamage}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"m_Gloves {Data.m_Gloves} {Data.m_GlovesDamage}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"m_Pants {Data.m_Pants} {Data.m_PantsDamage}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"m_Boots {Data.m_Boots} {Data.m_BootsDamage}");
+
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientClothing);
 
-            writer.Put(ClothingRegion);
-            writer.Put(GearName);
+            writer.Put(Data);
 
             SendToHost(writer);
         }

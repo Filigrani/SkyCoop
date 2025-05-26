@@ -280,6 +280,22 @@ namespace SkyCoopClient
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "SetDamageBlendValue")]
+        private static class GearItem_SetDamageBlendValue
+        {
+            private static void Postfix(GearItem __instance)
+            {
+                if (__instance.m_ClothingItem)
+                {
+                    if (__instance.m_ClothingItem.IsWearing())
+                    {
+                        PlayersManager.s_ForceUpdateClothing = true;
+                        SkyCoop.Logger.Log(ConsoleColor.Magenta, $"Gear {__instance.name} triggered s_ForceUpdateClothing");
+                    }
+                }
+            }
+        }
+
         public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0, GameObject Around = null)
         {
             if (gear != null && gear.gameObject != null)

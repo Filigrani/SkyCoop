@@ -183,9 +183,20 @@ namespace SkyCoopClient
                     if (IsMeleeWeapon(gi.name))
                     {
                         __result = "GAMEPLAY_Use";
-                    }else if(gi.name == "GEAR_CookingPot" || gi.name == "GEAR_BallisticVest")
+                    //}else if(gi.name == "GEAR_CookingPot" || gi.name == "GEAR_BallisticVest")
+                    //{
+                    //    __result = "GAMEPLAY_Wear";
+                    //}
+                    }else if(gi.m_ClothingItem)
                     {
-                        __result = "GAMEPLAY_Wear";
+                        if (gi.m_ClothingItem.IsWearing())
+                        {
+                            __result = "GAMEPLAY_Takeoff";
+                        }
+                        else
+                        {
+                            __result = "GAMEPLAY_Wear";
+                        }
                     }
                 }
             }

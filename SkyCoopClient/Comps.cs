@@ -341,14 +341,20 @@ namespace SkyCoop
             public AudioSource m_AudioSource2D;
             public List<Collider> m_PlayerColiders = new List<Collider>();
             public GameObject m_Helmet = null;
+            public GameObject m_Satchel = null;
+            public GameObject m_TechnicalBackpack = null;
             public Transform m_BottomLip = null;
             public float m_MouthMinY = 0.03f;
             public float m_MouthMaxY = 0.053f;
-            public float m_MouthLerpScaler = 10;
+            public float m_MouthLerpScaler = 50;
             public float m_MouthLerpSmoother = 0;
             public AudioClip m_LastVoiceSample = null;
             public float m_SampleVoiceSeek = 0;
             public int m_SampleVoiceWindow = 64;
+
+            public GameObject m_HairMesh = null;
+            public GameObject m_BeardMesh = null;
+            public GameObject m_EyebrowsMesh = null;
 
             public enum GearHandPose
             {
@@ -375,6 +381,7 @@ namespace SkyCoop
             public DataStr.PlayerVisualData m_VisualData = new DataStr.PlayerVisualData();
 
             public List<OtherPlayerGear> m_VisualGears = new List<OtherPlayerGear>();
+            public List<GameObject> m_ClothingMeshes = new List<GameObject>();
 
 
             float s_DeltaMultiplayer = 20;
@@ -486,12 +493,102 @@ namespace SkyCoop
                 m_VisualData.m_InVehicle = InVehicle;
             }
 
-            public void SetClothing(int Region, string GearName)
+            public bool OneOfHatsIsThis(string RequiredHat)
             {
-                if(Region == 0)
+                return m_VisualData.m_ClothingData.m_Hat1 == RequiredHat || m_VisualData.m_ClothingData.m_Hat2 == RequiredHat;
+            }
+
+            public bool CanShowHairs()
+            {
+                return m_VisualData.m_ClothingData.m_Hat1 == "" && m_VisualData.m_ClothingData.m_Hat1 == "";
+            }
+
+            public bool CanShowBeard()
+            {
+                if(OneOfHatsIsThis("GEAR_Balaclava") ||
+                    OneOfHatsIsThis("GEAR_WoolWrap") ||
+                    OneOfHatsIsThis("GEAR_WoolWrapCap"))
                 {
-                    m_Helmet.SetActive(GearName == "GEAR_CookingPot");
+                    return false;
                 }
+                return true;
+            }
+
+            public bool CanShowEyebrows()
+            {
+                if (OneOfHatsIsThis("GEAR_Balaclava"))
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            public void UpdateClothing()
+            {
+                if (m_Helmet)
+                {
+                    m_Helmet.SetActive(OneOfHatsIsThis("GEAR_CookingPot"));
+                }
+                if (m_Satchel)
+                {
+                    m_Satchel.SetActive(m_VisualData.m_ClothingData.HasThis("GEAR_MooseHideBag"));
+                }
+                if (m_TechnicalBackpack)
+                {
+                    m_TechnicalBackpack.SetActive(m_VisualData.m_ClothingData.m_TechPack);
+                }
+                if (m_HairMesh)
+                {
+                    m_HairMesh.SetActive(CanShowHairs());
+                }
+                if (m_BeardMesh)
+                {
+                    m_BeardMesh.SetActive(CanShowBeard());
+                }
+                if (m_EyebrowsMesh)
+                {
+                    m_EyebrowsMesh.SetActive(CanShowEyebrows());
+                }
+                ClothingData Data = m_VisualData.m_ClothingData;
+                foreach (GameObject Mesh in m_ClothingMeshes)
+                {
+                    bool HasIt = Data.HasThis(Mesh.name);
+                    Mesh.SetActive(HasIt);
+                    if (HasIt)
+                    {
+                        float DamageFloat = 0;
+                        if(Mesh.name == Data.m_Hat1)
+                        {
+                            DamageFloat = Data.m_Hat1Damage;
+                        }else if(Mesh.name == Data.m_Hat2)
+                        {
+                            DamageFloat = Data.m_Hat2Damage;
+                        }
+                        else if (Mesh.name == Data.m_Body)
+                        {
+                            DamageFloat = Data.m_BodyDamage;
+                        }
+                        else if (Mesh.name == Data.m_Gloves)
+                        {
+                            DamageFloat = Data.m_GlovesDamage;
+                        }
+                        else if (Mesh.name == Data.m_Pants)
+                        {
+                            DamageFloat = Data.m_PantsDamage;
+                        }
+                        else if (Mesh.name == Data.m_Boots)
+                        {
+                            DamageFloat = Data.m_BootsDamage;
+                        }
+                        Mesh.GetComponent<Renderer>().material.SetFloat("_blend_amt", DamageFloat);
+                    }
+                }
+            }
+
+            public void SetClothing(DataStr.ClothingData Data)
+            {
+                m_VisualData.m_ClothingData = Data;
+                UpdateClothing();
             }
 
             public static Transform GetBone(Animator Animator, HumanBodyBones Bone)
@@ -585,8 +682,33 @@ namespace SkyCoop
                 AddPlaceholderHoldingGear(this, "GEAR_Prybar", new Vector3(0.09f, 0.1f, -0.02f), new Vector3(350, 0, 0));
 
                 m_Helmet = AddCookpot(new Vector3(0f, 0.245f, 0f), new Vector3(0, 180, 180), 1.03f);
+                m_Satchel = AddSatchel(new Vector3(0.23f, 0.23f, -0.42f), new Vector3(90, 0, -50), 1f);
+                m_TechnicalBackpack = AddTechPack(new Vector3(0, -0.44f, -0.19f), new Vector3(0, 0, 0), 1f);
 
                 AddColider(m_Helmet);
+
+                m_HairMesh = transform.FindChild("Hair_mesh").gameObject;
+                m_BeardMesh = transform.FindChild("Beard_mesh").gameObject;
+                m_EyebrowsMesh = transform.FindChild("Eyebrows_mesh").gameObject;
+
+                AddClothingMesh("GEAR_Balaclava");
+                AddClothingMesh("GEAR_BaseballCap");
+                AddClothingMesh("GEAR_BasicGloves");
+                AddClothingMesh("GEAR_BasicWoolHat");
+                AddClothingMesh("GEAR_CargoPants");
+                AddClothingMesh("GEAR_ClimbingSocks");
+                AddClothingMesh("GEAR_CottonHoodie");
+                AddClothingMesh("GEAR_CottonScarf");
+                AddClothingMesh("GEAR_CottonShirt");
+                AddClothingMesh("GEAR_CowichanSweater");
+                AddClothingMesh("GEAR_FishermanSweater");
+                AddClothingMesh("GEAR_ImprovisedHat");
+                AddClothingMesh("GEAR_LongUnderwear");
+                AddClothingMesh("GEAR_LongUnderwearWool");
+                AddClothingMesh("GEAR_RabbitskinHat");
+                AddClothingMesh("GEAR_Toque");
+                AddClothingMesh("GEAR_WoolWrap");
+                AddClothingMesh("GEAR_WoolWrapCap");
 
 
                 //ModMain.AddPlaceholderHoldingGear(this, "DarkWalker_Death", false);
@@ -689,12 +811,74 @@ namespace SkyCoop
                 return Gear;
             }
 
+            public GameObject AddSatchel(Vector3 Position, Vector3 Rotation, float Scale)
+            {
+                Transform Head = GetBone(m_Animator, HumanBodyBones.LeftShoulder);
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_MooseHideBag");
+                if (Gear)
+                {
+                    Gear.transform.SetParent(Head);
+                    Gear.transform.localPosition = Position;
+                    Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
+                    Gear.transform.localScale = new Vector3(Scale, Scale, Scale);
+                }
+                Gear.SetActive(false);
+                return Gear;
+            }
+
+            public GameObject AddTechPack(Vector3 Position, Vector3 Rotation, float Scale)
+            {
+                Transform Head = GetBone(m_Animator, HumanBodyBones.UpperChest);
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_TechnicalBackpack");
+                if (Gear)
+                {
+                    Gear.transform.SetParent(Head);
+                    Gear.transform.localPosition = Position;
+                    Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
+                    Gear.transform.localScale = new Vector3(Scale, Scale, Scale);
+                }
+                Gear.SetActive(false);
+                return Gear;
+            }
+
             public static void AddVisualGear(string GearName, GameObject Obj, GearHandPose HandPose, Comps.NetworkPlayer Player)
             {
                 Comps.OtherPlayerGear Gear = Obj.AddComponent<Comps.OtherPlayerGear>();
                 Gear.m_GearName = GearName;
                 Gear.m_HandPose = HandPose;
                 Player.m_VisualGears.Add(Gear);
+            }
+
+            public void AddClothingMesh(string GearName)
+            {
+                Transform T = transform.FindChild(GearName);
+                if (T)
+                {
+                    m_ClothingMeshes.Add(T.gameObject);
+                    Renderer Mesh = T.GetComponent<Renderer>();
+
+                    GameObject GearReference = AssetManager.GetAssetFromGame<GameObject>(GearName);
+                    Material ReferenceMaterial = null;
+                    if(GearReference)
+                    {
+                        Renderer GearMesh = GearReference.GetComponent<Renderer>();
+                        if (GearMesh)
+                        {
+                            ReferenceMaterial = GearMesh.material;
+                        }
+                        else
+                        {
+                            ReferenceMaterial = GearReference.GetComponentInChildren<Renderer>().material;
+                        }
+                    }
+
+                    Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
+                    for (int i = 0; i < NewMatsArr.Length; i++)
+                    {
+                        NewMatsArr[i] = ReferenceMaterial;
+                    }
+                    Mesh.SetMaterialArray(NewMatsArr);
+                }
             }
 
             public float GetVoicePeak(float PlayTime, AudioClip AudioClip)

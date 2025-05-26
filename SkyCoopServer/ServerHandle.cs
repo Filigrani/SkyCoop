@@ -269,22 +269,15 @@ namespace SkyCoopServer
 
         public static void ClientClothing(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
-            int ClothingRegion = Reader.GetInt();
-            string GearName = Reader.GetString();
+            DataStr.ClothingData ClothingData = Reader.GetClothingData();
             PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
-            if(ClothingRegion == 0)
-            {
-                Data.m_VisualData.m_HeadGear = GearName;
-            }else if(ClothingRegion == 1)
-            {
-                Data.m_VisualData.m_BodyGear = GearName;
-            }
+            Data.m_VisualData.m_ClothingData = ClothingData;
 
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 if (Peer.Id != Client.Id || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
-                    ServerSend.SendClothing(Peer, ClothingRegion, GearName, Client.Id);
+                    ServerSend.SendClothing(Peer, ClothingData, Client.Id);
                 }
             }
         }

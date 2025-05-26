@@ -8,6 +8,7 @@ using UnityEngine.AddressableAssets;
 using SkyCoopServer;
 using static SkyCoop.Comps.PlayerDamageColider;
 using Il2CppTLD.PDID;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
 {
@@ -18,6 +19,7 @@ namespace SkyCoop
         public static DataStr.DamageType m_LastDamageType = DataStr.DamageType.Unknown;
         public static Comps.PlayerDamageColider.DamageZone m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
         public static GameObject s_LastTryInteractionObject = null;
+        public static bool s_ForceUpdateClothing = false;
 
         public class LocalPlayerData
         {
@@ -33,6 +35,7 @@ namespace SkyCoop
             public bool m_LastSentCrouch = false;
             public bool m_LastSentInVehicle = false;
             public Comps.NetworkPlayer.Actions m_LastSentAction = Comps.NetworkPlayer.Actions.None;
+            public DataStr.ClothingData m_ClothingData = new DataStr.ClothingData();
         }
 
         public static Comps.NetworkPlayer CreatePlayer(int PlayerID)
@@ -52,6 +55,7 @@ namespace SkyCoop
                     NP.LoadEquipment();
                     NP.AddInteraction();
                     NP.AddAudioSource();
+                    NP.UpdateClothing();
 
                     NP.m_PlayerID = PlayerID;
 
@@ -255,17 +259,19 @@ namespace SkyCoop
                         }
                     }
                 }
-                string HeadGear = GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid);
-                if(m_LocalPlayerData.m_HeadGear != HeadGear)
-                {
-                    m_LocalPlayerData.m_HeadGear = HeadGear;
-                    ClientSend.SendClothing(0, HeadGear);
-                }
 
                 if (m_LocalPlayerData.m_LastSentScene != Scene)
                 {
                     m_LocalPlayerData.m_LastSentScene = Scene;
                     ClientSend.SendScene(Scene);
+                }
+                DataStr.ClothingData NewClothingData = ClothingCombininizer.GetClothing();
+                if (!m_LocalPlayerData.m_ClothingData.Equals(NewClothingData) || s_ForceUpdateClothing)
+                {
+                    m_LocalPlayerData.m_ClothingData = NewClothingData;
+                    ClientSend.SendClothing(NewClothingData);
+                    SkyCoop.Logger.Log(ConsoleColor.Green, "m_LocalPlayerData SendClothing");
+                    s_ForceUpdateClothing = false;
                 }
             }
         }

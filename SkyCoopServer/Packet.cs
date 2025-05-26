@@ -215,5 +215,61 @@ namespace SkyCoopServer
             }
             return GearDataList;
         }
+
+        public static void Put(this NetDataWriter Writer, DataStr.ClothingData Data)
+        {
+            Writer.Put(Data.m_Hat1);
+            Writer.Put(Data.m_Hat2);
+
+            Writer.Put(Data.m_Body);
+            Writer.Put(Data.m_Gloves);
+
+            Writer.Put(Data.m_Pants);
+            Writer.Put(Data.m_Boots);
+
+            Writer.Put(Data.m_Accs1);
+            Writer.Put(Data.m_Accs2);
+
+            Writer.Put(Data.m_Hat1Damage);
+            Writer.Put(Data.m_Hat2Damage);
+
+            Writer.Put(Data.m_BodyDamage);
+            Writer.Put(Data.m_GlovesDamage);
+
+            Writer.Put(Data.m_PantsDamage);
+            Writer.Put(Data.m_BootsDamage);
+
+            Writer.Put(Data.m_TechPack);
+        }
+
+        public static DataStr.ClothingData GetClothingData(this NetDataReader Reader)
+        {
+            DataStr.ClothingData Data = new DataStr.ClothingData();
+
+            Data.m_Hat1 = Reader.GetString();
+            Data.m_Hat2 = Reader.GetString();
+
+            Data.m_Body = Reader.GetString();
+            Data.m_Gloves = Reader.GetString();
+
+            Data.m_Pants = Reader.GetString();
+            Data.m_Boots = Reader.GetString();
+
+            Data.m_Accs1 = Reader.GetString();
+            Data.m_Accs2 = Reader.GetString();
+
+            Data.m_Hat1Damage = Reader.GetFloat();
+            Data.m_Hat2Damage = Reader.GetFloat();
+
+            Data.m_BodyDamage = Reader.GetFloat();
+            Data.m_GlovesDamage = Reader.GetFloat();
+
+            Data.m_PantsDamage = Reader.GetFloat();
+            Data.m_BootsDamage = Reader.GetFloat();
+
+            Data.m_TechPack = Reader.GetBool();
+
+            return Data;
+        }
     }
 }

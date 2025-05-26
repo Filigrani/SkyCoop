@@ -1,4 +1,5 @@
 ﻿using LiteNetLib;
+using System;
 using System.Numerics;
 
 namespace SkyCoopServer
@@ -305,8 +306,7 @@ namespace SkyCoopServer
             public int m_GearVariant = 0;
             public int m_LatAction = 0;
             public List<InjectedItem> m_InjectedItems = new List<InjectedItem>();
-            public string m_HeadGear = "";
-            public string m_BodyGear = "";
+            public DataStr.ClothingData m_ClothingData = new DataStr.ClothingData();
 
         }
 
@@ -616,6 +616,61 @@ namespace SkyCoopServer
             public DangerCircleCenter ActualCenter { get; set; }
             public float StartingRadius { get; set; }
             public List<ShrinkStage> Stages { get; set; }
+        }
+
+        public class ClothingData
+        {
+            public string m_Hat1 = "";
+            public string m_Hat2 = "";
+            public string m_Body = "";
+            public string m_Gloves = "";
+            public string m_Pants = "";
+            public string m_Boots = "";
+
+            public string m_Accs1 = "";
+            public string m_Accs2 = "";
+
+            public float m_Hat1Damage = 0;
+            public float m_Hat2Damage = 0;
+            public float m_BodyDamage = 0;
+            public float m_GlovesDamage = 0;
+            public float m_PantsDamage = 0;
+            public float m_BootsDamage = 0;
+
+            public bool m_TechPack = false;
+
+            public bool Equals(ClothingData Other)
+            {
+                if(m_Hat1 == Other.m_Hat1 
+                    && m_Hat2 == Other.m_Hat2
+                    && m_Body == Other.m_Body
+                    && m_Gloves == Other.m_Gloves
+                    && m_Pants == Other.m_Pants
+                    && m_Boots == Other.m_Boots
+                    && m_Accs1 == Other.m_Accs1
+                    && m_Accs2 == Other.m_Accs2
+                    && m_TechPack == Other.m_TechPack)
+                {
+                    return true;
+                }
+                return false;
+            }
+
+            public bool HasThis(string GearName)
+            {
+                if (m_Hat1 == GearName
+                    || m_Hat2 == GearName
+                    || m_Body == GearName
+                    || m_Gloves == GearName
+                    || m_Pants == GearName
+                    || m_Boots == GearName
+                    || m_Accs1 == GearName
+                    || m_Accs2 == GearName)
+                {
+                    return true;
+                }
+                return false;
+            }
         }
     }
 }

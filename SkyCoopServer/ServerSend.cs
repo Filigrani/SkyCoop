@@ -471,13 +471,12 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.Unreliable);
         }
 
-        public static void SendClothing(NetPeer Client, int Region, string GearName, int FromID)
+        public static void SendClothing(NetPeer Client, DataStr.ClothingData Data, int FromID)
         {
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientClothing);
-            writer.Put(Region);
-            writer.Put(GearName);
+            writer.Put(Data);
             writer.Put(FromID);
             Client.Send(writer, DeliveryMethod.Unreliable);
         }

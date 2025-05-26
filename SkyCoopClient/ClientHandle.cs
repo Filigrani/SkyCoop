@@ -300,11 +300,10 @@ namespace SkyCoop
 
         public static void ClientClothing(NetDataReader Reader)
         {
-            int ClothingRegion = Reader.GetInt();
-            string GearName = Reader.GetString();
+            DataStr.ClothingData Data = Reader.GetClothingData();
             int FromID = Reader.GetInt();
 
-            PlayersManager.GetPlayer(FromID).SetClothing(ClothingRegion, GearName);
+            PlayersManager.GetPlayer(FromID).SetClothing(Data);
         }
 
         public static void ClientZoneUpdated(NetDataReader Reader)
