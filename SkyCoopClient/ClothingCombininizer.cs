@@ -73,6 +73,7 @@ namespace SkyCoopClient
                 "GEAR_CottonScarf",
                 "GEAR_WoolWrap",
                 "GEAR_WoolWrapCap",
+                "GEAR_CookingPot",
             }
             );
         }

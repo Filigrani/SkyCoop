@@ -798,7 +798,7 @@ namespace SkyCoop
 
             public GameObject AddCookpot(Vector3 Position, Vector3 Rotation, float Scale)
             {
-                Transform Head = GetBone(m_Animator, HumanBodyBones.Head);
+                Transform Head = GetBone(m_Animator, HumanBodyBones.LeftEye);
                 GameObject Gear = AssetManager.CreateBogusGear("GEAR_CookingPot");
                 if (Gear)
                 {
