@@ -43,13 +43,15 @@ namespace SkyCoopServer
             }
         }
 
-        public async void Dispose()
+        public void Dispose()
         {
             if (m_Device != null)
             {
+                NatUtility.DeviceFound -= DeviceFound;
+                NatUtility.StopDiscovery();
                 try
                 {
-                    await m_Device.DeletePortMapAsync(m_MappingPort);
+                    m_Device.DeletePortMap(m_MappingPort);
                     Logger.Log(ConsoleColor.DarkGreen, $"[NetworkHelper] Deleting upnp port: {m_MappingPort.Protocol}:{m_MappingPort.PublicPort}");
                 }
                 catch
