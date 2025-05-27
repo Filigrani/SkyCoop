@@ -495,5 +495,19 @@ namespace SkyCoopServer
             writer.Put(FromID);
             Client.Send(writer, DeliveryMethod.Unreliable);
         }
+
+        public static void SendClientStatus(int PlayerID, int Status, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientStatusMessage);
+            writer.Put(PlayerID);
+            writer.Put(Status);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
     }
 }

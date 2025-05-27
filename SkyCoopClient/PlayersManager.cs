@@ -87,6 +87,7 @@ namespace SkyCoop
             if (Player)
             {
                 Player.m_PlayerName = Name;
+                Player.UpdateName();
             }
         }
         public static void InitilizePlayers(int PlayersCount)
@@ -208,6 +209,38 @@ namespace SkyCoop
                 }
             }
             return "";
+        }
+
+        public static void HideLocalPlayer()
+        {
+            int PlayerID = -1;
+            if (ModMain.Client != null)
+            {
+                PlayerID = ModMain.Client.GetMyId();
+
+                Comps.NetworkPlayer Player = GetPlayer(PlayerID);
+                if (Player)
+                {
+                    Player.gameObject.SetActive(false);
+                }
+            }
+        }
+
+        public static void SetLocalPlayerVictory()
+        {
+            int PlayerID = -1;
+            if (ModMain.Client != null)
+            {
+                PlayerID = ModMain.Client.GetMyId();
+
+                Comps.NetworkPlayer Player = GetPlayer(PlayerID);
+                if (Player)
+                {
+                    Player.m_VisualData.m_ClothingData = m_LocalPlayerData.m_ClothingData;
+                    Player.UpdateClothing();
+                    Player.gameObject.SetActive(true);
+                }
+            }
         }
 
         public static void UpdateLocalPlayer()
@@ -664,36 +697,47 @@ namespace SkyCoop
             return null;
         }
 
-        public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation, bool RespawnAnim)
+        public static void FullyCure()
         {
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
+            GameManager.GetEmergencyStimComponent().ResetEmergencyStim();
+            GameManager.GetDiminishedState().Cure();
+            GameManager.GetPlayerMovementComponent().AddSprintStamina(GameManager.GetPlayerMovementComponent().DefaultMaxStamina);
+            PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
+            PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+            GameManager.GetBrokenBody().Cure();
+            GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
+            ConsoleManager.CONSOLE_afflictions_cure();
+            GameManager.GetSprainedAnkleComponent().Cure();
+            GameManager.GetSprainedWristComponent().Cure();
+            GameManager.GetHeadacheComponent().Cure();
+
+            GameManager.GetBloodLossComponent().Cure();
+        }
+
+        public static void ExitVehicleForced()
+        {
             if (GameManager.GetPlayerInVehicle().m_VehicleDoorUsed)
             {
                 GameManager.GetPlayerInVehicle().m_VehicleDoorUsed = null;
                 GameManager.GetPlayerInVehicle().ExitVehicleAfterFadeOut();
                 ClientSend.SendVehicleSeat("");
             }
+        }
+
+        public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation, bool RespawnAnim)
+        {
+            GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
+            ExitVehicleForced();
+
+            GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
+            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
             if (RespawnAnim)
             {
-                GameManager.GetEmergencyStimComponent().ResetEmergencyStim();
-                GameManager.GetDiminishedState().Cure();
-                GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
-                GameManager.GetPlayerMovementComponent().AddSprintStamina(GameManager.GetPlayerMovementComponent().DefaultMaxStamina);
-                PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
-                PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
-                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
-                GameManager.GetBrokenBody().Cure();
-                GameManager.GetConditionComponent().m_CurrentHP = GameManager.GetConditionComponent().GetAdjustedMaxHP();
-                ConsoleManager.CONSOLE_afflictions_cure();
-                GameManager.GetSprainedAnkleComponent().Cure();
-                GameManager.GetSprainedWristComponent().Cure();
-                GameManager.GetHeadacheComponent().Cure();
-                GameManager.GetInventoryComponent().DestroyAllGear();
-                GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
-
-                GameManager.GetBloodLossComponent().Cure();
+                FullyCure();
                 GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
             }
+            GameManager.GetInventoryComponent().DestroyAllGear();
+            GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
 
             ClientSend.SendRevived(-2);
 

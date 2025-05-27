@@ -46,7 +46,7 @@ Light:
   m_Color: {r: 1, g: 1, b: 1, a: 0.40392157}
   m_Intensity: 0.3
   m_Range: 25.099638
-  m_SpotAngle: 42.439198
+  m_SpotAngle: 37.60691
   m_InnerSpotAngle: 21.80208
   m_CookieSize: 10
   m_Shadows:
@@ -1023,7 +1023,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2048994145487119195
 Transform:
   m_ObjectHideFlags: 0
@@ -1250,7 +1250,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 673709934198473855, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: m_ApplyRootMotion
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 969144145878899356, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: m_LocalPosition.x

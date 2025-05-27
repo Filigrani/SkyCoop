@@ -8,6 +8,7 @@ using SkyCoopClient;
 using static SkyCoopServer.DataStr;
 using Harmony;
 using Il2CppRewired;
+using Il2CppTMPro;
 
 namespace SkyCoop
 {
@@ -358,6 +359,9 @@ namespace SkyCoop
             public GameObject m_BeardMesh = null;
             public GameObject m_EyebrowsMesh = null;
 
+            public Transform m_VictoryTransform = null;
+            public int m_VictoryPlace = 0;
+
             public enum GearHandPose
             {
                 None = 0,
@@ -652,6 +656,15 @@ namespace SkyCoop
                 SI.m_EventEntries.Add(Event);
             }
 
+            public void UpdateName()
+            {
+                SimpleInteraction SI = gameObject.GetComponent<SimpleInteraction>();
+                if (SI)
+                {
+                    SI.HoverText = m_PlayerName;
+                    SI.m_DefaultHoverText.m_LocalizationID = m_PlayerName;
+                }
+            }
             public void LoadEquipment()
             {
                 AddPlaceholderHoldingGear(this, "GEAR_Rifle", new Vector3(-0.23f, 0.32f, -0.047f), new Vector3(75, 90, 0), GearHandPose.Rifle);
@@ -961,9 +974,18 @@ namespace SkyCoop
 
                 if (m_Animator && ModMain.s_AppFocus)
                 {
+                    if (m_VictoryTransform == null)
+                    {
+                        m_Animator.SetInteger("VictoryPlace", 0);
+                        //m_Animator.applyRootMotion = false;
+                    }
+                    else
+                    {
+                        m_Animator.SetInteger("VictoryPlace", m_VictoryPlace);
+                        //m_Animator.applyRootMotion = true;
+                    }
+
                     float AnimatorSpeed = Speed.magnitude;
-
-
 
                     if (!m_VisualData.m_Crouch)
                     {
@@ -1012,35 +1034,44 @@ namespace SkyCoop
 
             void Update()
             {
-                // Cause we no more broadcast all the players position constatly to all the clients.
-                // Client side need somekind of failsafe.
-                // if client won't get any updates about this player in s_InActiveCooldown,
-                // This player going to be deactivated from scene.
-                if (m_SecondsBeforeHide > 0)
-                {
-                    m_SecondsBeforeHide -= Time.deltaTime;
-                    if(m_SecondsBeforeHide <= 0)
-                    {
-                        m_SecondsBeforeHide = 0;
-                        //gameObject.SetActive(false);
-                    }
-                }
-
                 UpdateAnimations();
 
-                Vector3 TargetPosition = m_Position + GetOffset();
+                if (m_VictoryTransform == null)
+                {
+                    // Cause we no more broadcast all the players position constatly to all the clients.
+                    // Client side need somekind of failsafe.
+                    // if client won't get any updates about this player in s_InActiveCooldown,
+                    // This player going to be deactivated from scene.
+                    if (m_SecondsBeforeHide > 0)
+                    {
+                        m_SecondsBeforeHide -= Time.deltaTime;
+                        if (m_SecondsBeforeHide <= 0)
+                        {
+                            m_SecondsBeforeHide = 0;
+                            //gameObject.SetActive(false);
+                        }
+                    }
 
-                // That way, we can avoid stupid situations when previous position of the objects was too far away
-                // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
-                if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
-                {
-                    transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
-                } else
-                {
-                    transform.position = TargetPosition;
+                    Vector3 TargetPosition = m_Position + GetOffset();
+
+                    // That way, we can avoid stupid situations when previous position of the objects was too far away
+                    // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
+                    if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
+                    {
+                        transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
+                    }
+                    else
+                    {
+                        transform.position = TargetPosition;
+                    }
+
+                    transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
                 }
-
-                transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
+                else
+                {
+                    transform.position = m_VictoryTransform.position;
+                    transform.rotation = m_VictoryTransform.rotation;
+                }
             }
         }
         public class CameraAttention : MonoBehaviour

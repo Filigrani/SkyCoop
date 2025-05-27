@@ -350,6 +350,7 @@ namespace SkyCoopServer
                     ServerSend.SendPlayerSceneNotification(Peer, false, PlayerID);
                 }
             }
+            ServerSend.SendClientStatus(PlayerID, 0, s_Server);
         }
 
         public DataStr.DMScore GetScore(int PlayerID)

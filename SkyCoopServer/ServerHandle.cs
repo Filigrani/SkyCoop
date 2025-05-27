@@ -22,7 +22,13 @@ namespace SkyCoopServer
                 if(Peer.Id != Client.Id)
                 {
                     ServerSend.SendClientName(Peer, Client.Id, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_PlayerName);
+                    if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                    {
+                        PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+                        ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Peer.Id), ServerInstance);
+                    }
                 }
+                ServerSend.SendClientStatus(Client.Id, 1, ServerInstance);
             }
         }
 

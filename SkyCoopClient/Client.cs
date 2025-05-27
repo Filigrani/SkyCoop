@@ -58,6 +58,7 @@ namespace SkyCoop
             { (int)Packet.Type.ServerLeaders, ClientHandle.ServerLeaders },
             { (int)Packet.Type.ClientTryInteract, ClientHandle.ClientTryInteract },
             { (int)Packet.Type.ClientInVehicle, ClientHandle.ClientInVehicle },
+            { (int)Packet.Type.ClientStatusMessage, ClientHandle.ClientStatusMessage },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

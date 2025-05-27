@@ -45,6 +45,7 @@ namespace SkyCoopServer
             ClientTryInteract,
             ClientVehicleSeat,
             ClientInVehicle,
+            ClientStatusMessage,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

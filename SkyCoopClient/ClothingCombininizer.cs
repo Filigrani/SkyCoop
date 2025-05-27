@@ -77,7 +77,7 @@ namespace SkyCoopClient
             }
             );
         }
-
+        //                                            1                       2                      3                      4
         public static int GetMostTopFromFour(GearItem GearBaseLayer, GearItem GearMidLayer, GearItem GearTopLayer, GearItem GearTopLayer2)
         {
             string BaseLayer = GetClothingNameFromGear(GearBaseLayer);
@@ -85,45 +85,61 @@ namespace SkyCoopClient
             string TopLayer = GetClothingNameFromGear(GearTopLayer);
             string TopLayer2 = GetClothingNameFromGear(GearTopLayer2);
 
-            if (string.IsNullOrEmpty(TopLayer) && string.IsNullOrEmpty(TopLayer2))
+            //SkyCoop.Logger.Log($"BaseLayer {BaseLayer}");
+            //SkyCoop.Logger.Log($"MidLayer {MidLayer}");
+            //SkyCoop.Logger.Log($"TopLayer {TopLayer}");
+            //SkyCoop.Logger.Log($"TopLayer2 {TopLayer2}");
+
+            if (string.IsNullOrEmpty(TopLayer) && string.IsNullOrEmpty(TopLayer2)) // No pants
             {
-                if(string.IsNullOrEmpty(BaseLayer) && string.IsNullOrEmpty(MidLayer))
+                //SkyCoop.Logger.Log($"Returning TopLayer ({TopLayer}) and TopLayer2 ({TopLayer2}) is empty, checking bottom layers");
+                if (string.IsNullOrEmpty(BaseLayer) && string.IsNullOrEmpty(MidLayer)) // No underware
                 {
+                    //SkyCoop.Logger.Log($"All 4 layers are empty, return nothing");
                     return 0;
                 }
                 
-                if(BaseLayer == MidLayer)
+                if(BaseLayer == MidLayer) // Both underware are the same, return most top one.
                 {
+                    //SkyCoop.Logger.Log($"BaseLayer ({BaseLayer}) and MidLayer ({MidLayer}) are the same, returning MidLayer ({MidLayer})");
                     return 2;
                 }
 
                 if (!string.IsNullOrEmpty(BaseLayer) && string.IsNullOrEmpty(MidLayer))
                 {
+                    //SkyCoop.Logger.Log($"Returning BaseLayer ({BaseLayer}), cause MidLayer ({MidLayer}) is empty");
                     return 1;
                 }
 
                 if (string.IsNullOrEmpty(BaseLayer) && !string.IsNullOrEmpty(MidLayer))
                 {
+                    //SkyCoop.Logger.Log($"Returning MidLayer ({MidLayer}), cause BaseLayer ({BaseLayer}) is empty");
                     return 2;
                 }
 
+                //SkyCoop.Logger.Log($"Returning MidLayer ({MidLayer}), cause it's toppest layer, over BaseLayer ({BaseLayer})");
                 return 2;
             }
 
+
             if (TopLayer == TopLayer2)
             {
+                //SkyCoop.Logger.Log($"TopLayer ({TopLayer}) and TopLayer2 ({TopLayer2}) are the same, returning TopLayer2 ({TopLayer2})");
                 return 4;
             }
 
             if (!string.IsNullOrEmpty(TopLayer) && string.IsNullOrEmpty(TopLayer2))
             {
+                //SkyCoop.Logger.Log($"Returning TopLayer ({TopLayer}), cause TopLayer2 ({TopLayer2}) is empty");
                 return 3;
             }
 
             if (string.IsNullOrEmpty(TopLayer) && !string.IsNullOrEmpty(TopLayer2))
             {
+                //SkyCoop.Logger.Log($"Returning TopLayer2 ({TopLayer2}), cause TopLayer ({TopLayer}) is empty");
                 return 4;
             }
+            //SkyCoop.Logger.Log($"Returning TopLayer2 ({TopLayer2}), cause it's toppest layer, over TopLayer ({TopLayer})");
             return 4;
         }
 
@@ -226,7 +242,7 @@ namespace SkyCoopClient
                     Data.m_BodyDamage = GetClothingDamageFromGear(Jacket2);
                     break;
             }
-            int PantsResult = GetMostTopFromFour(Pants1, Pants2, LongUnderware1, LongUnderware2);
+            int PantsResult = GetMostTopFromFour(LongUnderware1, LongUnderware2, Pants1, Pants2);
             switch (PantsResult)
             {
                 case 0:
@@ -234,20 +250,20 @@ namespace SkyCoopClient
                     Data.m_PantsDamage = 0;
                     break;
                 case 1:
-                    Data.m_Pants = GetClothingNameFromGear(Pants1);
-                    Data.m_PantsDamage = GetClothingDamageFromGear(Pants1);
-                    break;
-                case 2:
-                    Data.m_Pants = GetClothingNameFromGear(Pants2);
-                    Data.m_PantsDamage = GetClothingDamageFromGear(Pants2);
-                    break;
-                case 3:
                     Data.m_Pants = GetClothingNameFromGear(LongUnderware1);
                     Data.m_PantsDamage = GetClothingDamageFromGear(LongUnderware1);
                     break;
-                case 4:
+                case 2:
                     Data.m_Pants = GetClothingNameFromGear(LongUnderware2);
                     Data.m_PantsDamage = GetClothingDamageFromGear(LongUnderware2);
+                    break;
+                case 3:
+                    Data.m_Pants = GetClothingNameFromGear(Pants1);
+                    Data.m_PantsDamage = GetClothingDamageFromGear(Pants1);
+                    break;
+                case 4:
+                    Data.m_Pants = GetClothingNameFromGear(Pants2);
+                    Data.m_PantsDamage = GetClothingDamageFromGear(Pants2);
                     break;
             }
 

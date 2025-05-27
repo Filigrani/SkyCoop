@@ -80,6 +80,7 @@ namespace SkyCoop
 
         public static void ServerChangesMap(NetDataReader Reader)
         {
+            PlayersManager.HideLocalPlayer();
             DataStr.ServerConfig CFG = ModMain.Client.m_Config;
             ModMain.ChangeMap();
         }
@@ -367,9 +368,11 @@ namespace SkyCoop
             playerManagerComponent.ResetPickup();
             GameManager.GetVpFPSPlayer().CancelZoom();
             InterfaceManager.TrySetPanelEnabled<Panel_Inventory>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_Container>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_Inventory_Examine>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
-            PlayersManager.RespawnOnPoint(Vector3.zero, Quaternion.identity, false);
+            PlayersManager.FullyCure();
+            PlayersManager.ExitVehicleForced();
         }
 
         public static void ServerLeaders(NetDataReader Reader)
@@ -391,8 +394,12 @@ namespace SkyCoop
                 {
                     for (int i = 0; i < Count;i++)
                     {
-                        Obj.transform.GetChild(i).gameObject.SetActive(true);
-                        Obj.transform.GetChild(i).GetComponent<Animator>().SetInteger("VictoryPlace", i+1);
+                        Comps.NetworkPlayer PlayerObj = PlayersManager.GetPlayer(i);
+                        if (PlayerObj)
+                        {
+                            PlayerObj.m_VictoryTransform = Obj.transform.GetChild(i);
+                            PlayerObj.m_VictoryPlace = i + 1;
+                        }
                         Obj.transform.GetChild(i+3).gameObject.SetActive(true);
                         Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(WinnersNames[i]);
                     }
@@ -400,6 +407,7 @@ namespace SkyCoop
                     Cam.GetComponent<Camera>().enabled = false;
                     Cam.GetComponent<Animator>().enabled = true;
                     Cam.gameObject.AddComponent<Comps.CameraAttention>();
+                    PlayersManager.SetLocalPlayerVictory();
                 }
             }
         }
@@ -418,6 +426,20 @@ namespace SkyCoop
             if (Player)
             {
                 Player.SetInVehicle(InVechicle);
+            }
+        }
+
+        public static void ClientStatusMessage(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            int Status = Reader.GetInt();
+
+            if(Status == 0)
+            {
+                CanvasUI.AddLeaveMessage(PlayerID);
+            }else if(Status == 1)
+            {
+                CanvasUI.AddJoinMessage(PlayerID);
             }
         }
     }
