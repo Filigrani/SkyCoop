@@ -396,7 +396,10 @@ namespace SkyCoop
                         Obj.transform.GetChild(i+3).gameObject.SetActive(true);
                         Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(WinnersNames[i]);
                     }
-                    Obj.transform.FindChild("Camera").GetComponent<Animator>().enabled = true;
+                    Transform Cam = Obj.transform.FindChild("Camera");
+                    Cam.GetComponent<Camera>().enabled = false;
+                    Cam.GetComponent<Animator>().enabled = true;
+                    Cam.gameObject.AddComponent<Comps.CameraAttention>();
                 }
             }
         }

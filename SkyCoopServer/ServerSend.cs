@@ -136,7 +136,7 @@ namespace SkyCoopServer
                 }
                 else
                 {
-                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
+                    //ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
                 }
                 ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddDeath(ServerInstance);
             }
@@ -147,6 +147,21 @@ namespace SkyCoopServer
                 {
                     ServerInstance.m_PlayersData.GetPlayer(Message.m_Assist).AddAssist(ServerInstance);
                 }
+            }
+
+            List<int> Leaders = ServerInstance.m_PlayersData.GetDMLeaders();
+
+            if (Message.m_Killer != -1)
+            {
+                SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Killer), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Killer), ServerInstance);
+            }
+            if(Message.m_Assist != -1)
+            {
+                SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Assist), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Assist), ServerInstance);
+            }
+            if(Message.m_Victim != -1)
+            {
+                SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Victim), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Victim), ServerInstance);
             }
 
 

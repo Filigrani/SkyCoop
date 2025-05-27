@@ -16,7 +16,7 @@ namespace SkyCoopClient
 
         public static List<UISprite> s_SideIcons = new List<UISprite>();
         public static List<UILabel> s_SideLables = new List<UILabel>();
-        public static List<string> s_SideLablesPrefix = new List<string>() { "", "", "" };
+        public static List<string> s_SideLablesPrefix = new List<string>() { "", "", "", "" };
         public static UILabel s_BottomLable = null;
 
         public static void Reintilize()
@@ -25,7 +25,7 @@ namespace SkyCoopClient
             {
                 s_SideIcons.Clear();
                 s_SideLables.Clear();
-                s_SideLablesPrefix = new List<string>() { "", "", "" };
+                s_SideLablesPrefix = new List<string>() { "", "", "", "" };
                 Panel_HUD Panel = null;
                 if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
                 {
@@ -41,6 +41,7 @@ namespace SkyCoopClient
                     s_HUD.transform.GetChild(4).gameObject.SetActive(false);
                     s_HUD.m_ToxicFogIndicatorLabel.gameObject.SetActive(false);
                     s_HUD.m_ToxicFogIndicatorLabel.text = "";
+                    s_BottomLable = s_HUD.m_ToxicFogIndicatorLabel;
 
 
                     s_SideIcons.Add(FixSideIcon(s_HUD.m_WardGlyphRoot.transform));
@@ -50,8 +51,8 @@ namespace SkyCoopClient
                     s_SideLables.Add(GetSideLable(s_HUD.m_WardGlyphRoot.transform));
                     s_SideLables.Add(GetSideLable(s_HUD.m_LureGlyphRoot.transform));
                     s_SideLables.Add(GetSideLable(s_HUD.transform.GetChild(4)));
+                    s_SideLables.Add(s_BottomLable);
 
-                    s_BottomLable = s_HUD.m_ToxicFogIndicatorLabel;
                 }
             }
         }
@@ -82,6 +83,10 @@ namespace SkyCoopClient
 
         public static void SetSideIcon(int SideIconIndex, string Icon)
         {
+            if(SideIconIndex < 0 || SideIconIndex > s_SideIcons.Count-1)
+            {
+                return;
+            }
             s_SideIcons[SideIconIndex].transform.parent.parent.gameObject.SetActive(true);
             s_SideIcons[SideIconIndex].gameObject.SetActive(true);
             s_SideIcons[SideIconIndex].spriteName = Icon;
@@ -101,6 +106,10 @@ namespace SkyCoopClient
 
         public static void SetSideLable(int SideLableIndex, string Text)
         {
+            if (SideLableIndex < 0 || SideLableIndex > s_SideLables.Count - 1)
+            {
+                return;
+            }
             s_SideLables[SideLableIndex].gameObject.SetActive(true);
             s_SideLables[SideLableIndex].text = s_SideLablesPrefix[SideLableIndex]+Text;
         }

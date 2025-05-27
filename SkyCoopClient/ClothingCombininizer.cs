@@ -251,14 +251,39 @@ namespace SkyCoopClient
                     break;
             }
 
+            GearItem Socks1 = GetClothingInSlot(ClothingRegion.Feet, ClothingLayer.Base);
+            GearItem Socks2 = GetClothingInSlot(ClothingRegion.Feet, ClothingLayer.Mid);
+            GearItem Boots = GetClothingInSlot(ClothingRegion.Feet, ClothingLayer.Top);
+
+            int BootsResult = GetMostTopFromFour(Socks1, Socks2, Boots, null);
+            switch (BootsResult)
+            {
+                case 0:
+                case 4:
+                    Data.m_Boots = "";
+                    Data.m_BootsDamage = 0;
+                    break;
+                case 1:
+                    Data.m_Boots = GetClothingNameFromGear(Socks1);
+                    Data.m_BootsDamage = GetClothingDamageFromGear(Socks1);
+                    break;
+                case 2:
+                    Data.m_Boots = GetClothingNameFromGear(Socks2);
+                    Data.m_BootsDamage = GetClothingDamageFromGear(Socks2);
+                    break;
+                case 3:
+                    Data.m_Boots = GetClothingNameFromGear(Boots);
+                    Data.m_BootsDamage = GetClothingDamageFromGear(Boots);
+                    break;
+            }
+
             GearItem Gloves = GetClothingInSlot(ClothingRegion.Hands, ClothingLayer.Base);
-            GearItem Boots = GetClothingInSlot(ClothingRegion.Feet, ClothingLayer.Base);
+
 
             Data.m_Gloves = GetClothingNameFromGear(Gloves);
             Data.m_GlovesDamage = GetClothingDamageFromGear(Gloves);
 
-            Data.m_Boots = GetClothingNameFromGear(Boots);
-            Data.m_BootsDamage = GetClothingDamageFromGear(Boots);
+
 
             Data.m_Accs1 = GetClothingNameFromGear(GetClothingInSlot(ClothingRegion.Accessory, ClothingLayer.Base));
             Data.m_Accs2 = GetClothingNameFromGear(GetClothingInSlot(ClothingRegion.Accessory, ClothingLayer.Mid));

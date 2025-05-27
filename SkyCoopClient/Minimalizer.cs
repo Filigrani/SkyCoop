@@ -155,7 +155,7 @@ namespace SkyCoopClient
             for (int i = 0; i < GameManager.GetInventoryComponent().m_Items.Count; i++)
             {
                 GearItem gearItem = GameManager.GetInventoryComponent().m_Items[i];
-                if (gearItem && gearItem.m_ClothingItem)
+                if (gearItem && gearItem.m_ClothingItem && gearItem.m_NarrativeCollectibleItem == null)
                 {
                     Gears.Add(gearItem);
                 }
@@ -492,9 +492,17 @@ namespace SkyCoopClient
                     if (!string.IsNullOrEmpty(GearName))
                     {
                         GearItem GearItem = PlayersManager.GiveItemToPlayer(GearName, Gear.Units);
-                        if (GearItem && GearItem.m_GunItem)
+                        if (GearItem)
                         {
-                            GearItem.m_GunItem.FillClipAtCondition(100);
+                            if (GearItem.m_GunItem)
+                            {
+                                GearItem.m_GunItem.FillClipAtCondition(100);
+                            }
+                            if (GearItem.m_ClothingItem)
+                            {
+                                GearItem.m_ClothingItem.PutOn();
+                                GearItem.m_NarrativeCollectibleItem = GearItem.gameObject.AddComponent<NarrativeCollectibleItem>();
+                            }
                         }
                     }
                 }
@@ -622,6 +630,22 @@ namespace SkyCoopClient
                         UnityEngine.Object.Destroy(__instance.m_FoodItemEaten.gameObject);
                     }
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(BodyHarvest), "Awake")]
+        private static class BodyHarvest_Awake
+        {
+            private static void Postfix(BodyHarvest __instance)
+            {
+                __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(WaterSource), "Awake")]
+        private static class WaterSource_Awake
+        {
+            private static void Postfix(WaterSource __instance)
+            {
+                __instance.enabled = false;
             }
         }
     }

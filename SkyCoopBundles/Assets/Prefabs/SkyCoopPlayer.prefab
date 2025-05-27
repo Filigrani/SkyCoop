@@ -179,7 +179,7 @@ AudioSource:
   Spatialize: 0
   SpatializePostEffects: 0
   Priority: 128
-  DopplerLevel: 1
+  DopplerLevel: 0
   MinDistance: 16
   MaxDistance: 27
   Pan2D: 0
@@ -272,6 +272,10 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: -8781314631475492047, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_RootOrder
+      value: 25
+      objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_RootOrder
       value: 0
@@ -704,6 +708,10 @@ PrefabInstance:
       propertyPath: m_IsActive
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1997371324124627957, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_RootOrder
+      value: 27
+      objectReference: {fileID: 0}
     - target: {fileID: 2263154811663422260, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -739,6 +747,10 @@ PrefabInstance:
     - target: {fileID: 3351496724910008929, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_IsActive
       value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 4156149149305936724, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_RootOrder
+      value: 26
       objectReference: {fileID: 0}
     - target: {fileID: 4218282392391512276, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_IsActive

@@ -4,6 +4,7 @@ using System.Reflection;
 using static SkyCoopServer.DataStr;
 using System.Text.Json;
 using System.Drawing;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
@@ -351,6 +352,20 @@ namespace SkyCoopServer
             }
         }
 
+        public DataStr.DMScore GetScore(int PlayerID)
+        {
+            DataStr.PlayerData Player = GetPlayer(PlayerID);
+            return new DataStr.DMScore(Player.m_PlayerID, Player.m_Kills, Player.m_Assists, Player.m_Deaths);
+        }
+
+        public string GetPlayerScoreString(int PlayerID)
+        {
+            DataStr.PlayerData Player = GetPlayer(PlayerID);
+            List<int> Leaders = GetDMLeaders();
+            int Score = GetScore(PlayerID).GetFinalScore();
+            return $"{Score} Place: {Leaders.IndexOf(PlayerID)+1}/{Leaders.Count}";
+        }
+
         public List<int> GetDMLeaders()
         {
             List<int> Leaders = new List<int>();
@@ -358,11 +373,7 @@ namespace SkyCoopServer
 
             foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
             {
-                DataStr.PlayerData Player = GetPlayer(Peer.Id);
-                Player.m_Kills = 0;
-                Player.m_Deaths = 0;
-                Player.m_Assists = 0;
-                Scores.Add(new DataStr.DMScore(Player.m_PlayerID, Player.m_Kills, Player.m_Assists, Player.m_Deaths));
+                Scores.Add(GetScore(Peer.Id));
             }
             Scores.Sort();
 

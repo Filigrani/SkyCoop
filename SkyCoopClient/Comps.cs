@@ -29,6 +29,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<ArrowHook>();
             ClassInjector.RegisterTypeInIl2Cpp<DroppedGearVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<BulletWallBangHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<CameraAttention>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -351,6 +352,7 @@ namespace SkyCoop
             public AudioClip m_LastVoiceSample = null;
             public float m_SampleVoiceSeek = 0;
             public int m_SampleVoiceWindow = 64;
+            public Vector3 m_InVehicleOffset = new Vector3(0, 0.21f, 0.21f);
 
             public GameObject m_HairMesh = null;
             public GameObject m_BeardMesh = null;
@@ -385,7 +387,7 @@ namespace SkyCoop
 
 
             float s_DeltaMultiplayer = 20;
-            float s_InterpolationSkipDistance = 15f;
+            float s_InterpolationSkipDistance = 3f;
             float s_InActiveCooldown = 5f;
 
             public void SetTransform(Vector3 position, Quaternion rotation)
@@ -694,18 +696,21 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_Balaclava");
                 AddClothingMesh("GEAR_BaseballCap");
                 AddClothingMesh("GEAR_BasicGloves");
+                AddClothingMesh("GEAR_BasicShoes");
                 AddClothingMesh("GEAR_BasicWoolHat");
                 AddClothingMesh("GEAR_CargoPants");
                 AddClothingMesh("GEAR_ClimbingSocks");
                 AddClothingMesh("GEAR_CottonHoodie");
                 AddClothingMesh("GEAR_CottonScarf");
                 AddClothingMesh("GEAR_CottonShirt");
+                AddClothingMesh("GEAR_CottonSocks");
                 AddClothingMesh("GEAR_CowichanSweater");
                 AddClothingMesh("GEAR_FishermanSweater");
                 AddClothingMesh("GEAR_ImprovisedHat");
                 AddClothingMesh("GEAR_LongUnderwear");
                 AddClothingMesh("GEAR_LongUnderwearWool");
                 AddClothingMesh("GEAR_RabbitskinHat");
+                AddClothingMesh("GEAR_WoolSocks");
                 AddClothingMesh("GEAR_Toque");
                 AddClothingMesh("GEAR_WoolWrap");
                 AddClothingMesh("GEAR_WoolWrapCap");
@@ -994,6 +999,17 @@ namespace SkyCoop
                 AnimateMouth();
             }
 
+            public Vector3 GetOffset()
+            {
+                if (m_VisualData.m_InVehicle)
+                {
+                    return m_InVehicleOffset;
+                }
+                
+                
+                return Vector3.zero;
+            }
+
             void Update()
             {
                 // Cause we no more broadcast all the players position constatly to all the clients.
@@ -1011,19 +1027,34 @@ namespace SkyCoop
                 }
 
                 UpdateAnimations();
-                
-                
+
+                Vector3 TargetPosition = m_Position + GetOffset();
+
                 // That way, we can avoid stupid situations when previous position of the objects was too far away
                 // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
-                if (Vector3.Distance(transform.position, m_Position) > s_InterpolationSkipDistance)
+                if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
                 {
-                    transform.position = Vector3.Lerp(transform.position, m_Position, Time.deltaTime * s_DeltaMultiplayer);
+                    transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
                 } else
                 {
-                    transform.position = m_Position;
+                    transform.position = TargetPosition;
                 }
 
                 transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
+            }
+        }
+        public class CameraAttention : MonoBehaviour
+        {
+            public CameraAttention(IntPtr ptr) : base(ptr) { }
+
+            void LateUpdate()
+            {
+                Camera Cam = GameManager.GetCurrentCamera();
+                if (Cam)
+                {
+                    Cam.transform.position = transform.position;
+                    Cam.transform.rotation = transform.rotation;
+                }
             }
         }
     }

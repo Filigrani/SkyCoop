@@ -242,6 +242,7 @@ namespace SkyCoopServer
                 ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
                 ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
                 ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
+                ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
             }
 
             if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_Time > 0)

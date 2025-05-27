@@ -47,28 +47,18 @@ namespace SkyCoopClient
                 {
                     return;
                 }
-                int variant = 0;
-                if ((__instance.gameObject.GetComponent<FoodItem>() != null && __instance.gameObject.GetComponent<FoodItem>().m_Opened == true) ||
-                    (__instance.gameObject.GetComponent<SmashableItem>() != null && __instance.gameObject.GetComponent<SmashableItem>().m_HasBeenSmashed == true))
-                {
-                    variant = 1;
-                }
-                if (__instance.gameObject.GetComponent<KeroseneLampItem>() != null && __instance.gameObject.GetComponent<KeroseneLampItem>().m_On)
-                {
-                    variant = 1;
-                }
 
                 int left = Had - ShouldDrop;
                 if (left > 0)
                 {
-                    SendDropItem(__instance, ShouldDrop, Had, false, variant);
+                    SendDropItem(__instance, ShouldDrop, Had, false);
                 }
                 else
                 {
-                    SendDropItem(__instance, 0, 0, false, variant);
+                    SendDropItem(__instance, 0, 0, false);
                 }
 
-                if (__result != null && __result.gameObject != null && __result != __instance)
+                if (__result && __result != __instance)
                 {
                     UnityEngine.Object.Destroy(__result.gameObject);
                 }
@@ -188,6 +178,7 @@ namespace SkyCoopClient
                     GearItem gi = saveObj.GetComponent<GearItem>();
                     if (gi)
                     {
+                        SkyCoop.Logger.Log("RestoreTransform");
                         SendDropItem(gi, 0, 0, true);
                     }
                 }
@@ -208,12 +199,13 @@ namespace SkyCoopClient
                     GearItem gi = saveObj.GetComponent<GearItem>();
                     if (gi)
                     {
+                        SkyCoop.Logger.Log("PlaceMeshInWorld");
                         SendDropItem(gi, 0, 0, true);
                     }
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")] // Once
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")] // It supposed to check "Leave it" action to drop gear to server.
         private static class PlayerManager_ExitInspectGearMode
         {
             private static GearItem gear;
@@ -223,10 +215,22 @@ namespace SkyCoopClient
             }
             internal static void Postfix(PlayerManager __instance)
             {
-                if (gear && !gear.m_InPlayerInventory && !gear.m_InsideContainer)
-                {
-                    SendDropItem(gear, 0, 0, true);
-                }
+                //Broken. It leads to dublication bug. Because ExitInspectGearMode called even if you pickup item.
+                // and for some reason, it can't find it in inventory, and I can't check if player actaully left gear or not.
+
+                //if (gear && !gear.m_InPlayerInventory && !gear.m_InsideContainer)
+                //{
+                //    foreach (GearItem item in GameManager.GetInventoryComponent().m_Items)
+                //    {
+                //        if(item == gear)
+                //        {
+                //            return;
+                //        }
+                //    }
+                //    SkyCoop.Logger.Log("ExitInspectGearMode");
+                //    SendDropItem(gear, 0, 0, true);
+                //}
+                //__instance.m_Gear = null;
             }
         }
 
@@ -334,7 +338,7 @@ namespace SkyCoopClient
 
                 ClientSend.SendGear(gear.name, v3, rot, JSON);
 
-                if (nums == 0)
+                if (total < 2)
                 {
                     UnityEngine.Object.Destroy(obj);
                 }
