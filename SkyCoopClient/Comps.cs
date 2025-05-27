@@ -1047,14 +1047,27 @@ namespace SkyCoop
         {
             public CameraAttention(IntPtr ptr) : base(ptr) { }
 
+            vp_FPSCamera m_Camera;
+            void Start()
+            {
+                m_Camera = GameManager.GetVpFPSCamera();
+                GameManager.GetPlayerAnimationComponent().ShowPlayer(false);
+                m_Camera.enabled = false;
+            }
+            
             void LateUpdate()
             {
-                Camera Cam = GameManager.GetCurrentCamera();
-                if (Cam)
+                if (m_Camera)
                 {
-                    Cam.transform.position = transform.position;
-                    Cam.transform.rotation = transform.rotation;
+                    m_Camera.transform.position = transform.position;
+                    m_Camera.transform.rotation = transform.rotation;
                 }
+            }
+
+            void OnDestroy()
+            {
+                GameManager.GetPlayerAnimationComponent().ShowPlayer(true);
+                m_Camera.enabled = true;
             }
         }
     }
