@@ -80,7 +80,6 @@ namespace SkyCoop
 
         public static void ServerChangesMap(NetDataReader Reader)
         {
-            PlayersManager.HideLocalPlayer();
             DataStr.ServerConfig CFG = ModMain.Client.m_Config;
             ModMain.ChangeMap();
         }
@@ -395,10 +394,14 @@ namespace SkyCoop
                     for (int i = 0; i < Count;i++)
                     {
                         Comps.NetworkPlayer PlayerObj = PlayersManager.GetPlayer(i);
-                        if (PlayerObj)
+                        GameObject VictoryDoll = Obj.transform.GetChild(i).gameObject;
+                        if (PlayerObj && VictoryDoll)
                         {
-                            PlayerObj.m_VictoryTransform = Obj.transform.GetChild(i);
-                            PlayerObj.m_VictoryPlace = i + 1;
+                            VictoryDoll.gameObject.SetActive(true);
+                            PlayerObj.m_VisualData.m_ClothingData = PlayersManager.m_LocalPlayerData.m_ClothingData;
+                            PlayerObj.UpdateClothing();
+                            PlayerObj.CloneMeshSettingsToDummy(VictoryDoll);
+                            VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", i+1);
                         }
                         Obj.transform.GetChild(i+3).gameObject.SetActive(true);
                         Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(WinnersNames[i]);
@@ -407,7 +410,6 @@ namespace SkyCoop
                     Cam.GetComponent<Camera>().enabled = false;
                     Cam.GetComponent<Animator>().enabled = true;
                     Cam.gameObject.AddComponent<Comps.CameraAttention>();
-                    PlayersManager.SetLocalPlayerVictory();
                 }
             }
         }
@@ -441,6 +443,37 @@ namespace SkyCoop
             {
                 CanvasUI.AddJoinMessage(PlayerID);
             }
+        }
+        public static void ClientDeathPackAdded(NetDataReader Reader)
+        {
+            DataStr.DeathPack Pack = Reader.GetDeathPack();
+            DeathPacksManager.HandleDeathPack(Pack.m_Prefab, Pack.m_Position.ConvertToUnity(), Pack.m_Rotation.ConvertToUnity(), Pack.m_GUID, Pack.m_Owner);
+        }
+
+        public static void ClientDeathPackRemoved(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+            DeathPacksManager.HandleDeathPackRemoved(GUID);
+        }
+        public static void ClientContainerOpen(NetDataReader Reader)
+        {
+            string CompressedJSON = Reader.GetString();
+            MenuHook.RemovePleaseWait();
+            ContainersSync.HandleContainerOpen(CompressedJSON);
+        }
+        public static void ServerContainerDataArrived(NetDataReader Reader)
+        {
+            bool Result = Reader.GetBool();
+            MenuHook.RemovePleaseWait();
+            ContainersSync.HandleClosePanel();
+        }
+
+        public static void ClientContainerStateUpdated(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+            int State = Reader.GetInt();
+
+            ContainersSync.HandleStateUpdated(GUID, State);
         }
     }
 }

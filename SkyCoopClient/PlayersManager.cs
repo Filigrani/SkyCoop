@@ -9,6 +9,7 @@ using SkyCoopServer;
 using static SkyCoop.Comps.PlayerDamageColider;
 using Il2CppTLD.PDID;
 using static SkyCoopServer.DataStr;
+using UnityEngine.UIElements;
 
 namespace SkyCoop
 {
@@ -209,38 +210,6 @@ namespace SkyCoop
                 }
             }
             return "";
-        }
-
-        public static void HideLocalPlayer()
-        {
-            int PlayerID = -1;
-            if (ModMain.Client != null)
-            {
-                PlayerID = ModMain.Client.GetMyId();
-
-                Comps.NetworkPlayer Player = GetPlayer(PlayerID);
-                if (Player)
-                {
-                    Player.gameObject.SetActive(false);
-                }
-            }
-        }
-
-        public static void SetLocalPlayerVictory()
-        {
-            int PlayerID = -1;
-            if (ModMain.Client != null)
-            {
-                PlayerID = ModMain.Client.GetMyId();
-
-                Comps.NetworkPlayer Player = GetPlayer(PlayerID);
-                if (Player)
-                {
-                    Player.m_VisualData.m_ClothingData = m_LocalPlayerData.m_ClothingData;
-                    Player.UpdateClothing();
-                    Player.gameObject.SetActive(true);
-                }
-            }
         }
 
         public static void UpdateLocalPlayer()
@@ -801,10 +770,22 @@ namespace SkyCoop
                             GameManager.GetPlayerInVehicle().EnterVehicle(Door);
                         }
                     }
+                    Container Container = s_LastTryInteractionObject.GetComponent<Container>();
+                    if (Container)
+                    {
+                        
+                        MenuHook.DoPleaseWait("Please wait...", "Downloading container data...");
+                        ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().Get());
+                    }
                 }
                 else
                 {
                     HUDMessage.AddMessage("Failed, interaction blocked by other player!", true, true);
+                    Container Container = s_LastTryInteractionObject.GetComponent<Container>();
+                    if (Container && !Container.m_PendingClose)
+                    {
+                        Container.BeginContainerClose();
+                    }
                 }
             }
             else
@@ -984,6 +965,21 @@ namespace SkyCoop
                     SkyCoop.Logger.Log($"VehicleDoor PerformHold {DoorGUID}");
 
                     ClientSend.SendTryInteract(DoorGUID);
+                    return false;
+                }
+                Container container = __instance.GetComponent<Container>();
+                if (container && container.m_Inspected)
+                {
+                    string ContainerGUID = "";
+                    ObjectGuid ObjGUID = __instance.GetComponent<ObjectGuid>();
+                    if (ObjGUID)
+                    {
+                        ContainerGUID = ObjGUID.Get();
+                    }
+                    s_LastTryInteractionObject = __instance.gameObject;
+                    SkyCoop.Logger.Log($"Container PerformHold {ContainerGUID}");
+
+                    ClientSend.SendTryInteract(ContainerGUID);
                     return false;
                 }
                 return true;

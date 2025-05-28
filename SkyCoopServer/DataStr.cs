@@ -1,6 +1,9 @@
 ﻿using LiteNetLib;
 using System;
+using System.IO.Compression;
 using System.Numerics;
+using System.Text.RegularExpressions;
+using System.Text;
 
 namespace SkyCoopServer
 {
@@ -88,6 +91,7 @@ namespace SkyCoopServer
             public int m_Assists = 0;
 
             public string m_CarSeat = "";
+            public string m_InteractionGUID = "";
 
 
             public GamePlayState m_GamePlayState = GamePlayState.Unassigned;
@@ -334,6 +338,9 @@ namespace SkyCoopServer
             public string m_SceneName = "";
             public Dictionary<string, GearDataContainer> m_Gears = new Dictionary<string, GearDataContainer>();
             public Dictionary<string, bool> m_Openables = new Dictionary<string, bool>();
+            public Dictionary<string, DeathPack> m_DeathPacks = new Dictionary<string, DeathPack>();
+            public Dictionary<string, string> m_Containers = new Dictionary<string, string>();
+            public Dictionary<string, int> m_ContainerStats = new Dictionary<string, int>();
 
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public DataStr.DangerCircleData m_ActiveZone = null;
@@ -671,6 +678,64 @@ namespace SkyCoopServer
                 }
                 return false;
             }
+        }
+
+        public class DeathPack
+        {
+            public string m_Prefab = "";
+            public string m_GUID = "";
+            public string m_Owner = "";
+            public Vector3 m_Position;
+            public Quaternion m_Rotation;
+        }
+
+        public static string CompressString(string text)
+        {
+            byte[] buffer = Encoding.UTF8.GetBytes(text);
+            var memoryStream = new MemoryStream();
+            using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Compress, true))
+            {
+                gZipStream.Write(buffer, 0, buffer.Length);
+            }
+
+            memoryStream.Position = 0;
+
+            var compressedData = new byte[memoryStream.Length];
+            memoryStream.Read(compressedData, 0, compressedData.Length);
+
+            var gZipBuffer = new byte[compressedData.Length + 4];
+            Buffer.BlockCopy(compressedData, 0, gZipBuffer, 4, compressedData.Length);
+            Buffer.BlockCopy(BitConverter.GetBytes(buffer.Length), 0, gZipBuffer, 0, 4);
+            return Convert.ToBase64String(gZipBuffer);
+        }
+
+        public static string DecompressString(string compressedText)
+        {
+            byte[] gZipBuffer = Convert.FromBase64String(compressedText);
+            using (var memoryStream = new MemoryStream())
+            {
+                int dataLength = BitConverter.ToInt32(gZipBuffer, 0);
+                memoryStream.Write(gZipBuffer, 4, gZipBuffer.Length - 4);
+
+                var buffer = new byte[dataLength];
+
+                memoryStream.Position = 0;
+                using (var gZipStream = new GZipStream(memoryStream, CompressionMode.Decompress))
+                {
+                    gZipStream.Read(buffer, 0, buffer.Length);
+                }
+
+                return Encoding.UTF8.GetString(buffer);
+            }
+        }
+        public static bool IsBase64String(string s)
+        {
+            s = s.Trim();
+            return (s.Length % 4 == 0) && Regex.IsMatch(s, @"^[a-zA-Z0-9\+/]*={0,3}$", RegexOptions.None);
+        }
+        public static long GetDeterministicId(string m)
+        {
+            return (long)m.ToCharArray().Select((c, i) => Math.Pow(i, c % 5) * Math.Max(Math.Sqrt(c), i)).Sum();
         }
     }
 }

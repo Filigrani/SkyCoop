@@ -37,14 +37,14 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Clothing), "Enable")]
-        private static class Panel_Clothing_Enable
-        {
-            private static bool Prefix(Panel_Clothing __instance)
-            {
-                return false;
-            }
-        }
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_Clothing), "Enable")]
+        //private static class Panel_Clothing_Enable
+        //{
+        //    private static bool Prefix(Panel_Clothing __instance)
+        //    {
+        //        return false;
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool)})]
         private static class Panel_Map_Enable
         {
@@ -386,6 +386,7 @@ namespace SkyCoopClient
                     if (GameManager.GetBrokenBody().HasAffliction)
                     {
                         PlayersManager.Death(DamageType, PlayersManager.m_LastDamageZone);
+                        DeathPacksManager.CreateMyDeathPack();
                         return true;
                     }
                     PlayersManager.ToKnockedState(DamageType, PlayersManager.m_LastDamageZone);
@@ -396,6 +397,7 @@ namespace SkyCoopClient
                 else
                 {
                     PlayersManager.Death(DamageType, PlayersManager.m_LastDamageZone);
+                    DeathPacksManager.CreateMyDeathPack();
                 }
                 return true;
             }
@@ -484,6 +486,8 @@ namespace SkyCoopClient
                 {
                     return true;
                 }
+
+                GameManager.GetInventoryComponent().DestroyAllGear();
 
                 foreach (DataStr.StartingGearData Gear in StartingGear)
                 {

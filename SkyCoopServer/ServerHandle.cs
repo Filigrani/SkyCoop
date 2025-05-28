@@ -28,7 +28,7 @@ namespace SkyCoopServer
                         ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Peer.Id), ServerInstance);
                     }
                 }
-                ServerSend.SendClientStatus(Client.Id, 1, ServerInstance);
+                ServerSend.SendClientStatus(Peer.Id, 1, ServerInstance);
             }
         }
 
@@ -240,6 +240,8 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendAllGears(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllOpenables(SceneName, Client);
             ServerInstance.m_ScenesData.SendZone(SceneName, Client);
+            ServerInstance.m_ScenesData.SendAllDeathContainers(SceneName, Client);
+            ServerInstance.m_ScenesData.SendAllContainerStates(SceneName, Client);
             ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
 
             if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
@@ -249,6 +251,23 @@ namespace SkyCoopServer
                 ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
                 ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
                 ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
+            }
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (Peer.Id != Client.Id)
+                {
+                    DataStr.PlayerData PeerData = ServerInstance.GetPlayerDataByNetPeer(Peer);
+                    if (PeerData.m_Scene == SceneName)
+                    {
+                        ServerSend.SendPlayerCrouch(Client, PeerData.m_VisualData.m_Crouch, Peer.Id);
+                        ServerSend.SendClothing(Client, PeerData.m_VisualData.m_ClothingData, Peer.Id);
+                        ServerSend.SendPosition(Client, PeerData.m_Position, Peer.Id);
+                        ServerSend.SendRotation(Client, PeerData.m_Rotation, Peer.Id);
+                        ServerSend.SendPlayerAction(Client, PeerData.m_VisualData.m_LatAction, Peer.Id);
+                        ServerSend.SendPlayerChangeGear(Client, PeerData.m_VisualData.m_GearInHands, PeerData.m_VisualData.m_GearVariant, Peer.Id);
+                    }
+                }
             }
 
             if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_Time > 0)
@@ -268,7 +287,10 @@ namespace SkyCoopServer
             {
                 if (Peer.Id != Client.Id)
                 {
-                    ServerSend.SendOpenableState(Peer, GUID, OpenState);
+                    if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene)
+                    {
+                        ServerSend.SendOpenableState(Peer, GUID, OpenState);
+                    }
                 }
             }
             ServerInstance.m_ScenesData.AddOpenableState(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID, OpenState);
@@ -284,7 +306,10 @@ namespace SkyCoopServer
             {
                 if (Peer.Id != Client.Id || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
-                    ServerSend.SendClothing(Peer, ClothingData, Client.Id);
+                    if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene)
+                    {
+                        ServerSend.SendClothing(Peer, ClothingData, Client.Id);
+                    }
                 }
             }
         }
@@ -296,7 +321,7 @@ namespace SkyCoopServer
                 PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Peer);
                 if (Peer.Id != Client.Id)
                 {
-                    if(Data.m_CarSeat == GUID)
+                    if(Data.m_CarSeat == GUID || Data.m_InteractionGUID == GUID)
                     {
                         ServerSend.SendInteractResult(Client, false);
                         return;
@@ -331,6 +356,83 @@ namespace SkyCoopServer
         {
             bool IsInVehicle = Reader.GetBool();
             ServerInstance.m_PlayersData.PlayerChangeVehicleState(Client.Id, IsInVehicle);
+        }
+
+        public static void ClientDeathPackAdded(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            DataStr.DeathPack Pack = Reader.GetDeathPack();
+            string JSONCompressed = Reader.GetString();
+            ServerInstance.m_ScenesData.AddDeathPack(Pack, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
+            ServerInstance.m_ScenesData.AddContainer(Pack.m_GUID, JSONCompressed, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (Peer.Id != Client.Id)
+                {
+                    if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene)
+                    {
+                        ServerSend.SendDeathPack(Peer, Pack, ServerInstance);
+                    }
+                }
+            }
+        }
+
+        public static void ClientDeathPackRemoved(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            ServerInstance.m_ScenesData.RemoveDeathPack(GUID, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
+            ServerInstance.m_ScenesData.RemoveContainer(GUID, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene)
+                {
+                    ServerSend.SendDeathPackRemoved(Peer, GUID, ServerInstance);
+                }
+            }
+        }
+
+        public static void ClientContainerOpen(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+
+            string JSON = ServerInstance.m_ScenesData.GetContainerContent(GUID, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
+            ServerSend.SendContainerData(Client, JSON, ServerInstance);
+        }
+
+        public static void ClientUpdateContainerData(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            string JSONCompressed = Reader.GetString();
+            ServerInstance.m_ScenesData.AddContainer(GUID, JSONCompressed, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
+            ServerSend.SendContainerDataArrived(Client, ServerInstance);
+        }
+
+        public static void ClientFinishInteract(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            ServerInstance.m_PlayersData.SetPlayerInteractionGUID(Client.Id, "");
+        }
+
+        public static void ClientSetInteraction(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            ServerInstance.m_PlayersData.SetPlayerInteractionGUID(Client.Id, GUID);
+        }
+
+        public static void ClientContainerStateUpdated(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            int State = Reader.GetInt();
+            string Scene = ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene;
+            ServerInstance.m_ScenesData.SetContainerState(GUID, State, Scene);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Scene)
+                {
+                    ServerSend.SendContainerState(Peer, GUID, State, ServerInstance);
+                }
+            }
         }
     }
 }

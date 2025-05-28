@@ -31,6 +31,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<DroppedGearVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<BulletWallBangHook>();
             ClassInjector.RegisterTypeInIl2Cpp<CameraAttention>();
+            ClassInjector.RegisterTypeInIl2Cpp<DeathPackComp>();
+            ClassInjector.RegisterTypeInIl2Cpp<ContainerDescriptorHook>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -359,9 +361,6 @@ namespace SkyCoop
             public GameObject m_BeardMesh = null;
             public GameObject m_EyebrowsMesh = null;
 
-            public Transform m_VictoryTransform = null;
-            public int m_VictoryPlace = 0;
-
             public enum GearHandPose
             {
                 None = 0,
@@ -665,6 +664,27 @@ namespace SkyCoop
                     SI.m_DefaultHoverText.m_LocalizationID = m_PlayerName;
                 }
             }
+
+            public void CloneMeshSettingsToDummy(GameObject CloneDummy)
+            {
+                foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
+                {
+                    foreach (SkinnedMeshRenderer MeshDummy in CloneDummy.GetComponentsInChildren<SkinnedMeshRenderer>())
+                    {
+                        if(MeshDummy.name == Mesh.name)
+                        {
+                            Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
+                            for (int i = 0; i < NewMatsArr.Length; i++)
+                            {
+                                NewMatsArr[i] = Mesh.materials[i];
+                            }
+                            MeshDummy.SetMaterialArray(NewMatsArr);
+                            MeshDummy.gameObject.SetActive(Mesh.gameObject.activeSelf);
+                        }
+                    }
+                }
+            }
+
             public void LoadEquipment()
             {
                 AddPlaceholderHoldingGear(this, "GEAR_Rifle", new Vector3(-0.23f, 0.32f, -0.047f), new Vector3(75, 90, 0), GearHandPose.Rifle);
@@ -706,27 +726,50 @@ namespace SkyCoop
                 m_BeardMesh = transform.FindChild("Beard_mesh").gameObject;
                 m_EyebrowsMesh = transform.FindChild("Eyebrows_mesh").gameObject;
 
-                AddClothingMesh("GEAR_Balaclava");
+
+                // Hats
+                AddClothingMesh("GEAR_Balaclava"); // No UV.
                 AddClothingMesh("GEAR_BaseballCap");
-                AddClothingMesh("GEAR_BasicGloves");
-                AddClothingMesh("GEAR_BasicShoes");
-                AddClothingMesh("GEAR_BasicWoolHat");
-                AddClothingMesh("GEAR_CargoPants");
-                AddClothingMesh("GEAR_ClimbingSocks");
+                AddClothingMesh("GEAR_BasicWoolHat"); // No UV.
+                AddClothingMesh("GEAR_Toque");
+                AddClothingMesh("GEAR_ImprovisedHat"); // No UV.
+                AddClothingMesh("GEAR_CottonScarf"); // No UV.
+                AddClothingMesh("GEAR_WoolWrap"); // No UV.
+                AddClothingMesh("GEAR_WoolWrapCap"); // No UV.
+                AddClothingMesh("GEAR_RabbitskinHat"); // No UV.
+
+                //Torso
                 AddClothingMesh("GEAR_CottonHoodie");
-                AddClothingMesh("GEAR_CottonScarf");
+                AddClothingMesh("GEAR_BasicWinterCoat");
+                AddClothingMesh("GEAR_HeavyWoolSweater");
+                AddClothingMesh("GEAR_WoolSweater");
                 AddClothingMesh("GEAR_CottonShirt");
-                AddClothingMesh("GEAR_CottonSocks");
                 AddClothingMesh("GEAR_CowichanSweater");
                 AddClothingMesh("GEAR_FishermanSweater");
-                AddClothingMesh("GEAR_ImprovisedHat");
-                AddClothingMesh("GEAR_LongUnderwear");
-                AddClothingMesh("GEAR_LongUnderwearWool");
-                AddClothingMesh("GEAR_RabbitskinHat");
+                AddClothingMesh("GEAR_WoolSweater");
+
+                //Pants
+                AddClothingMesh("GEAR_CargoPants");
+                AddClothingMesh("GEAR_LongUnderwear"); // No UV.
+                AddClothingMesh("GEAR_LongUnderwearWool"); // No UV.
+
+                //Socks
+                AddClothingMesh("GEAR_CottonSocks");
+                AddClothingMesh("GEAR_ClimbingSocks");
                 AddClothingMesh("GEAR_WoolSocks");
-                AddClothingMesh("GEAR_Toque");
-                AddClothingMesh("GEAR_WoolWrap");
-                AddClothingMesh("GEAR_WoolWrapCap");
+
+                //Boots
+                AddClothingMesh("GEAR_BasicShoes");
+
+
+                // Gloves
+                AddClothingMesh("GEAR_BasicGloves"); // No UV.
+
+
+                foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
+                {
+                    Mesh.gameObject.layer = vp_Layer.Gear;
+                }
 
 
                 //ModMain.AddPlaceholderHoldingGear(this, "DarkWalker_Death", false);
@@ -974,16 +1017,6 @@ namespace SkyCoop
 
                 if (m_Animator && ModMain.s_AppFocus)
                 {
-                    if (m_VictoryTransform == null)
-                    {
-                        m_Animator.SetInteger("VictoryPlace", 0);
-                        //m_Animator.applyRootMotion = false;
-                    }
-                    else
-                    {
-                        m_Animator.SetInteger("VictoryPlace", m_VictoryPlace);
-                        //m_Animator.applyRootMotion = true;
-                    }
 
                     float AnimatorSpeed = Speed.magnitude;
 
@@ -1036,42 +1069,34 @@ namespace SkyCoop
             {
                 UpdateAnimations();
 
-                if (m_VictoryTransform == null)
+                // Cause we no more broadcast all the players position constatly to all the clients.
+                // Client side need somekind of failsafe.
+                // if client won't get any updates about this player in s_InActiveCooldown,
+                // This player going to be deactivated from scene.
+                if (m_SecondsBeforeHide > 0)
                 {
-                    // Cause we no more broadcast all the players position constatly to all the clients.
-                    // Client side need somekind of failsafe.
-                    // if client won't get any updates about this player in s_InActiveCooldown,
-                    // This player going to be deactivated from scene.
-                    if (m_SecondsBeforeHide > 0)
+                    m_SecondsBeforeHide -= Time.deltaTime;
+                    if (m_SecondsBeforeHide <= 0)
                     {
-                        m_SecondsBeforeHide -= Time.deltaTime;
-                        if (m_SecondsBeforeHide <= 0)
-                        {
-                            m_SecondsBeforeHide = 0;
-                            //gameObject.SetActive(false);
-                        }
+                        m_SecondsBeforeHide = 0;
+                        //gameObject.SetActive(false);
                     }
+                }
 
-                    Vector3 TargetPosition = m_Position + GetOffset();
+                Vector3 TargetPosition = m_Position + GetOffset();
 
-                    // That way, we can avoid stupid situations when previous position of the objects was too far away
-                    // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
-                    if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
-                    {
-                        transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
-                    }
-                    else
-                    {
-                        transform.position = TargetPosition;
-                    }
-
-                    transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
+                // That way, we can avoid stupid situations when previous position of the objects was too far away
+                // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
+                if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
+                {
+                    transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
                 }
                 else
                 {
-                    transform.position = m_VictoryTransform.position;
-                    transform.rotation = m_VictoryTransform.rotation;
+                    transform.position = TargetPosition;
                 }
+
+                transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
             }
         }
         public class CameraAttention : MonoBehaviour
@@ -1099,6 +1124,66 @@ namespace SkyCoop
             {
                 GameManager.GetPlayerAnimationComponent().ShowPlayer(true);
                 m_Camera.enabled = true;
+            }
+        }
+        public class DeathPackComp : MonoBehaviour
+        {
+            public DeathPackComp(IntPtr ptr) : base(ptr) { }
+            public string m_OwnerName = "";
+        }
+
+        public class ContainerDescriptorHook : MonoBehaviour
+        {
+            public ContainerDescriptorHook(IntPtr ptr) : base(ptr) { }
+            public Container m_Container = null;
+            public ContainerState m_HookState = ContainerState.Untouched;
+            public bool m_EverBeenSearchedByMe = false;
+            public bool m_Sent = false;
+
+            public enum ContainerState
+            {
+                Untouched = 0,
+                Inspected,
+                Empty,
+            }
+
+            public void Start()
+            {
+                m_Container = GetComponent<Container>();
+            }
+
+            void Update()
+            {
+                if (!m_Sent)
+                {
+                    if (m_Container)
+                    {
+                        if (m_Container.m_SearchInProgress)
+                        {
+                            m_EverBeenSearchedByMe = true;
+                        }
+
+                        if (m_EverBeenSearchedByMe && !m_Container.m_SearchInProgress)
+                        {
+                            if (m_Container.m_Inspected && m_Container.IsEmpty())
+                            {
+                                if(m_HookState == ContainerState.Untouched)
+                                {
+                                    ObjectGuid OBJGUID = m_Container.GetComponent<ObjectGuid>();
+                                    if (OBJGUID)
+                                    {
+                                        ClientSend.SendContainerState(OBJGUID.Get(), 2);
+                                        m_Sent = true;
+                                    }
+                                }
+                                else
+                                {
+                                    m_Sent = true;
+                                }
+                            }
+                        }
+                    }
+                }
             }
         }
     }

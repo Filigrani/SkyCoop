@@ -1,4 +1,5 @@
-﻿using LiteNetLib.Utils;
+﻿using Il2CppHoloville.HOTween.Core.Easing;
+using LiteNetLib.Utils;
 using SkyCoopServer;
 using UnityEngine;
 using static SkyCoopServer.Packet;
@@ -281,6 +282,86 @@ namespace SkyCoop
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientInVehicle);
             writer.Put(InVehicle);
+            SendToHost(writer);
+        }
+
+        public static void SendDeathPack(string Prefab, string GUID, string CompressedJSON, string OwnerName, Vector3 Position, Quaternion Rotation)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientDeathPackAdded);
+
+            DataStr.DeathPack Pack = new DataStr.DeathPack();
+            Pack.m_Prefab = Prefab;
+            Pack.m_GUID = GUID;
+            Pack.m_Position = Position.ConvertToSystem();
+            Pack.m_Rotation = Rotation.ConvertToSystem();
+            Pack.m_Owner = OwnerName;
+
+            writer.Put(Pack);
+            writer.Put(CompressedJSON);
+
+            SendToHost(writer);
+        }
+
+        public static void RequestContainerContent(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientContainerOpen);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+
+        public static void SendContainerData(string GUID, string JSONCompressed)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientUpdateContainerData);
+
+            writer.Put(GUID);
+            writer.Put(JSONCompressed);
+
+            SendToHost(writer);
+        }
+
+        public static void SendRemoveDeathPack(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientDeathPackRemoved);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+
+        public static void SendInteractionGUID(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientSetInteraction);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+
+        public static void SendFinishInteract()
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientFinishInteract);
+
+            SendToHost(writer);
+        }
+
+        public static void SendContainerState(string GUID, int State)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientContainerStateUpdated);
+
+            writer.Put(GUID);
+            writer.Put(State);
+
+            SkyCoop.Logger.Log($"SendContainerState {GUID} {State}");
+
             SendToHost(writer);
         }
     }

@@ -7,42 +7,6 @@ namespace SkyCoop
     public class MenuHook
     {
         public static string s_CurrenetMenuOverride = "Original";
-        public static Dictionary<string, SettingTab> s_CustomSettings = new Dictionary<string, SettingTab>();
-
-        public class SettingTab
-        {
-            public GameObject m_Tab = null;
-            public string m_TabName = "";
-            public Dictionary<string, GameObject> m_Items = new Dictionary<string, GameObject>();
-
-            public SettingTab(GameObject Tab, string Name)
-            {
-                m_Tab = Tab;
-                m_TabName = Name;
-            }
-        }
-
-        public static void AddSettingTab(string Name, GameObject Tab)
-        {
-            s_CustomSettings.Add(Name, new SettingTab(Tab, Name));
-        }
-        public static void AddItemToSettingTab(string TabName, GameObject Item, string ItemName)
-        {
-            SettingTab tab = null;
-            if(s_CustomSettings.TryGetValue(TabName, out tab))
-            {
-                tab.m_Items.Add(ItemName, Item);
-            }
-        }
-        public static SettingTab GetSettingTab(string TabName)
-        {
-            SettingTab tab = null;
-            if (s_CustomSettings.TryGetValue(TabName, out tab))
-            {
-                return tab;
-            }
-            return null;
-        }
 
         public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
         {
@@ -382,153 +346,12 @@ namespace SkyCoop
             }
         }
 
-        public static GameObject AddSetting(string TabName, string Name, string Description, GameObject Prefab, string ItemName, string LableName)
-        {
-            SettingTab Tab = GetSettingTab(TabName);
-
-            GameObject setting = NGUITools.AddChild(Tab.m_Tab, Prefab);
-            setting.name = "Custom Setting (" + Name + ")";
-
-            setting.AddComponent<Comps.UiButtonSettingHook>();
-
-            Transform labelTransform = setting.transform.Find(LableName);
-            UnityEngine.Object.Destroy(labelTransform.GetComponent<UILocalize>());
-            UILabel uiLabel = labelTransform.GetComponent<UILabel>();
-            uiLabel.text = Name;
-
-            setting.SetActive(true);
-
-            AddItemToSettingTab(TabName, setting, ItemName);
-
-            setting.transform.localPosition = new Vector3(-180.565f, 148- (40*Tab.m_Items.Count), 0);
-
-            if (Prefab = UIPrefabs.TextEntryPrefab)
-            {
-                UIButton Button = setting.GetComponent<UIButton>();
-                if (Button)
-                {
-                    EventDelegate onClick = new EventDelegate(new Action(() => setting.transform.GetChild(3).GetComponent<TextInputField>().Select()));
-
-                    Button.onClick.Add(onClick);
-                }
-            }
-
-            return setting;
-        }
-
-        // Honorably stolen from Mod Settings
-        public static GameObject CreateSettingTabTemplate(Panel_OptionsMenu panel, string TabName, string DisplayName)
-        {
-            Transform pages = panel.transform.Find("Pages");
-
-            GameObject tab = UnityEngine.Object.Instantiate(panel.m_QualityTab, pages);
-            tab.name = TabName;
-
-            Transform titleLabel = tab.transform.Find("TitleDisplay/Label");
-            UnityEngine.Object.Destroy(titleLabel.GetComponent<UILocalize>());
-            titleLabel.GetComponent<UILabel>().text = DisplayName;
-
-            panel.m_MainMenuItemTabs.Add(tab);
-            panel.m_Tabs.Add(tab);
-
-            AddSettingTab(TabName, tab);
-
-            return tab;
-        }
-
-
-        internal static GameObject CreateSkyCoopSettingsTab(Panel_OptionsMenu panel)
-        {
-            GameObject tab = CreateSettingTabTemplate(panel, "SkyCoopSettings", "MULTIPLAYER");
-
-
-            if (tab.transform.GetChild(1))
-            {
-                for (int i = tab.transform.GetChild(1).childCount - 1; i >= 0; i--)
-                {
-                    GameObject.Destroy(tab.transform.GetChild(1).GetChild(i).gameObject);
-                }
-            }
-
-            AddSetting("SkyCoopSettings", "Nickname", "", UIPrefabs.TextEntryPrefab, "Nickname", "Label");
-            AddSetting("SkyCoopSettings", "Voice Key", "", UIPrefabs.KeyEntryPrefab, "VoiceKey", "Label");
-            AddSetting("SkyCoopSettings", "Emotions Key", "", UIPrefabs.KeyEntryPrefab, "EmoteKey", "Label");
-            AddSetting("SkyCoopSettings", "Chat Key", "", UIPrefabs.KeyEntryPrefab, "ChatKey", "Label");
-            AddSetting("SkyCoopSettings", "Equip Melee Weapon", "", UIPrefabs.KeyEntryPrefab, "MeleeKey", "Label");
-            return tab;
-        }
-
-        // Honorably stolen from Mod Settings
-        private const int SKY_COOP_SETTINGS_ID = 0x5343; // "SC" in hex
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_OptionsMenu), "ConfigureMenu", new Type[0])]
-        private static class Panel_OptionsMenu_ConfigureMenu
-        {
-            private static void Postfix(Panel_OptionsMenu __instance)
-            {
-                BasicMenu basicMenu = __instance.m_BasicMenu;
-                if (basicMenu == null)
-                    return;
-
-                AddAnotherMenuItem(basicMenu); // We need one more than they have...
-                BasicMenu.BasicMenuItemModel firstItem = basicMenu.m_ItemModelList[0];
-                int itemIndex = basicMenu.GetItemCount();
-                basicMenu.AddItem("MultiplayerSettings", SKY_COOP_SETTINGS_ID, itemIndex, "Multiplayer", "Change your nickname and customize your appeal.", null,
-                        new Action(() => ShowSettings(__instance, "SkyCoopSettings")), firstItem.m_NormalTint, firstItem.m_HighlightTint);
-            }
-
-            private static void ShowSettings(Panel_OptionsMenu __instance, string TabName)
-            {
-                GameAudioManager.PlayGUIButtonClick();
-                __instance.SetTabActive(GetSettingTab(TabName).m_Tab);
-            }
-
-            private static void AddAnotherMenuItem(BasicMenu basicMenu)
-            {
-                GameObject gameObject = NGUITools.AddChild(basicMenu.m_MenuGrid.gameObject, basicMenu.m_BasicMenuItemPrefab);
-                gameObject.name = "ModSettings MenuItem";
-                BasicMenuItem item = gameObject.GetComponent<BasicMenuItem>();
-                BasicMenu.BasicMenuItemView view = item.m_View;
-                int itemIndex = basicMenu.m_MenuItems.Count;
-                EventDelegate onClick = new EventDelegate(new Action(() => basicMenu.OnItemClicked(itemIndex)));
-                view.m_Button.onClick.Add(onClick);
-                EventDelegate onDoubleClick = new EventDelegate(new Action(() => basicMenu.OnItemDoubleClicked(itemIndex)));
-                view.m_DoubleClickButton.m_OnDoubleClick.Add(onDoubleClick);
-                basicMenu.m_MenuItems.Add(view);
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_OptionsMenu), "InitializeAutosaveMenuItems", null)]
-        private static class Panel_OptionsMenu_InitializeAutosaveMenuItems
-        {
-            private static void Postfix(Panel_OptionsMenu __instance)
-            {
-                if (!UIPrefabs.isInitialized)
-                {
-                    UIPrefabs.Initialize(__instance);
-                }
-                CreateSkyCoopSettingsTab(__instance);
-            }
-        }
-
         [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Start")]
         internal static class InitializePatch
         {
             private static void Prefix()
             {
                 ModMain.OnGameBoot();
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_OptionsMenu), "OnCancel", null)]
-        private static class Panel_OptionsMenu_OnCancel
-        {
-            private static void Postfix(Panel_OptionsMenu __instance)
-            {
-                foreach (var item in s_CustomSettings)
-                {
-                    item.Value.m_Tab.SetActive(false);
-                }
             }
         }
 

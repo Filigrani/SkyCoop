@@ -59,6 +59,11 @@ namespace SkyCoop
             { (int)Packet.Type.ClientTryInteract, ClientHandle.ClientTryInteract },
             { (int)Packet.Type.ClientInVehicle, ClientHandle.ClientInVehicle },
             { (int)Packet.Type.ClientStatusMessage, ClientHandle.ClientStatusMessage },
+            { (int)Packet.Type.ClientDeathPackAdded, ClientHandle.ClientDeathPackAdded },
+            { (int)Packet.Type.ClientDeathPackRemoved, ClientHandle.ClientDeathPackRemoved },
+            { (int)Packet.Type.ClientContainerOpen, ClientHandle.ClientContainerOpen },
+            { (int)Packet.Type.ServerContainerDataArrived, ClientHandle.ServerContainerDataArrived },
+            { (int)Packet.Type.ClientContainerStateUpdated, ClientHandle.ClientContainerStateUpdated },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

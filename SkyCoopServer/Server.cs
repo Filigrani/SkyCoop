@@ -52,6 +52,13 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientTryInteract, ServerHandle.ClientTryInteract },
             { (int)Packet.Type.ClientVehicleSeat, ServerHandle.ClientVehicleSeat },
             { (int)Packet.Type.ClientInVehicle, ServerHandle.ClientInVehicle },
+            { (int)Packet.Type.ClientDeathPackAdded, ServerHandle.ClientDeathPackAdded },
+            { (int)Packet.Type.ClientDeathPackRemoved, ServerHandle.ClientDeathPackRemoved },
+            { (int)Packet.Type.ClientContainerOpen, ServerHandle.ClientContainerOpen },
+            { (int)Packet.Type.ClientUpdateContainerData, ServerHandle.ClientUpdateContainerData },
+            { (int)Packet.Type.ClientFinishInteract, ServerHandle.ClientFinishInteract },
+            { (int)Packet.Type.ClientSetInteraction, ServerHandle.ClientSetInteraction },
+            { (int)Packet.Type.ClientContainerStateUpdated, ServerHandle.ClientContainerStateUpdated },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

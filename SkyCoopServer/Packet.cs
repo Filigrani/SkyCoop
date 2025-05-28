@@ -46,6 +46,14 @@ namespace SkyCoopServer
             ClientVehicleSeat,
             ClientInVehicle,
             ClientStatusMessage,
+            ClientDeathPackAdded,
+            ClientDeathPackRemoved,
+            ClientContainerOpen,
+            ClientUpdateContainerData,
+            ServerContainerDataArrived,
+            ClientFinishInteract,
+            ClientSetInteraction,
+            ClientContainerStateUpdated,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -269,6 +277,30 @@ namespace SkyCoopServer
             Data.m_BootsDamage = Reader.GetFloat();
 
             Data.m_TechPack = Reader.GetBool();
+
+            return Data;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.DeathPack Data)
+        {
+            Writer.Put(Data.m_Prefab);
+            Writer.Put(Data.m_GUID);
+            Writer.Put(Data.m_Owner);
+
+            Writer.Put(Data.m_Position);
+            Writer.Put(Data.m_Rotation);
+        }
+
+        public static DataStr.DeathPack GetDeathPack(this NetDataReader Reader)
+        {
+            DataStr.DeathPack Data = new DataStr.DeathPack();
+
+            Data.m_Prefab = Reader.GetString();
+            Data.m_GUID = Reader.GetString();
+            Data.m_Owner = Reader.GetString();
+
+            Data.m_Position = Reader.GetVector3();
+            Data.m_Rotation = Reader.GetQuaternion();
 
             return Data;
         }

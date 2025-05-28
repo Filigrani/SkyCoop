@@ -44,5 +44,16 @@ namespace SkyCoop
             UnityEngine.Quaternion Quaternion = new UnityEngine.Quaternion(Quat.X, Quat.Y, Quat.Z, Quat.W);
             return Quaternion;
         }
+
+        public static System.Numerics.Vector3 ConvertToSystem(this UnityEngine.Vector3 V3)
+        {
+            System.Numerics.Vector3 Vector = new System.Numerics.Vector3(V3.x, V3.y, V3.z);
+            return Vector;
+        }
+        public static System.Numerics.Quaternion ConvertToSystem(this UnityEngine.Quaternion Quat)
+        {
+            System.Numerics.Quaternion Quaternion = new System.Numerics.Quaternion(Quat.x, Quat.y, Quat.z, Quat.w);
+            return Quaternion;
+        }
     }
 }

@@ -12,7 +12,7 @@ namespace SkyCoopServer
     {
         public List<DataStr.PlayerData> m_Players = new List<DataStr.PlayerData>();
 
-        public bool m_RecursiveDebug = false;
+        public bool m_RecursiveDebug = true;
 
         private Server s_Server;
 
@@ -393,6 +393,15 @@ namespace SkyCoopServer
                 Player.m_Kills = 0;
                 Player.m_Deaths = 0;
                 Player.m_Assists = 0;
+            }
+        }
+
+        public void SetPlayerInteractionGUID(int PlayerID, string GUID)
+        {
+            DataStr.PlayerData Player = GetPlayer(PlayerID);
+            if (Player != null)
+            {
+                Player.m_InteractionGUID = GUID;
             }
         }
     }

@@ -185,6 +185,103 @@ namespace SkyCoopServer
             }
         }
 
+        public void AddContainer(string GUID, string CompressedJSON, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_Containers.ContainsKey(GUID))
+                {
+                    SceneData.m_Containers.Remove(GUID);
+                }
+                SceneData.m_Containers.Add(GUID, CompressedJSON);
+            }
+        }
+
+        public void RemoveContainer(string GUID, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_Containers.ContainsKey(GUID))
+                {
+                    SceneData.m_Containers.Remove(GUID);
+                }
+            }
+        }
+
+        public void AddDeathPack(DataStr.DeathPack Pack, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_DeathPacks.ContainsKey(Pack.m_GUID))
+                {
+                    SceneData.m_DeathPacks.Remove(Pack.m_GUID);
+                }
+                SceneData.m_DeathPacks.Add(Pack.m_GUID, Pack);
+            }
+        }
+
+        public void RemoveDeathPack(string GUID, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_DeathPacks.ContainsKey(GUID))
+                {
+                    SceneData.m_DeathPacks.Remove(GUID);
+                }
+            }
+        }
+
+        public string GetContainerContent(string GUID, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_Containers.ContainsKey(GUID))
+                {
+                    return SceneData.m_Containers[GUID];
+                }
+                return "";
+            }
+            return "";
+        }
+
+        public int GetContainerState(string GUID, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_ContainerStats.ContainsKey(GUID))
+                {
+                    return SceneData.m_ContainerStats[GUID];
+                }
+                return 0;
+            }
+            return 0;
+        }
+
+        public void SetContainerState(string GUID, int State, string SceneName)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_ContainerStats.ContainsKey(GUID))
+                {
+                    SceneData.m_ContainerStats[GUID] = State;
+                }
+            }
+        }
+
         public void SendAllOpenables(string SceneName, NetPeer Client)
         {
             LoadScene(SceneName);
@@ -209,6 +306,33 @@ namespace SkyCoopServer
                 foreach (GearDataContainer Data in SceneData.m_Gears.Values.ToList())
                 {
                     ServerSend.SendGearVisual(Data.m_Visual, Client);
+                }
+            }
+        }
+
+        public void SendAllDeathContainers(string SceneName, NetPeer Client)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+
+                foreach (string GUID in SceneData.m_DeathPacks.Keys.ToList())
+                {
+                    ServerSend.SendDeathPack(Client, SceneData.m_DeathPacks[GUID], m_ServerInstance);
+                }
+            }
+        }
+        public void SendAllContainerStates(string SceneName, NetPeer Client)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+
+                foreach (string GUID in SceneData.m_ContainerStats.Keys.ToList())
+                {
+                    ServerSend.SendContainerState(Client, GUID, SceneData.m_ContainerStats[GUID], m_ServerInstance);
                 }
             }
         }

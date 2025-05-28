@@ -509,5 +509,54 @@ namespace SkyCoopServer
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
         }
+
+        public static void SendDeathPack(NetPeer Client, DataStr.DeathPack Data, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientDeathPackAdded);
+            writer.Put(Data);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendDeathPackRemoved(NetPeer Client, string GUID, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientDeathPackRemoved);
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendContainerData(NetPeer Client, string JSON, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientContainerOpen);
+            writer.Put(JSON);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendContainerDataArrived(NetPeer Client, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ServerContainerDataArrived);
+            writer.Put(true);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendContainerState(NetPeer Client, string GUID, int State, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientContainerStateUpdated);
+            writer.Put(GUID);
+            writer.Put(State);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

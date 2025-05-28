@@ -237,12 +237,12 @@ namespace SkyCoopClient
                     GameObject Element = GameObject.Instantiate(Prefab, m_KillFeedTransform);
                     if (Element)
                     {
-                        Canvas.ForceUpdateCanvases();
                         Element.transform.GetChild(0).GetComponent<TextMeshProUGUI>().SetText(Text);
                         Element.transform.GetChild(0).GetComponent<VerticalLayoutGroup>().enabled = false;
                         Element.transform.GetChild(0).GetComponent<VerticalLayoutGroup>().enabled = true;
                         Element.transform.GetChild(0).GetComponent<ContentSizeFitter>().enabled = false;
                         Element.transform.GetChild(0).GetComponent<ContentSizeFitter>().enabled = true;
+                        Canvas.ForceUpdateCanvases();
                         UnityEngine.Object.Destroy(Element, 5.5f);
                     }
                     else
