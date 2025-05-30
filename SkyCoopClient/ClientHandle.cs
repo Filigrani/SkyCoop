@@ -398,10 +398,12 @@ namespace SkyCoop
                         if (PlayerObj && VictoryDoll)
                         {
                             VictoryDoll.gameObject.SetActive(true);
-                            PlayerObj.m_VisualData.m_ClothingData = PlayersManager.m_LocalPlayerData.m_ClothingData;
-                            PlayerObj.UpdateClothing();
-                            PlayerObj.CloneMeshSettingsToDummy(VictoryDoll);
-                            VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", i+1);
+                            VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", i + 1);
+                            Comps.NetworkPlayerDummy Dummy = VictoryDoll.AddComponent<Comps.NetworkPlayerDummy>();
+                            if (Dummy)
+                            {
+                                Dummy.ClonePlayer(PlayerObj);
+                            }
                         }
                         Obj.transform.GetChild(i+3).gameObject.SetActive(true);
                         Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(WinnersNames[i]);

@@ -9,6 +9,7 @@ using static SkyCoopServer.DataStr;
 using Harmony;
 using Il2CppRewired;
 using Il2CppTMPro;
+using UnityEngine.UIElements;
 
 namespace SkyCoop
 {
@@ -33,6 +34,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<CameraAttention>();
             ClassInjector.RegisterTypeInIl2Cpp<DeathPackComp>();
             ClassInjector.RegisterTypeInIl2Cpp<ContainerDescriptorHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayerDummy>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -665,26 +667,6 @@ namespace SkyCoop
                 }
             }
 
-            public void CloneMeshSettingsToDummy(GameObject CloneDummy)
-            {
-                foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
-                {
-                    foreach (SkinnedMeshRenderer MeshDummy in CloneDummy.GetComponentsInChildren<SkinnedMeshRenderer>())
-                    {
-                        if(MeshDummy.name == Mesh.name)
-                        {
-                            Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
-                            for (int i = 0; i < NewMatsArr.Length; i++)
-                            {
-                                NewMatsArr[i] = Mesh.materials[i];
-                            }
-                            MeshDummy.SetMaterialArray(NewMatsArr);
-                            MeshDummy.gameObject.SetActive(Mesh.gameObject.activeSelf);
-                        }
-                    }
-                }
-            }
-
             public void LoadEquipment()
             {
                 AddPlaceholderHoldingGear(this, "GEAR_Rifle", new Vector3(-0.23f, 0.32f, -0.047f), new Vector3(75, 90, 0), GearHandPose.Rifle);
@@ -750,6 +732,11 @@ namespace SkyCoop
 
                 //Pants
                 AddClothingMesh("GEAR_CargoPants");
+                AddClothingMesh("GEAR_CombatPants");
+                AddClothingMesh("GEAR_DeerSkinPants");
+                AddClothingMesh("GEAR_Jeans");
+                AddClothingMesh("GEAR_InsulatedPants");
+                AddClothingMesh("GEAR_WorkPants");
                 AddClothingMesh("GEAR_LongUnderwear"); // No UV.
                 AddClothingMesh("GEAR_LongUnderwearWool"); // No UV.
 
@@ -1183,6 +1170,89 @@ namespace SkyCoop
                             }
                         }
                     }
+                }
+            }
+        }
+        public class NetworkPlayerDummy : MonoBehaviour
+        {
+            public NetworkPlayerDummy(IntPtr ptr) : base(ptr) { }
+            public NetworkPlayer m_Original;
+            public ClothingData m_ClothingData;
+
+            public List<GameObject> m_ClothingMeshes = new List<GameObject>();
+
+            public GameObject m_HairMesh = null;
+            public GameObject m_BeardMesh = null;
+            public GameObject m_EyebrowsMesh = null;
+
+            public bool m_IsMe = false;
+
+            public void ClonePlayer(NetworkPlayer Player)
+            {
+                m_HairMesh = transform.FindChild("Hair_mesh").gameObject;
+                m_BeardMesh = transform.FindChild("Beard_mesh").gameObject;
+                m_EyebrowsMesh = transform.FindChild("Eyebrows_mesh").gameObject;
+                if (Player != null)
+                {
+                    m_Original = Player;
+
+                    if (ModMain.Client != null && m_Original.m_PlayerID == ModMain.Client.GetMyId())
+                    {
+                        m_ClothingData = PlayersManager.m_LocalPlayerData.m_ClothingData;
+                    }
+                    else
+                    {
+                        m_ClothingData = m_Original.m_VisualData.m_ClothingData;
+                    }
+                    foreach (GameObject OriginalMesh in m_Original.m_ClothingMeshes)
+                    {
+                        AddClothingMesh(OriginalMesh);
+                    }
+                    UpdateClothing();
+                }
+            }
+
+            public void AddClothingMesh(GameObject OriginalModelMesh)
+            {
+                Transform T = transform.FindChild(OriginalModelMesh.name);
+                if (T)
+                {
+                    m_ClothingMeshes.Add(T.gameObject);
+                    Renderer Mesh = T.GetComponent<Renderer>();
+                    Renderer OriginalMesh = OriginalModelMesh.GetComponent<Renderer>();
+
+                    Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(OriginalMesh.materials.Length);
+                    for (int i = 0; i < NewMatsArr.Length; i++)
+                    {
+                        NewMatsArr[i] = OriginalMesh.materials[i];
+                    }
+                    Mesh.SetMaterialArray(NewMatsArr);
+                }
+            }
+
+            public void UpdateClothing()
+            {
+                if (m_Original)
+                {
+                    if (m_HairMesh)
+                    {
+                        m_HairMesh.SetActive(m_Original.m_HairMesh.activeSelf);
+                    }
+                    if (m_BeardMesh)
+                    {
+                        m_BeardMesh.SetActive(m_Original.m_BeardMesh.activeSelf);
+                    }
+                    if (m_EyebrowsMesh)
+                    {
+                        m_EyebrowsMesh.SetActive(m_Original.m_EyebrowsMesh.activeSelf);
+                    }
+                }
+
+                ClothingData Data = m_ClothingData;
+                foreach (GameObject Mesh in m_ClothingMeshes)
+                {
+                    bool HasIt = Data.HasThis(Mesh.name);
+                    Mesh.SetActive(HasIt);
                 }
             }
         }

@@ -408,7 +408,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1676286548619810992, guid: 2d79b7373e4d03d43a5e71b3a81796df, type: 3}
       propertyPath: m_RootOrder
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 2712052963433648320, guid: 2d79b7373e4d03d43a5e71b3a81796df, type: 3}
       propertyPath: m_AnchorMax.y
@@ -448,7 +448,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3658773214159908600, guid: 2d79b7373e4d03d43a5e71b3a81796df, type: 3}
       propertyPath: m_RootOrder
-      value: 2
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5126002347304057033, guid: 2d79b7373e4d03d43a5e71b3a81796df, type: 3}
       propertyPath: m_Name
@@ -927,7 +927,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1121188982629953403, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: m_IsActive
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1136232203174425918, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: DopplerLevel
@@ -1187,7 +1187,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2873063784396517079, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: m_IsActive
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3095666113213293708, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: m_LocalPosition.x
