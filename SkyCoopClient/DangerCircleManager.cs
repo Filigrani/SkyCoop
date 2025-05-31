@@ -9,34 +9,22 @@ namespace SkyCoop
 {
     public static class DangerCircleManager
     {
-        public static GameObject s_DangerCircleObject;
-        public static Vector3 s_LastCenter = Vector3.zero;
-        public static Vector3 s_LastScale = Vector3.zero;
-        public const float c_Smoother = 7f;
+        public static Comps.DangerCircleZone s_DangerCircle;
         
         public static void HandleDangerCircleSync(Vector3 Center, float Radius)
         {
-            if(s_DangerCircleObject == null)
+            if(s_DangerCircle == null)
             {
-                s_DangerCircleObject = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>("Zone"));
+                GameObject Obj = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>("Zone"));
+                Comps.DangerCircleZone Comp = Obj.AddComponent<Comps.DangerCircleZone>();
+                s_DangerCircle = Comp;
+
             }
 
-            if (s_DangerCircleObject)
+            if (s_DangerCircle)
             {
-                s_LastScale = new Vector3 (Radius, Radius, 4300);
-                s_LastCenter = Center;
-
-                s_DangerCircleObject.transform.localScale = s_LastScale;
-                s_DangerCircleObject.transform.position = s_LastCenter;
-            }
-        }
-
-        public static void Update()
-        {
-            if (s_DangerCircleObject)
-            {
-                s_DangerCircleObject.transform.localScale = Vector3.Lerp(s_DangerCircleObject.transform.localScale, s_LastScale, c_Smoother * Time.deltaTime);
-                s_DangerCircleObject.transform.position = Vector3.Lerp(s_DangerCircleObject.transform.position, s_LastCenter, c_Smoother * Time.deltaTime);
+                s_DangerCircle.m_TargetScale = Radius;
+                s_DangerCircle.m_Center = Center;
             }
         }
     }

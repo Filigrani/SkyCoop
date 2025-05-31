@@ -21,7 +21,7 @@ namespace SkyCoopServer
         public PlayersDataManager m_PlayersData;
         public ScenesDataManager m_ScenesData;
 
-        private Timer s_EverySecondTimer = null;
+        private DateTime s_NextSecondCall;
 
 
         public delegate void PacketHandler(NetPeer Client, NetDataReader Reader, Server ServerInstance);
@@ -82,7 +82,7 @@ namespace SkyCoopServer
             m_PlayersData = new PlayersDataManager(this);
             m_ScenesData = new ScenesDataManager(this);
 
-            s_EverySecondTimer = new Timer(EverySecond, null, 1000, 1000);
+            s_NextSecondCall = DateTime.Now.AddSeconds(1);
         }
 
         public List<int> GetClientsIndexs()
@@ -128,25 +128,39 @@ namespace SkyCoopServer
             {
                 m_Instance.PollEvents();
             }
+            if(DateTime.Now >= s_NextSecondCall)
+            {
+                s_NextSecondCall = DateTime.Now.AddSeconds(1);
+                EverySecond();
+            }
         }
 
-        public void EverySecond(object obj)
+        public bool CanRespawn()
         {
-            if(m_Rules != null && m_Rules.m_Time > 0)
-            {
-                m_Rules.m_Time = m_Rules.m_Time - 1;
-                ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
-                if (m_Rules.m_Time == 0)
-                {
-                    m_PendingGameModeOverTimer = 25;
+            return m_Rules != null && m_Rules.m_Respawns;
+        }
 
-                    foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+        public void EverySecond()
+        {
+            //SkyCoopServer.Logger.Log("EverySecond");
+            if(m_Rules != null)
+            {
+                if(m_Rules.m_Time > 0)
+                {
+                    m_Rules.m_Time = m_Rules.m_Time - 1;
+                    ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
+                    if (m_Rules.m_Time == 0)
                     {
-                        ServerSend.SendFreeze(Peer);
-                        m_PlayersData.GetPlayer(Peer.Id).m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
-                        ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), FilesManager.GetVictoryPosition(m_Config.m_GameMode, m_Config.m_SceneToSpawn), this);
+                        m_PendingGameModeOverTimer = 25;
+
+                        foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                        {
+                            ServerSend.SendFreeze(Peer);
+                            m_PlayersData.GetPlayer(Peer.Id).m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
+                            ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), FilesManager.GetVictoryPosition(m_Config.m_GameMode, m_Config.m_SceneToSpawn), this);
+                        }
+                        m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
                     }
-                    m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
                 }
             }
             if(m_PendingGameModeOverTimer > 0)
@@ -154,11 +168,13 @@ namespace SkyCoopServer
                 m_PendingGameModeOverTimer--;
                 if(m_PendingGameModeOverTimer == 0)
                 {
+                    m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
                     ChangeGameMode(m_Config.m_GameMode);
                     m_PlayersData.ResetFrags();
                 }
             }
-            m_ScenesData.UnloadSceneNobodyOn(this);
+            //m_ScenesData.UnloadSceneNobodyOn(this);
+            m_ScenesData.UpdateZone();
         }
 
         public string GetRandomSceneForGameMode(string GameMode)

@@ -6,6 +6,7 @@ using System.Net;
 using SkyCoop;
 using UnityEngine;
 using Il2CppRewired;
+using SkyCoopServer;
 
 namespace SkyCoopClient
 {
@@ -20,7 +21,9 @@ namespace SkyCoopClient
         public VoiceChatInterface VoiceInterface = new VoiceChatInterface(stereo: false, enableNoiseSuppression: false);
         public BasicMicrophoneRecorder MicrophoneRecorder = new BasicMicrophoneRecorder(stereo: false);
         public int BufferSamples = VoiceUtilities.GetSampleSize(1) / 2;
-        public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer = new Dictionary<int, CircularAudioBuffer<float>>();
+        public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer3D = new Dictionary<int, CircularAudioBuffer<float>>();
+        public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer2D = new Dictionary<int, CircularAudioBuffer<float>>();
+        public Dictionary<int, CircularAudioBuffer<float>> VoiceBufferRadio = new Dictionary<int, CircularAudioBuffer<float>>();
         public CircularAudioBuffer<float> m_AnnouncerBuffer = new CircularAudioBuffer<float>();
 
         public AudioSource m_AnnoncerAudioSource = null;
@@ -146,6 +149,7 @@ namespace SkyCoopClient
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
         {
             int clientId = Reader.GetInt(); //id
+            DataStr.PlayerHearing Hearing = (DataStr.PlayerHearing)Reader.GetInt();
             byte[] Data = new byte[Reader.GetInt()];
             Reader.GetBytes(Data, Data.Length);
 
@@ -155,17 +159,50 @@ namespace SkyCoopClient
 
             //SkyCoop.Logger.Log("ExecuteVoice Recived " + samples.Length);
 
-            if (VoiceBuffer.ContainsKey(clientId)) 
+            switch (Hearing)
             {
-                CircularAudioBuffer<float> buffer = VoiceBuffer[clientId];
-                buffer.PushChunk(samples);
-                VoiceBuffer[clientId] = buffer;
-            }
-            else
-            {
-                CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
-                buffer.PushChunk(samples);
-                VoiceBuffer.Add(clientId, buffer);
+                case DataStr.PlayerHearing.Proximity:
+                    if (VoiceBuffer3D.ContainsKey(clientId))
+                    {
+                        CircularAudioBuffer<float> buffer = VoiceBuffer3D[clientId];
+                        buffer.PushChunk(samples);
+                        VoiceBuffer3D[clientId] = buffer;
+                    }
+                    else
+                    {
+                        CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
+                        buffer.PushChunk(samples);
+                        VoiceBuffer3D.Add(clientId, buffer);
+                    }
+                    break;
+                case DataStr.PlayerHearing.Global:
+                    if (VoiceBuffer2D.ContainsKey(clientId))
+                    {
+                        CircularAudioBuffer<float> buffer = VoiceBuffer2D[clientId];
+                        buffer.PushChunk(samples);
+                        VoiceBuffer2D[clientId] = buffer;
+                    }
+                    else
+                    {
+                        CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
+                        buffer.PushChunk(samples);
+                        VoiceBuffer2D.Add(clientId, buffer);
+                    }
+                    break;
+                case DataStr.PlayerHearing.Radio:
+                    if (VoiceBufferRadio.ContainsKey(clientId))
+                    {
+                        CircularAudioBuffer<float> buffer = VoiceBufferRadio[clientId];
+                        buffer.PushChunk(samples);
+                        VoiceBufferRadio[clientId] = buffer;
+                    }
+                    else
+                    {
+                        CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
+                        buffer.PushChunk(samples);
+                        VoiceBufferRadio.Add(clientId, buffer);
+                    }
+                    break;
             }
         }
 
@@ -226,6 +263,46 @@ namespace SkyCoopClient
             };
             MicrophoneRecorder.StartRecording();
         }
+        public void HandleVoiceBuffer(Dictionary<int, CircularAudioBuffer<float>> Buffer, DataStr.PlayerHearing AudioSourceType)
+        {
+            if (Buffer.Count > 0)
+            {
+                foreach (var clientBuffer in Buffer.ToArray())
+                {
+                    //SkyCoop.Logger.Log(ConsoleColor.Magenta, $"VoiceBuffer id:{clientBuffer.Key} has {clientBuffer.Value.ChunksAvailable} chunck");
+                    if (clientBuffer.Value.ChunksAvailable > 0)
+                    {
+                        Comps.NetworkPlayer player = PlayersManager.GetPlayer(clientBuffer.Key);
+
+                        AudioSource audioSource = null;
+
+                        switch (AudioSourceType)
+                        {
+                            case DataStr.PlayerHearing.Proximity:
+                                audioSource = player.m_AudioSource2D;
+                                break;
+                            case DataStr.PlayerHearing.Global:
+                                audioSource = player.m_AudioSource2D;
+                                break;
+                            case DataStr.PlayerHearing.Radio:
+                                audioSource = player.m_AudioSourceRadio;
+                                break;
+                        }
+                        if (audioSource && !audioSource.isPlaying)
+                        {
+                            CircularAudioBuffer<float> buffer = clientBuffer.Value;
+                            AudioClip clip = AudioClip.Create("Voice", buffer.BufferLength, 1, 48000, true, false);
+                            float[] voice = buffer.ReadAllBuffer();
+                            voice[voice.Length - 1] = 0f;
+                            clip.SetData(voice, 0);
+                            audioSource.PlayOneShot(clip, 3);
+                            player.SetVoiceSampleForAnimation(clip);
+                            Buffer[clientBuffer.Key] = buffer;
+                        }
+                    }
+                }
+            }
+        }
 
         public void Update()
         {
@@ -233,28 +310,10 @@ namespace SkyCoopClient
 
             if (m_IsReady)
             {
-                if (VoiceBuffer.Count > 0)
-                {
-                    foreach (var clientBuffer in VoiceBuffer.ToList())
-                    {
-                        //SkyCoop.Logger.Log(ConsoleColor.Magenta, $"VoiceBuffer id:{clientBuffer.Key} has {clientBuffer.Value.ChunksAvailable} chunck");
-                        if (clientBuffer.Value.ChunksAvailable > 0)
-                        {
-                            Comps.NetworkPlayer player = PlayersManager.GetPlayer(clientBuffer.Key);
-                            if (!player.m_AudioSource3D.isPlaying)
-                            {
-                                CircularAudioBuffer<float> buffer = clientBuffer.Value;
-                                AudioClip clip = AudioClip.Create("Voice", buffer.BufferLength, 1, 48000, true, false);
-                                float[] voice = buffer.ReadAllBuffer();
-                                voice[voice.Length - 1] = 0f;
-                                clip.SetData(voice, 0);
-                                player.m_AudioSource3D.PlayOneShot(clip, 3);
-                                player.SetVoiceSampleForAnimation(clip);
-                                VoiceBuffer[clientBuffer.Key] = buffer;
-                            }
-                        }
-                    }
-                }
+
+                HandleVoiceBuffer(VoiceBuffer3D, DataStr.PlayerHearing.Proximity);
+                HandleVoiceBuffer(VoiceBuffer2D, DataStr.PlayerHearing.Global);
+                HandleVoiceBuffer(VoiceBufferRadio, DataStr.PlayerHearing.Radio);
 
                 if (m_AnnouncerBuffer.ChunksAvailable > 0)
                 {

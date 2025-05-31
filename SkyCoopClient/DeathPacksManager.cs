@@ -85,6 +85,12 @@ namespace SkyCoopClient
 
         public static void CreateMyDeathPack()
         {
+            if (ModMain.Client == null || !ModMain.Client.m_Rules.m_DeathPacks)
+            {
+                return;
+            }
+
+
             string Prefab = "CONTAINER_Backpack";
             string GUID = Guid.NewGuid().ToString();
             string OwnerName = ModMain.GetNickName();

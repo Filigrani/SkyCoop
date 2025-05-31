@@ -21,6 +21,7 @@ namespace SkyCoop
         public static Comps.PlayerDamageColider.DamageZone m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
         public static GameObject s_LastTryInteractionObject = null;
         public static bool s_ForceUpdateClothing = false;
+        public static bool s_Spectator = false;
 
         public class LocalPlayerData
         {
@@ -683,6 +684,20 @@ namespace SkyCoop
             GameManager.GetBloodLossComponent().Cure();
         }
 
+        public static void RespawnAsSpecator()
+        {
+            GameManager.GetConditionComponent().m_NeverDie = false;
+            s_Spectator = true;
+            GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
+            GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+
+            ExitVehicleForced();
+            FullyCure();
+
+            MenuHook.RemovePleaseWait();
+            InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
+        }
+
         public static void ExitVehicleForced()
         {
             if (GameManager.GetPlayerInVehicle().m_VehicleDoorUsed)
@@ -695,6 +710,9 @@ namespace SkyCoop
 
         public static void RespawnOnPoint(Vector3 Position, Quaternion Rotation, bool RespawnAnim)
         {
+            GameManager.GetConditionComponent().m_NeverDie = false;
+            s_Spectator = false;
+
             GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
             ExitVehicleForced();
 
@@ -791,6 +809,122 @@ namespace SkyCoop
             else
             {
                 HUDMessage.AddMessage("Failed, interaction object no longer exist!", true, true);
+            }
+        }
+
+        public static void DeactivateAllSpectatingTargets()
+        {
+            foreach (Comps.NetworkPlayer Player in s_Players)
+            {
+                if (Player && Player.m_CameraAttention)
+                {
+                    Player.m_CameraAttention.enabled = false; 
+                }
+            }
+        }
+
+        public static bool SetFirstValidSpectatingTarget(int StartIndex = 0, bool Reverse = false)
+        {
+            if (!Reverse)
+            {
+                for (int i = StartIndex; i < s_Players.Count; i++)
+                {
+                    Comps.NetworkPlayer Player = s_Players[i];
+                    if (Player && Player.m_CameraAttention)
+                    {
+                        if (!Player.m_CameraAttention.enabled && Player.gameObject.activeSelf && Player.m_Action != Comps.NetworkPlayer.Actions.Death)
+                        {
+                            DeactivateAllSpectatingTargets();
+                            HUDMessage.AddMessage($"YOU SPECTATING {Player.m_PlayerName}");
+                            GameAudioManager.PlayGuiConfirm();
+                            Player.m_CameraAttention.enabled = true;
+                            return true;
+                        }
+                    }
+                }
+            }
+            else
+            {
+                for (int i = StartIndex; i >= 0; i--)
+                {
+                    Comps.NetworkPlayer Player = s_Players[i];
+                    if (Player && Player.m_CameraAttention)
+                    {
+                        if (!Player.m_CameraAttention.enabled && Player.gameObject.activeSelf && Player.m_Action != Comps.NetworkPlayer.Actions.Death)
+                        {
+                            DeactivateAllSpectatingTargets();
+                            HUDMessage.AddMessage($"YOU SPECTATING {Player.m_PlayerName}");
+                            GameAudioManager.PlayGuiConfirm();
+                            Player.m_CameraAttention.enabled = true;
+                            return true;
+                        }
+                    }
+                }
+            }
+            
+
+            return false;
+        }
+
+        public static int GetSpectatorIndex()
+        {
+            for (int i = 0; i < s_Players.Count; i++)
+            {
+                Comps.NetworkPlayer Player = s_Players[i];
+                if (Player && Player.m_CameraAttention)
+                {
+                    if (Player.m_CameraAttention.enabled)
+                    {
+                        return i;
+                    }
+                }
+            }
+            return 0;
+        }
+
+        public static void NextSpectatingTarget()
+        {
+            int CurrentSpectatingTarget = GetSpectatorIndex();
+
+            bool Result = SetFirstValidSpectatingTarget(CurrentSpectatingTarget);
+            if (!Result)
+            {
+                bool Result2 = SetFirstValidSpectatingTarget();
+                if (!Result2)
+                {
+                    HUDMessage.AddMessage($"NO PLAYERS TO SPECTATE", true, true);
+                    GameAudioManager.PlayGUIError();
+                }
+            }
+        }
+
+        public static void PreviousSpectatingTarget()
+        {
+            int CurrentSpectatingTarget = GetSpectatorIndex();
+
+            bool Result = SetFirstValidSpectatingTarget(CurrentSpectatingTarget, true);
+            if (!Result)
+            {
+                bool Result2 = SetFirstValidSpectatingTarget(s_Players.Count-1, true);
+                if (!Result2)
+                {
+                    HUDMessage.AddMessage($"NO PLAYERS TO SPECTATE", true, true);
+                    GameAudioManager.PlayGUIError();
+                }
+            }
+        }
+
+        public static void SpectatorControls()
+        {
+            if (s_Spectator)
+            {
+                if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
+                {
+                    NextSpectatingTarget();
+                }else if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
+                {
+                    PreviousSpectatingTarget();
+                }
             }
         }
 

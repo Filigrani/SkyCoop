@@ -54,6 +54,8 @@ namespace SkyCoopServer
             ClientFinishInteract,
             ClientSetInteraction,
             ClientContainerStateUpdated,
+            ClientHUDTimerPrefix,
+            ClientRespawnAsSpectator,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -166,6 +168,8 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_PVP);
             Writer.Put(Rules.m_StartingItems);
             Writer.Put(Rules.m_HUDMode);
+            Writer.Put(Rules.m_DeathPacks);
+            Writer.Put(Rules.m_Respawns);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -176,6 +180,8 @@ namespace SkyCoopServer
             Rules.m_PVP = Reader.GetBool();
             Rules.m_StartingItems = Reader.GetStartingGearList();
             Rules.m_HUDMode = Reader.GetString();
+            Rules.m_DeathPacks = Reader.GetBool();
+            Rules.m_Respawns = Reader.GetBool();
 
             return Rules;
         }

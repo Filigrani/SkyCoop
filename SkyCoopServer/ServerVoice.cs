@@ -79,11 +79,15 @@ namespace SkyCoopServer
         {
             foreach (NetPeer _Peer in m_Instance.ConnectedPeerList)
             {
-                if (m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(ClientId, _Peer.Id))
+                DataStr.PlayerHearing HearingMode = m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(ClientId, _Peer.Id);
+
+
+                if (HearingMode != DataStr.PlayerHearing.None)
                 {
                     NetDataWriter writer = new NetDataWriter();
                     writer.Put(0);
                     writer.Put(ClientId);
+                    writer.Put((int)HearingMode);
                     writer.Put(Data.Length);
                     writer.Put(Data);
                     _Peer.Send(writer, DeliveryMethod.Unreliable);

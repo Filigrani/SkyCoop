@@ -17,6 +17,7 @@ namespace SkyCoopClient
         public static List<UISprite> s_SideIcons = new List<UISprite>();
         public static List<UILabel> s_SideLables = new List<UILabel>();
         public static List<string> s_SideLablesPrefix = new List<string>() { "", "", "", "" };
+        public static string s_TimerPrefix = "Time Remaining";
         public static UILabel s_BottomLable = null;
 
         public static void Reintilize()
@@ -123,6 +124,11 @@ namespace SkyCoopClient
             s_BottomLable.gameObject.SetActive(true);
             s_BottomLable.text = Text;
         }
+
+        public static void SetTimerPrefix(string Text)
+        {
+            s_TimerPrefix = Text;
+        }
         public static void UpdateGameModeTimer(float TimeLeft)
         {
             if (s_HUD)
@@ -137,7 +143,8 @@ namespace SkyCoopClient
                     UnityEngine.Object.Destroy(Loca);
                 }
 
-                Lable.text = "Time remaining";
+                Lable.text = s_TimerPrefix;
+
                 s_HUD.m_StartCountdownLabel.text = string.Format("{0:0}:{1:00}", Minutes, Seconds);
             }
         }

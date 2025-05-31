@@ -520,7 +520,16 @@ namespace SkyCoopClient
             {
                 __instance.m_CampfireGrid.gameObject.SetActive(false);
                 UILocalize RespawnButton = __instance.m_CheatDeathButtonWidget.transform.GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
-                RespawnButton.key = "Respawn";
+                
+                if(ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns)
+                {
+                    RespawnButton.key = "Respawn";
+                }
+                else
+                {
+                    RespawnButton.key = "Spectate";
+                }
+                
                 RespawnButton.OnLocalize();
 
                 UILocalize QuitButton = __instance.m_CheatDeathButtonWidget.transform.parent.GetChild(1).GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();

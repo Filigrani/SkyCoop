@@ -49,6 +49,8 @@ namespace SkyCoopServer
             Rules.m_StartingItems = Save.StartingGear;
             Rules.m_Time = Save.Time;
             Rules.m_HUDMode = Save.HUDMode;
+            Rules.m_Respawns = Save.Respawns;
+            Rules.m_DeathPacks = Save.DeathPacks;
             return Rules;
         }
 

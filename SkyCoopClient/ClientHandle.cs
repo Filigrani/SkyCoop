@@ -54,8 +54,9 @@ namespace SkyCoop
             ModMain.Client.ProcessAllDelayedPackages();
             MenuHook.RemovePleaseWait();
             ModMain.SetupSurvivalSettings(CFG.m_ExperienceMode, CFG.m_Seed, CFG.m_StartingRegion, CFG.m_SceneToSpawn);
+            PlayersManager.DeactivateAllSpectatingTargets();
 
-            if(CFG.m_VoicePort != 0)
+            if (CFG.m_VoicePort != 0)
             {
                 Task.Run(() => { ModMain.Client.ConnectToServerVoice(CFG.m_VoicePort); });
             }
@@ -81,6 +82,7 @@ namespace SkyCoop
         public static void ServerChangesMap(NetDataReader Reader)
         {
             DataStr.ServerConfig CFG = ModMain.Client.m_Config;
+            PlayersManager.DeactivateAllSpectatingTargets();
             ModMain.ChangeMap();
         }
 
@@ -229,6 +231,7 @@ namespace SkyCoop
             Quaternion Quaternion = Reader.GetQuaternionUnity();
             bool RespawnAnim = Reader.GetBool();
 
+            PlayersManager.DeactivateAllSpectatingTargets();
             PlayersManager.RespawnOnPoint(Position, Quaternion, RespawnAnim);
         }
 
@@ -476,6 +479,17 @@ namespace SkyCoop
             int State = Reader.GetInt();
 
             ContainersSync.HandleStateUpdated(GUID, State);
+        }
+
+        public static void ClientHUDTimerPrefix(NetDataReader Reader)
+        {
+            string Prefix = Reader.GetString();
+            GameModeHUD.SetTimerPrefix(Prefix);
+        }
+
+        public static void ClientRespawnAsSpectator(NetDataReader Reader)
+        {
+            PlayersManager.RespawnAsSpecator();
         }
     }
 }

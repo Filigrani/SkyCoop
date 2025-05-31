@@ -1,16 +1,16 @@
 ﻿using LiteNetLib;
+using System;
+using System.Linq;
 using System.Numerics;
 using System.Reflection;
 using static SkyCoopServer.DataStr;
-using System.Text.Json;
-using System.Drawing;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
     public class PlayersDataManager
     {
         public List<DataStr.PlayerData> m_Players = new List<DataStr.PlayerData>();
+        public Dictionary<string, PlayersSquad> m_Squads = new Dictionary<string, PlayersSquad>();
 
         public bool m_RecursiveDebug = false;
 
@@ -73,6 +73,11 @@ namespace SkyCoopServer
             {
                 Player.m_Position = Position;
 
+                if(Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
+
                 if(Broadcast)
                 {
                     if (s_Server != null)
@@ -97,6 +102,11 @@ namespace SkyCoopServer
             if (Player != null)
             {
                 Player.m_Rotation = Rotation;
+
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
 
                 if (Broadcast)
                 {
@@ -148,6 +158,11 @@ namespace SkyCoopServer
                 Player.m_VisualData.m_GearInHands = GearName;
                 Player.m_VisualData.m_GearVariant = GearVariant;
 
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
+
                 if (Broadcast)
                 {
                     if (s_Server != null)
@@ -178,7 +193,10 @@ namespace SkyCoopServer
                     if (OtherPlayerID != Client.Id || m_RecursiveDebug)
                     {
                         DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
-                        ServerSend.SendPlayerSceneNotification(Client, OtherPlayer.m_Scene == SceneName, OtherPlayerID);
+                        if (OtherPlayer.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                        {
+                            ServerSend.SendPlayerSceneNotification(Client, OtherPlayer.m_Scene == SceneName, OtherPlayerID);
+                        }
                     }
                 }
             }
@@ -214,6 +232,11 @@ namespace SkyCoopServer
             {
                 Player.m_VisualData.m_Crouch = CrouchState;
 
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
+
                 if (Broadcast)
                 {
                     if (s_Server != null)
@@ -242,6 +265,11 @@ namespace SkyCoopServer
             {
                 Player.m_VisualData.m_InVehicle = InVehicle;
 
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
+
                 if (Broadcast)
                 {
                     if (s_Server != null)
@@ -263,28 +291,43 @@ namespace SkyCoopServer
             }
         }
 
-        public bool PlayerCanHearOtherPlayer(int SpeakerID, int ListenerID)
+        public PlayerHearing PlayerCanHearOtherPlayer(int SpeakerID, int ListenerID)
         {
             if(SpeakerID == ListenerID)
             {
-                return m_RecursiveDebug;
+                return PlayerHearing.Proximity;
             }
             
             DataStr.PlayerData Speaker = GetPlayer(SpeakerID);
             DataStr.PlayerData Listener = GetPlayer(ListenerID);
             if (Speaker != null && Listener != null)
             {
-
-                //TODO: If Speaker and Listener are dead, always return true, because spectators must be able to hear each other.
-
-
-                if (Speaker.m_Scene == Listener.m_Scene) // For now mostly just to prevent player for hearing others during loading.
+                if((Speaker.m_GamePlayState == PlayerData.GamePlayState.Unassigned || Speaker.m_GamePlayState == PlayerData.GamePlayState.Spectator) && 
+                    Listener.m_GamePlayState == PlayerData.GamePlayState.Unassigned || Listener.m_GamePlayState == PlayerData.GamePlayState.Spectator)
                 {
-                    return Vector3.Distance(Speaker.m_Position, Listener.m_Position) < ServerVoice.c_MaxProximityChatDistance;
+                    return PlayerHearing.Global;
+                }
+
+                if (Speaker.m_Scene == Listener.m_Scene)
+                {
+                    if(Vector3.Distance(Speaker.m_Position, Listener.m_Position) < ServerVoice.c_MaxProximityChatDistance)
+                    {
+                        return PlayerHearing.Proximity;
+                    }
+                    else
+                    {
+                        string SpeakerSquad = GetPlayerSquadIn(SpeakerID);
+                        string ListnerSquad = GetPlayerSquadIn(ListenerID);
+
+                        if(!string.IsNullOrEmpty(SpeakerSquad) && !string.IsNullOrEmpty(ListnerSquad) && SpeakerSquad == ListnerSquad)
+                        {
+                            return PlayerHearing.Radio;
+                        }
+                    }
                 }
             }
 
-            return false;
+            return PlayerHearing.None;
         }
         public void PlayerChangeAction(int Index, int Action, bool Broadcast = true)
         {
@@ -292,6 +335,11 @@ namespace SkyCoopServer
             if (Player != null)
             {
                 Player.m_VisualData.m_LatAction = Action;
+
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
 
                 if (Broadcast)
                 {
@@ -318,6 +366,11 @@ namespace SkyCoopServer
             DataStr.PlayerData Player = GetPlayer(Index);
             if (Player != null)
             {
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
+
                 if (Broadcast)
                 {
                     if (s_Server != null)
@@ -349,6 +402,19 @@ namespace SkyCoopServer
                 {
                     ServerSend.SendPlayerSceneNotification(Peer, false, PlayerID);
                 }
+            }
+            List<string> SquadsToDismember = new List<string>();
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                Squad.RemovePlayer(PlayerID);
+                if(Squad.m_Players.Count == 0)
+                {
+                    SquadsToDismember.Add(Squad.m_Name);
+                }
+            }
+            foreach (string SquadNameToDismember in SquadsToDismember)
+            {
+                m_Squads.Remove(SquadNameToDismember);
             }
             ServerSend.SendClientStatus(PlayerID, 0, s_Server);
         }
@@ -403,6 +469,113 @@ namespace SkyCoopServer
             {
                 Player.m_InteractionGUID = GUID;
             }
+        }
+
+        public void AddPlayerToSquad(string SquadName, int PlayerID)
+        {
+            if (!m_Squads.ContainsKey(SquadName))
+            {
+                m_Squads[SquadName].AddPlayer(PlayerID);
+            }
+        }
+
+        public void RemovePlayerFromSquad(string SquadName, int PlayerID)
+        {
+            if (!m_Squads.ContainsKey(SquadName))
+            {
+                m_Squads[SquadName].AddPlayer(PlayerID);
+            }
+        }
+
+        public bool CanAddPlayerToSquad(string SquadName, int PlayerID)
+        {
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                if (Squad.HasPlayer(PlayerID))
+                {
+                    return false;
+                }
+            }
+            return true;
+        }
+
+        public string GetPlayerSquadIn(int PlayerID)
+        {
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                if (Squad.HasPlayer(PlayerID))
+                {
+                    return Squad.m_Name;
+                }
+            }
+            return "";
+        }
+
+        public string GetRandomSquadName()
+        {
+            int MaxAttempts = 5;
+            int CurrentAttempt = 1;
+            List<string> PossibleNames = new List<string>()
+            {
+                "Alpha",
+                "Bravo",
+                "Charlie",
+                "Delta",
+                "Echo",
+                "Foxtrot",
+                "Golf",
+                "Hotel",
+                "India",
+                "Juliet",
+                "Kilo",
+                "Lima",
+                "Mike",
+                "November",
+                "Oscar",
+                "Papa",
+                "Quebec",
+                "Romeo",
+                "Sierra",
+                "Tango",
+                "Uniform",
+                "Victor",
+                "Whiskey",
+                "X-ray",
+                "Yankee",
+                "Zulu",
+                "Fijma",
+                "Shpingalets",
+                "Dogma",
+                "Cinema",
+                "Sintarians",
+            };
+            System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
+            while (CurrentAttempt <= MaxAttempts)
+            {
+                string SquadName = PossibleNames[RNG.Next(0, PossibleNames.Count)];
+                if (!m_Squads.ContainsKey(SquadName))
+                {
+                    return SquadName;
+                }
+                CurrentAttempt++;
+            }
+            return Guid.NewGuid().ToString();
+        }
+
+        public PlayersSquad CreateSquad()
+        {
+            return CreateSquad(GetRandomSquadName());
+        }
+
+        public PlayersSquad CreateSquad(string SquadName)
+        {
+            if (!m_Squads.ContainsKey(SquadName))
+            {
+                PlayersSquad NewSquad = new PlayersSquad(SquadName);
+                m_Squads.Add(SquadName, NewSquad);
+                return NewSquad;
+            }
+            return null;
         }
     }
 }

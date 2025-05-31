@@ -48,7 +48,7 @@ namespace SkyCoopServer
 
                 if (Data != null && Data.m_ActiveZone != null)
                 {
-                    Data.m_ActiveZone.Dispose();
+                    Data.m_ActiveZone = null;
                 }
 
                 m_LoadedScenes.Remove(SceneName);
@@ -71,6 +71,7 @@ namespace SkyCoopServer
                 if (CanUnload)
                 {
                     UnloadScene(LoadedSceneName);
+                    SkyCoopServer.Logger.Log($"Scene unloaded because no body on there {LoadedSceneName}");
                 }
             }
         }
@@ -180,7 +181,8 @@ namespace SkyCoopServer
                 SceneData SceneData = m_LoadedScenes[SceneName];
                 if (SceneData.m_ActiveZone != null)
                 {
-                    ServerSend.SendZoneUpdate(Client, SceneName, SceneData.m_ActiveZone.m_Config.ActualCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
+                    ServerSend.SendZoneUpdate(Client, SceneName, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
+                    ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
                 }
             }
         }
@@ -333,6 +335,17 @@ namespace SkyCoopServer
                 foreach (string GUID in SceneData.m_ContainerStats.Keys.ToList())
                 {
                     ServerSend.SendContainerState(Client, GUID, SceneData.m_ContainerStats[GUID], m_ServerInstance);
+                }
+            }
+        }
+
+        public void UpdateZone()
+        {
+            foreach (SceneData Data in m_LoadedScenes.Values.ToList())
+            {
+                if (Data.m_ActiveZone != null)
+                {
+                    Data.m_ActiveZone.Update();
                 }
             }
         }

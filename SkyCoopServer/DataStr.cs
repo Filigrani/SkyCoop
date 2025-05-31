@@ -4,6 +4,8 @@ using System.IO.Compression;
 using System.Numerics;
 using System.Text.RegularExpressions;
 using System.Text;
+using System.IO;
+using System.Linq;
 
 namespace SkyCoopServer
 {
@@ -18,7 +20,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "LakeRegion";
-            public string m_GameMode = "DM";
+            public string m_GameMode = "Shrink";
         }
 
         public class GameRulesSave
@@ -28,6 +30,8 @@ namespace SkyCoopServer
             public List<StartingGearData> StartingGear { get; set; }
             public int Time { get; set; }
             public string HUDMode { get; set; }
+            public bool DeathPacks { get; set; }
+            public bool Respawns { get; set; }
         }
 
         public class GameRules
@@ -37,6 +41,8 @@ namespace SkyCoopServer
             public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
             public int m_Time = 0;
             public string m_HUDMode = "";
+            public bool m_DeathPacks = false;
+            public bool m_Respawns = false;
         }
 
         public class StartingGearData
@@ -148,7 +154,15 @@ namespace SkyCoopServer
                 }
                 if (!Knocked)
                 {
-                    m_GamePlayState = GamePlayState.Dead;
+                    
+                    if (ServerInstance.m_Rules.m_Respawns)
+                    {
+                        m_GamePlayState = GamePlayState.Dead;
+                    }
+                    else
+                    {
+                        m_GamePlayState = GamePlayState.Spectator;
+                    }
                     Logger.Log("[DataStr] PlayerID " + m_PlayerID + " m_GamePlayState: " + m_GamePlayState.ToString());
                 }
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
@@ -268,7 +282,7 @@ namespace SkyCoopServer
             public void AddKill(Server ServerInstance)
             {
                 m_Kills++;
-                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink")
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, m_Kills.ToString(), ServerInstance);
                 }
@@ -472,26 +486,53 @@ namespace SkyCoopServer
             public int StageTime { get; set; }
         }
 
-        public class DangerCircleData : IDisposable
+        public class DangerCircleData
         {
             public DangerCircleConfig m_Config = new DangerCircleConfig();
             public int m_CurrentStage = 0;
             public float m_CurrentRadius = 0;
             public float m_TargetRadius = 0;
+            public Vector3 m_CurrentCenter = Vector3.Zero;
+            public Vector3 m_TargetCenter = Vector3.Zero;
+            public float m_MovementSpeed = 0;
 
             private float s_NextStageIn = 0;
             private bool s_Started = false;
             private bool s_Finished = false;
             private bool s_Static = false;
-            private Timer s_StageTimer;
-            private Timer s_SyncTimer;
-            private Timer s_DamageTimer;
+            private DateTime s_NextStageCall;
+            private bool s_NextStageTimerActive = false;
             private string s_SceneName = "";
             private Server s_ServerInstance;
+
+            public string GetTimerPrefix()
+            {
+                if (!s_Finished)
+                {
+                    return "Next zone movement";
+                }else if (!s_NextStageTimerActive)
+                {
+                    return "Time Remaining";
+                }
+                return "Time Remaining";
+            }
 
             public DataStr.ShrinkStage GetCurrentStage()
             {
                 return m_Config.Stages[m_CurrentStage];
+            }
+
+            public DataStr.ShrinkStage GetNextStage()
+            {
+                int Index = m_CurrentStage+1;
+                if (Index < m_Config.Stages.Count)
+                {
+                    return m_Config.Stages[Index];
+                }
+                else
+                {
+                    return null;
+                }
             }
 
             public DangerCircleData(){}
@@ -509,43 +550,176 @@ namespace SkyCoopServer
                 {
                     DoNextStage();
                     s_Started = true;
-                    s_DamageTimer = new Timer(DamageCheck, null, 1000, 1000);
-                    if (!s_Static)
-                    {
-                        s_SyncTimer = new Timer(Update, null, 500, 500);
-                    }
                 }
             }
 
-            public void Update(object obj)
+            public int GetApproximateShrinkingTime()
             {
+                if (m_CurrentRadius <= m_TargetRadius)
+                {
+                    return 0;
+                }
+
+                if (m_CurrentRadius > m_TargetRadius)
+                {
+                    float RemaningRadius = m_CurrentRadius - m_TargetRadius;
+                    float RemaningSecods = RemaningRadius / GetCurrentStage().ShrinkSpeed;
+                    return (int) MathF.Ceiling(RemaningSecods);
+                }
+                return 0;
+            }
+
+            public Vector3 GetNewRandomCenter()
+            {
+                // Legal bounds for zone that ever can be is radius from ActualCenter to MaximumRadius
+                Vector3 ActualCenter = new Vector3(m_Config.ActualCenter.x, m_Config.ActualCenter.y, m_Config.ActualCenter.z);
+                float MaximumRadius = m_Config.StartingRadius;
+
+                // Current bounds of zone
+                Vector3 CurrentCenter = m_CurrentCenter;
+                float CurrentRadius = m_CurrentRadius;
+                float TargetRadius = m_TargetRadius;
+
+                // How much distance new center can be from previous center
+                float MaximumDistanceFromOldCenter = CurrentRadius - TargetRadius;
+
+                System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
+
+                // Generate random direction vector
+                Vector3 randomDirection = new Vector3(
+                    (float)(RNG.NextDouble() * 2 - 1),  // -1 to 1
+                    0,
+                    (float)(RNG.NextDouble() * 2 - 1)   // -1 to 1
+                );
+
+                // Normalize the direction vector manually
+                float length = MathF.Sqrt(randomDirection.X * randomDirection.X +
+                                         randomDirection.Y * randomDirection.Y +
+                                         randomDirection.Z * randomDirection.Z);
+
+                if (length > 0)
+                {
+                    randomDirection = new Vector3(
+                        randomDirection.X / length,
+                        randomDirection.Y / length,
+                        randomDirection.Z / length
+                    );
+                }
+
+                // Generate random distance within allowed range
+                float randomDistance = (float)RNG.NextDouble() * MaximumDistanceFromOldCenter;
+
+                // Calculate new center position
+                Vector3 NewRandomCenter = CurrentCenter + randomDirection * randomDistance;
+
+                // Ensure the new center stays within the maximum allowed radius from ActualCenter
+                Vector3 offsetFromActual = NewRandomCenter - ActualCenter;
+                float distanceFromActualCenter = MathF.Sqrt(offsetFromActual.X * offsetFromActual.X +
+                                                          offsetFromActual.Y * offsetFromActual.Y +
+                                                          offsetFromActual.Z * offsetFromActual.Z);
+
+                if (distanceFromActualCenter > MaximumRadius - TargetRadius)
+                {
+                    // Adjust to stay within bounds
+                    if (distanceFromActualCenter > 0)
+                    {
+                        Vector3 directionFromActual = new Vector3(
+                            offsetFromActual.X / distanceFromActualCenter,
+                            offsetFromActual.Y / distanceFromActualCenter,
+                            offsetFromActual.Z / distanceFromActualCenter
+                        );
+                        NewRandomCenter = ActualCenter + directionFromActual * (MaximumRadius - TargetRadius);
+                    }
+                }
+
+                return NewRandomCenter;
+            }
+
+            public void Update()
+            {
+                //SkyCoopServer.Logger.Log($"DangerCircleData Update() Radius {m_CurrentRadius}/{m_TargetRadius} Stage: {m_CurrentStage+1}/{m_Config.Stages.Count}");
                 if (s_Started)
                 {
-                    if(m_CurrentRadius > m_TargetRadius)
+                    if (!s_Static)
                     {
-                        m_CurrentRadius -= GetCurrentStage().ShrinkSpeed;
-                        if(m_CurrentRadius <= m_TargetRadius)
+                        if (s_NextStageTimerActive)
                         {
-                            m_CurrentRadius = m_TargetRadius;
-                            if (s_StageTimer != null)
+                            if(s_NextStageCall <= DateTime.Now)
                             {
-                                s_StageTimer.Dispose();
+                                OnNextStage();
                             }
-                            s_StageTimer = new Timer(OnNextStage, null, GetCurrentStage().StageTime * 1000, GetCurrentStage().StageTime * 1000);
                         }
-                        ServerSend.SendZoneUpdate(s_SceneName, m_Config.ActualCenter, m_CurrentRadius, s_ServerInstance);
+
+                        bool NeedSendUpdate = false;
+
+                        if (m_CurrentRadius > m_TargetRadius)
+                        {
+                            m_CurrentRadius -= GetCurrentStage().ShrinkSpeed;
+                            if (m_CurrentRadius <= m_TargetRadius)
+                            {
+                                m_CurrentRadius = m_TargetRadius;
+                                StartNextStageTimer();
+                            }
+                            NeedSendUpdate = true;
+                            ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, s_ServerInstance);
+                        }
+
+                        if (m_CurrentCenter != m_TargetCenter)
+                        {
+                            float Distance = Vector3.Distance(m_CurrentCenter, m_TargetCenter);
+                            Vector3 direction = m_TargetCenter - m_CurrentCenter;
+                            Vector3 movement = direction * MathF.Min(m_MovementSpeed, Distance);
+                            m_CurrentCenter += movement;
+                            if (Distance < m_MovementSpeed)
+                            {
+                                m_CurrentCenter = m_TargetCenter;
+                            }
+                            NeedSendUpdate = true;
+                        }
+
+
+                        if (NeedSendUpdate)
+                        {
+                            ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, s_ServerInstance);
+                        }
+
+                        if (!s_Finished)
+                        {
+                            if (s_ServerInstance != null && s_ServerInstance.m_Rules.m_HUDMode == "Shrink")
+                            {
+                                if (s_NextStageTimerActive)
+                                {
+                                    TimeSpan remainingTime = s_NextStageCall - DateTime.Now;
+                                    ServerSend.ClientGameModeTimer(remainingTime.Seconds, s_ServerInstance);
+                                }
+                                else
+                                {
+                                    ShrinkStage NextStage = GetNextStage();
+                                    if (NextStage == null)
+                                    {
+                                        ServerSend.ClientGameModeTimer(GetApproximateShrinkingTime(), s_ServerInstance);
+                                    }
+                                    else
+                                    {
+                                        ServerSend.ClientGameModeTimer(GetApproximateShrinkingTime() + NextStage.StageTime, s_ServerInstance);
+                                    }
+                                }
+                            }
+                        }
                     }
+                    DamageCheck();
                 }
             }
 
-            public void DamageCheck(object obj)
+            public void DamageCheck()
             {
                 foreach (NetPeer Peer in s_ServerInstance.m_Instance.ConnectedPeerList.ToList())
                 {
                     PlayerData PlayerData = s_ServerInstance.GetPlayerDataByNetPeer(Peer);
                     if(PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
                     {
-                        float Distance = Vector3.Distance(PlayerData.m_Position, new Vector3(m_Config.ActualCenter.x, m_Config.ActualCenter.y, m_Config.ActualCenter.z)) * 100;
+                        float Distance = Vector2.Distance(new Vector2(PlayerData.m_Position.X, PlayerData.m_Position.Z), new Vector2(m_Config.ActualCenter.x, m_Config.ActualCenter.z)) * 100;
+                        //SkyCoopServer.Logger.Log($"DangerCircleData PlayerID {Peer.Id} Distance {Distance}/{m_CurrentRadius}");
                         if (Distance > m_CurrentRadius)
                         {
                             ServerSend.SendDamageToPlayer(Peer, GetCurrentStage().DamagePerSecond, Peer.Id, 1, "ZONE");
@@ -554,20 +728,29 @@ namespace SkyCoopServer
                 }
             }
 
+            void StartNextStageTimer()
+            {
+                s_NextStageCall = DateTime.Now.AddSeconds(GetCurrentStage().StageTime);
+                s_NextStageTimerActive = true;
+            }
+
+            void ClearStageTimer()
+            {
+                s_NextStageTimerActive = false;
+            }
+
             void DoNextStage()
             {
                 if(m_CurrentStage == 0)
                 {
                     m_CurrentRadius = m_Config.StartingRadius;
                     m_TargetRadius = m_Config.StartingRadius;
-                    if (s_StageTimer != null)
-                    {
-                        s_StageTimer.Dispose();
-                    }
+                    m_CurrentCenter = new Vector3(m_Config.ActualCenter.x, m_Config.ActualCenter.y, m_Config.ActualCenter.z);
+                    m_TargetCenter = m_CurrentCenter;
                     s_Static = GetCurrentStage().StageTime <= 0;
                     if (!s_Static)
                     {
-                        s_StageTimer = new Timer(OnNextStage, null, GetCurrentStage().StageTime * 1000, GetCurrentStage().StageTime * 1000);
+                        StartNextStageTimer();
                     }
                 }
                 else
@@ -575,38 +758,32 @@ namespace SkyCoopServer
                     int Stage = m_CurrentStage+1;
                     int MaxStage = m_Config.Stages.Count;
                     m_TargetRadius = m_Config.StartingRadius-(m_Config.StartingRadius*Stage/MaxStage);
-                    if (s_StageTimer != null)
-                    {
-                        s_StageTimer.Dispose();
-                    }
+                    //m_TargetCenter = GetNewRandomCenter();
+                    //m_MovementSpeed = Vector3.Distance(m_CurrentCenter, m_TargetCenter) / GetApproximateShrinkingTime();
+                    SkyCoopServer.Logger.Log($"GetNewRandomCenter {m_TargetCenter}");
+                    ClearStageTimer();
                 }
             }
 
-            void OnNextStage(object obj)
+            void OnNextStage()
             {
                 if(m_CurrentStage == m_Config.Stages.Count-1)
                 {
                     s_Finished = true;
+                    ClearStageTimer();
                 }
                 else
                 {
                     m_CurrentStage++;
                     DoNextStage();
                 }
-            }
-            public void Dispose()
-            {
-                if (s_StageTimer != null)
+                if (s_ServerInstance != null && s_ServerInstance.m_Rules.m_HUDMode == "Shrink")
                 {
-                    s_StageTimer.Dispose();
-                }
-                if (s_SyncTimer != null)
-                {
-                    s_SyncTimer.Dispose();
-                }
-                if (s_DamageTimer != null)
-                {
-                    s_DamageTimer.Dispose();
+                    ServerSend.UpdateTimerPrefix(GetTimerPrefix(), s_ServerInstance);
+                    if (s_Finished)
+                    {
+                        s_ServerInstance.m_Rules.m_Time = 120;
+                    }
                 }
             }
         }
@@ -687,6 +864,44 @@ namespace SkyCoopServer
             public string m_Owner = "";
             public Vector3 m_Position;
             public Quaternion m_Rotation;
+        }
+
+        public enum PlayerHearing
+        {
+            None = 0,
+            Proximity = 1,
+            Global = 2,
+            Radio = 3,
+            Anoncer = 4,
+        }
+
+        public class PlayersSquad
+        {
+            public string m_Name = "";
+            public List<int> m_Players = new List<int>();
+
+            public PlayersSquad(string SquadName)
+            {
+                m_Name = SquadName;
+            }
+
+            public bool HasPlayer(int PlayerID)
+            {
+                return m_Players.Contains(PlayerID);
+            }
+
+            public void AddPlayer(int PlayerID)
+            {
+                if (!m_Players.Contains(PlayerID))
+                {
+                    m_Players.Add(PlayerID);
+                }
+            }
+
+            public void RemovePlayer(int PlayerID)
+            {
+                m_Players.Remove(PlayerID);
+            }
         }
 
         public static string CompressString(string text)

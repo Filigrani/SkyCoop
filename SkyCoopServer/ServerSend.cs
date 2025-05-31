@@ -128,42 +128,47 @@ namespace SkyCoopServer
         }
         public static void SendKillFeed(DataStr.KillFeedMessage Message, Server ServerInstance)
         {
-            if(Message.m_Killer != -1 && Message.m_Victim != -1)
+            if (!Message.m_Flags.Contains(DataStr.KillFeedFlag.Knocked))
             {
-                if (Message.m_Killer != Message.m_Victim)
+                if (Message.m_Killer != -1 && Message.m_Victim != -1)
                 {
-                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).AddKill(ServerInstance);
+                    if (Message.m_Killer != Message.m_Victim)
+                    {
+                        ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).AddKill(ServerInstance);
+                    }
+                    else
+                    {
+                        //ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
+                    }
+                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddDeath(ServerInstance);
                 }
-                else
+
+                if (Message.m_Assist != -1)
                 {
-                    //ServerInstance.m_PlayersData.GetPlayer(Message.m_Killer).RemoveKill(ServerInstance);
+                    if (Message.m_Assist != Message.m_Victim)
+                    {
+                        ServerInstance.m_PlayersData.GetPlayer(Message.m_Assist).AddAssist(ServerInstance);
+                    }
                 }
-                ServerInstance.m_PlayersData.GetPlayer(Message.m_Victim).AddDeath(ServerInstance);
-            }
 
-            if(Message.m_Assist != -1)
-            {
-                if (Message.m_Assist != Message.m_Victim)
+                List<int> Leaders = ServerInstance.m_PlayersData.GetDMLeaders();
+
+                if (ServerInstance.m_Rules.m_HUDMode == "DM")
                 {
-                    ServerInstance.m_PlayersData.GetPlayer(Message.m_Assist).AddAssist(ServerInstance);
+                    if (Message.m_Killer != -1)
+                    {
+                        SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Killer), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Killer), ServerInstance);
+                    }
+                    if (Message.m_Assist != -1)
+                    {
+                        SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Assist), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Assist), ServerInstance);
+                    }
+                    if (Message.m_Victim != -1)
+                    {
+                        SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Victim), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Victim), ServerInstance);
+                    }
                 }
             }
-
-            List<int> Leaders = ServerInstance.m_PlayersData.GetDMLeaders();
-
-            if (Message.m_Killer != -1)
-            {
-                SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Killer), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Killer), ServerInstance);
-            }
-            if(Message.m_Assist != -1)
-            {
-                SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Assist), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Assist), ServerInstance);
-            }
-            if(Message.m_Victim != -1)
-            {
-                SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Victim), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Victim), ServerInstance);
-            }
-
 
             NetDataWriter writer = new NetDataWriter();
 
@@ -358,20 +363,18 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendZoneUpdate(NetPeer Client, string SceneName, DataStr.DangerCircleCenter Center, float Radius, Server ServerInstance)
+        public static void SendZoneUpdate(NetPeer Client, string SceneName, Vector3 Center, float Radius, Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientZoneUpdated);
 
-            writer.Put(Center.x);
-            writer.Put(Center.y);
-            writer.Put(Center.z);
+            writer.Put(Center);
             writer.Put(Radius);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendZoneUpdate(string SceneName, DataStr.DangerCircleCenter Center, float Radius, Server ServerInstance)
+        public static void SendZoneUpdate(string SceneName, Vector3 Center, float Radius, Server ServerInstance)
         {
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
@@ -556,6 +559,34 @@ namespace SkyCoopServer
             writer.Put(GUID);
             writer.Put(State);
 
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendTimerPrefix(NetPeer Client, string Prefix)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientHUDTimerPrefix);
+            writer.Put(Prefix);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void UpdateTimerPrefix(string Prefix, Server ServerInstance)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientHUDTimerPrefix);
+            writer.Put(Prefix);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
+        public static void SendPlayerBecomeSpectator(NetPeer Client)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRespawnAsSpectator);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
     }

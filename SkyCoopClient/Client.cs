@@ -64,6 +64,8 @@ namespace SkyCoop
             { (int)Packet.Type.ClientContainerOpen, ClientHandle.ClientContainerOpen },
             { (int)Packet.Type.ServerContainerDataArrived, ClientHandle.ServerContainerDataArrived },
             { (int)Packet.Type.ClientContainerStateUpdated, ClientHandle.ClientContainerStateUpdated },
+            { (int)Packet.Type.ClientHUDTimerPrefix, ClientHandle.ClientHUDTimerPrefix },
+            { (int)Packet.Type.ClientRespawnAsSpectator, ClientHandle.ClientRespawnAsSpectator },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

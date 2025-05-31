@@ -35,6 +35,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<DeathPackComp>();
             ClassInjector.RegisterTypeInIl2Cpp<ContainerDescriptorHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayerDummy>();
+            ClassInjector.RegisterTypeInIl2Cpp<DangerCircleZone>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -345,6 +346,8 @@ namespace SkyCoop
             public Actions m_Action = Actions.None;
             public AudioSource m_AudioSource3D;
             public AudioSource m_AudioSource2D;
+            public AudioSource m_AudioSourceRadio;
+            public AudioSource m_AudioSourceRadioBG;
             public List<Collider> m_PlayerColiders = new List<Collider>();
             public GameObject m_Helmet = null;
             public GameObject m_Satchel = null;
@@ -362,6 +365,8 @@ namespace SkyCoop
             public GameObject m_HairMesh = null;
             public GameObject m_BeardMesh = null;
             public GameObject m_EyebrowsMesh = null;
+
+            public CameraAttention m_CameraAttention;
 
             public enum GearHandPose
             {
@@ -644,6 +649,12 @@ namespace SkyCoop
                 }
             }
 
+            public void AddSpectatorTarget()
+            {
+                m_CameraAttention = gameObject.AddComponent<Comps.CameraAttention>();
+                m_CameraAttention.enabled = false;
+            }
+
             public void AddInteraction()
             {
                 LocalizedString Str = new LocalizedString();
@@ -804,6 +815,8 @@ namespace SkyCoop
             {
                 m_AudioSource3D = gameObject.transform.FindChild("Voice3D").GetComponent<AudioSource>();
                 m_AudioSource2D = gameObject.transform.FindChild("Voice2D").GetComponent<AudioSource>();
+                m_AudioSource2D = gameObject.transform.FindChild("VoiceRadio").GetComponent<AudioSource>();
+                m_AudioSource2D = gameObject.transform.FindChild("VoiceRadioBG").GetComponent<AudioSource>();
                 m_BottomLip = m_Animator.GetBoneTransform(HumanBodyBones.Head).FindChild("Lip_Bottom");
             }
 
@@ -1254,6 +1267,31 @@ namespace SkyCoop
                     bool HasIt = Data.HasThis(Mesh.name);
                     Mesh.SetActive(HasIt);
                 }
+            }
+        }
+        public class DangerCircleZone : MonoBehaviour
+        {
+            public DangerCircleZone(IntPtr ptr) : base(ptr) { }
+            public float m_Smoother = 8;
+            public Vector3 m_Center = Vector3.zero;
+            public float m_TargetScale = 0;
+
+
+            public Vector3 GetScale()
+            {
+                return new Vector3(m_TargetScale, m_TargetScale, 4300);
+            }
+
+            public void SetForced()
+            {
+                transform.localScale = GetScale();
+                transform.position = m_Center;
+            }
+
+            void Update()
+            {
+                transform.localScale = Vector3.Lerp(transform.localScale, GetScale(), m_Smoother * Time.deltaTime);
+                transform.position = Vector3.Lerp(transform.position, m_Center, m_Smoother * Time.deltaTime);
             }
         }
     }

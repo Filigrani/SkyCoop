@@ -113,7 +113,11 @@ namespace SkyCoop
                     SpawnPointEditor.AddSpawnPoint();
                 }
             }
-            DangerCircleManager.Update();
+
+            if (IsGameplayScene() && !GameManager.s_IsGameplaySuspended)
+            {
+                PlayersManager.SpectatorControls();
+            }
         }
 
         public static void ReimplementConsole()
@@ -247,7 +251,7 @@ namespace SkyCoop
             public static bool Prefix(GameManager __instance, bool focusStatus)
             {
                 s_AppFocus = focusStatus;
-                SkyCoop.Logger.Log("OnApplicationFocus " + focusStatus);
+                //SkyCoop.Logger.Log("OnApplicationFocus " + focusStatus);
                 return false;
             }
         }
