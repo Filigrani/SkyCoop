@@ -56,6 +56,8 @@ namespace SkyCoopServer
             ClientContainerStateUpdated,
             ClientHUDTimerPrefix,
             ClientRespawnAsSpectator,
+            ClientSpawnProp,
+            ClientRemoveProp,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

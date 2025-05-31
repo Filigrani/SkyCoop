@@ -102,15 +102,23 @@ namespace SkyCoop
                     }
                 }
             }
-            if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.K))
+            if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F6))
             {
                 SpawnPointEditor.ToggleSpawnPointEditor();
             }
-            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.L))
+            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F9))
             {
-                if(CanvasUI.m_SpawnPointEditor && CanvasUI.m_SpawnPointEditor.activeSelf)
+                PropsSpawnsEditor.TogglePropsEditor();
+            }
+            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.P))
+            {
+                if (CanvasUI.m_SpawnPointEditor && CanvasUI.m_SpawnPointEditor.activeSelf)
                 {
                     SpawnPointEditor.AddSpawnPoint();
+                }
+                if (CanvasUI.m_PropsEditor && CanvasUI.m_PropsEditor.activeSelf)
+                {
+                    PropsSpawnsEditor.AddProp();
                 }
             }
 

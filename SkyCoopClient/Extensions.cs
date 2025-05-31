@@ -2,6 +2,7 @@
 using UnityEngine;
 using System.Numerics;
 using Il2Cpp;
+using SkyCoopServer;
 
 namespace SkyCoop
 {
@@ -54,6 +55,18 @@ namespace SkyCoop
         {
             System.Numerics.Quaternion Quaternion = new System.Numerics.Quaternion(Quat.x, Quat.y, Quat.z, Quat.w);
             return Quaternion;
+        }
+
+        public static UnityEngine.Vector3 GetVector3Unity(this DataStr.PropData Data)
+        {
+            UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Data.posx, Data.posy, Data.posz);
+            return v3;
+        }
+
+        public static UnityEngine.Quaternion GetQuaternionUnity(this DataStr.PropData Data)
+        {
+            UnityEngine.Quaternion quat = new UnityEngine.Quaternion(Data.rotx, Data.roty, Data.rotz, Data.rotw);
+            return quat;
         }
     }
 }

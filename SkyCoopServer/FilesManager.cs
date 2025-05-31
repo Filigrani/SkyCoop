@@ -11,6 +11,7 @@ namespace SkyCoopServer
         public static string s_ZoneConfigDirectory = "ZoneConfig";
         public static string s_StartingGearFileName = "StartingGear";
         public static string s_VictoryPlaceDirectory = "Victory";
+        public static string s_PropsDirectory = "Props";
         public static string s_RulesFileName = "Rules";
         public static string s_DataDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData";
 
@@ -178,6 +179,39 @@ namespace SkyCoopServer
             DangerCircleCenter Save = JsonSerializer.Deserialize<DangerCircleCenter>(JSON);
 
             return new Vector3(Save.x, Save.y, Save.z);
+        }
+
+        public static PropDataSave GetProps(string GameMode, string Scene)
+        {
+            PropDataSave Save = new PropDataSave();
+            string Path = $"{s_DataDirectory}/{GameMode}/{s_PropsDirectory}/{Scene}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_PropsDirectory}/{Scene}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return Save;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} not exist");
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} is empty");
+                return Save;
+            }
+            Save = JsonSerializer.Deserialize<PropDataSave>(JSON);
+            return Save;
         }
     }
 }

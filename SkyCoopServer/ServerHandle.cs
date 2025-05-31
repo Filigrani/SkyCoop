@@ -25,8 +25,11 @@ namespace SkyCoopServer
                     ServerSend.SendClientName(Peer, Client.Id, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_PlayerName);
                     if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
                     {
-                        PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
-                        ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Peer.Id), ServerInstance);
+                        ServerSend.SendHUDSideBar(Peer, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Peer.Id), ServerInstance);
+                    }
+                    if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "Shrink")
+                    {
+                        ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                     }
                 }
                 ServerSend.SendClientStatus(Peer.Id, 1, ServerInstance);
@@ -126,7 +129,7 @@ namespace SkyCoopServer
         public static void ClientRevived(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             int Reviver = Reader.GetInt();
-            ServerInstance.GetPlayerDataByNetPeer(Client).Revived(Reviver);
+            ServerInstance.GetPlayerDataByNetPeer(Client).Revived(Reviver, ServerInstance);
             if(Reviver == -2)
             {
                 ServerSend.SendRemoveAllInjectedItem(Client.Id, ServerInstance);
@@ -273,14 +276,23 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendAllContainerStates(SceneName, Client);
             ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
 
-            if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+            if (ServerInstance.m_Rules != null && (ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink"))
             {
                 PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+
                 ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
-                ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
-                ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
-                ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
-                ServerSend.SendTimerPrefix(Client, "Time Remaining");
+
+                if (ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                {
+                    ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
+                    ServerSend.SendTimerPrefix(Client, "Time Remaining");
+                }
+                else
+                {
+                    ServerSend.SendHUDSideBar(Client, 1, "ico_knowledge_people", $"Players Alive:", ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                }
             }
 
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())

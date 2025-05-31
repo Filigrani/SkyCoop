@@ -279,7 +279,7 @@ namespace SkyCoopClient
                         switch (AudioSourceType)
                         {
                             case DataStr.PlayerHearing.Proximity:
-                                audioSource = player.m_AudioSource2D;
+                                audioSource = player.m_AudioSource3D;
                                 break;
                             case DataStr.PlayerHearing.Global:
                                 audioSource = player.m_AudioSource2D;

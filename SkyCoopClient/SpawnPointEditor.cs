@@ -164,6 +164,10 @@ namespace SkyCoopClient
             {
                 CanvasUI.m_SpawnPointEditor.SetActive(!CanvasUI.m_SpawnPointEditor.activeSelf);
             }
+            if (CanvasUI.m_PropsEditor)
+            {
+                CanvasUI.m_PropsEditor.SetActive(false);
+            }
         }
 
         public static void AddSpawnPoint()

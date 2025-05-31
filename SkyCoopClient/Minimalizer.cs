@@ -1,6 +1,7 @@
 ﻿using Il2Cpp;
 using Il2CppTLD.Gameplay;
 using Il2CppTLD.Gear;
+using Il2CppTLD.ModularElectrolizer;
 using Il2CppTLD.Scenes;
 using Il2CppTLD.UI;
 using SkyCoop;
@@ -37,14 +38,14 @@ namespace SkyCoopClient
                 }
             }
         }
-        //[HarmonyLib.HarmonyPatch(typeof(Panel_Clothing), "Enable")]
-        //private static class Panel_Clothing_Enable
-        //{
-        //    private static bool Prefix(Panel_Clothing __instance)
-        //    {
-        //        return false;
-        //    }
-        //}
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Clothing), "Enable")]
+        private static class Panel_Clothing_Enable
+        {
+            private static bool Prefix(Panel_Clothing __instance)
+            {
+                return false;
+            }
+        }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool)})]
         private static class Panel_Map_Enable
         {
@@ -659,6 +660,58 @@ namespace SkyCoopClient
             private static void Postfix(WaterSource __instance)
             {
                 __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "Awake")]
+        private static class WoodStove_Awake
+        {
+            private static void Postfix(WoodStove __instance)
+            {
+                __instance.enabled = false;
+                __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Campfire), "Awake")]
+        private static class Campfire_Awake
+        {
+            private static void Postfix(Campfire __instance)
+            {
+                __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "Awake")]
+        private static class CookingSlot_Awake
+        {
+            private static void Postfix(CookingSlot __instance)
+            {
+                __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Bed), "Awake")]
+        private static class Bed_Awake
+        {
+            private static void Postfix(Bed __instance)
+            {
+                __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "Enable", new System.Type[] { typeof(bool) })]
+        private static class Panel_Rest_Enable
+        {
+            private static bool Prefix(Panel_Rest __instance)
+            {
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(AuroraModularElectrolizer), "Awake")]
+        private static class AuroraModularElectrolizer_Awake
+        {
+            private static void Postfix(AuroraLightingSimple __instance)
+            {
+                if (ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
+                {
+
+                }
             }
         }
     }

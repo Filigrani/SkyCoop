@@ -6,6 +6,7 @@ using System.Text.RegularExpressions;
 using System.Text;
 using System.IO;
 using System.Linq;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -19,7 +20,7 @@ namespace SkyCoopServer
             public int m_VoicePort = 37850;
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "LakeRegion";
+            public string m_SceneToSpawn = "HuntingLodgeA";
             public string m_GameMode = "Shrink";
         }
 
@@ -164,6 +165,14 @@ namespace SkyCoopServer
                         m_GamePlayState = GamePlayState.Spectator;
                     }
                     Logger.Log("[DataStr] PlayerID " + m_PlayerID + " m_GamePlayState: " + m_GamePlayState.ToString());
+
+                    if(ServerInstance.m_Rules.m_HUDMode == "Shrink")
+                    {
+                        foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                        }
+                    }
                 }
                 DataStr.KillFeedMessage Message = new KillFeedMessage();
                 Message.m_Victim = m_PlayerID;
@@ -258,7 +267,7 @@ namespace SkyCoopServer
                 }
             }
 
-            public void Revived(int Reviver)
+            public void Revived(int Reviver, Server ServerInstance)
             {
                 //if(Reviver == m_PlayerID)
                 //{
@@ -274,6 +283,13 @@ namespace SkyCoopServer
                 if (Reviver == -2)
                 {
                     m_GamePlayState = GamePlayState.Alive;
+                    if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
+                    {
+                        foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                        }
+                    }
                 }
 
                 m_Damagers.Clear();
@@ -355,7 +371,8 @@ namespace SkyCoopServer
             public Dictionary<string, DeathPack> m_DeathPacks = new Dictionary<string, DeathPack>();
             public Dictionary<string, string> m_Containers = new Dictionary<string, string>();
             public Dictionary<string, int> m_ContainerStats = new Dictionary<string, int>();
-
+            
+            public PropDataSave m_Props = new PropDataSave();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public DataStr.DangerCircleData m_ActiveZone = null;
         }
@@ -951,6 +968,108 @@ namespace SkyCoopServer
         public static long GetDeterministicId(string m)
         {
             return (long)m.ToCharArray().Select((c, i) => Math.Pow(i, c % 5) * Math.Max(Math.Sqrt(c), i)).Sum();
+        }
+
+        public enum CardType
+        {
+            Two,
+            Three,
+            Fourth,
+            Five,
+            Six,
+            Seven,
+            Eight,
+            Nine,
+            Ten,
+            Jack,
+            Queen,
+            King,
+            Ace,
+
+            Count,
+        }
+
+        public enum CardSuit
+        {
+            Clubs,
+            Spades,
+            Hearts,
+            Diamonds,
+
+            Count,
+        }
+
+        public class PlayingCard
+        {
+            public CardType m_Type = CardType.Two;
+            public CardSuit m_Suit = CardSuit.Clubs;
+
+            public PlayingCard(CardType type, CardSuit suit)
+            {
+                m_Type = type;
+                m_Suit = suit;
+            }
+        }
+
+        public class CardsDeck
+        {
+            public List<PlayingCard> m_Cards = new List<PlayingCard>();
+
+            public List<PlayingCard> ShuffleDeck(List<PlayingCard> Deck)
+            {
+                System.Random RNG = new System.Random();
+                for (int i = 0; i < Deck.Count; i++)
+                {
+                    var temp = Deck[i];
+                    var index = RNG.Next(0, Deck.Count);
+                    Deck[i] = Deck[index];
+                    Deck[index] = temp;
+                }
+                return Deck;
+            }
+            public void ShuffleDeck()
+            {
+                m_Cards = ShuffleDeck(m_Cards);
+            }
+
+            public void AddCard(CardType Type, CardSuit Suit)
+            {
+                m_Cards.Add(new PlayingCard(Type, Suit));
+            }
+            public void AddCard(int Type, int Suit)
+            {
+                AddCard((CardType)Type, (CardSuit)Suit);
+            }
+
+            public void PopulateCards()
+            {
+                m_Cards.Clear();
+                for (int iCardType = 0; iCardType < (int)CardType.Count; iCardType++)
+                {
+                    for (int iSuit = 0; iSuit < (int)CardSuit.Count; iSuit++)
+                    {
+                        AddCard(iCardType, iSuit);
+                    }
+                }
+            }
+        }
+        public class PropDataSave
+        {
+            public List<PropData> props { get; set; }
+        }
+        public class PropData
+        {
+            public string prefabname { get; set; }
+            public bool frombundle { get; set; }
+            public float posx { get; set; }
+            public float posy { get; set; }
+            public float posz { get; set; }
+
+            public float rotx { get; set; }
+            public float roty { get; set; }
+            public float rotz { get; set; }
+            public float rotw { get; set; }
+            public string guid { get; set; }
         }
     }
 }

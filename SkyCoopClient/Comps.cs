@@ -36,6 +36,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<ContainerDescriptorHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayerDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<DangerCircleZone>();
+            ClassInjector.RegisterTypeInIl2Cpp<ForcedFire>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -653,6 +654,7 @@ namespace SkyCoop
             {
                 m_CameraAttention = gameObject.AddComponent<Comps.CameraAttention>();
                 m_CameraAttention.enabled = false;
+                m_CameraAttention.m_OffsetTranform = transform.FindChild("SpectaterView");
             }
 
             public void AddInteraction()
@@ -1083,6 +1085,11 @@ namespace SkyCoop
                     }
                 }
 
+                if(m_CameraAttention && m_CameraAttention.m_OffsetTranform)
+                {
+                    m_CameraAttention.m_OffsetTranform.localPosition = new Vector3(m_CameraAttention.m_OffsetTranform.localPosition.x, GetBone(m_Animator, HumanBodyBones.LeftEye).localPosition.y, m_CameraAttention.m_OffsetTranform.localPosition.z);
+                }
+
                 Vector3 TargetPosition = m_Position + GetOffset();
 
                 // That way, we can avoid stupid situations when previous position of the objects was too far away
@@ -1102,6 +1109,7 @@ namespace SkyCoop
         public class CameraAttention : MonoBehaviour
         {
             public CameraAttention(IntPtr ptr) : base(ptr) { }
+            public Transform m_OffsetTranform;
 
             vp_FPSCamera m_Camera;
             void Start()
@@ -1115,8 +1123,16 @@ namespace SkyCoop
             {
                 if (m_Camera)
                 {
-                    m_Camera.transform.position = transform.position;
-                    m_Camera.transform.rotation = transform.rotation;
+                    if(m_OffsetTranform == null)
+                    {
+                        m_Camera.transform.position = transform.position;
+                        m_Camera.transform.rotation = transform.rotation;
+                    }
+                    else
+                    {
+                        m_Camera.transform.position = m_OffsetTranform.position;
+                        m_Camera.transform.rotation = m_OffsetTranform.rotation;
+                    }
                 }
             }
 
@@ -1292,6 +1308,44 @@ namespace SkyCoop
             {
                 transform.localScale = Vector3.Lerp(transform.localScale, GetScale(), m_Smoother * Time.deltaTime);
                 transform.position = Vector3.Lerp(transform.position, m_Center, m_Smoother * Time.deltaTime);
+            }
+        }
+        public class ForcedFire : MonoBehaviour
+        {
+            public ForcedFire(IntPtr ptr) : base(ptr) { }
+
+            public Fire m_Fire;
+
+            void Update()
+            {
+                if(ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
+                {
+                    if (m_Fire)
+                    {
+                        Fire fire = m_Fire;
+                        fire.m_StartedByPlayer = false;
+                        if (fire.m_FireState != FireState.FullBurn)
+                        {
+                            fire.FireStateSet(FireState.FullBurn);
+                        }
+                        fire.m_HeatSource.TurnOn();
+                        fire.m_FX.TriggerStage(FireState.FullBurn, true, true);
+                        fire.m_FuelHeatIncrease = fire.m_HeatSource.m_MaxTempIncrease;
+                        fire.m_ElapsedOnTODSeconds = 0;
+                        fire.m_ElapsedOnTODSecondsUnmodified = 0;
+                        fire.ForceBurnTimeInMinutes(5);
+                        fire.PlayFireLoop(100f);
+
+                        if (fire.m_Campfire != null)
+                        {
+                            Campfire campFire = fire.m_Campfire.GetComponent<Campfire>();
+                            if (campFire.m_State != CampfireState.Lit)
+                            {
+                                campFire.SetState(CampfireState.Lit);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

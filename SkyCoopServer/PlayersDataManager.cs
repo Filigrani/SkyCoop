@@ -452,6 +452,55 @@ namespace SkyCoopServer
             return Leaders;
         }
 
+        public int GetSquadsAlive()
+        {
+            int Squads = 0;
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                foreach (int PlayerID in Squad.m_Players)
+                {
+                    PlayerData Player = GetPlayer(PlayerID);
+                    if(Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                    {
+                        Squads++;
+                        break;
+                    }
+                }
+            }
+            foreach (PlayerData Player in m_Players)
+            {
+                if (Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                {
+                    if(GetPlayerSquadIn(Player.m_PlayerID) == "")
+                    {
+                        Squads++;
+                    }
+                }
+            }
+            return Squads;
+        }
+
+        public int GetPlayersAlive()
+        {
+            int Alive = 0;
+            foreach (PlayerData Player in m_Players)
+            {
+                if (Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                {
+                    Alive++;
+                }
+            }
+            return Alive;
+        }
+
+        public string GetShrinkModeString()
+        {
+            int Squads = GetSquadsAlive();
+            string s = (Squads > 1 || Squads == 0) ? "s" : "";
+
+            return $"{GetPlayersAlive()} ({Squads} Squad{s})";
+        }
+
         public void ResetFrags()
         {
             foreach (DataStr.PlayerData Player in m_Players)

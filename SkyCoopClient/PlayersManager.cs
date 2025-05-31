@@ -58,6 +58,7 @@ namespace SkyCoop
                     NP.AddInteraction();
                     NP.AddAudioSource();
                     NP.UpdateClothing();
+                    NP.AddSpectatorTarget();
 
                     NP.m_PlayerID = PlayerID;
 

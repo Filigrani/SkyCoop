@@ -1,5 +1,36 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1361567684703455172
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6395066991127702737}
+  m_Layer: 27
+  m_Name: SpectaterView
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6395066991127702737
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1361567684703455172}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 1.736, z: 0.245}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6897635877710765573}
+  m_RootOrder: 39
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6664410906378269437
 GameObject:
   m_ObjectHideFlags: 0
@@ -672,6 +703,22 @@ PrefabInstance:
       propertyPath: m_Layer
       value: 27
       objectReference: {fileID: 0}
+    - target: {fileID: -6939957725856589275, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 0.9735669
+      objectReference: {fileID: 0}
+    - target: {fileID: -6939957725856589275, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0.22832848
+      objectReference: {fileID: 0}
+    - target: {fileID: -6939957725856589275, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0.0057996805
+      objectReference: {fileID: 0}
+    - target: {fileID: -6939957725856589275, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0.00013057604
+      objectReference: {fileID: 0}
     - target: {fileID: -6854795532205224595, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_Layer
       value: 27
@@ -1018,7 +1065,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2085470243301865738, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_RootOrder
-      value: 27
+      value: 28
       objectReference: {fileID: 0}
     - target: {fileID: 2263154811663422260, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_IsActive
@@ -1038,7 +1085,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2822291275873783227, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_RootOrder
-      value: 28
+      value: 27
       objectReference: {fileID: 0}
     - target: {fileID: 2950061150099365760, guid: 9cf42d351eff86c4eb9d7041561def2c, type: 3}
       propertyPath: m_Layer

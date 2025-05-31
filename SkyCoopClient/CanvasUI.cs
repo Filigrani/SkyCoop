@@ -19,6 +19,8 @@ namespace SkyCoopClient
         public static Transform m_KillFeedTransform;
         public static GameObject m_SpawnPointEditor;
         public static Transform m_SpawnPointEditorScrollParnet;
+        public static GameObject m_PropsEditor;
+        public static Transform m_PropsEditorScrollParnet;
 
         public static GameObject s_KillfeedRegularClone;
         public static GameObject s_KillfeedKillOrAssistClone;
@@ -26,6 +28,9 @@ namespace SkyCoopClient
 
         public static Animator s_ZoneDamageOverlay;
         public static GameObject s_DarkwalkerHUDClone;
+
+        public static TMP_InputField s_PropsEditorPrefabName;
+        public static Toggle s_PropsEditorIsFromBundle;
 
         private static Transform s_Parent;
 
@@ -97,12 +102,26 @@ namespace SkyCoopClient
                     m_KillFeedTransform = m_UIPanel.transform.GetChild(0);
                     m_SpawnPointEditor = m_UIPanel.transform.GetChild(1).gameObject;
 
+                    m_PropsEditor = m_UIPanel.transform.GetChild(3).gameObject;
+
                     Action act = new Action(() => SpawnPointEditor.Save());
                     Action act2 = new Action(() => SpawnPointEditor.LoadCurrentSceneFile());
                     m_UIPanel.transform.GetChild(1).GetChild(2).GetComponent<Button>().onClick.AddListener(act);
                     m_UIPanel.transform.GetChild(1).GetChild(3).GetComponent<Button>().onClick.AddListener(act2);
                     m_SpawnPointEditorScrollParnet = m_UIPanel.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(0);
+                    m_PropsEditorScrollParnet = m_UIPanel.transform.GetChild(3).GetChild(1).GetChild(0).GetChild(0);
+
                     s_ZoneDamageOverlay = m_UIPanel.transform.GetChild(2).GetComponent<Animator>();
+
+                    Action act3 = new Action(() => PropsSpawnsEditor.Save());
+                    Action act4 = new Action(() => PropsSpawnsEditor.LoadCurrentSceneFile());
+
+                    m_UIPanel.transform.GetChild(3).GetChild(2).GetComponent<Button>().onClick.AddListener(act3);
+                    m_UIPanel.transform.GetChild(3).GetChild(3).GetComponent<Button>().onClick.AddListener(act4);
+
+                    s_PropsEditorPrefabName = m_UIPanel.transform.GetChild(3).GetChild(4).GetComponent<TMP_InputField>();
+                    s_PropsEditorIsFromBundle = m_UIPanel.transform.GetChild(3).GetChild(5).GetComponent<Toggle>();
+
                     SkyCoop.Logger.Log(ConsoleColor.Cyan, "Canvas UI created!");
                 }
             }
