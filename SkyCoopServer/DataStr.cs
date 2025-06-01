@@ -21,7 +21,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "HuntingLodgeA";
-            public string m_GameMode = "Shrink";
+            public string m_GameMode = "Lobby";
         }
 
         public class GameRulesSave
@@ -372,7 +372,7 @@ namespace SkyCoopServer
             public Dictionary<string, string> m_Containers = new Dictionary<string, string>();
             public Dictionary<string, int> m_ContainerStats = new Dictionary<string, int>();
             
-            public PropDataSave m_Props = new PropDataSave();
+            public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public DataStr.DangerCircleData m_ActiveZone = null;
         }
@@ -972,9 +972,11 @@ namespace SkyCoopServer
 
         public enum CardType
         {
-            Two,
+            Hidden = -2,
+            Empty = -1,
+            Two = 0,
             Three,
-            Fourth,
+            Four,
             Five,
             Six,
             Seven,
@@ -991,12 +993,27 @@ namespace SkyCoopServer
 
         public enum CardSuit
         {
-            Clubs,
+            Hidden = -1,
+            Clubs = 0,
             Spades,
             Hearts,
             Diamonds,
 
             Count,
+        }
+
+        public enum HandRank
+        {
+            HighCard,
+            Pair,
+            TwoPair,
+            ThreeOfAKind,
+            Straight,
+            Flush,
+            FullHouse,
+            FourOfAKind,
+            StraightFlush,
+            RoyalFlush
         }
 
         public class PlayingCard
@@ -1030,6 +1047,14 @@ namespace SkyCoopServer
             public void ShuffleDeck()
             {
                 m_Cards = ShuffleDeck(m_Cards);
+            }
+
+            public void LogAllCards()
+            {
+                for (int i = 0;i < m_Cards.Count; i++)
+                {
+                    SkyCoopServer.Logger.Log($"{i}. {m_Cards[i].m_Type} of {m_Cards[i].m_Suit}");
+                }
             }
 
             public void AddCard(CardType Type, CardSuit Suit)

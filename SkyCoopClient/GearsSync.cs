@@ -80,6 +80,21 @@ namespace SkyCoopClient
                         {
                             TryPickUp(Visual.m_GUID, false);
                         }
+                        Comps.CardGameProp CardGameProp = OBJ.GetComponent<Comps.CardGameProp>();
+                        if(CardGameProp)
+                        {
+                            CardGameProp.TryUse();
+                        }
+                        Comps.TexasHoldEmJoin JoinGame = OBJ.GetComponent<Comps.TexasHoldEmJoin>();
+                        if (JoinGame)
+                        {
+                            JoinGame.TryUse();
+                        }
+                        Comps.TexasHoldEmPlay Play = OBJ.GetComponent<Comps.TexasHoldEmPlay>();
+                        if (Play)
+                        {
+                            Play.TryUse();
+                        }
                     }
                 }
             }

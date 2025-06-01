@@ -589,5 +589,113 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientRespawnAsSpectator);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendPropCreated(NetPeer Client, DataStr.PropData PropData)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientSpawnProp);
+            writer.Put(PropData);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPropRemoved(NetPeer Client, string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRemoveProp);
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPlayerJoinCardGame(NetPeer Client, string GUID, int PlayerID, int GamePlayerID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientCardJoinGame);
+            writer.Put(GUID);
+            writer.Put(PlayerID);
+            writer.Put(GamePlayerID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendCurrentPlayerTurn(NetPeer Client, string GUID, int Turn)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientCardGameTurn);
+            writer.Put(GUID);
+            writer.Put(Turn);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPokerChips(NetPeer Client, string GUID, int GamePlayerID, int Chips)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientCardGamePokerUpdate);
+
+            writer.Put(GUID);
+            writer.Put(0);
+
+
+            writer.Put(GamePlayerID);
+            writer.Put(Chips);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPokerBet(NetPeer Client, string GUID, int GamePlayerID, int Bet)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientCardGamePokerUpdate);
+
+            writer.Put(GUID);
+            writer.Put(1);
+
+
+            writer.Put(GamePlayerID);
+            writer.Put(Bet);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPokerCard(NetPeer Client, string GUID, int GamePlayerID, int CardIndex, int CardType, int CardSuit)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientCardGamePokerUpdate);
+
+            writer.Put(GUID);
+            writer.Put(2);
+
+
+            writer.Put(GamePlayerID);
+            writer.Put(CardIndex);
+            writer.Put(CardType);
+            writer.Put(CardSuit);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPokerDealer(NetPeer Client, string GUID, int Dealer)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientCardGamePokerUpdate);
+
+            writer.Put(GUID);
+            writer.Put(3);
+
+
+            writer.Put(Dealer);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

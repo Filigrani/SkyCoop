@@ -58,6 +58,10 @@ namespace SkyCoopServer
             ClientRespawnAsSpectator,
             ClientSpawnProp,
             ClientRemoveProp,
+            ClientCardGameAction,
+            ClientCardJoinGame,
+            ClientCardGameTurn,
+            ClientCardGamePokerUpdate,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -309,6 +313,43 @@ namespace SkyCoopServer
 
             Data.m_Position = Reader.GetVector3();
             Data.m_Rotation = Reader.GetQuaternion();
+
+            return Data;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.PropData Data)
+        {
+            Writer.Put(Data.posx);
+            Writer.Put(Data.posy);
+            Writer.Put(Data.posz);
+
+            Writer.Put(Data.rotx);
+            Writer.Put(Data.roty);
+            Writer.Put(Data.rotz);
+            Writer.Put(Data.rotw);
+
+            Writer.Put(Data.guid);
+            Writer.Put(Data.prefabname);
+
+            Writer.Put(Data.frombundle);
+        }
+
+        public static DataStr.PropData GetPropData(this NetDataReader Reader)
+        {
+            DataStr.PropData Data = new DataStr.PropData();
+
+            Data.posx = Reader.GetFloat();
+            Data.posy = Reader.GetFloat();
+            Data.posz = Reader.GetFloat();
+
+            Data.rotx = Reader.GetFloat();
+            Data.roty = Reader.GetFloat();
+            Data.rotz = Reader.GetFloat();
+            Data.rotw = Reader.GetFloat();
+
+            Data.guid = Reader.GetString();
+            Data.prefabname = Reader.GetString();
+            Data.frombundle = Reader.GetBool();
 
             return Data;
         }

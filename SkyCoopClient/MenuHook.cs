@@ -8,6 +8,8 @@ namespace SkyCoop
     {
         public static string s_CurrenetMenuOverride = "Original";
 
+        public static Comps.TexasHoldEmPlay s_RaisBetHook;
+
         public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
         {
             Panel_MainMenu.MainMenuItem mainMenuItem = new Panel_MainMenu.MainMenuItem();
@@ -388,6 +390,102 @@ namespace SkyCoop
         {
             ChangeMenuItems("Original");
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PickUnits), "Refresh", null)]
+        public class Panel_PickUnits_Refresh
+        {
+            public static bool Prefix(Panel_PickUnits __instance)
+            {
+                if (s_RaisBetHook != null)
+                {
+                    __instance.m_Label_NumUnits.text = __instance.m_numUnits.ToString() + "/" + __instance.m_maxUnits.ToString();
+                    __instance.m_GearIcon.mainTexture = Utils.GetInventoryIconTextureFromPrefabName("GEAR_CashBundle");
+                    __instance.m_Label_Description.text = "How much to bet?";
+
+                    if(s_RaisBetHook.m_Player)
+                    {
+                        int CurrentBet = s_RaisBetHook.m_Player.m_Bet;
+                        int MaxBet = s_RaisBetHook.m_Player.m_Game.GetMaxBet();
+                        if (__instance.m_numUnits+ CurrentBet <= MaxBet)
+                        {
+                            int MinBet = (MaxBet+1)-(__instance.m_numUnits + CurrentBet);
+                            __instance.m_Label_Description.text +=  $"\n[FF0000]You need to bet at least {MinBet} more![-]";
+                        }
+                    }
+
+                    Utils.GetComponentInChildren<UILabel>(__instance.m_Execute_Button).text = Localization.Get("Bet");
+                    Utils.GetComponentInChildren<UILabel>(__instance.m_ExecuteAll_Button).text = Localization.Get("ALL-IN");
+                    __instance.m_ExecuteAction = PickUnitsExecuteAction.Drop;
+                    __instance.m_ButtonLegendContainer.BeginUpdate();
+                    __instance.m_ButtonLegendContainer.UpdateButton("Inventory_Examine", Utils.GetComponentInChildren<UILabel>(__instance.m_ExecuteAll_Button).text, true, 2, false);
+                    __instance.m_ButtonLegendContainer.UpdateButton("Inventory_Equip", Utils.GetComponentInChildren<UILabel>(__instance.m_Execute_Button).text, true, 1, false);
+                    __instance.m_ButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_ButtonBack", true, 0, true);
+                    __instance.m_ButtonLegendContainer.EndUpdate();
+                    __instance.m_ButtonIncrease.SetActive(__instance.m_numUnits < __instance.m_maxUnits);
+                    __instance.m_ButtonDecrease.SetActive(__instance.m_numUnits > 0);
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PickUnits), "OnExecute", null)]
+        public class Panel_PickUnits_OnExecute
+        {
+            public static bool Prefix(Panel_PickUnits __instance)
+            {
+                if (s_RaisBetHook != null)
+                {
+                    int CurrentBet = s_RaisBetHook.m_Player.m_Bet;
+                    int MaxBet = s_RaisBetHook.m_Player.m_Game.GetMaxBet();
+                    if (__instance.m_numUnits + CurrentBet <= MaxBet)
+                    {
+                        HUDMessage.AddMessage($"[FF0000]You need to bet at least {MaxBet+1}![-]", true, true);
+                        GameAudioManager.PlayGUIError();
+                    }
+                    else
+                    {
+                        s_RaisBetHook.SendActionRaise(__instance.m_numUnits);
+                    }
+
+                    
+                    s_RaisBetHook = null;
+                    __instance.ExitInterface();
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PickUnits), "OnExecuteAll", null)]
+        public class Panel_PickUnits_OnExecuteAll
+        {
+            public static bool Prefix(Panel_PickUnits __instance)
+            {
+                if (s_RaisBetHook != null)
+                {
+                    s_RaisBetHook.SendActionAllIN();
+                    s_RaisBetHook = null;
+                    __instance.ExitInterface();
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PickUnits), "ExitInterface", null)]
+        public class Panel_PickUnits_ExitInterface
+        {
+            public static bool Prefix(Panel_PickUnits __instance)
+            {
+                s_RaisBetHook = null;
+
+                return true;
+            }
         }
 
         //TODO: Move it to different class

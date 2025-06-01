@@ -59,6 +59,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientFinishInteract, ServerHandle.ClientFinishInteract },
             { (int)Packet.Type.ClientSetInteraction, ServerHandle.ClientSetInteraction },
             { (int)Packet.Type.ClientContainerStateUpdated, ServerHandle.ClientContainerStateUpdated },
+            { (int)Packet.Type.ClientCardGameAction, ServerHandle.ClientCardGameAction },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

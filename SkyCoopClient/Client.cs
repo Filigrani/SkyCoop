@@ -66,6 +66,11 @@ namespace SkyCoop
             { (int)Packet.Type.ClientContainerStateUpdated, ClientHandle.ClientContainerStateUpdated },
             { (int)Packet.Type.ClientHUDTimerPrefix, ClientHandle.ClientHUDTimerPrefix },
             { (int)Packet.Type.ClientRespawnAsSpectator, ClientHandle.ClientRespawnAsSpectator },
+            { (int)Packet.Type.ClientSpawnProp, ClientHandle.ClientSpawnProp },
+            { (int)Packet.Type.ClientRemoveProp, ClientHandle.ClientRemoveProp },
+            { (int)Packet.Type.ClientCardJoinGame, ClientHandle.ClientJoinGame },
+            { (int)Packet.Type.ClientCardGameTurn, ClientHandle.ClientCardGameTurn },
+            { (int)Packet.Type.ClientCardGamePokerUpdate, ClientHandle.ClientCardGamePokerUpdate },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

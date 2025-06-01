@@ -34,6 +34,23 @@ namespace SkyCoopServer
                     sceneData.m_ActiveZone.Start();
                 }
 
+                DataStr.PropDataSave PropsSave = FilesManager.GetProps(m_ServerInstance.m_Config.m_GameMode, SceneName);
+
+                if(PropsSave != null)
+                {
+                    foreach (DataStr.PropData Prop in PropsSave.props)
+                    {
+                        sceneData.m_Props.Add(Prop.guid, Prop);
+                        foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        {
+                            if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                            {
+                                ServerSend.SendPropCreated(Peer, Prop);
+                            }
+                        }
+                    }
+                }
+
                 sceneData.m_SceneName = SceneName;
                 m_LoadedScenes.Add(SceneName, sceneData);
             }
@@ -335,6 +352,89 @@ namespace SkyCoopServer
                 foreach (string GUID in SceneData.m_ContainerStats.Keys.ToList())
                 {
                     ServerSend.SendContainerState(Client, GUID, SceneData.m_ContainerStats[GUID], m_ServerInstance);
+                }
+            }
+        }
+
+        public void RemoveProp(string SceneName, string GUID)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+
+                if(SceneData.m_Props.ContainsKey(GUID))
+                {
+                    SceneData.m_Props.Remove(GUID);
+                }
+            }
+        }
+
+        public void UseProp(string SceneName, string GUID, bool Remove = false)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+                if (SceneData.m_Props.ContainsKey(GUID))
+                {
+                    PropData Data = SceneData.m_Props[GUID];
+                    OnPropUsed(SceneName, Data);
+                    if (Remove)
+                    {
+                        SceneData.m_Props.Remove(GUID);
+                        foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        {
+                            if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                            {
+                                ServerSend.SendPropRemoved(Peer, GUID);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public void OnPropUsed(string SceneName, PropData PropData)
+        {
+            if(PropData.prefabname == "CardGameTablePrefab")
+            {
+                PropData NewProp = new PropData();
+                NewProp.prefabname = "TexasHoldEmGamePrefab";
+                NewProp.frombundle = true;
+
+                NewProp.posx = PropData.posx;
+                NewProp.posy = PropData.posy;
+                NewProp.posz = PropData.posz;
+
+                NewProp.rotx = PropData.rotx;
+                NewProp.roty = PropData.roty;
+                NewProp.rotz = PropData.rotz;
+
+                NewProp.guid = Guid.NewGuid().ToString();
+
+                CardGamesManager.StartNewGame(NewProp.guid, SceneName, m_ServerInstance);
+
+                foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                {
+                    if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                    {
+                        ServerSend.SendPropCreated(Peer, NewProp);
+                    }
+                }
+            }
+        }
+
+        public void SendAllProps(string SceneName, NetPeer Client)
+        {
+            LoadScene(SceneName);
+            if (m_LoadedScenes.ContainsKey(SceneName))
+            {
+                SceneData SceneData = m_LoadedScenes[SceneName];
+
+                foreach (string GUID in SceneData.m_Props.Keys.ToList())
+                {
+                    ServerSend.SendPropCreated(Client, SceneData.m_Props[GUID]);
                 }
             }
         }

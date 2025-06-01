@@ -10,6 +10,8 @@ using Harmony;
 using Il2CppRewired;
 using Il2CppTMPro;
 using UnityEngine.UIElements;
+using Il2CppNodeCanvas.BehaviourTrees;
+using Il2CppNodeCanvas.StateMachines;
 
 namespace SkyCoop
 {
@@ -37,6 +39,11 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayerDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<DangerCircleZone>();
             ClassInjector.RegisterTypeInIl2Cpp<ForcedFire>();
+            ClassInjector.RegisterTypeInIl2Cpp<CardGameProp>();
+            ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmProp>();
+            ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmPlayer>();
+            ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmJoin>();
+            ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmPlay>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -1345,6 +1352,431 @@ namespace SkyCoop
                             }
                         }
                     }
+                }
+            }
+        }
+        public class CardGameProp : MonoBehaviour
+        {
+            public CardGameProp(IntPtr ptr) : base(ptr) { }
+
+            public string m_GUID = "";
+
+            public void SetInteraction(string InteractionText, string GUID)
+            {
+                LocalizedString Str = new LocalizedString();
+                Str.m_LocalizationID = InteractionText;
+                SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
+                SI.m_DefaultHoverText = Str;
+                SI.HoverText = InteractionText;
+                SI.m_CanInteract = true;
+                m_GUID = GUID;
+            }
+
+            public void TryUse()
+            {
+                PlayersManager.s_LastTryInteractionObject = gameObject;
+                ClientSend.SendTryInteract(m_GUID);
+            }
+        }
+
+        public class TexasHoldEmPlayer : MonoBehaviour
+        {
+            public TexasHoldEmPlayer(IntPtr ptr) : base(ptr) { }
+
+            public TexasHoldEmProp m_Game = null;
+
+            public int m_PlayerID = -1;
+            public int m_PokerIndex = 0;
+
+            public int m_Bet = 0;
+            public int m_Chips = 0;
+
+            public TextMeshPro m_ChipsLable;
+            public TextMeshPro m_BetLable;
+            public TextMeshPro m_RaisAmount;
+
+            public List<GameObject> m_Cards = new List<GameObject>();
+
+            private bool s_StartCalled = false;
+
+            void Start()
+            {
+                ManualStart();
+            }
+
+            public void ManualStart()
+            {
+                if (!s_StartCalled)
+                {
+                    s_StartCalled = true;
+                }
+                else
+                {
+                    return;
+                }
+                
+                // 0 Card0
+                // 1 Card1
+                // 2 Bet
+                // 3 Chips
+
+                m_Cards.Add(transform.GetChild(0).gameObject);
+                transform.GetChild(0).gameObject.SetActive(false);
+
+                m_Cards.Add(transform.GetChild(1).gameObject);
+                transform.GetChild(1).gameObject.SetActive(false);
+
+                m_BetLable = transform.GetChild(2).GetComponent<TextMeshPro>();
+                m_ChipsLable = transform.GetChild(3).GetComponent<TextMeshPro>();
+            }
+
+            void Update()
+            {
+                if (m_BetLable)
+                {
+                    m_BetLable.SetText($"{m_Bet}$");
+                }
+                if (m_ChipsLable)
+                {
+                    m_ChipsLable.SetText($"{m_Chips}$");
+                }
+            }
+
+            public void SetCard(int CardID, int CardType, int CardSuit)
+            {
+                GameObject CardObj = m_Cards[CardID];
+                if (CardType == -1)
+                {
+                    CardObj.SetActive(false);
+                    return;
+                }
+                Renderer Mesh = CardObj.transform.GetChild(0).GetComponent<Renderer>();
+                Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
+                for (int i = 0; i < NewMatsArr.Length; i++)
+                {
+                    NewMatsArr[i] = Mesh.materials[i];
+                    if(i == 0)
+                    {
+                        NewMatsArr[0].mainTexture = AssetManager.GetAssetFromBundle<Texture>($"{CardType}_{CardSuit}");
+                    }
+                }
+                Mesh.SetMaterialArray(NewMatsArr);
+                CardObj.SetActive(true);
+            }
+        }
+
+
+        public class TexasHoldEmProp : MonoBehaviour
+        {
+            public TexasHoldEmProp(IntPtr ptr) : base(ptr) { }
+
+            public string m_GUID = "";
+
+            public int m_CurrentPlayerTurn = -1;
+            public int m_Dealer = 0;
+
+            public List<TexasHoldEmPlayer> m_Players = new List<TexasHoldEmPlayer>();
+            public List<GameObject> m_CommunityCards = new List<GameObject>();
+            public List<GameObject> m_JoinObjects = new List<GameObject>();
+            public List<GameObject> m_PlayObjects = new List<GameObject>();
+
+            private bool s_StartCalled = false;
+
+            void Start()
+            {
+                ManualStart();
+            }
+
+            public List<int> GetBets()
+            {
+                List<int> Bets = new List<int>();
+
+                foreach (TexasHoldEmPlayer Player in m_Players)
+                {
+                    Bets.Add(Player.m_Bet);
+                }
+
+                return Bets;
+            }
+
+            public int GetMaxBet()
+            {
+                return GetBets().Max();
+            }
+
+            public bool CanCheck(TexasHoldEmPlayer Player)
+            {
+                return GetMaxBet() <= Player.m_Bet;
+            }
+
+            public bool CanRaise(TexasHoldEmPlayer Player)
+            {
+                if (GetMaxBet() == 0)
+                {
+                    return false;
+                }
+                if(GetMaxBet() > Player.m_Bet + Player.m_Chips)
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            public bool CanCall(TexasHoldEmPlayer Player)
+            {
+                if(GetMaxBet() == Player.m_Bet)
+                {
+                    return false;
+                }
+                
+                int callAmount = GetBets().Max() - Player.m_Bet;
+                if (callAmount > Player.m_Bet)
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            public void ManualStart()
+            {
+                if (!s_StartCalled)
+                {
+                    s_StartCalled = true;
+                }
+                else
+                {
+                    return;
+                }
+                for (int i = 0; i < 4; i++)
+                {
+                    GameObject PlayerObj = transform.GetChild(i).gameObject;
+                    TexasHoldEmPlayer Comp = PlayerObj.AddComponent<TexasHoldEmPlayer>();
+                    Comp.m_PokerIndex = i;
+                    Comp.m_Game = this;
+                    Comp.ManualStart();
+                    m_Players.Add(Comp);
+                    PlayerObj.SetActive(false);
+                }
+                for (int i = 0; i < 5; i++)
+                {
+                    GameObject Card = transform.GetChild(4).GetChild(i).gameObject;
+                    Card.gameObject.SetActive(false);
+                    m_CommunityCards.Add(Card);
+                }
+                for (int i = 0; i < 4; i++)
+                {
+                    GameObject JoinObj = transform.GetChild(5+i).gameObject;
+                    TexasHoldEmJoin Comp = JoinObj.AddComponent<TexasHoldEmJoin>();
+                    Comp.SetInteraction($"Join as player {i+1} ", m_GUID, i);
+                    m_JoinObjects.Add(JoinObj);
+                }
+                for (int i = 0; i < 4; i++)
+                {
+                    GameObject PlayObj = transform.GetChild(9 + i).gameObject;
+                    TexasHoldEmPlay Comp = PlayObj.AddComponent<TexasHoldEmPlay>();
+                    Comp.SetInteraction($"Play", m_Players[i]);
+                    m_PlayObjects.Add(PlayObj);
+                }
+
+                // Game checks coliders of child objects, so eh, have to make them parnetless.
+                foreach (GameObject Obj in m_JoinObjects)
+                {
+                    Obj.transform.SetParent(null);
+                }
+                foreach (GameObject Obj in m_PlayObjects)
+                {
+                    Obj.transform.SetParent(null);
+                }
+            }
+
+            public void SetGUID(string GUID)
+            {
+                m_GUID = GUID;
+            }
+
+            public void SetCard(int PokerID, int CardID, int CardType, int CardSuit)
+            {
+                SkyCoop.Logger.Log($"SetCard (Player {PokerID}) {CardID} {(DataStr.CardType)CardType} of {(DataStr.CardSuit)CardSuit}");
+                m_Players[PokerID].SetCard(CardID, CardType, CardSuit);
+            }
+
+            public void SetCard(int CardID, int CardType, int CardSuit)
+            {
+                SkyCoop.Logger.Log($"SetCard (Community) {CardID} {(DataStr.CardType)CardType} of {(DataStr.CardSuit)CardSuit}");
+                GameObject CardObj = m_CommunityCards[CardID];
+                if (CardType == -1)
+                {
+                    CardObj.SetActive(false);
+                    return;
+                }
+
+                
+                Renderer Mesh = CardObj.transform.GetChild(0).GetComponent<Renderer>();
+                Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
+                for (int i = 0; i < NewMatsArr.Length; i++)
+                {
+                    NewMatsArr[i] = Mesh.materials[i];
+                    if (i == 0)
+                    {
+                        NewMatsArr[0].mainTexture = AssetManager.GetAssetFromBundle<Texture>($"{CardType}_{CardSuit}");
+                    }
+                }
+                Mesh.SetMaterialArray(NewMatsArr);
+                CardObj.SetActive(true);
+            }
+
+            public void SetCurrentPlayerTurn(int Turn)
+            {
+                m_CurrentPlayerTurn = Turn;
+            }
+
+            public void SetDealer(int Dealer)
+            {
+                m_Dealer = Dealer;
+            }
+
+            public void SetPlayerBet(int PlayerID, int Bet)
+            {
+                m_Players[PlayerID].m_Bet = Bet;
+            }
+
+            public void SetPlayerChips(int PlayerID, int Chips)
+            {
+                m_Players[PlayerID].m_Chips = Chips;
+            }
+
+            public void RegisterPlayer(int PlayerID, int PokerIndex)
+            {
+                TexasHoldEmPlayer Comp = m_Players[PokerIndex];
+                Comp.m_PlayerID = PlayerID;
+                Comp.gameObject.SetActive(true);
+                m_JoinObjects[PokerIndex].SetActive(false);
+            }
+
+            public void OnDestroy()
+            {
+                foreach (GameObject JoinObj in m_JoinObjects)
+                {
+                    UnityEngine.Object.Destroy(JoinObj);
+                }
+            }
+
+            void Update()
+            {
+                foreach (GameObject PlayObj in m_PlayObjects)
+                {
+                    TexasHoldEmPlay Play = PlayObj.GetComponent<TexasHoldEmPlay>();
+                    if (Play.m_Player)
+                    {
+                        PlayObj.SetActive(Play.m_Player.m_PokerIndex == m_CurrentPlayerTurn);
+                    }
+                }
+            }
+        }
+
+        public class TexasHoldEmJoin : MonoBehaviour
+        {
+            public TexasHoldEmJoin(IntPtr ptr) : base(ptr) { }
+
+            public string m_GUID = "";
+            public int m_PokerID = 0;
+
+            public void SetInteraction(string InteractionText, string GUID, int PokerIndex)
+            {
+                LocalizedString Str = new LocalizedString();
+                Str.m_LocalizationID = InteractionText;
+                SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
+                SI.m_DefaultHoverText = Str;
+                SI.HoverText = InteractionText;
+                SI.m_CanInteract = true;
+                m_GUID = GUID;
+                m_PokerID = PokerIndex;
+            }
+
+            public void TryUse()
+            {
+                ClientSend.SendCardGameAction(m_GUID, 0, m_PokerID);
+            }
+        }
+
+        public class TexasHoldEmPlay : MonoBehaviour
+        {
+            public TexasHoldEmPlay(IntPtr ptr) : base(ptr) { }
+
+            public TexasHoldEmPlayer m_Player;
+
+            public void SetInteraction(string InteractionText, TexasHoldEmPlayer Player)
+            {
+                LocalizedString Str = new LocalizedString();
+                Str.m_LocalizationID = InteractionText;
+                SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
+                SI.m_DefaultHoverText = Str;
+                SI.HoverText = InteractionText;
+                SI.m_CanInteract = true;
+                m_Player = Player;
+            }
+
+            public void SendAction(int Action)
+            {
+                ClientSend.SendCardGameAction(m_Player.m_Game.m_GUID, Action, m_Player.m_PokerIndex);
+            }
+
+            public void SendActionAllIN()
+            {
+                ClientSend.SendCardGameAction(m_Player.m_Game.m_GUID, 4, m_Player.m_PokerIndex, m_Player.m_Chips);
+            }
+
+            public void SendActionRaise(int Amount)
+            {
+                ClientSend.SendCardGameAction(m_Player.m_Game.m_GUID, 4, m_Player.m_PokerIndex, Amount);
+            }
+
+            public void OpenPicker()
+            {
+                Panel_PickUnits Panel = InterfaceManager.GetPanel<Panel_PickUnits>();
+                if (Panel)
+                {
+                    Panel.Enable(true);
+                    Panel.m_GearItem = null;
+                    Panel.m_numUnits = 1;
+                    Panel.m_maxUnits = m_Player.m_Chips;
+                    MenuHook.s_RaisBetHook = this;
+                    Panel.Refresh();
+                }
+            }
+
+            public void TryUse()
+            {
+                Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
+                if (Panel)
+                {
+                    Panel.Enable(true);
+                    Panel.m_ActionPickerItemDataList.Clear();
+                    Action act1 = new Action(() => SendAction(1));
+                    Action act2 = new Action(() => SendAction(2));
+                    Action act3 = new Action(() => SendAction(3));
+                    Action act4 = new Action(() => OpenPicker());
+
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_Radial_decoy", "Fold", act1));
+
+                    if(m_Player && m_Player.m_Game)
+                    {
+                        if (m_Player.m_Game.CanCheck(m_Player))
+                        {
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_tab_passTime1", "Check", act2));
+                        }
+                        if (m_Player.m_Game.CanCall(m_Player))
+                        {
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_SideMIssions", "Call", act3));
+                        }
+                        if (m_Player.m_Game.CanRaise(m_Player))
+                        {
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_clothing_outer", "Raise", act4));
+                        }
+                    }
+
+                    Panel.m_ObjectInteractedWith = null;
+                    Panel.EnableWithCurrentList();
                 }
             }
         }

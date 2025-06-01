@@ -197,7 +197,7 @@ namespace SkyCoopServer
                 catch (Exception e)
                 {
                     Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return Save;
+                    return null;
                 }
             }
             else
@@ -208,7 +208,7 @@ namespace SkyCoopServer
             if (string.IsNullOrEmpty(JSON))
             {
                 Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} is empty");
-                return Save;
+                return null;
             }
             Save = JsonSerializer.Deserialize<PropDataSave>(JSON);
             return Save;

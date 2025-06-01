@@ -1,10 +1,12 @@
 ﻿using Il2Cpp;
 using Il2CppRewired;
+using Il2CppTLD.PDID;
 using Il2CppTMPro;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
+using static Il2Cppgw.gql.Interpreter;
 using static Il2CppParadoxNotion.Services.Logger;
 using static SkyCoop.Comps.PlayerDamageColider;
 
@@ -490,6 +492,72 @@ namespace SkyCoop
         public static void ClientRespawnAsSpectator(NetDataReader Reader)
         {
             PlayersManager.RespawnAsSpecator();
+        }
+
+        public static void ClientSpawnProp(NetDataReader Reader)
+        {
+            DataStr.PropData PropData = Reader.GetPropData();
+            PropsManager.HandlePropSpawn(PropData);
+        }
+
+        public static void ClientRemoveProp(NetDataReader Reader)
+        {
+            string PropGUID = Reader.GetString();
+            PropsManager.HandlePropRemove(PropGUID);
+        }
+
+        public static void ClientJoinGame(NetDataReader Reader)
+        {
+            string GameGUID = Reader.GetString();
+            int PlayerID = Reader.GetInt();
+            int PokerID = Reader.GetInt();
+
+            PropsManager.HandleCardGameJoin(GameGUID, PlayerID, PokerID);
+        }
+
+        public static void ClientCardGameTurn(NetDataReader Reader)
+        {
+            string GameGUID = Reader.GetString();
+            int Turn = Reader.GetInt();
+
+            SkyCoop.Logger.Log($"ClientCardGameTurn GameGUID {GameGUID} Turn {Turn}");
+
+            PropsManager.HandleCardGameTurn(GameGUID, Turn);
+        }
+
+        public static void ClientCardGamePokerUpdate(NetDataReader Reader)
+        {
+            string GameGUID = Reader.GetString();
+            int UpdateType = Reader.GetInt();
+
+            if(UpdateType == 0)
+            {
+                int GamePlayerID = Reader.GetInt();
+                int Chips = Reader.GetInt();
+
+                PropsManager.HandleCardGameChips(GameGUID, GamePlayerID, Chips);
+            }else if(UpdateType == 1)
+            {
+                int GamePlayerID = Reader.GetInt();
+                int Bets = Reader.GetInt();
+
+                PropsManager.HandleCardGameBet(GameGUID, GamePlayerID, Bets);
+            }
+            else if (UpdateType == 2)
+            {
+                int GamePlayerID = Reader.GetInt();
+                int CardID = Reader.GetInt();
+                int CardType = Reader.GetInt();
+                int CardSuit = Reader.GetInt();
+
+                PropsManager.HandleCardGameCard(GameGUID, GamePlayerID, CardID, CardType, CardSuit);
+            }
+            else if (UpdateType == 3)
+            {
+                int Dealer = Reader.GetInt();
+
+                PropsManager.HandleCardGameDealer(GameGUID, Dealer);
+            }
         }
     }
 }

@@ -364,5 +364,33 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+
+        public static void SendCardGameAction(string GUID, int State, int GamePlayerID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientCardGameAction);
+
+            writer.Put(GUID);
+            writer.Put(State);
+            writer.Put(GamePlayerID);
+
+            SkyCoop.Logger.Log($"SendCardGameAction {GUID} {State} {GamePlayerID}");
+
+            SendToHost(writer);
+        }
+        public static void SendCardGameAction(string GUID, int State, int GamePlayerID, int Amount)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientCardGameAction);
+
+            writer.Put(GUID);
+            writer.Put(State);
+            writer.Put(GamePlayerID);
+            writer.Put(Amount);
+
+            SkyCoop.Logger.Log($"SendCardGameAction {GUID} {State} {GamePlayerID} {Amount}");
+
+            SendToHost(writer);
+        }
     }
 }

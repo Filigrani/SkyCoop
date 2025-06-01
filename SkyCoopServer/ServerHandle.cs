@@ -274,6 +274,7 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendZone(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllDeathContainers(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllContainerStates(SceneName, Client);
+            ServerInstance.m_ScenesData.SendAllProps(SceneName, Client);
             ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
 
             if (ServerInstance.m_Rules != null && (ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink"))
@@ -361,7 +362,8 @@ namespace SkyCoopServer
         }
         public static void ClientTryInteract(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
-            if (ServerInstance.GetPlayerDataByNetPeer(Client).m_GamePlayState != PlayerData.GamePlayState.Alive)
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+            if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
             {
                 ServerSend.SendInteractResult(Client, false);
                 return;
@@ -379,6 +381,8 @@ namespace SkyCoopServer
                     }
                 }
             }
+
+            ServerInstance.m_ScenesData.UseProp(Player.m_Scene, GUID, true);
             ServerSend.SendInteractResult(Client, true);
         }
         public static void ClientVehicleSeat(NetPeer Client, NetDataReader Reader, Server ServerInstance)
@@ -483,6 +487,34 @@ namespace SkyCoopServer
                 {
                     ServerSend.SendContainerState(Peer, GUID, State, ServerInstance);
                 }
+            }
+        }
+
+        public static void ClientCardGameAction(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string GUID = Reader.GetString();
+            int State = Reader.GetInt();
+            int GamePlayerID = Reader.GetInt(); // NOT A CLINET ID!!!
+
+            if(State == 0)
+            {
+                CardGamesManager.TryJoinGame(Client, GUID, Client.Id, GamePlayerID, ServerInstance);
+            }else if(State == 1)
+            {
+                CardGamesManager.TryDoAction(GUID, GamePlayerID, "fold");
+            }
+            else if (State == 2)
+            {
+                CardGamesManager.TryDoAction(GUID, GamePlayerID, "check");
+            }
+            else if (State == 3)
+            {
+                CardGamesManager.TryDoAction(GUID, GamePlayerID, "call");
+            }
+            else if (State == 4)
+            {
+                int Raised = Reader.GetInt();
+                CardGamesManager.TryDoAction(GUID, GamePlayerID, "raise", Raised);
             }
         }
     }
