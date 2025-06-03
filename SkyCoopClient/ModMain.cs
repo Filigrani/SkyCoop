@@ -25,6 +25,7 @@ namespace SkyCoop
         {
             Server = new Server();
             Client = new Client();
+            Settings.Init();
         }
 
         public static void SetAppBackgroundMode()
@@ -121,6 +122,13 @@ namespace SkyCoop
                     PropsSpawnsEditor.AddProp();
                 }
             }
+
+            if (CanvasUI.s_SpeakingIndicator)
+            {
+                ClientVoice.IsSpeaking();
+            }
+
+            CanvasUI.Update();
 
             if (IsGameplayScene() && !GameManager.s_IsGameplaySuspended)
             {

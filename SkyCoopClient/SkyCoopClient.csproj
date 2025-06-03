@@ -40,6 +40,11 @@
 	<ItemGroup>
 	  <ProjectReference Include="..\SkyCoopServer\SkyCoopServer.csproj" />
 	</ItemGroup>
+	<ItemGroup>
+	  <Reference Include="ModSettings">
+	    <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\ModSettings.dll</HintPath>
+	  </Reference>
+	</ItemGroup>
 	<Target Name="PostBuild" AfterTargets="PostBuildEvent">
 	  <Exec Command="postbuild.cmd" />
 	</Target>

@@ -5,7 +5,6 @@ using OpenVoiceSharp;
 using System.Net;
 using SkyCoop;
 using UnityEngine;
-using Il2CppRewired;
 using SkyCoopServer;
 
 namespace SkyCoopClient
@@ -18,7 +17,7 @@ namespace SkyCoopClient
         public bool m_IsReady = false;
         public NetPeer m_HostEndPoint;
 
-        public VoiceChatInterface VoiceInterface = new VoiceChatInterface(stereo: false, enableNoiseSuppression: false);
+        public VoiceChatInterface VoiceInterface = new VoiceChatInterface(stereo: false, enableNoiseSuppression: Settings.m_Options.m_NoiseSuppression);
         public BasicMicrophoneRecorder MicrophoneRecorder = new BasicMicrophoneRecorder(stereo: false);
         public int BufferSamples = VoiceUtilities.GetSampleSize(1) / 2;
         public Dictionary<int, CircularAudioBuffer<float>> VoiceBuffer3D = new Dictionary<int, CircularAudioBuffer<float>>();
@@ -27,6 +26,19 @@ namespace SkyCoopClient
         public CircularAudioBuffer<float> m_AnnouncerBuffer = new CircularAudioBuffer<float>();
 
         public AudioSource m_AnnoncerAudioSource = null;
+
+        public bool m_IsSpeakingFlag = false;
+
+        private static bool s_LastPushToTalkState = false;
+        private static float s_PushTotalReleaseTime = 0;
+
+        public static void OnNoiseSuppressionChanged()
+        {
+            if (ModMain.ClientVoice != null)
+            {
+                ModMain.ClientVoice.VoiceInterface.EnableNoiseSuppression = Settings.m_Options.m_NoiseSuppression;
+            }
+        }
 
         public ClientVoice()
         {
@@ -148,8 +160,14 @@ namespace SkyCoopClient
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
         {
+            if(Settings.m_Options.m_ReceivedVoiceVolume == 0)
+            {
+                return;
+            }
+            
             int clientId = Reader.GetInt(); //id
             DataStr.PlayerHearing Hearing = (DataStr.PlayerHearing)Reader.GetInt();
+            float VolumeScaler = Reader.GetFloat();
             byte[] Data = new byte[Reader.GetInt()];
             Reader.GetBytes(Data, Data.Length);
 
@@ -241,16 +259,69 @@ namespace SkyCoopClient
             }
         }
 
+        public static bool IsSpeaking()
+        {
+            if(ModMain.ClientVoice == null)
+            {
+                return false;
+            }
+            return ModMain.ClientVoice.m_IsSpeakingFlag;
+        }
+
+        public static bool PushToTalkisHeldRaw()
+        {
+            return Input.GetKey(Settings.m_Options.m_VoiceButton);
+        }
+
+        public static bool PushToTalkIsHeld()
+        {
+            if (Input.GetKey(Settings.m_Options.m_VoiceButton))
+            {
+                s_LastPushToTalkState = true;
+            }
+            else
+            {
+                if (s_LastPushToTalkState)
+                {
+                    s_PushTotalReleaseTime = Time.time + 0.5f;
+                }
+                s_LastPushToTalkState = false;
+            }
+
+            if (s_LastPushToTalkState)
+            {
+                return true;
+            }
+            else
+            {
+                return s_PushTotalReleaseTime > Time.time;
+            }
+        }
+
         public void StartRecording()
         {
             SkyCoop.Logger.Log(ConsoleColor.Green, "Start Voice chat");
 
             MicrophoneRecorder.DataAvailable += (pcmData, length) =>
             {
+                m_IsSpeakingFlag = false;
                 if (!m_IsReady)
+                {
                     return;
+                }
                 if (!VoiceInterface.IsSpeaking(pcmData))
+                {
                     return;
+                }      
+                if(Settings.m_Options.m_PushToTalk && !PushToTalkIsHeld())
+                {
+                    return;
+                }
+                if(Settings.m_Options.m_MicrophoneVoice == 0)
+                {
+                    return;
+                }
+                m_IsSpeakingFlag = true;
 
                 (byte[] encodedData, int encodedLength) = VoiceInterface.SubmitAudioData(pcmData, length);
 
@@ -295,7 +366,7 @@ namespace SkyCoopClient
                             float[] voice = buffer.ReadAllBuffer();
                             voice[voice.Length - 1] = 0f;
                             clip.SetData(voice, 0);
-                            audioSource.PlayOneShot(clip, 3);
+                            audioSource.PlayOneShot(clip, Settings.m_Options.m_ReceivedVoiceVolume);
                             player.SetVoiceSampleForAnimation(clip);
                             Buffer[clientBuffer.Key] = buffer;
                         }

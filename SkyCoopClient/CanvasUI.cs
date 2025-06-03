@@ -32,6 +32,8 @@ namespace SkyCoopClient
         public static TMP_InputField s_PropsEditorPrefabName;
         public static Toggle s_PropsEditorIsFromBundle;
 
+        public static CanvasGroup s_SpeakingIndicator;
+
         private static Transform s_Parent;
 
 
@@ -89,6 +91,15 @@ namespace SkyCoopClient
             }
         }
 
+        public static void Update()
+        {
+            bool DisplayIcon = Settings.m_Options.m_DisplayMicrophoneIcon && ((Settings.m_Options.m_PushToTalk && ClientVoice.PushToTalkisHeldRaw()) || (!Settings.m_Options.m_PushToTalk && ClientVoice.IsSpeaking()));
+            if (s_SpeakingIndicator)
+            {
+                s_SpeakingIndicator.alpha = Mathf.Lerp(s_SpeakingIndicator.alpha, DisplayIcon ? 1 : 0, Time.deltaTime * 8);
+            }
+        }
+
         public static void CreateUI(Transform Parent)
         {
             s_Parent = Parent;
@@ -121,6 +132,9 @@ namespace SkyCoopClient
 
                     s_PropsEditorPrefabName = m_UIPanel.transform.GetChild(3).GetChild(4).GetComponent<TMP_InputField>();
                     s_PropsEditorIsFromBundle = m_UIPanel.transform.GetChild(3).GetChild(5).GetComponent<Toggle>();
+
+                    s_SpeakingIndicator = m_UIPanel.transform.GetChild(4).GetComponent<CanvasGroup>();
+                    s_SpeakingIndicator.alpha = 0;
 
                     SkyCoop.Logger.Log(ConsoleColor.Cyan, "Canvas UI created!");
                 }
