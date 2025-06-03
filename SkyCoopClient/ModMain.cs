@@ -25,6 +25,7 @@ namespace SkyCoop
         {
             Server = new Server();
             Client = new Client();
+            DebugConsole.RegisterCommands();
             Settings.Init();
         }
 
