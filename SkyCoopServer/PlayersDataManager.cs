@@ -295,7 +295,7 @@ namespace SkyCoopServer
         {
             if(SpeakerID == ListenerID)
             {
-                return PlayerHearing.Proximity;
+                return m_RecursiveDebug ? PlayerHearing.Proximity : PlayerHearing.None;
             }
             
             DataStr.PlayerData Speaker = GetPlayer(SpeakerID);

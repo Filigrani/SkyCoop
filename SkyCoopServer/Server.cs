@@ -187,7 +187,11 @@ namespace SkyCoopServer
         {
             m_Config.m_GameMode = GameMode;
             //m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
-            m_Config.m_SceneToSpawn = GetRandomSceneForGameMode(m_Config.m_GameMode);
+
+            if (string.IsNullOrEmpty(m_Config.m_SceneToSpawn))
+            {
+                m_Config.m_SceneToSpawn = GetRandomSceneForGameMode(m_Config.m_GameMode);
+            }
             m_Rules = FilesManager.GetRules(GameMode);
             m_ScenesData.ChangeGameMode(GameMode);
             ServerSend.SendConfigUpdated(this);
@@ -197,6 +201,7 @@ namespace SkyCoopServer
         public void StartServer()
         {
             StartServer(m_Port, m_Config.m_MaxPlayers);
+
             ChangeGameMode(m_Config.m_GameMode);
 
             m_NetworkHelper = new NetworkHelper(m_Port, "SkyCoopServer");

@@ -2,6 +2,7 @@
 # This .gitignore file was automatically created by Microsoft(R) Visual Studio.
 ################################################################################
 
+/[Dd]ependencies
 /bin/Release
 /obj/Release
 /obj/Dedicated Linux

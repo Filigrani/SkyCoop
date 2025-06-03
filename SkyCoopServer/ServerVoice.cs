@@ -27,7 +27,7 @@ namespace SkyCoopServer
             List<int> Indexes = new List<int>();
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList)
+                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
                 {
                     Indexes.Add(Peer.Id);
                 }
@@ -39,7 +39,7 @@ namespace SkyCoopServer
         {
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList)
+                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
                 {
                     if (Peer.Id == Index)
                     {
@@ -77,11 +77,11 @@ namespace SkyCoopServer
 
         public void SendVoiceToAll(NetPeer Peer, byte[] Data, int ClientId)
         {
-            foreach (NetPeer _Peer in m_Instance.ConnectedPeerList)
+            foreach (NetPeer _Peer in m_Instance.ConnectedPeerList.ToArray())
             {
                 DataStr.PlayerHearing HearingMode = m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(ClientId, _Peer.Id);
 
-
+                SkyCoopServer.Logger.Log($"Voice from {ClientId} to {_Peer.Id} Hearing mode {HearingMode.ToString()}");
                 if (HearingMode != DataStr.PlayerHearing.None)
                 {
                     NetDataWriter writer = new NetDataWriter();

@@ -159,7 +159,7 @@ namespace SkyCoopClient
         }
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
-        {
+        {            
             if(Settings.m_Options.m_ReceivedVoiceVolume == 0)
             {
                 return;
@@ -167,9 +167,10 @@ namespace SkyCoopClient
             
             int clientId = Reader.GetInt(); //id
             DataStr.PlayerHearing Hearing = (DataStr.PlayerHearing)Reader.GetInt();
-            float VolumeScaler = Reader.GetFloat();
             byte[] Data = new byte[Reader.GetInt()];
             Reader.GetBytes(Data, Data.Length);
+
+
 
             (byte[] decodedData, int decodedLength) = VoiceInterface.WhenDataReceived(Data, Data.Length);
             float[] samples = new float[decodedLength / 2];
