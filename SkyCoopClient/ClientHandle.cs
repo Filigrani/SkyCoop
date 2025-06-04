@@ -559,5 +559,16 @@ namespace SkyCoop
                 PropsManager.HandleCardGameDealer(GameGUID, Dealer);
             }
         }
+
+
+        public static void ClientFishTalk(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.DoFishTalk();
+            }
+        }
     }
 }

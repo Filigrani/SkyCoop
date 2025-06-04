@@ -1,0 +1,35 @@
+{
+  "ModGenericComponent": {
+    "DisplayNameLocalizationId": "GAMEPLAY_FishKnife",
+    "DescriptionLocalizatonId": "GAMEPLAY_FishKnifeDescription",
+    "InventoryActionLocalizationId": "",
+    "WeightKG": 0.5,
+    "DaysToDecay": 0,
+    "MaxHP": 100.0,
+    "InitialCondition": "Perfect",
+    "InventoryCategory": "Tool",
+    "PickUpAudio": "",
+    "PutBackAudio": "",
+    "StowAudio": "",
+    "WornOutAudio": "",
+    "InspectOnPickup": true,
+    "InspectDistance": 1.0,
+    "InspectAngles": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "InspectOffset": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "InspectScale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "NormalModel": "",
+    "InspectModel": ""
+  }
+}

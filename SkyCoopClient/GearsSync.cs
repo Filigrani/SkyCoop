@@ -281,6 +281,23 @@ namespace SkyCoopClient
             }
         }
 
+        public static void ApplyTextureDoner(GameObject Obj, string GearName = "")
+        {
+            if (string.IsNullOrEmpty(GearName))
+            {
+                GearName = Obj.name;
+            }
+            if (GearName == "GEAR_FishKnife")
+            {
+                GameObject TextureDoner = AssetManager.GetAssetFromGame<GameObject>("GEAR_RawCohoSalmon");
+
+                if (TextureDoner)
+                {
+                    Obj.transform.GetChild(0).GetChild(1).GetComponent<Renderer>().material = TextureDoner.transform.GetChild(0).GetComponent<Renderer>().material;
+                }
+            }
+        }
+
         public static void GearManualPatch(GearItem __instance)
         {
             MeleeManager.MeeleWeaponPatch(__instance);
@@ -392,6 +409,7 @@ namespace SkyCoopClient
                 Comps.DroppedGearVisual VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
                 VisualComp.m_GUID = Visual.m_GUID;
                 VisualComp.m_LocalizedName = LocalizedGearName;
+                GearsSync.ApplyTextureDoner(GearObject);
 
                 PdidTable.RuntimeRegister(GUIDObj, Visual.m_GUID);
             }

@@ -697,5 +697,16 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendFishTalk(NetPeer Client, int Fisher)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientFishTalk);
+
+            writer.Put(Fisher);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

@@ -81,7 +81,7 @@ namespace SkyCoopServer
             {
                 DataStr.PlayerHearing HearingMode = m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(ClientId, _Peer.Id);
 
-                SkyCoopServer.Logger.Log($"Voice from {ClientId} to {_Peer.Id} Hearing mode {HearingMode.ToString()}");
+                //SkyCoopServer.Logger.Log($"Voice from {ClientId} to {_Peer.Id} Hearing mode {HearingMode.ToString()}");
                 if (HearingMode != DataStr.PlayerHearing.None)
                 {
                     NetDataWriter writer = new NetDataWriter();

@@ -71,6 +71,7 @@ namespace SkyCoop
             { (int)Packet.Type.ClientCardJoinGame, ClientHandle.ClientJoinGame },
             { (int)Packet.Type.ClientCardGameTurn, ClientHandle.ClientCardGameTurn },
             { (int)Packet.Type.ClientCardGamePokerUpdate, ClientHandle.ClientCardGamePokerUpdate },
+            { (int)Packet.Type.ClientFishTalk, ClientHandle.ClientFishTalk },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

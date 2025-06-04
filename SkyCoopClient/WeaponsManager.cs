@@ -100,6 +100,16 @@ namespace SkyCoopClient
             AddDescriptor("GEAR_JeremiahKnife", Knife);
             AddDescriptor("GEAR_KnifeScrapMetal", Knife);
 
+            WeaponDescripter Fish = new WeaponDescripter();
+            Fish.m_IsMelee = true;
+            Fish.m_PlayerDamage = 25;
+            Fish.m_AnimalDamage = 60;
+            Fish.m_BloodLoss = false;
+            Fish.m_ClothingTearing = false;
+            Fish.m_AttackSpeed = 10f;
+            Fish.m_DamageType = DataStr.DamageType.Knife;
+            AddDescriptor("GEAR_FishKnife", Fish);
+
             WeaponDescripter Stone = new WeaponDescripter();
             Stone.m_PlayerDamage = 5;
             Stone.m_Pain = true;
@@ -366,8 +376,13 @@ namespace SkyCoopClient
                 rigidbody.angularVelocity = AngularVelocity;
                 rigidbody.angularDrag = 0.0f;
                 rigidbody.drag = 0.0f;
-            }else if(ProjectileName == "Melee")
+            }else if(ProjectileName == "Melee" || ProjectileName == "Fish")
             {
+                if(ProjectileName == "Fish")
+                {
+                    SoundObj = AssetManager.GetAssetFromBundle<GameObject>("3DFishHit");
+                }
+                
                 if (AssetManager.s_PistolBulletPrefab)
                 {
                     Bullet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.s_PistolBulletPrefab, Position, Rotation);

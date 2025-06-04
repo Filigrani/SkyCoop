@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: db675f5799250e745af26862f49a0c43, type: 3}
+  m_Name: SkyCoopLocalization
+  m_EditorClassIdentifier: 
+  localizationEntries:
+  - localizationKey: GAMEPLAY_FishKnife
+    languages:
+      English: Coho Clubmon
+      German: 
+      Russian: "\u041A\u0438\u0436\u0443\u0447-\u0414\u0443\u0431\u0438\u043D\u0430"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_FishKnifeDescription
+    languages:
+      English: Anomaly coho salmon that has been catched during aurora.
+      German: 
+      Russian: "\u0410\u043D\u043E\u043C\u0430\u043B\u044C\u043D\u044B\u0439 \u043A\u0438\u0436\u0443\u0447
+        \u043F\u043E\u0439\u043C\u0430\u043D\u043D\u044B\u0439 \u0432\u043E \u0432\u0440\u0435\u043C\u044F
+        \u0441\u0435\u0432\u0435\u0440\u043D\u043E\u0433\u043E \u0441\u0438\u044F\u043D\u0438\u044F."
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 

@@ -44,6 +44,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmPlayer>();
             ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmJoin>();
             ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmPlay>();
+            ClassInjector.RegisterTypeInIl2Cpp<TalkingFish>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -374,6 +375,8 @@ namespace SkyCoop
             public GameObject m_BeardMesh = null;
             public GameObject m_EyebrowsMesh = null;
 
+            public AudioSource m_TalkingFishAudioSource;
+
             public CameraAttention m_CameraAttention;
 
             public enum GearHandPose
@@ -471,6 +474,14 @@ namespace SkyCoop
                 if (m_Animator)
                 {
                     m_Animator.SetTrigger("Damaged");
+                }
+            }
+
+            public void DoFishTalk()
+            {
+                if (m_TalkingFishAudioSource)
+                {
+                    m_TalkingFishAudioSource.Play();
                 }
             }
 
@@ -718,6 +729,18 @@ namespace SkyCoop
                 AddPlaceholderHoldingGear(this, "GEAR_Hammer", new Vector3(0.09f, 0.11f, -0.1f), new Vector3(80, 0, 0));
                 AddPlaceholderHoldingGear(this, "GEAR_Prybar", new Vector3(0.09f, 0.1f, -0.02f), new Vector3(350, 0, 0));
 
+                GameObject FishKnife = AddPlaceholderHoldingGearFromBundle(this, "TalkingFish", "GEAR_FishKnife", new Vector3(0.09f, 0.07f, -0.085f), new Vector3(75, 0, 0), GearHandPose.GenericHold);
+
+                if (FishKnife)
+                {
+                    Comps.TalkingFish Comp = FishKnife.AddComponent<Comps.TalkingFish>();
+                    Comp.m_AudioSource = FishKnife.GetComponent<AudioSource>();
+                    Comp.SetupMoth();
+                    m_TalkingFishAudioSource = Comp.m_AudioSource;
+                    GearsSync.ApplyTextureDoner(FishKnife, "GEAR_FishKnife");
+                }
+
+
                 m_Helmet = AddCookpot(new Vector3(0f, 0.245f, 0f), new Vector3(0, 180, 180), 1.03f);
                 m_Satchel = AddSatchel(new Vector3(0.23f, 0.23f, -0.42f), new Vector3(90, 0, -50), 1f);
                 m_TechnicalBackpack = AddTechPack(new Vector3(0, -0.44f, -0.19f), new Vector3(0, 0, 0), 1f);
@@ -824,8 +847,8 @@ namespace SkyCoop
             {
                 m_AudioSource3D = gameObject.transform.FindChild("Voice3D").GetComponent<AudioSource>();
                 m_AudioSource2D = gameObject.transform.FindChild("Voice2D").GetComponent<AudioSource>();
-                m_AudioSource2D = gameObject.transform.FindChild("VoiceRadio").GetComponent<AudioSource>();
-                m_AudioSource2D = gameObject.transform.FindChild("VoiceRadioBG").GetComponent<AudioSource>();
+                m_AudioSourceRadio = gameObject.transform.FindChild("VoiceRadio").GetComponent<AudioSource>();
+                m_AudioSourceRadioBG = gameObject.transform.FindChild("VoiceRadioBG").GetComponent<AudioSource>();
                 m_BottomLip = m_Animator.GetBoneTransform(HumanBodyBones.Head).FindChild("Lip_Bottom");
             }
 
@@ -864,6 +887,30 @@ namespace SkyCoop
                     }
                     AddVisualGear(GearName, Gear, HandPose, Player);
                 }
+            }
+
+            public static GameObject AddPlaceholderHoldingGearFromBundle(Comps.NetworkPlayer Player, string Prefab, string GearName, Vector3 LocalPosition, Vector3 LocalRotation, GearHandPose HandPose = GearHandPose.None)
+            {
+                Transform RightHand = GetBone(Player.m_Animator, HumanBodyBones.RightHand);
+                if (RightHand)
+                {
+                    GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>(Prefab);
+
+                    if (Reference)
+                    {
+                        GameObject Gear = GameObject.Instantiate(Reference);
+                        if (Gear)
+                        {
+                            Gear.transform.SetParent(RightHand);
+                            Gear.transform.localPosition = LocalPosition;
+                            Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
+                        }
+                        Gear.SetActive(true);
+                        AddVisualGear(GearName, Gear, HandPose, Player);
+                        return Gear;
+                    }
+                }
+                return null;
             }
 
             public GameObject AddCookpot(Vector3 Position, Vector3 Rotation, float Scale)
@@ -1777,6 +1824,62 @@ namespace SkyCoop
 
                     Panel.m_ObjectInteractedWith = null;
                     Panel.EnableWithCurrentList();
+                }
+            }
+        }
+        public class TalkingFish : MonoBehaviour
+        {
+            public TalkingFish(IntPtr ptr) : base(ptr) { }
+
+            public AudioSource m_AudioSource;
+            public Transform m_MouthBottom;
+            public float m_MouthMinY = 0.0004f;
+            public float m_MouthMaxY = 0.0006f;
+
+            public float m_MothScaler = 40;
+
+            public float GetVoicePeak()
+            {
+                int SeekPosition = m_AudioSource.timeSamples;
+
+                int StartIndex = SeekPosition - 64;
+                if (StartIndex < 0)
+                {
+                    return 0;
+                }
+
+                Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<float> floatData = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStructArray<float>(64);
+                m_AudioSource.clip.GetData(floatData, StartIndex);
+
+                float Peak = 0;
+                for (int i = 0; i < 64; i++)
+                {
+                    float F = floatData[i];
+                    Peak += Mathf.Abs(F);
+                }
+                float Average = (float)Peak / 64;
+                return Average;
+            }
+
+            public void SetupMoth()
+            {
+                m_MouthBottom = transform.GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0).GetChild(0);
+            }
+
+            void LateUpdate()
+            {
+                if (m_AudioSource && m_MouthBottom)
+                {
+                    float PeakVal = 0;
+
+                    if(m_AudioSource.isPlaying)
+                    {
+                        PeakVal = GetVoicePeak();
+                    }
+                    float InvertedVal = 1 - (PeakVal * m_MothScaler);
+                    Vector3 TargetPosition = new Vector3(m_MouthBottom.localPosition.x, Mathf.Lerp(m_MouthMinY, m_MouthMaxY, InvertedVal), m_MouthBottom.localPosition.z);
+
+                    m_MouthBottom.localPosition = TargetPosition;
                 }
             }
         }

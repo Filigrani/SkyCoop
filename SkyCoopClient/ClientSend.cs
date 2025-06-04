@@ -392,5 +392,11 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+        public static void SendFishTalk()
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientFishTalk);
+            SendToHost(writer);
+        }
     }
 }

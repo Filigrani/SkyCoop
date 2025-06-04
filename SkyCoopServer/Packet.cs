@@ -62,6 +62,7 @@ namespace SkyCoopServer
             ClientCardJoinGame,
             ClientCardGameTurn,
             ClientCardGamePokerUpdate,
+            ClientFishTalk
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

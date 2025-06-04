@@ -7,7 +7,7 @@ namespace SkyCoopClient
     {
         public static void ConsoleLog(string message)
         {
-            uConsoleLog.Add($"[SkyCoop] {message}");
+            //uConsoleLog.Add($"[SkyCoop] {message}");
         }
 
         public static void RegisterCommands()

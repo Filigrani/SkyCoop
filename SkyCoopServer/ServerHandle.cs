@@ -517,5 +517,21 @@ namespace SkyCoopServer
                 CardGamesManager.TryDoAction(GUID, GamePlayerID, "raise", Raised);
             }
         }
+
+        public static void ClientFishTalk(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string Scene = ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene;
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Scene)
+                {
+                    if(Peer.Id != Client.Id || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                    {
+                        ServerSend.SendFishTalk(Peer, Client.Id);
+                    }
+                }
+            }
+        }
     }
 }

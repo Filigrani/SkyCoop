@@ -1,0 +1,26 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 979bcfae80cf69f44b869e9c8c3392e5, type: 3}
+  m_Name: SkyCoop
+  m_EditorClassIdentifier: 
+  Name: SkyCoop
+  Author: Filigrani
+  Version: 
+  RequiredMods: []
+  RequiresDLC: 0
+  modLocalization: {fileID: 11400000, guid: 0a3c6cfc77dcaad41a2d2ccc9efd8a25, type: 2}
+  modGearSpawns: {fileID: 11400000, guid: 88a29c8779273774fad0efd2f6c97f3a, type: 2}
+  modItemRarities: {fileID: 0}
+  Items:
+  - {fileID: 5240960228646552211, guid: 0de88f04a02e185469f7051106af5d90, type: 3}
+  Icons:
+  - {fileID: 2800000, guid: bac5c98130623374daeb83767ace981e, type: 3}

@@ -75,7 +75,8 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<Transform>().Name
                             && ComName != Il2CppType.Of<Rigidbody>().Name
                             && ComName != Il2CppType.Of<MeshRenderer>().Name
-                            && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
+                            && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
+                            && ComName != Il2CppType.Of<AudioSource>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }

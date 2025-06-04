@@ -1,0 +1,10 @@
+﻿{
+    "GAMEPLAY_FishKnife" : {
+                            "English" : "Coho clubmon",
+                            "Russian" : "Кижуч-Дубина"
+    },
+    "GAMEPLAY_FishKnifeDescription" : {
+                            "English" : "Coho salmon that become a weapon under long affection of aurora.",
+                            "Russian" : "Аномальный кижуч, выловленный во время северного сияния."
+    }
+}

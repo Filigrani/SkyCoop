@@ -131,6 +131,13 @@ namespace SkyCoop
 
             CanvasUI.Update();
 
+            MeleeManager.FishTalkRollChane();
+
+            if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
+            {
+                MeleeManager.OnFishStartTalking();
+            }
+
             if (IsGameplayScene() && !GameManager.s_IsGameplaySuspended)
             {
                 PlayersManager.SpectatorControls();
