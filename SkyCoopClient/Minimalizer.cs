@@ -19,6 +19,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(MiniTopNav __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 for (int i = __instance.m_ActiveElements.Count - 1; i >= 0; i--)
                 {
                     MiniTopNavButton butt = __instance.m_ActiveElements[i];
@@ -43,6 +45,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Clothing __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -51,6 +55,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Map __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -59,6 +65,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Log __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -67,6 +75,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_RecipeBook __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -75,6 +85,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Crafting __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -83,6 +95,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Crafting __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -91,6 +105,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_ActionsRadial __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 Panel_ActionsRadial.RadialInfo Empty = new Panel_ActionsRadial.RadialInfo();
                 Empty.m_RadialElement = Panel_ActionsRadial.RadialType.Empty;
                 Empty.m_SpriteName = "";
@@ -174,6 +190,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_ActionsRadial __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.m_Queue.Add(new Action(__instance.StartClothingUI));
                 __instance.ShowGearRadial(GetClothingItemsInInventory(), new Action(ShowNoClothing));
             }
@@ -184,6 +202,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_FirstAid __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.transform.GetChild(2).gameObject.SetActive(false);
                 __instance.transform.GetChild(5).GetChild(11).gameObject.SetActive(false);
 
@@ -203,6 +223,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(BreakDown __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -211,6 +233,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(HarvestableInteraction __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -219,6 +243,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(IceFishingHole __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -227,6 +253,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(GenericStatusBarSpawner __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_StatusBarType != StatusBar.StatusBarType.Condition)
                 {
                     if (__instance.m_SpawnedObject)
@@ -241,6 +269,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(GameManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (GameManager.m_TimeOfDay)
                 {
                     //GameManager.m_TimeOfDay.enabled = false;
@@ -280,6 +310,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(SpawnRegion __instance, bool __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __result = true;
             }
         }
@@ -288,6 +320,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(SpawnRegion __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -296,6 +330,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(PrefabSpawn __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -304,6 +340,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(RadialObjectSpawner __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -312,6 +350,8 @@ namespace SkyCoopClient
         {
             private static void Prefix(RadialSpawnManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 RadialSpawnManager.m_RadialSpawnObjects.Clear();
             }
         }
@@ -320,6 +360,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(GameManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 SkyCoop.Logger.Log(ConsoleColor.Cyan, "Scenes loaded");
 
                 for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
@@ -340,6 +382,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Fatigue __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.m_CurrentFatigue = 0;
             }
         }
@@ -348,6 +392,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Hunger __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories*0.9f;
             }
         }
@@ -356,6 +402,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Thirst __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.m_CurrentThirst = 15;
             }
         }
@@ -364,6 +412,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(EmergencyStim __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 GameManager.GetDiminishedState().Apply(1, AfflictionOptions.None);
                 GameManager.GetSprainPainComponent().ApplyAffliction(AfflictionBodyArea.LegLeft, "Emergency Stimulator");
                 GameManager.GetSprainPainComponent().ApplyAffliction(AfflictionBodyArea.LegRight, "Emergency Stimulator");
@@ -374,6 +424,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Condition __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 DataStr.DamageType DamageType = DataStr.DamageType.Unknown;
 
                 SkyCoop.Logger.Log("PlayerDeath Cause " + __instance.m_CauseOfDeath);
@@ -408,6 +460,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
                     HUDMessage.AddMessage("You can't do this while knocked down", true, true);
@@ -422,6 +476,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
                     HUDMessage.AddMessage("You can't do this while knocked down", true, true);
@@ -437,6 +493,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(LoadScene __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
                 __instance.m_Active = false;
                 Collider COL = __instance.GetComponent<Collider>();
@@ -452,6 +510,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(LoadingZone __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -460,6 +520,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Hypothermia __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -468,6 +530,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Hypothermia __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.m_SuppressHypothermia = true;
             }
         }
@@ -476,6 +540,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(StartGear __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 List<DataStr.StartingGearData> StartingGear = new List<DataStr.StartingGearData>();
 
                 if (ModMain.Client != null)
@@ -519,6 +585,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_LifeAfterDeath __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.m_CampfireGrid.gameObject.SetActive(false);
                 UILocalize RespawnButton = __instance.m_CheatDeathButtonWidget.transform.GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
                 
@@ -543,6 +611,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_LifeAfterDeath __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 GameManager.GetConditionComponent().ResetAudio();
                 ClientSend.SendRespawnRequest();
                 MenuHook.RemovePleaseWait();
@@ -555,6 +625,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Condition __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -563,6 +635,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_LifeAfterDeath __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 if (ModMain.Client != null)
                 {
                     ModMain.Client.m_Instance.Stop();
@@ -576,6 +650,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(SafehouseManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 return false;
             }
         }
@@ -584,6 +660,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(SafehouseManager __instance, ref bool __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __result = false;
             }
         }
@@ -592,6 +670,8 @@ namespace SkyCoopClient
         {
             private static bool Prefix(GameManager __instance, string sceneName)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 SkyCoop.Logger.Log("LoadSceneWithLoadingScreen");
                 if (string.IsNullOrEmpty(s_SceneSpawnOverride))
                 {
@@ -619,7 +699,9 @@ namespace SkyCoopClient
         {
             private static void Postfix(PlayerManager __instance, bool success, bool playerCancel, float progress)
             {
-                if(success && !playerCancel && __instance.m_FoodItemEaten)
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (success && !playerCancel && __instance.m_FoodItemEaten)
                 {
                     float Cal = __instance.m_FoodItemEaten.m_FoodItem.m_CaloriesTotal;
 
@@ -651,6 +733,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(BodyHarvest __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -659,6 +743,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(WaterSource __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -667,6 +753,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(WoodStove __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
                 __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
             }
@@ -676,6 +764,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Campfire __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -684,6 +774,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(CookingSlot __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -692,6 +784,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(Bed __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.enabled = false;
             }
         }
@@ -700,18 +794,9 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Rest __instance)
             {
-                return false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(AuroraModularElectrolizer), "Awake")]
-        private static class AuroraModularElectrolizer_Awake
-        {
-            private static void Postfix(AuroraLightingSimple __instance)
-            {
-                if (ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
-                {
+                if (!ModMain.IsMultiplayer()) { return true; }
 
-                }
+                return false;
             }
         }
     }

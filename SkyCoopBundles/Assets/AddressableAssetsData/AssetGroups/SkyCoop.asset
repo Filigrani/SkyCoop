@@ -25,6 +25,10 @@ MonoBehaviour:
     m_Address: ico_GearItem__FishKnife
     m_ReadOnly: 0
     m_SerializedLabels: []
+  - m_GUID: b3ace995e6b00bb469be852aac7f36bb
+    m_Address: Titles_SkyCoopReborn_Texture
+    m_ReadOnly: 0
+    m_SerializedLabels: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: efa755aa14ecd584594da22fb5be160b, type: 2}
   m_SchemaSet:

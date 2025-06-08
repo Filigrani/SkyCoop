@@ -19,9 +19,6 @@ namespace SkyCoop
     {
         public static void RegisterComponents()
         {
-            ClassInjector.RegisterTypeInIl2Cpp<UiButtonPressHook>();
-            ClassInjector.RegisterTypeInIl2Cpp<UiButtonKeyboardPressSkip>();
-            ClassInjector.RegisterTypeInIl2Cpp<UiButtonSettingHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayer>();
             ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerGear>();
             ClassInjector.RegisterTypeInIl2Cpp<PlayerDamageColider>();
@@ -883,7 +880,7 @@ namespace SkyCoop
                             Gear.transform.localPosition = LocalPosition;
                             Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
                         }
-                        Gear.SetActive(true);
+                        Gear.SetActive(false);
                     }
                     AddVisualGear(GearName, Gear, HandPose, Player);
                 }
@@ -905,7 +902,7 @@ namespace SkyCoop
                             Gear.transform.localPosition = LocalPosition;
                             Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
                         }
-                        Gear.SetActive(true);
+                        Gear.SetActive(false);
                         AddVisualGear(GearName, Gear, HandPose, Player);
                         return Gear;
                     }
@@ -1141,7 +1138,7 @@ namespace SkyCoop
 
                 if(m_CameraAttention && m_CameraAttention.m_OffsetTranform)
                 {
-                    m_CameraAttention.m_OffsetTranform.localPosition = new Vector3(m_CameraAttention.m_OffsetTranform.localPosition.x, GetBone(m_Animator, HumanBodyBones.LeftEye).localPosition.y, m_CameraAttention.m_OffsetTranform.localPosition.z);
+                    m_CameraAttention.m_OffsetTranform.position = new Vector3(m_CameraAttention.m_OffsetTranform.position.x, GetBone(m_Animator, HumanBodyBones.LeftEye).position.y, m_CameraAttention.m_OffsetTranform.position.z);
                 }
 
                 Vector3 TargetPosition = m_Position + GetOffset();

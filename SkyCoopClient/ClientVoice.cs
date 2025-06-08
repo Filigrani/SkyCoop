@@ -299,6 +299,26 @@ namespace SkyCoopClient
             }
         }
 
+        private void AdjustVolume(byte[] pcmData, float volumeScale)
+        {
+            // Assuming 16-bit PCM data (common for microphone input)
+            for (int i = 0; i < pcmData.Length; i += 2)
+            {
+                // Combine two bytes to form a 16-bit sample
+                short sample = (short)((pcmData[i + 1] << 8) | pcmData[i]);
+
+                // Apply volume scaling
+                sample = (short)(sample * volumeScale);
+
+                // Ensure we don't clip (optional)
+                sample = Math.Max(short.MinValue, Math.Min(short.MaxValue, sample));
+
+                // Split back into bytes
+                pcmData[i] = (byte)(sample & 0xFF);
+                pcmData[i + 1] = (byte)(sample >> 8);
+            }
+        }
+
         public void StartRecording()
         {
             SkyCoop.Logger.Log(ConsoleColor.Green, "Start Voice chat");
@@ -324,7 +344,12 @@ namespace SkyCoopClient
                 }
                 m_IsSpeakingFlag = true;
 
-                (byte[] encodedData, int encodedLength) = VoiceInterface.SubmitAudioData(pcmData, length);
+                byte[] adjustedPcmData = new byte[length];
+                Array.Copy(pcmData, adjustedPcmData, length);
+
+                AdjustVolume(adjustedPcmData, Settings.m_Options.m_MicrophoneVoice);
+
+                (byte[] encodedData, int encodedLength) = VoiceInterface.SubmitAudioData(adjustedPcmData, length);
 
                 NetDataWriter writer = new NetDataWriter();
                 writer.Put(0);

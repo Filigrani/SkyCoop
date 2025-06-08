@@ -20,8 +20,8 @@ namespace SkyCoopServer
             public int m_VoicePort = 37850;
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "HuntingLodgeA";
-            public string m_GameMode = "Lobby";
+            public string m_SceneToSpawn = "BlackrockPrisonSurvivalZone";
+            public string m_GameMode = "DM";
         }
 
         public class GameRulesSave

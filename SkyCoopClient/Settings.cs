@@ -9,12 +9,20 @@ using ModSettings;
 using MelonLoader;
 using UnityEngine;
 using System.Reflection;
+using Il2Cpp;
 
 namespace SkyCoopClient
 {
     public class Settings : JsonModSettings
     {
         internal static Settings m_Options = new Settings();
+
+        [Section("Generic Settings")]
+
+        [Name("User Name")]
+        [Description("Nickname other players will see. Leave empty to use your name from Steam.")]
+        public string m_UserName = "";
+
         [Section("Voice Chat")]
 
         [Name("Push To Talk")]
@@ -54,6 +62,69 @@ namespace SkyCoopClient
         {
             base.OnChange(field, oldValue, newValue);
             ClientVoice.OnNoiseSuppressionChanged();
+        }
+
+        public static void BackFromForcedMenu()
+        {
+            Panel_OptionsMenu Options = InterfaceManager.GetPanel<Panel_OptionsMenu>();
+
+            if (Options)
+            {
+                Transform Pages = Options.transform.FindChild("Pages");
+                if (Pages)
+                {
+                    Transform ModSettings = Pages.FindChild("ModSettings");
+
+                    ConsoleComboBox box = ModSettings.GetChild(1).GetChild(0).GetComponent<ConsoleComboBox>();
+                    Transform SubMenuDisplay = ModSettings.GetChild(0);
+                    if (SubMenuDisplay)
+                    {
+                        SubMenuDisplay.gameObject.SetActive(true);
+                    }
+
+                    if (box)
+                    {
+                        box.gameObject.SetActive(true);
+                    }
+                }
+            }
+        }
+
+        public static void ForceToShow()
+        {
+            Panel_OptionsMenu Options = InterfaceManager.GetPanel<Panel_OptionsMenu>();
+
+            if (Options)
+            {
+                Options.m_MainTab.SetActive(false);
+
+                Transform Pages = Options.transform.FindChild("Pages");
+                if (Pages)
+                {
+                    Transform ModSettings = Pages.FindChild("ModSettings");
+
+                    ModSettings.gameObject.SetActive(true);
+
+                    ConsoleComboBox box = ModSettings.GetChild(1).GetChild(0).GetComponent<ConsoleComboBox>();
+                    Transform SubMenuDisplay = ModSettings.GetChild(0);
+                    if (SubMenuDisplay)
+                    {
+                        SubMenuDisplay.gameObject.SetActive(false);
+                    }
+
+                    if (box)
+                    {
+                        box.m_CurrentIndex = box.items.IndexOf("Sky Co-op: Reborn");
+                        box.m_SelectedItem = box.items[box.m_CurrentIndex];
+                        box.Refresh();
+                        if (EventDelegate.IsValid(box.onChange))
+                        {
+                            EventDelegate.Execute(box.onChange);
+                        }
+                        box.gameObject.SetActive(false);
+                    }
+                }
+            }
         }
     }
 }

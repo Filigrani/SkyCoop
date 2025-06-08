@@ -164,6 +164,7 @@ namespace SkyCoopClient
         {
             private static bool Prefix(Panel_Container __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
                 Container box = __instance.m_Container;
                 if (__instance.ShouldEnterSectionNav() && __instance.m_Container != null && !__instance.m_Container.m_FilterLocked)
                 {
@@ -217,6 +218,7 @@ namespace SkyCoopClient
         {
             private static void Postfix(Container __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
                 Comps.ContainerDescriptorHook Hook = __instance.gameObject.GetComponent<Comps.ContainerDescriptorHook>();
                 if (Hook == null)
                 {

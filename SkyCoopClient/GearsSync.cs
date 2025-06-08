@@ -43,6 +43,7 @@ namespace SkyCoopClient
             }
             public static void Postfix(GearItem __instance, int numUnits, GearItem __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
                 if (__instance.gameObject.GetComponent<Bed>() != null && __instance.gameObject.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
                 {
                     return;
@@ -70,6 +71,8 @@ namespace SkyCoopClient
         {
             internal static void Postfix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.ActiveInteraction != null)
                 {
                     GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
@@ -104,6 +107,8 @@ namespace SkyCoopClient
         {
             internal static void Postfix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 SkyCoop.Logger.Log("InteractiveObjectsProcessAltFire");
                 if (__instance.ActiveInteraction != null)
                 {
@@ -125,6 +130,8 @@ namespace SkyCoopClient
         {
             internal static void Postfix(PlayerManager __instance, RaycastHit hit, ref GearItem gi, ref GameObject interactiveObj)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (hit.collider && hit.collider.gameObject)
                 {
                     GameObject hitObj = hit.collider.transform.gameObject;
@@ -142,6 +149,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(GearItem gearItemPrefab, int numUnits, GearItem __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__result)
                 {
                     SendDropItem(__result, 0, 0, false);
@@ -153,6 +162,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(AssetReferenceGearItem assetReference, int numUnits, GearItem __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__result && __result.name.Contains("GEAR_RevolverAmmoCasing"))
                 {
                     SendDropItem(__result, 0, 0, false);
@@ -164,6 +175,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(PlayerManager __instance, GearItem gearItemPrefab, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
             }
@@ -173,6 +186,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(PlayerManager __instance, AssetReferenceGearItem assetReference, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 SkyCoop.Logger.Log($"InstantiateItemAtLocation GUID {assetReference.AssetGUID} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
             }
@@ -188,6 +203,8 @@ namespace SkyCoopClient
             }
             internal static void Postfix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (saveObj)
                 {
                     GearItem gi = saveObj.GetComponent<GearItem>();
@@ -209,6 +226,8 @@ namespace SkyCoopClient
             }
             internal static void Postfix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (saveObj)
                 {
                     GearItem gi = saveObj.GetComponent<GearItem>();
@@ -311,6 +330,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(GearItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 //SkyCoop.Logger.Log($"ManualStart {__instance.name}");
                 GearManualPatch(__instance);
             }
@@ -321,6 +342,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(GearItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_ClothingItem)
                 {
                     if (__instance.m_ClothingItem.IsWearing())

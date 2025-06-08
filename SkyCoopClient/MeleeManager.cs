@@ -229,6 +229,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(ItemDescriptionPage __instance, GearItem gi, ref string __result)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (gi != null)
                 {
                     if (IsMeleeWeapon(gi.name))
@@ -257,6 +259,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(vp_FPSCamera __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_CurrentWeapon == null)
                 {
                     OnMeleeUnEquipped();

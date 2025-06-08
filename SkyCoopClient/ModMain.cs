@@ -46,6 +46,15 @@ namespace SkyCoop
             }
         }
 
+        public static bool IsMultiplayer()
+        {
+            if(MenuHook.s_CurrenetMenuOverride == "Multiplayer" || (Client != null && Client.m_IsReady))
+            {
+                return true;
+            }
+            return false;
+        }
+
         [Obsolete]
         public override void OnApplicationStart()
         {
@@ -131,7 +140,7 @@ namespace SkyCoop
 
             CanvasUI.Update();
 
-            MeleeManager.FishTalkRollChane();
+            //MeleeManager.FishTalkRollChane();
 
             if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
             {
@@ -244,7 +253,14 @@ namespace SkyCoop
 
         public static string GetNickName()
         {
-            return SteamFriends.GetPersonaName();
+            string UserName = Settings.m_Options.m_UserName;
+
+            if (string.IsNullOrEmpty(UserName))
+            {
+                return SteamFriends.GetPersonaName();
+            }
+
+            return UserName;
         }
 
         public static string GenerateSeededGUID(int gameSeed, Vector3 v3)
