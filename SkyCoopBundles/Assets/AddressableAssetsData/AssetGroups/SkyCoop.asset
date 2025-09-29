@@ -29,14 +29,6 @@ MonoBehaviour:
     m_Address: Titles_SkyCoopReborn_Texture
     m_ReadOnly: 0
     m_SerializedLabels: []
-  - m_GUID: 55bdea1624180324d8c7ae97632dfb9f
-    m_Address: GEAR_CringeStockings
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-  - m_GUID: 76bb53d88b0fff547a08c687ba4669e9
-    m_Address: CLTH_LEG_CringeStockings
-    m_ReadOnly: 0
-    m_SerializedLabels: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: efa755aa14ecd584594da22fb5be160b, type: 2}
   m_SchemaSet:

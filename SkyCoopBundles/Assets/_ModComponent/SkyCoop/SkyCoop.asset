@@ -22,8 +22,6 @@ MonoBehaviour:
   modItemRarities: {fileID: 0}
   Items:
   - {fileID: 5240960228646552211, guid: 0de88f04a02e185469f7051106af5d90, type: 3}
-  - {fileID: 6393746213553058848, guid: 55bdea1624180324d8c7ae97632dfb9f, type: 3}
   Icons:
   - {fileID: 2800000, guid: bac5c98130623374daeb83767ace981e, type: 3}
   - {fileID: 2800000, guid: b3ace995e6b00bb469be852aac7f36bb, type: 3}
-  - {fileID: 2800000, guid: 76bb53d88b0fff547a08c687ba4669e9, type: 3}
