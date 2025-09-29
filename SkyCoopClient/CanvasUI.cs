@@ -133,6 +133,10 @@ namespace SkyCoopClient
                     s_PropsEditorPrefabName = m_UIPanel.transform.GetChild(3).GetChild(4).GetComponent<TMP_InputField>();
                     s_PropsEditorIsFromBundle = m_UIPanel.transform.GetChild(3).GetChild(5).GetComponent<Toggle>();
 
+                    Action act5 = new Action(() => PropsSpawnsEditor.AddProp());
+
+                    m_UIPanel.transform.GetChild(3).GetChild(6).GetComponent<Button>().onClick.AddListener(act5);
+
                     s_SpeakingIndicator = m_UIPanel.transform.GetChild(4).GetComponent<CanvasGroup>();
                     s_SpeakingIndicator.alpha = 0;
 

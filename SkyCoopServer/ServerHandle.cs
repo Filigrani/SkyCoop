@@ -369,6 +369,7 @@ namespace SkyCoopServer
                 return;
             }
             string GUID = Reader.GetString();
+            bool BindItNow = Reader.GetBool();
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
                 PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Peer);
@@ -380,6 +381,11 @@ namespace SkyCoopServer
                         return;
                     }
                 }
+            }
+
+            if (BindItNow)
+            {
+                Player.m_InteractionGUID = GUID;
             }
 
             ServerInstance.m_ScenesData.UseProp(Player.m_Scene, GUID, true);
@@ -399,6 +405,10 @@ namespace SkyCoopServer
                     if (Peer.Id != Client.Id)
                     {
                         if (OtherData.m_CarSeat == GUID)
+                        {
+                            return;
+                        }
+                        if (OtherData.m_InteractionGUID == GUID)
                         {
                             return;
                         }
@@ -531,6 +541,15 @@ namespace SkyCoopServer
                         ServerSend.SendFishTalk(Peer, Client.Id);
                     }
                 }
+            }
+        }
+
+        public static void ClientGetTier(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+            if (Player != null)
+            {
+                ServerSend.SendTier(Client, Player.m_Tier);
             }
         }
     }

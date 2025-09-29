@@ -48,6 +48,7 @@ namespace SkyCoopServer
             Rules.m_PlayerCanBeKnocked = Save.Knockdowns;
             Rules.m_PVP = Save.PVP;
             Rules.m_StartingItems = Save.StartingGear;
+            Rules.m_StartingItemsByTier = Save.StartingGearByTier;
             Rules.m_Time = Save.Time;
             Rules.m_HUDMode = Save.HUDMode;
             Rules.m_Respawns = Save.Respawns;

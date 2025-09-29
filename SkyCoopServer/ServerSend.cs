@@ -708,5 +708,16 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendTier(NetPeer Client, int Tier)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientGetTier);
+
+            writer.Put(Tier);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

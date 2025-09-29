@@ -49,6 +49,10 @@ namespace SkyCoopClient
                         Game.SetGUID(PropData.guid);
                         Game.ManualStart();
                     }
+                    else if (PropData.prefabname == "cs_mansion")
+                    {
+                        MaterialsContainer.ApplyInGameMaterials(PropObj);
+                    }
                 }
             }
         }

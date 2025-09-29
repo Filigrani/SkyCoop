@@ -42,6 +42,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmJoin>();
             ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmPlay>();
             ClassInjector.RegisterTypeInIl2Cpp<TalkingFish>();
+            ClassInjector.RegisterTypeInIl2Cpp<PropsEditorVisuzlier>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -769,6 +770,7 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_CowichanSweater");
                 AddClothingMesh("GEAR_FishermanSweater");
                 AddClothingMesh("GEAR_WoolSweater");
+                AddClothingMesh("GEAR_SweaterChristmasA");
 
                 //Pants
                 AddClothingMesh("GEAR_CargoPants");
@@ -1878,6 +1880,18 @@ namespace SkyCoop
 
                     m_MouthBottom.localPosition = TargetPosition;
                 }
+            }
+        }
+
+        public class PropsEditorVisuzlier : MonoBehaviour
+        {
+            public PropsEditorVisuzlier(IntPtr ptr) : base(ptr) { }
+
+            public int m_IndexHandler = 0;
+
+            public void Place()
+            {
+                GameManager.GetPlayerManagerComponent().StartPlaceMesh(gameObject, PlaceMeshFlags.None, Il2CppTLD.Placement.PlaceMeshRules.IgnoreCloseObjects);
             }
         }
     }

@@ -508,6 +508,7 @@ namespace SkyCoopServer
                 Player.m_Kills = 0;
                 Player.m_Deaths = 0;
                 Player.m_Assists = 0;
+                Player.m_Tier = 0;
             }
         }
 

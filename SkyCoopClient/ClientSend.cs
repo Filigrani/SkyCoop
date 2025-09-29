@@ -258,12 +258,13 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
-        public static void SendTryInteract(string GUID)
+        public static void SendTryInteract(string GUID, bool BindIt = false)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientTryInteract);
 
             writer.Put(GUID);
+            writer.Put(BindIt);
 
             SendToHost(writer);
         }

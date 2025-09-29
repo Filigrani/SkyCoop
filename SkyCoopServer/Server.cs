@@ -61,6 +61,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientContainerStateUpdated, ServerHandle.ClientContainerStateUpdated },
             { (int)Packet.Type.ClientCardGameAction, ServerHandle.ClientCardGameAction },
             { (int)Packet.Type.ClientFishTalk, ServerHandle.ClientFishTalk },
+            { (int)Packet.Type.ClientGetTier, ServerHandle.ClientGetTier },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -171,7 +172,7 @@ namespace SkyCoopServer
                 if(m_PendingGameModeOverTimer == 0)
                 {
                     m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
-                    ChangeGameMode(m_Config.m_GameMode);
+                    ChangeGameMode(m_Config.m_GameMode, true);
                     m_PlayersData.ResetFrags();
                 }
             }
@@ -184,12 +185,12 @@ namespace SkyCoopServer
             return FilesManager.GetRandomSceneForGameMode(GameMode);
         }
 
-        public void ChangeGameMode(string GameMode)
+        public void ChangeGameMode(string GameMode, bool RollRandomMap = false)
         {
             m_Config.m_GameMode = GameMode;
             //m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
 
-            if (string.IsNullOrEmpty(m_Config.m_SceneToSpawn))
+            if (string.IsNullOrEmpty(m_Config.m_SceneToSpawn) || RollRandomMap)
             {
                 m_Config.m_SceneToSpawn = GetRandomSceneForGameMode(m_Config.m_GameMode);
             }

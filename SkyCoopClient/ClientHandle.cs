@@ -9,6 +9,7 @@ using UnityEngine;
 using static Il2Cppgw.gql.Interpreter;
 using static Il2CppParadoxNotion.Services.Logger;
 using static SkyCoop.Comps.PlayerDamageColider;
+using static SkyCoop.PlayersManager;
 
 namespace SkyCoop
 {
@@ -568,6 +569,20 @@ namespace SkyCoop
             if (Player)
             {
                 Player.DoFishTalk();
+            }
+        }
+
+        public static void ClientGetTier(NetDataReader Reader)
+        {
+            int MyNewTier = Reader.GetInt();
+
+            int OldTier = PlayersManager.m_LocalPlayerData.m_Tier;
+
+            PlayersManager.m_LocalPlayerData.m_Tier = MyNewTier;
+
+            if (OldTier != -1 && MyNewTier != OldTier && !PlayersManager.s_Spectator && !GameManager.GetConditionComponent().IsConsideredDead())
+            {
+                PlayersManager.GiveoutStartingGear(MyNewTier);
             }
         }
     }

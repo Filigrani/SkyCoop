@@ -248,22 +248,36 @@ namespace SkyCoopClient
                 __instance.enabled = false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GenericStatusBarSpawner), "AssignValuesToSpawnedObject")]
-        private static class GenericStatusBarSpawner_Start
-        {
-            private static void Postfix(GenericStatusBarSpawner __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
 
-                if (__instance.m_StatusBarType != StatusBar.StatusBarType.Condition)
+        private static List<GenericStatusBarSpawner> s_GenericStatusBarSpawners = new List<GenericStatusBarSpawner>();
+
+        public static void ToggleStats()
+        {
+            foreach (GenericStatusBarSpawner __instance in s_GenericStatusBarSpawners)
+            {
+                if (__instance)
                 {
-                    if (__instance.m_SpawnedObject)
+                    if (__instance.m_StatusBarType != StatusBar.StatusBarType.Condition)
                     {
-                        __instance.m_SpawnedObject.SetActive(false);
+                        if (__instance.m_SpawnedObject)
+                        {
+                            __instance.m_SpawnedObject.SetActive(!ModMain.IsMultiplayer());
+                        }
                     }
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(GenericStatusBarSpawner), "AssignValuesToSpawnedObject")]
+        private static class GenericStatusBarSpawner_AssignValuesToSpawnedObject
+        {
+            private static void Postfix(GenericStatusBarSpawner __instance)
+            {
+                s_GenericStatusBarSpawners.Add(__instance);
+            }
+        }
+
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "Update")]
         private static class GameManager_Update
         {
@@ -542,42 +556,8 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                List<DataStr.StartingGearData> StartingGear = new List<DataStr.StartingGearData>();
 
-                if (ModMain.Client != null)
-                {
-                    StartingGear = ModMain.Client.m_Rules.m_StartingItems;
-                }
-
-                if(StartingGear.Count == 0)
-                {
-                    return true;
-                }
-
-                GameManager.GetInventoryComponent().DestroyAllGear();
-
-                foreach (DataStr.StartingGearData Gear in StartingGear)
-                {
-                    string GearName = Gear.Get();
-
-                    if (!string.IsNullOrEmpty(GearName))
-                    {
-                        GearItem GearItem = PlayersManager.GiveItemToPlayer(GearName, Gear.Units);
-                        if (GearItem)
-                        {
-                            if (GearItem.m_GunItem)
-                            {
-                                GearItem.m_GunItem.FillClipAtCondition(100);
-                            }
-                            if (GearItem.m_ClothingItem)
-                            {
-                                GearItem.m_ClothingItem.PutOn();
-                                GearItem.m_NarrativeCollectibleItem = GearItem.gameObject.AddComponent<NarrativeCollectibleItem>();
-                            }
-                        }
-                    }
-                }
-                return false;
+                return PlayersManager.GiveoutStartingGear();
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_LifeAfterDeath), "Enable")]

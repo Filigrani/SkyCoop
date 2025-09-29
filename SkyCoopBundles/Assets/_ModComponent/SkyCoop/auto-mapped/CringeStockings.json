@@ -1,0 +1,60 @@
+{
+  "ModClothingComponent": {
+    "DisplayNameLocalizationId": "GAMEPLAY_CringeStockings",
+    "DescriptionLocalizatonId": "GAMEPLAY_CringeStockingsDescription",
+    "InventoryActionLocalizationId": "",
+    "WeightKG": 0.3,
+    "DaysToDecay": 0,
+    "MaxHP": 100.0,
+    "InitialCondition": "Perfect",
+    "InventoryCategory": "Clothing",
+    "PickUpAudio": "",
+    "PutBackAudio": "",
+    "StowAudio": "",
+    "WornOutAudio": "",
+    "InspectOnPickup": true,
+    "InspectDistance": 1.0,
+    "InspectAngles": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "InspectOffset": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "InspectScale": [
+      1.0,
+      1.0,
+      1.0
+    ],
+    "NormalModel": "",
+    "InspectModel": "",
+    "Region": "Legs",
+    "MinLayer": "Base",
+    "MaxLayer": "Mid",
+    "MovementSound": "None",
+    "Footwear": "None",
+    "DaysToDecayWornOutside": 0.0,
+    "DaysToDecayWornInside": 0.0,
+    "Warmth": 0.0,
+    "WarmthWhenWet": 0.0,
+    "Windproof": 0.0,
+    "Waterproofness": 0.0,
+    "Toughness": 0.0,
+    "SprintBarReduction": 0.0,
+    "DecreaseAttackChance": 0,
+    "IncreaseFleeChance": 0,
+    "HoursToDryNearFire": 0.0,
+    "HoursToDryWithoutFire": 0.0,
+    "HoursToFreeze": 0.0,
+    "MainTexture": "CLTH_LEG_CringeStockings",
+    "BlendTexture": "CLTH_LEG_CringeStockings",
+    "DrawLayer": 0,
+    "ImplementationType": "",
+    "DamageSource": "Unspecified",
+    "FirstPersonPrefabMale": "",
+    "FirstPersonPrefabFemale": ""
+  }
+}

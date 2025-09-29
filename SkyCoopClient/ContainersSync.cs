@@ -30,7 +30,6 @@ namespace SkyCoopClient
                 {
                     GUID = GUIDOBJ.Get();
                 }
-                ClientSend.SendInteractionGUID(GUID);
                 Container = PlayersManager.s_LastTryInteractionObject.GetComponent<Container>();
 
                 if (Container)
@@ -51,8 +50,8 @@ namespace SkyCoopClient
                                 SkyCoop.Logger.Log(ConsoleColor.Red, "HandleContainerOpen got Non base64 string!");
                             }
                         }
-                        Panel.SetContainer(Container, Container.m_LocalizedDisplayName.Text());
                         Panel.Enable(true);
+                        Panel.SetContainer(Container, Container.m_LocalizedDisplayName.Text());
                         Container.m_Inspected = true;
                         Container.m_StartInspected = true;
                         Container.m_GearToInstantiate.Clear();

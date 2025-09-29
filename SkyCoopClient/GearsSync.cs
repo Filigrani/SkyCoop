@@ -69,6 +69,33 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InteractiveObjectsProcessInteraction")]
         public class PlayerManager_InteractiveObjectsProcessInteraction
         {
+            internal static bool Prefix(PlayerManager __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (__instance.ActiveInteraction != null)
+                {
+                    GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
+                    if (OBJ)
+                    {
+                        VehicleDoor door = OBJ.GetComponent<VehicleDoor>();
+
+                        if (door && PlayersManager.TryInteract(door))
+                        {
+                            return false;
+                        }
+
+                        Container container = OBJ.GetComponent<Container>();
+
+                        if (container && PlayersManager.TryInteract(container))
+                        {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            }
+
             internal static void Postfix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
@@ -97,6 +124,11 @@ namespace SkyCoopClient
                         if (Play)
                         {
                             Play.TryUse();
+                        }
+                        Comps.PropsEditorVisuzlier Vizual = OBJ.GetComponent<Comps.PropsEditorVisuzlier>();
+                        if (Vizual)
+                        {
+                            Vizual.Place();
                         }
                     }
                 }

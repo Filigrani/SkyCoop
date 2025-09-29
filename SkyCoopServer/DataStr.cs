@@ -15,12 +15,12 @@ namespace SkyCoopServer
         public class ServerConfig
         {
             public int m_MaxPlayers = 4;
-            public string m_StartingRegion = "ForlornMuskeg";
+            public string m_StartingRegion = "CoastalRegion";
             public int m_Seed = 777777;
             public int m_VoicePort = 37850;
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "BlackrockPrisonSurvivalZone";
+            public string m_SceneToSpawn = "CoastalRegion";
             public string m_GameMode = "DM";
         }
 
@@ -29,6 +29,7 @@ namespace SkyCoopServer
             public bool Knockdowns { get; set; }
             public bool PVP { get; set; }
             public List<StartingGearData> StartingGear { get; set; }
+            public List<List<StartingGearData>> StartingGearByTier { get; set; }
             public int Time { get; set; }
             public string HUDMode { get; set; }
             public bool DeathPacks { get; set; }
@@ -40,6 +41,7 @@ namespace SkyCoopServer
             public bool m_PlayerCanBeKnocked = false;
             public bool m_PVP = true;
             public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
+            public List<List<StartingGearData>> m_StartingItemsByTier = new List<List<StartingGearData>>();
             public int m_Time = 0;
             public string m_HUDMode = "";
             public bool m_DeathPacks = false;
@@ -96,6 +98,7 @@ namespace SkyCoopServer
             public int m_Kills = 0;
             public int m_Deaths = 0;
             public int m_Assists = 0;
+            public int m_Tier = 0;
 
             public string m_CarSeat = "";
             public string m_InteractionGUID = "";
@@ -328,6 +331,30 @@ namespace SkyCoopServer
                 if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 2, m_Assists.ToString(), ServerInstance);
+                }
+            }
+
+            public void AddTier(Server ServerInstance)
+            {
+                if(ServerInstance.m_Rules.m_StartingItemsByTier != null)
+                {
+                    int MaxTier = ServerInstance.m_Rules.m_StartingItemsByTier.Count - 1;
+
+                    if(m_Tier < MaxTier)
+                    {
+                        m_Tier++;
+                    }
+                }
+            }
+
+            public void RemoveTier(Server ServerInstance)
+            {
+                if (ServerInstance.m_Rules.m_StartingItemsByTier != null)
+                {
+                    if (m_Tier > 0)
+                    {
+                        m_Tier--;
+                    }
                 }
             }
         }

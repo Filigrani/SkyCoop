@@ -3,7 +3,87 @@ guid: a5d38ad7ff1f3be4eb4ca0cb68d7e17a
 ModelImporter:
   serializedVersion: 21300
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_MetalCorrugated_I01_Blend
+    second: {fileID: 2100000, guid: 8911356a9916a2240895b0521c33ec20, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_MetalCorrugated_I01_Blend.001
+    second: {fileID: 2100000, guid: 8911356a9916a2240895b0521c33ec20, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_WoodWallNatural_B04_Blend
+    second: {fileID: 2100000, guid: b0766821048a9114b9450b0875b7e339, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_WoodWallNatural_B04_Blend.001
+    second: {fileID: 2100000, guid: b0766821048a9114b9450b0875b7e339, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_WoodWallRed_D03_Flat_Blend
+    second: {fileID: 2100000, guid: 8c7a8af08d873fd4b85e5f6c1a3f209d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_WoodWallnatural_A01_Flat
+    second: {fileID: 2100000, guid: 528b6e58723ef894cb1bb9ae20423c82, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_WoodWallnatural_A01_Flat.001
+    second: {fileID: 2100000, guid: 528b6e58723ef894cb1bb9ae20423c82, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: GLB_WoodWallnatural_A01_Flat.002
+    second: {fileID: 2100000, guid: 528b6e58723ef894cb1bb9ae20423c82, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat.001
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat.002
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat.003
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat.004
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat.005
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: OBJ_BonesA_Mat.006
+    second: {fileID: 2100000, guid: fc3370a9da716fb40b6f875bd7b2ac02, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TRN_SnowA_01
+    second: {fileID: 2100000, guid: b55a65c466f10fb449d0cdaebf5a1c66, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

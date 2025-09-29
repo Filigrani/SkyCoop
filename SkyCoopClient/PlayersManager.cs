@@ -33,6 +33,7 @@ namespace SkyCoop
             public int m_GearVariant = 0;
             public string m_HeadGear = "";
             public string m_BodyGear = "";
+            public int m_Tier = -1; // -1 so, when we loads for first time, we not treat it like updated tier yet, but wait for respawn.
 
             public bool m_LastSentCrouch = false;
             public bool m_LastSentInVehicle = false;
@@ -604,6 +605,8 @@ namespace SkyCoop
         {
             private static void Postfix()
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
                 ClientSend.SendEraceAllInjectedItems();
             }
@@ -614,6 +617,8 @@ namespace SkyCoop
         {
             private static void Postfix(EmergencyStim __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (GameManager.GetBrokenBody().HasAffliction)
                 {
                     RevivedViaEmergencyStim();
@@ -792,7 +797,10 @@ namespace SkyCoop
                     Container Container = s_LastTryInteractionObject.GetComponent<Container>();
                     if (Container)
                     {
-                        
+                        if (!Container.m_OpenInProgress)
+                        {
+                            Container.BeginContainerOpen();
+                        }
                         MenuHook.DoPleaseWait("Please wait...", "Downloading container data...");
                         ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().Get());
                     }
@@ -800,11 +808,6 @@ namespace SkyCoop
                 else
                 {
                     HUDMessage.AddMessage("Failed, interaction blocked by other player!", true, true);
-                    Container Container = s_LastTryInteractionObject.GetComponent<Container>();
-                    if (Container && !Container.m_PendingClose)
-                    {
-                        Container.BeginContainerClose();
-                    }
                 }
             }
             else
@@ -1061,9 +1064,12 @@ namespace SkyCoop
                             break;
                     }
 
-                    if(ModMain.Client != null && ModMain.Client.m_MyEndPoint != null)
+                    if (ModMain.IsMultiplayer())
                     {
-                        ClientSend.SendRemoveInjectedItem(ModMain.Client.GetMyId(), GearName, DamageZone);
+                        if (ModMain.Client != null && ModMain.Client.m_MyEndPoint != null)
+                        {
+                            ClientSend.SendRemoveInjectedItem(ModMain.Client.GetMyId(), GearName, DamageZone);
+                        }
                     }
                 }
                 return false;
@@ -1082,49 +1088,119 @@ namespace SkyCoop
                 PdidTable.RuntimeRegister(ObjGUID, ModMain.GenerateSeededGUID(0, __instance.m_ExitPoint.transform.position));
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(TimedHoldInteraction), "PerformHold")]
-        private static class TimedHoldInteraction_PerformHold
+
+        //[HarmonyLib.HarmonyPatch(typeof(TimedHoldInteraction), "PerformHold")]
+        //private static class TimedHoldInteraction_PerformHold
+        //{
+        //    private static bool Prefix(TimedHoldInteraction __instance)
+        //    {
+        //        __instance.
+        //    }
+        //}
+
+        public static bool TryInteract(VehicleDoor Door)
         {
-            private static bool Prefix(TimedHoldInteraction __instance)
+            string DoorGUID = "";
+            ObjectGuid ObjGUID = Door.GetComponent<ObjectGuid>();
+            if (ObjGUID)
             {
-                VehicleDoor door = __instance.GetComponent<VehicleDoor>();
-                if (door)
-                {
-                    string DoorGUID = "";
-                    ObjectGuid ObjGUID = __instance.GetComponent<ObjectGuid>();
-                    if (ObjGUID)
-                    {
-                        DoorGUID = ObjGUID.Get();
-                    }
-                    s_LastTryInteractionObject = __instance.gameObject;
-                    SkyCoop.Logger.Log($"VehicleDoor PerformHold {DoorGUID}");
+                DoorGUID = ObjGUID.Get();
+            }
+            s_LastTryInteractionObject = Door.gameObject;
+            SkyCoop.Logger.Log($"VehicleDoor PerformHold {DoorGUID}");
 
-                    ClientSend.SendTryInteract(DoorGUID);
-                    return false;
-                }
-                Container container = __instance.GetComponent<Container>();
-                if (container && container.m_Inspected)
-                {
-                    string ContainerGUID = "";
-                    ObjectGuid ObjGUID = __instance.GetComponent<ObjectGuid>();
-                    if (ObjGUID)
-                    {
-                        ContainerGUID = ObjGUID.Get();
-                    }
-                    s_LastTryInteractionObject = __instance.gameObject;
-                    SkyCoop.Logger.Log($"Container PerformHold {ContainerGUID}");
+            ClientSend.SendTryInteract(DoorGUID);
+            return true;
+        }
 
-                    ClientSend.SendTryInteract(ContainerGUID);
-                    return false;
+        public static bool TryInteract(Container container)
+        {
+            if (container.m_Inspected)
+            {
+                string ContainerGUID = "";
+                ObjectGuid ObjGUID = container.GetComponent<ObjectGuid>();
+                if (ObjGUID)
+                {
+                    ContainerGUID = ObjGUID.Get();
                 }
+                s_LastTryInteractionObject = container.gameObject;
+                SkyCoop.Logger.Log($"Container PerformHold {ContainerGUID}");
+
+                ClientSend.SendTryInteract(ContainerGUID, true);
                 return true;
             }
+            return false;
         }
+
+        public static bool GiveoutStartingGear(int Tier = 0)
+        {
+
+            List<DataStr.StartingGearData> StartingGear = new List<DataStr.StartingGearData>();
+            List<List<DataStr.StartingGearData>> StartingGearByTier = new List<List<DataStr.StartingGearData>>();
+
+            if (ModMain.Client != null)
+            {
+                StartingGear = ModMain.Client.m_Rules.m_StartingItems;
+                StartingGearByTier = ModMain.Client.m_Rules.m_StartingItemsByTier;
+            }
+
+            if ((StartingGear == null || StartingGear.Count == 0) && (StartingGearByTier == null || StartingGearByTier.Count == 0))
+            {
+                return true;
+            }
+
+            GameManager.GetInventoryComponent().DestroyAllGear();
+
+            // Starting gear that given to everyone.
+            if(StartingGear != null)
+            {
+                GiveoutKit(StartingGear);
+            }
+
+            // Addtional gear that given based on tier. For example in GunGame.
+            if(StartingGearByTier != null)
+            {
+                if(Tier >= 0 && Tier < StartingGearByTier.Count)
+                {
+                    GiveoutKit(StartingGearByTier[Tier]);
+                }
+            }
+
+            return false; // Return false, vanila starting kit won't be given.
+        }
+
+        public static void GiveoutKit(List<StartingGearData> StartingKit)
+        {
+            foreach (DataStr.StartingGearData Gear in StartingKit)
+            {
+                string GearName = Gear.Get();
+
+                if (!string.IsNullOrEmpty(GearName))
+                {
+                    GearItem GearItem = PlayersManager.GiveItemToPlayer(GearName, Gear.Units);
+                    if (GearItem)
+                    {
+                        if (GearItem.m_GunItem)
+                        {
+                            GearItem.m_GunItem.FillClipAtCondition(100);
+                        }
+                        if (GearItem.m_ClothingItem)
+                        {
+                            GearItem.m_ClothingItem.PutOn();
+                            GearItem.m_NarrativeCollectibleItem = GearItem.gameObject.AddComponent<NarrativeCollectibleItem>();
+                        }
+                    }
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(PlayerInVehicle), "EnterVehicle")]
         private static class PlayerInVehicle_EnterVehicle
         {
             private static void Postfix(PlayerInVehicle __instance, VehicleDoor vd)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 string DoorGUID = "";
                 ObjectGuid ObjGUID = vd.GetComponent<ObjectGuid>();
                 if (ObjGUID)
@@ -1140,6 +1216,8 @@ namespace SkyCoop
         {
             private static void Postfix(PlayerInVehicle __instance, VehicleDoor vd)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 string DoorGUID = "";
                 ObjectGuid ObjGUID = vd.GetComponent<ObjectGuid>();
                 if (ObjGUID)

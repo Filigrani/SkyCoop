@@ -46,6 +46,29 @@ namespace SkyCoop
             return Asset;
         }
 
+        public static void BogusIt(GameObject Obj)
+        {
+            foreach (Component Com in Obj.GetComponents<Component>())
+            {
+                string ComName = Com.GetIl2CppType().Name;
+                if (ComName != Il2CppType.Of<BoxCollider>().Name
+                    && ComName != Il2CppType.Of<SphereCollider>().Name
+                    && ComName != Il2CppType.Of<CapsuleCollider>().Name
+                    && ComName != Il2CppType.Of<MeshCollider>().Name
+                    && ComName != Il2CppType.Of<PhysicMaterial>().Name
+                    && ComName != Il2CppType.Of<MeshFilter>().Name
+                    && ComName != Il2CppType.Of<LODGroup>().Name
+                    && ComName != Il2CppType.Of<Transform>().Name
+                    && ComName != Il2CppType.Of<Rigidbody>().Name
+                    && ComName != Il2CppType.Of<MeshRenderer>().Name
+                    && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
+                    && ComName != Il2CppType.Of<AudioSource>().Name)
+                {
+                    UnityEngine.Object.Destroy(Com);
+                }
+            }
+        }
+
         public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, Transform parent = null)
         {
             string LN = "Invalid";

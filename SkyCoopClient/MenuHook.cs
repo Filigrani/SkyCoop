@@ -13,9 +13,10 @@ namespace SkyCoop
 
         public static Comps.TexasHoldEmPlay s_RaisBetHook;
 
-        public static void AddButton(BasicMenu Menu, string Text, string Description, int order, Action Exec = null)
+        public static void AddButton(BasicMenu Menu, string Text, string Description, int order, Action Exec = null, bool Locked = false)
         {
             BasicMenu.BasicMenuItemModel basicMenuItemModel = new BasicMenu.BasicMenuItemModel("", order, order, Localization.Get(Text), Localization.Get(Description), "", Exec, Color.gray, Color.white);
+            basicMenuItemModel.m_IsLocked = Locked;
             Menu.m_ItemModelList.Insert(order, basicMenuItemModel);
             foreach (IBasicMenuExtension basicMenuExtension in Menu.m_MenuExtensions)
             {
@@ -158,7 +159,7 @@ namespace SkyCoop
                     __instance.m_BasicMenu.Reset();
                     __instance.m_BasicMenu.UpdateTitle("", "", Vector3.zero);
 
-                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_Host", "GAMEPLAY_HostDescription", 0, new Action(OnHostPressed));
+                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_Host", "GAMEPLAY_HostDescription", 0, new Action(OnHostPressed), !Environment.GetCommandLineArgs().Contains("-JoeBiden"));
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Join", "GAMEPLAY_JoinDescription", 1, new Action(OnJoinPressed));
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Options", "GAMEPLAY_OptionsMultiplayerDescription", 2, new Action(OnSettingsPressed));
 

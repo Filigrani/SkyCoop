@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5240960228646552208}
   - component: {fileID: 2752918583684809799}
+  - component: {fileID: 4581243562608761313}
   m_Layer: 17
   m_Name: GEAR_FishKnife
   m_TagString: Untagged
@@ -46,6 +47,37 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 0.57972383, y: 0.07825438, z: 0.17077667}
   m_Center: {x: 0.0013986826, y: 0.042527568, z: 0.0148564875}
+--- !u!114 &4581243562608761313
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5240960228646552211}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b791cf8328f045d45bf04b4f116cb5bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DisplayNameLocalizationId: GAMEPLAY_FishKnife
+  DescriptionLocalizatonId: GAMEPLAY_FishKnifeDescription
+  InventoryActionLocalizationId: 
+  WeightKG: 0.5
+  DaysToDecay: 0
+  MaxHP: 100
+  InitialCondition: 1
+  InventoryCategory: 6
+  PickUpAudio: {fileID: 0}
+  PutBackAudio: {fileID: 0}
+  StowAudio: {fileID: 0}
+  WornOutAudio: {fileID: 0}
+  InspectOnPickup: 1
+  InspectDistance: 1
+  InspectAngles: {x: 0, y: 0, z: 0}
+  InspectOffset: {x: 0, y: 0, z: 0}
+  InspectScale: {x: 1, y: 1, z: 1}
+  NormalModel: {fileID: 0}
+  InspectModel: {fileID: 0}
 --- !u!1001 &5240960228613007369
 PrefabInstance:
   m_ObjectHideFlags: 0

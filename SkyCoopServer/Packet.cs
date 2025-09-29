@@ -1,4 +1,5 @@
 ﻿using System.Numerics;
+using System.Reflection.PortableExecutable;
 using LiteNetLib.Utils;
 
 namespace SkyCoopServer
@@ -62,7 +63,8 @@ namespace SkyCoopServer
             ClientCardJoinGame,
             ClientCardGameTurn,
             ClientCardGamePokerUpdate,
-            ClientFishTalk
+            ClientFishTalk,
+            ClientGetTier,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -174,6 +176,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_PlayerCanBeKnocked);
             Writer.Put(Rules.m_PVP);
             Writer.Put(Rules.m_StartingItems);
+            Writer.Put(Rules.m_StartingItemsByTier);
             Writer.Put(Rules.m_HUDMode);
             Writer.Put(Rules.m_DeathPacks);
             Writer.Put(Rules.m_Respawns);
@@ -186,6 +189,7 @@ namespace SkyCoopServer
             Rules.m_PlayerCanBeKnocked = Reader.GetBool();
             Rules.m_PVP = Reader.GetBool();
             Rules.m_StartingItems = Reader.GetStartingGearList();
+            Rules.m_StartingItemsByTier = Reader.GetStartingGearListOfLists();
             Rules.m_HUDMode = Reader.GetString();
             Rules.m_DeathPacks = Reader.GetBool();
             Rules.m_Respawns = Reader.GetBool();
@@ -236,6 +240,27 @@ namespace SkyCoopServer
                 GearDataList.Add(Reader.GetStartingGear());
             }
             return GearDataList;
+        }
+
+        public static void Put(this NetDataWriter Writer, List<List<DataStr.StartingGearData>> GearDataListOfLists)
+        {
+            Writer.Put(GearDataListOfLists.Count);
+
+            foreach (List<DataStr.StartingGearData> ListOfGears in GearDataListOfLists)
+            {
+                Writer.Put(ListOfGears);
+            }
+        }
+
+        public static List<List<DataStr.StartingGearData>> GetStartingGearListOfLists(this NetDataReader Reader)
+        {
+            List<List<DataStr.StartingGearData>> GearDataListOfLists = new List<List<DataStr.StartingGearData>>();
+            int Count = Reader.GetInt();
+            for (int i = 0; i < Count; i++)
+            {
+                GearDataListOfLists.Add(Reader.GetStartingGearList());
+            }
+            return GearDataListOfLists;
         }
 
         public static void Put(this NetDataWriter Writer, DataStr.ClothingData Data)

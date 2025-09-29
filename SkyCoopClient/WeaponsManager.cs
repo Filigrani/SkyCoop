@@ -450,6 +450,8 @@ namespace SkyCoopClient
         {
             private static void Prefix(vp_Bullet __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 Comps.OtherPlayerBullet OPB = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>();
                 if (OPB == null)
                 {
@@ -493,6 +495,8 @@ namespace SkyCoopClient
         {
             private static void Postfix(vp_Bullet __instance, RaycastHit hit)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 Comps.OtherPlayerBullet OPB = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>();
                 if (OPB == null)
                 {
@@ -572,6 +576,8 @@ namespace SkyCoopClient
         {
             public static void Prefix(vp_FPSShooter __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_Weapon.GetAmmoCount() < 1)
                 {
                     ClientSend.SendProjectile(GameManager.GetPlayerTransform().position, GameManager.GetPlayerTransform().rotation, "DryFire");
@@ -596,6 +602,8 @@ namespace SkyCoopClient
         {
             public static void Prefix(BowItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_GearArrow)
                 {
                     Transform transform = GameManager.GetPlayerAnimationComponent().m_ArrowFirePropPoint.transform;
@@ -611,6 +619,8 @@ namespace SkyCoopClient
         {
             public static void Postfix(GunItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_GunType == GunType.FlareGun)
                 {
                     Transform T = GameManager.GetVpFPSCamera().CurrentShooter.m_Camera.transform;
@@ -631,6 +641,8 @@ namespace SkyCoopClient
             }
             public static void Postfix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (m_Throw != null)
                 {
                     if (m_Throw.m_NoiseMakerItem)
@@ -674,6 +686,8 @@ namespace SkyCoopClient
         {
             public static void Postfix(NoiseMakerItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 Transform T = GameManager.GetPlayerTransform();
 
                 ClientSend.SendProjectileThrow(T.position, T.rotation, "GEAR_NoiseMaker", Vector3.zero, Vector3.zero, 0);
@@ -696,6 +710,8 @@ namespace SkyCoopClient
         {
             public static bool Prefix(NoiseMakerItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 foreach (BaseAi baseAi in AiUtils.GetAisWithinRange(__instance.transform.position, __instance.m_AIDamageRadius))
                 {
                     baseAi.ApplyDamage(__instance.m_AIDamageInflictionInRadius, DamageSource.NoiseMaker, "noisemaker");
@@ -717,6 +733,8 @@ namespace SkyCoopClient
         {
             public static void Prefix(ArrowItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 __instance.gameObject.AddComponent<Comps.ArrowHook>();
             }
         }
@@ -725,6 +743,8 @@ namespace SkyCoopClient
         {
             public static bool Prefix(ArrowItem __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
                 Comps.ArrowHook Hook = __instance.gameObject.AddComponent<Comps.ArrowHook>();
                 bool Other = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>() != null;
                 if (Hook)

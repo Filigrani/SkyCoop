@@ -10,6 +10,7 @@ using UnityEngine;
 using Il2Cpp;
 using SkyCoop;
 using SkyCoopServer;
+using Il2CppTMPro;
 
 namespace SkyCoopClient
 {
@@ -38,14 +39,31 @@ namespace SkyCoopClient
 
                 GameObject Viszualizer;
 
-                if (Data.frombundle)
+                if (!Data.prefabname.StartsWith("Deco"))
                 {
-                    Viszualizer = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>(Data.prefabname), Data.GetVector3Unity(), Data.GetQuaternionUnity());
+                    if (Data.frombundle)
+                    {
+                        Viszualizer = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>(Data.prefabname), Data.GetVector3Unity(), Data.GetQuaternionUnity());
+                        Viszualizer.name = Data.prefabname;
+                    }
+                    else
+                    {
+                        Viszualizer = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(Data.prefabname), Data.GetVector3Unity(), Data.GetQuaternionUnity());
+                        Viszualizer.name = Data.prefabname;
+                    }
                 }
                 else
                 {
-                    Viszualizer = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(Data.prefabname), Data.GetVector3Unity(), Data.GetQuaternionUnity());
+                    int DecoIndex;
+                    if(!int.TryParse(Data.prefabname.Replace("Deco", "").Trim(), out DecoIndex))
+                    {
+                        DecoIndex = 0;
+                    }
+                    Viszualizer = MaterialsContainer.GetDecoByIndex(DecoIndex);
+                    Viszualizer.transform.position = Data.GetVector3Unity();
+                    Viszualizer.transform.rotation = Data.GetQuaternionUnity();
                 }
+                Viszualizer.AddComponent<Comps.PropsEditorVisuzlier>().m_IndexHandler = i;
 
                 m_Visualizers.Add(Viszualizer);
                 GameObject NewElemenet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>("SpawnPointEditorElement"), CanvasUI.m_PropsEditorScrollParnet);
@@ -58,6 +76,9 @@ namespace SkyCoopClient
 
                 Action act2 = new Action(() => Teleport(NewElemenet));
                 NewElemenet.transform.GetChild(1).GetComponent<Button>().m_OnClick.AddListener(act2);
+                NewElemenet.transform.GetChild(2).GetComponent<TMP_Text>().SetText(Viszualizer.gameObject.name);
+                Action act3 = new Action(() => PlaceMode(NewElemenet));
+                NewElemenet.transform.GetChild(3).GetComponent<Button>().m_OnClick.AddListener(act3);
             }
         }
 
@@ -74,6 +95,13 @@ namespace SkyCoopClient
             int Index = int.Parse(Obj.name);
             SkyCoop.Logger.Log("Teleport to index " + Index);
             GameManager.GetPlayerManagerComponent().TeleportPlayer(m_Data[Index].GetVector3Unity(), m_Data[Index].GetQuaternionUnity());
+        }
+
+        public static void PlaceMode(GameObject Obj)
+        {
+            int Index = int.Parse(Obj.name);
+            SkyCoop.Logger.Log("Place mode for index " + Index);
+            m_Visualizers[Index].GetComponent<Comps.PropsEditorVisuzlier>().Place();
         }
 
         public static string GetFileName()
@@ -157,6 +185,30 @@ namespace SkyCoopClient
             if (CanvasUI.m_SpawnPointEditor)
             {
                 CanvasUI.m_SpawnPointEditor.SetActive(false);
+            }
+        }
+
+        public static void ApplyTransformFromVizualizer(Transform VizualizerTransform, int PropIndex)
+        {
+            m_Data[PropIndex].posx = VizualizerTransform.position.x;
+            m_Data[PropIndex].posy = VizualizerTransform.position.y;
+            m_Data[PropIndex].posz = VizualizerTransform.position.z;
+
+            m_Data[PropIndex].rotx = VizualizerTransform.rotation.x;
+            m_Data[PropIndex].roty = VizualizerTransform.rotation.y;
+            m_Data[PropIndex].rotz = VizualizerTransform.rotation.z;
+            m_Data[PropIndex].rotw = VizualizerTransform.rotation.w;
+        }
+
+        public static void ApplyTransformFromVizualizer(GameObject Vizualizer)
+        {
+            if (Vizualizer)
+            {
+                Comps.PropsEditorVisuzlier Comp = Vizualizer.GetComponent<Comps.PropsEditorVisuzlier>();
+                if (Comp)
+                {
+                    ApplyTransformFromVizualizer(Vizualizer.transform, Comp.m_IndexHandler);
+                }
             }
         }
 

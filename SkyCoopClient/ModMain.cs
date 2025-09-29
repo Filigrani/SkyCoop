@@ -10,6 +10,7 @@ using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using System.Reflection;
+using AssetsTools.NET.Extra;
 
 namespace SkyCoop
 {
@@ -69,6 +70,7 @@ namespace SkyCoop
         {
             MeleeManager.ReintilizeViewModels();
             GameModeHUD.Reintilize();
+            Minimalizer.ToggleStats();
             //AssetManager.DumpLocalizationKeysList();
         }
 
@@ -76,6 +78,11 @@ namespace SkyCoop
         {
             ReimplementConsole();
             //AssetManager.DumpAddressablesContent();
+            if (!MaterialsContainer.s_Intilized)
+            {
+                MaterialsContainer.PreloadMaterials();
+                MaterialsContainer.s_Intilized = true;
+            }
         }
 
         public override void OnUpdate()
