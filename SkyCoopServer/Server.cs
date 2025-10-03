@@ -62,6 +62,8 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientCardGameAction, ServerHandle.ClientCardGameAction },
             { (int)Packet.Type.ClientFishTalk, ServerHandle.ClientFishTalk },
             { (int)Packet.Type.ClientGetTier, ServerHandle.ClientGetTier },
+            { (int)Packet.Type.ClientSV_CMD, ServerHandle.ClientSV_CMD },
+            { (int)Packet.Type.ClientSquadHealth, ServerHandle.ClientSquadHealth },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -141,6 +143,11 @@ namespace SkyCoopServer
         public bool CanRespawn()
         {
             return m_Rules != null && m_Rules.m_Respawns;
+        }
+
+        public void ForceToOver()
+        {
+            m_Rules.m_Time = 1;
         }
 
         public void EverySecond()

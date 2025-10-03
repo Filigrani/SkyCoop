@@ -583,7 +583,30 @@ namespace SkyCoop
             if (OldTier != -1 && MyNewTier != OldTier && !PlayersManager.s_Spectator && !GameManager.GetConditionComponent().IsConsideredDead())
             {
                 PlayersManager.GiveoutStartingGear(MyNewTier);
+                PlayersManager.DoWeaponSwitch(true);
             }
+        }
+
+        public static void ClientAssignSquad(NetDataReader Reader)
+        {
+            bool HasSquad = Reader.GetBool();
+
+            PlayersManager.s_InSquad = HasSquad;
+        }
+
+        public static void ClientSquadHealth(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            float Health = Reader.GetFloat();
+            bool Debuffs = Reader.GetBool();
+            bool KnockedDown = Reader.GetBool();
+
+            SquadHUD.UpdateMember(PlayerID, Health, Debuffs, KnockedDown);
+        }
+
+        public static void ServerRequestSquadHealth(NetDataReader Reader)
+        {
+            ClientSend.SendSquadHealth(m_LocalPlayerData.m_Health, m_LocalPlayerData.m_HasDebuffs, m_LocalPlayerData.m_KnockedDown);
         }
     }
 }

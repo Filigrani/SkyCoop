@@ -17,7 +17,9 @@ namespace SkyCoop
         {
             BasicMenu.BasicMenuItemModel basicMenuItemModel = new BasicMenu.BasicMenuItemModel("", order, order, Localization.Get(Text), Localization.Get(Description), "", Exec, Color.gray, Color.white);
             basicMenuItemModel.m_IsLocked = Locked;
+
             Menu.m_ItemModelList.Insert(order, basicMenuItemModel);
+
             foreach (IBasicMenuExtension basicMenuExtension in Menu.m_MenuExtensions)
             {
                 basicMenuExtension.ItemAdded(basicMenuItemModel);
@@ -101,6 +103,12 @@ namespace SkyCoop
 
         public static void OnHostPressed()
         {
+            if (!Environment.GetCommandLineArgs().Contains("-JoeBiden"))
+            {
+                DoOKMessage("Stop it!", "No, you can't host yourself in this build.\nWait when we host.");
+                return;
+            }
+            
             if (ModMain.Server.m_IsReady)
             {
                 RemovePleaseWait();
@@ -111,7 +119,8 @@ namespace SkyCoop
                 ModMain.Server.StartServer();
                 Thread.Sleep(15);
                 ModMain.Client.ConnectToServer("localhost");
-                OpenSandbox();
+                SetMenuOverrideMode("Original");
+                //OpenSandbox();
             }
         }
 
@@ -145,7 +154,7 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_MainMenu __instance)
             {
-                AddButton(__instance.m_BasicMenu, "GAMEPLAY_Multiplayer", "GAMEPLAY_MultiplayerDescription", 3, new Action(OnMultiplayerPressed));
+                AddButton(__instance.m_BasicMenu, "GAMEPLAY_Multiplayer", "GAMEPLAY_MultiplayerDescription", __instance.m_BasicMenu.m_ItemModelList.Count-1, new Action(OnMultiplayerPressed));
             }
         }
 

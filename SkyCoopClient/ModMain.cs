@@ -70,7 +70,6 @@ namespace SkyCoop
         {
             MeleeManager.ReintilizeViewModels();
             GameModeHUD.Reintilize();
-            Minimalizer.ToggleStats();
             //AssetManager.DumpLocalizationKeysList();
         }
 

@@ -34,6 +34,7 @@ namespace SkyCoopServer
                 }
                 ServerSend.SendClientStatus(Peer.Id, 1, ServerInstance);
             }
+            ServerSend.SendAssignSquad(Client, !string.IsNullOrEmpty(ServerInstance.m_PlayersData.GetPlayerNameSquadIn(Client.Id)));
         }
 
         public static void ClientPosition(NetPeer Client, NetDataReader Reader, Server ServerInstance)
@@ -277,22 +278,31 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendAllProps(SceneName, Client);
             ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
 
-            if (ServerInstance.m_Rules != null && (ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink"))
+            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            ServerSend.SendTier(Client, Data.m_Tier);
+
+            if (ServerInstance.m_Rules != null && (ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink" || ServerInstance.m_Rules.m_HUDMode == "GunGame"))
             {
-                PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
-
-                ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
-
                 if (ServerInstance.m_Rules.m_HUDMode == "DMStats")
                 {
+                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
                     ServerSend.SendTimerPrefix(Client, "Time Remaining");
                 }
-                else
+                else if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
                 {
+                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 1, "ico_knowledge_people", $"Players Alive:", ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                }
+                else if (ServerInstance.m_Rules.m_HUDMode == "GunGame")
+                {
+                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Weapon Tier:", Data.GetTierString(ServerInstance), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 1, "", $"Kills Required:", Data.GetTierProgressString(ServerInstance), ServerInstance);
+
+                    ServerSend.SendTimerPrefix(Client, "Time Remaining");
                 }
             }
 
@@ -550,6 +560,64 @@ namespace SkyCoopServer
             if (Player != null)
             {
                 ServerSend.SendTier(Client, Player.m_Tier);
+            }
+        }
+
+        public static void ProcessCMD(Server ServerInstance, string CMD, PlayerData Player)
+        {
+            switch (CMD)
+            {
+                case "recurs":
+                case "recursive":
+                case "mimic":
+                    ServerInstance.m_PlayersData.m_RecursiveDebug = !ServerInstance.m_PlayersData.m_RecursiveDebug;
+                    break;
+                case "addtier":
+                    Player.AddTier(ServerInstance);
+                    break;
+                case "removetier":
+                    Player.RemoveTier(ServerInstance);
+                    break;
+                case "nextmap":
+                    ServerInstance.ForceToOver();
+                    break;
+                case "squad":
+                    ServerInstance.m_PlayersData.CreateRandomSquadForPlayer(Player.m_PlayerID);
+                    break;
+                case "join":
+                    ServerInstance.m_PlayersData.JoinRandomSquad(Player.m_PlayerID);
+                    break;
+            }
+        }
+
+        public static void ClientSV_CMD(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+            if (Player != null && ServerInstance.m_PlayersData.PlayerCanBeTrusted(Player))
+            {
+                ProcessCMD(ServerInstance, Reader.GetString(), Player);
+            }
+        }
+
+        public static void ClientSquadHealth(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+            float Health = Reader.GetFloat();
+            bool Debuffs = Reader.GetBool();
+            bool KnockedDown = Reader.GetBool();
+            if (Player != null)
+            {
+                PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(Player.m_PlayerID);
+                if (Squad != null)
+                {
+                    foreach (int TeammateID in Squad.m_Players)
+                    {
+                        if(TeammateID != Player.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                        {
+                            ServerSend.SendSquadMemberUpdate(ServerInstance.GetClient(TeammateID), Player.m_PlayerID, Health, Debuffs, KnockedDown);
+                        }
+                    }
+                }
             }
         }
     }

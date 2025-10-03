@@ -22,6 +22,7 @@ namespace SkyCoop
         public static GameObject s_LastTryInteractionObject = null;
         public static bool s_ForceUpdateClothing = false;
         public static bool s_Spectator = false;
+        public static bool s_InSquad = false;
 
         public class LocalPlayerData
         {
@@ -34,6 +35,10 @@ namespace SkyCoop
             public string m_HeadGear = "";
             public string m_BodyGear = "";
             public int m_Tier = -1; // -1 so, when we loads for first time, we not treat it like updated tier yet, but wait for respawn.
+
+            public float m_Health = 100;
+            public bool m_HasDebuffs = false;
+            public bool m_KnockedDown = false;
 
             public bool m_LastSentCrouch = false;
             public bool m_LastSentInVehicle = false;
@@ -97,6 +102,12 @@ namespace SkyCoop
         public static void InitilizePlayers(int PlayersCount)
         {
             m_LocalPlayerData = new LocalPlayerData();
+            m_LastDamageType = DataStr.DamageType.Unknown;
+            m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
+            s_LastTryInteractionObject = null;
+            s_ForceUpdateClothing = false;
+            s_Spectator = false;
+            s_InSquad = false;
             
             // Trying to re-use such complex objects as much as possible.
             // So in for some reason we have less or more characters already exist
@@ -260,6 +271,23 @@ namespace SkyCoop
                             {
                                 m_LocalPlayerData.m_LastSentAction = Action;
                                 ClientSend.SendAction((int)Action);
+                            }
+
+                            float CurrentHealth = GameManager.GetConditionComponent().m_CurrentHP;
+                            float Change = CurrentHealth-m_LocalPlayerData.m_Health;
+                            bool HasDebuffs = GameManager.GetConditionComponent().HasAffliction();
+                            bool KnockedDown = GameManager.GetBrokenBody().HasAffliction;
+
+                            if (Change > 1 || Change < 1 || HasDebuffs != m_LocalPlayerData.m_HasDebuffs || KnockedDown != m_LocalPlayerData.m_KnockedDown)
+                            {
+                                m_LocalPlayerData.m_Health = CurrentHealth;
+                                m_LocalPlayerData.m_HasDebuffs = HasDebuffs;
+                                m_LocalPlayerData.m_KnockedDown = KnockedDown;
+
+                                if (s_InSquad)
+                                {
+                                    ClientSend.SendSquadHealth(CurrentHealth, HasDebuffs, KnockedDown);
+                                }
                             }
                         }
                     }
@@ -724,13 +752,15 @@ namespace SkyCoop
 
             GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
+
+            GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
+
             if (RespawnAnim)
             {
                 FullyCure();
                 GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
             }
-            GameManager.GetInventoryComponent().DestroyAllGear();
-            GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
+            DoWeaponSwitch(!RespawnAnim);
 
             ClientSend.SendRevived(-2);
 
@@ -1149,6 +1179,9 @@ namespace SkyCoop
                 return true;
             }
 
+
+            SafelyRemoveGearFromHands();
+
             GameManager.GetInventoryComponent().DestroyAllGear();
 
             // Starting gear that given to everyone.
@@ -1191,6 +1224,69 @@ namespace SkyCoop
                         }
                     }
                 }
+            }
+        }
+
+        public static GearItem GetAutoSwitchGear()
+        {
+            Inventory Inv = GameManager.GetInventoryComponent();
+            foreach (var item in Inv.m_Items)
+            {
+                if(item != null && item.m_GearItem != null)
+                {
+                    if (item.m_GearItem.m_FirstPersonItem || MeleeManager.IsMeleeWeapon(item.m_GearItemName))
+                    {
+                        return item.m_GearItem;
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public static void SafelyRemoveGearFromHands()
+        {
+            PlayerManager PM = GameManager.GetPlayerManagerComponent();
+            PM.UnequipItemInHandsSkipAnimation();
+            PM.ClearLastUnequippedItem();
+            PM.ClearRestoreItemInHandsAfterInteraction();
+            PM.OnUnequipItemInHandInternalCompleteResetWeapon();
+            PM.m_LastUnequippedItem = null;
+            PM.m_StoredWeapon = null;
+        }
+
+        public static void PrepareWeaponSwitch()
+        {
+            PlayerManager PM = GameManager.GetPlayerManagerComponent();
+
+            GearItem Gear = GetAutoSwitchGear();
+
+            if (Gear)
+            {
+                PM.m_LastUnequippedItem = Gear;
+                PM.m_HasSavedItemInHands = true;
+            }
+        }
+
+        public static void DoWeaponSwitch(bool Now = false)
+        {
+            if (Now)
+            {
+                PrepareWeaponSwitch();
+                PlayerManager PM = GameManager.GetPlayerManagerComponent();
+
+                PM.AutoEquipItemInHandsAfterInteraction();
+
+                // Fix for melee weapon.
+                if(PM.m_ItemInHands && MeleeManager.IsMeleeWeapon(PM.m_ItemInHands.name))
+                {
+                    MeleeManager.MeleeUnstove();
+                }
+
+            }
+            else
+            {
+                PrepareWeaponSwitch();
             }
         }
 

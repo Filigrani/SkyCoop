@@ -29,6 +29,10 @@ MonoBehaviour:
     m_Address: Titles_SkyCoopReborn_Texture
     m_ReadOnly: 0
     m_SerializedLabels: []
+  - m_GUID: 0773d2fdf75945d46b4a9d1dce7a6220
+    m_Address: GEAR_CanLauncher
+    m_ReadOnly: 0
+    m_SerializedLabels: []
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: efa755aa14ecd584594da22fb5be160b, type: 2}
   m_SchemaSet:

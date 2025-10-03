@@ -65,6 +65,10 @@ namespace SkyCoopServer
             ClientCardGamePokerUpdate,
             ClientFishTalk,
             ClientGetTier,
+            ClientSV_CMD,
+            ClientSquadHealth,
+            ClientAssignSquad,
+            ServerRequestSquadHealth,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

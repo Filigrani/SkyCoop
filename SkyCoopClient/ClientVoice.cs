@@ -393,7 +393,7 @@ namespace SkyCoopClient
                             voice[voice.Length - 1] = 0f;
                             clip.SetData(voice, 0);
                             audioSource.PlayOneShot(clip, Settings.m_Options.m_ReceivedVoiceVolume);
-                            player.SetVoiceSampleForAnimation(clip);
+                            player.SetVoiceSampleForAnimation(clip, AudioSourceType);
                             Buffer[clientBuffer.Key] = buffer;
                         }
                     }

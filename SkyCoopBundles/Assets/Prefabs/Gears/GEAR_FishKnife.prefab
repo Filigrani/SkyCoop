@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5240960228646552208}
   - component: {fileID: 2752918583684809799}
-  - component: {fileID: 4581243562608761313}
+  - component: {fileID: -7112310143985765846}
   m_Layer: 17
   m_Name: GEAR_FishKnife
   m_TagString: Untagged
@@ -47,7 +47,7 @@ BoxCollider:
   serializedVersion: 2
   m_Size: {x: 0.57972383, y: 0.07825438, z: 0.17077667}
   m_Center: {x: 0.0013986826, y: 0.042527568, z: 0.0148564875}
---- !u!114 &4581243562608761313
+--- !u!114 &-7112310143985765846
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

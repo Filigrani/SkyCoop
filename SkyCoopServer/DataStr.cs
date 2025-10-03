@@ -21,7 +21,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "CoastalRegion";
-            public string m_GameMode = "DM";
+            public string m_GameMode = "GunGame";
         }
 
         public class GameRulesSave
@@ -99,6 +99,7 @@ namespace SkyCoopServer
             public int m_Deaths = 0;
             public int m_Assists = 0;
             public int m_Tier = 0;
+            public int m_TierProgress = 0;
 
             public string m_CarSeat = "";
             public string m_InteractionGUID = "";
@@ -305,6 +306,20 @@ namespace SkyCoopServer
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, m_Kills.ToString(), ServerInstance);
                 }
+                if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "GunGame")
+                {
+                    m_TierProgress += 1;
+
+                    if (m_TierProgress > 2)
+                    {
+                        m_TierProgress = 0;
+                        AddTier(ServerInstance);
+                    }
+                    else
+                    {
+                        ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 1, GetTierProgressString(ServerInstance), ServerInstance);
+                    }
+                }
             }
 
             public void RemoveKill(Server ServerInstance)
@@ -343,6 +358,14 @@ namespace SkyCoopServer
                     if(m_Tier < MaxTier)
                     {
                         m_Tier++;
+
+                        ServerSend.SendTier(ServerInstance.GetClient(m_PlayerID), m_Tier);
+
+                        if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "GunGame")
+                        {
+                            ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, GetTierString(ServerInstance), ServerInstance);
+                            ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 1, GetTierProgressString(ServerInstance), ServerInstance);
+                        }
                     }
                 }
             }
@@ -354,7 +377,44 @@ namespace SkyCoopServer
                     if (m_Tier > 0)
                     {
                         m_Tier--;
+                        m_TierProgress = 0;
+                        ServerSend.SendTier(ServerInstance.GetClient(m_PlayerID), m_Tier);
+
+                        if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "GunGame")
+                        {
+                            ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, GetTierString(ServerInstance), ServerInstance);
+                            ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 1, GetTierProgressString(ServerInstance), ServerInstance);
+                        }
                     }
+                }
+            }
+
+            public string GetTierString(Server ServerInstance)
+            {
+                string Tier = (m_Tier+1) + "/";
+
+                if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_StartingItemsByTier.Count > 0)
+                {
+                    return (m_Tier+1) + "/" + ServerInstance.m_Rules.m_StartingItemsByTier.Count;
+                }
+
+                return Tier.ToString();
+            }
+            public string GetTierProgressString(Server ServerInstance)
+            {
+                if(m_TierProgress == 0)
+                {
+                    return "[707070]OOO[-]";
+                }else if(m_TierProgress == 1)
+                {
+                    return "X[707070]OO[-]";
+                }else if(m_TierProgress == 2)
+                {
+                    return "XX[707070]O[-]";
+                }
+                else
+                {
+                    return "[707070]OOO[-]";
                 }
             }
         }
@@ -548,6 +608,7 @@ namespace SkyCoopServer
             private bool s_NextStageTimerActive = false;
             private string s_SceneName = "";
             private Server s_ServerInstance;
+            private bool s_DebugPauseTimer = false;
 
             public string GetTimerPrefix()
             {
@@ -934,12 +995,14 @@ namespace SkyCoopServer
                 return m_Players.Contains(PlayerID);
             }
 
-            public void AddPlayer(int PlayerID)
+            public bool AddPlayer(int PlayerID)
             {
                 if (!m_Players.Contains(PlayerID))
                 {
                     m_Players.Add(PlayerID);
+                    return true;
                 }
+                return false;
             }
 
             public void RemovePlayer(int PlayerID)

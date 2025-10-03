@@ -148,5 +148,18 @@ namespace SkyCoopClient
                 s_HUD.m_StartCountdownLabel.text = string.Format("{0:0}:{1:00}", Minutes, Seconds);
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_HUD), "Enable")]
+        private static class Panel_HUD_Enable
+        {
+            private static void Postfix(Panel_HUD __instance)
+            {
+                if (__instance.m_ExperimentalBuildLabel)
+                {
+                    __instance.m_ExperimentalBuildLabel.gameObject.SetActive(true);
+                    __instance.m_ExperimentalBuildLabel.text = $"{BuildInfo.ModName} {BuildInfo.ModVersion}";
+                }
+            }
+        }
     }
 }

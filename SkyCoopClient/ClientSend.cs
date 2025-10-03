@@ -399,5 +399,32 @@ namespace SkyCoop
             writer.Put((int)Packet.Type.ClientFishTalk);
             SendToHost(writer);
         }
+
+        public static void SendTierRequest()
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientGetTier);
+            SendToHost(writer);
+        }
+
+        public static void SendSV_CMD(string cmd)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientSV_CMD);
+            writer.Put(cmd.ToLower());
+            SendToHost(writer);
+        }
+
+        public static void SendSquadHealth(float Health, bool Debuffs, bool KnockedDown)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientSquadHealth);
+
+            writer.Put(Health);
+            writer.Put(Debuffs);
+            writer.Put(KnockedDown);
+
+            SendToHost(writer);
+        }
     }
 }

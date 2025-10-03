@@ -7,6 +7,7 @@ using Il2CppTLD.UI;
 using SkyCoop;
 using SkyCoopServer;
 using UnityEngine;
+using static SkyCoop.Comps;
 
 namespace SkyCoopClient
 {
@@ -249,31 +250,16 @@ namespace SkyCoopClient
             }
         }
 
-        private static List<GenericStatusBarSpawner> s_GenericStatusBarSpawners = new List<GenericStatusBarSpawner>();
-
-        public static void ToggleStats()
-        {
-            foreach (GenericStatusBarSpawner __instance in s_GenericStatusBarSpawners)
-            {
-                if (__instance)
-                {
-                    if (__instance.m_StatusBarType != StatusBar.StatusBarType.Condition)
-                    {
-                        if (__instance.m_SpawnedObject)
-                        {
-                            __instance.m_SpawnedObject.SetActive(!ModMain.IsMultiplayer());
-                        }
-                    }
-                }
-            }
-        }
-
         [HarmonyLib.HarmonyPatch(typeof(GenericStatusBarSpawner), "AssignValuesToSpawnedObject")]
         private static class GenericStatusBarSpawner_AssignValuesToSpawnedObject
         {
             private static void Postfix(GenericStatusBarSpawner __instance)
             {
-                s_GenericStatusBarSpawners.Add(__instance);
+                GenericStatusBarSpawnerHook Hook = __instance.gameObject.GetComponent<GenericStatusBarSpawnerHook>();
+                if (Hook == null)
+                {
+                    Hook = __instance.gameObject.AddComponent<GenericStatusBarSpawnerHook>();
+                }
             }
         }
 
@@ -557,7 +543,7 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return true; }
 
 
-                return PlayersManager.GiveoutStartingGear();
+                return PlayersManager.GiveoutStartingGear(PlayersManager.m_LocalPlayerData.m_Tier);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_LifeAfterDeath), "Enable")]
@@ -596,7 +582,7 @@ namespace SkyCoopClient
                 GameManager.GetConditionComponent().ResetAudio();
                 ClientSend.SendRespawnRequest();
                 MenuHook.RemovePleaseWait();
-                MenuHook.DoPleaseWait("Да блин, жди что ли...", "Грузим шпингалеты...");
+                MenuHook.DoPleaseWait("Взламываем твой камютэр, жди...", "Грузим шпингалеты...");
                 return false;
             }
         }

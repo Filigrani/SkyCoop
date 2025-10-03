@@ -43,6 +43,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<TexasHoldEmPlay>();
             ClassInjector.RegisterTypeInIl2Cpp<TalkingFish>();
             ClassInjector.RegisterTypeInIl2Cpp<PropsEditorVisuzlier>();
+            ClassInjector.RegisterTypeInIl2Cpp<GenericStatusBarSpawnerHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<TeammateBar>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -365,7 +367,9 @@ namespace SkyCoop
             public float m_MouthLerpScaler = 50;
             public float m_MouthLerpSmoother = 0;
             public AudioClip m_LastVoiceSample = null;
+            public AudioClip m_LastRadioSample = null;
             public float m_SampleVoiceSeek = 0;
+            public float m_SampleRadioSeek = 0;
             public int m_SampleVoiceWindow = 64;
             public Vector3 m_InVehicleOffset = new Vector3(0, 0.21f, 0.21f);
 
@@ -1055,10 +1059,26 @@ namespace SkyCoop
                         m_LastVoiceSample = null;
                     }
                 }
+                if (m_LastRadioSample)
+                {
+                    m_SampleRadioSeek += Time.deltaTime;
+                    if (m_SampleRadioSeek > m_LastRadioSample.length)
+                    {
+                        m_SampleRadioSeek = 0;
+                        m_LastRadioSample = null;
+                    }
+                }
             }
 
-            public void SetVoiceSampleForAnimation(AudioClip Clip)
+            public void SetVoiceSampleForAnimation(AudioClip Clip, DataStr.PlayerHearing HearingMode)
             {
+                if(HearingMode == PlayerHearing.Radio)
+                {
+                    m_LastRadioSample = Clip;
+                    m_SampleRadioSeek = 0;
+                    return;
+                }
+                
                 m_LastVoiceSample = Clip;
                 m_SampleVoiceSeek = 0;
             }
@@ -1155,6 +1175,11 @@ namespace SkyCoop
                 {
                     transform.position = TargetPosition;
                 }
+
+                //if (m_AudioSourceRadio && m_AudioSourceRadioBG)
+                //{
+                //    m_AudioSourceRadioBG.gameObject.SetActive(m_LastRadioSample != null);
+                //}
 
                 transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
             }
@@ -1892,6 +1917,180 @@ namespace SkyCoop
             public void Place()
             {
                 GameManager.GetPlayerManagerComponent().StartPlaceMesh(gameObject, PlaceMeshFlags.None, Il2CppTLD.Placement.PlaceMeshRules.IgnoreCloseObjects);
+            }
+        }
+
+        public class TeammateBar : MonoBehaviour
+        {
+            public TeammateBar(IntPtr ptr) : base(ptr) { }
+
+            public int m_IndexHandler = 0;
+            public float m_Health = 100;
+            public UILabel m_NameLable = null;
+            public GameObject m_BuffObj;
+            public GameObject m_DebuffObj;
+            public UISprite m_DebuffSprite;
+            GenericStatusBarSpawner s_Bar;
+            StatusBar s_StatusBar;
+
+
+            void Start()
+            {
+                s_Bar = GetComponent<GenericStatusBarSpawner>();
+                if (s_Bar && s_Bar.m_SpawnedObject)
+                {
+                    s_StatusBar = s_Bar.m_SpawnedObject.GetComponent<StatusBar>();
+                    if (s_StatusBar)
+                    {
+                        if(m_BuffObj == null) // On case if Start called more than once
+                        {
+                            m_BuffObj = s_StatusBar.m_BuffObject;
+                            s_StatusBar.m_BuffObject = null; // remove control of this object from original StatusBar script.
+                        }
+                        if(m_DebuffObj == null)
+                        {
+                            m_DebuffObj = s_StatusBar.m_DebuffObject;
+                            s_StatusBar.m_DebuffObject = null;
+                            m_DebuffSprite = m_DebuffObj.GetComponent<UISprite>();
+                        }
+                    }
+                }
+            }
+
+            void Update()
+            {
+                if (s_Bar && s_Bar.m_SpawnedObject)
+                {
+                    SquadHUD.SquadMember Member = SquadHUD.GetMember(m_IndexHandler);
+                    s_Bar.m_SpawnedObject.SetActive(Member != null);
+                    if (m_NameLable)
+                    {
+                        m_NameLable.gameObject.SetActive(Member != null);
+                    }
+                    if (Member != null)
+                    {
+                        m_Health = Member.m_Health;
+                        if (m_NameLable)
+                        {
+                            m_NameLable.text = CanvasUI.GetPlayerName(Member.m_ID);
+                        }
+                        if (m_DebuffObj)
+                        {
+                            m_DebuffObj.SetActive(Member.m_HasDebuffs || Member.m_KnockedDown);
+
+                            if (m_DebuffSprite)
+                            {
+                                if (Member.m_HasDebuffs && !Member.m_KnockedDown)
+                                {
+                                    m_DebuffSprite.spriteName = "ico_afflictionGeneric";
+                                    m_DebuffSprite.color = InterfaceManager.m_FirstAidRiskColor;
+                                }
+                                else if(Member.m_KnockedDown)
+                                {
+                                    m_DebuffSprite.spriteName = "ico_injury_BrokenBody";
+                                    m_DebuffSprite.color = InterfaceManager.m_FirstAidRedColor;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public class GenericStatusBarSpawnerHook : MonoBehaviour
+        {
+            public GenericStatusBarSpawnerHook(IntPtr ptr) : base(ptr) { }
+
+            GenericStatusBarSpawner s_Bar;
+            List<TeammateBar> s_TeamBars = new List<TeammateBar>();
+
+
+            void AddTeamBar()
+            {
+                Panel_HUD HUD = InterfaceManager.GetPanel<Panel_HUD>();
+
+
+                float BarsSpacing = 60;
+                float NamesSpacing = 30;
+
+                if (HUD.m_SmallSizeGroup && HUD.m_SmallSizeGroup.gameObject.activeSelf)
+                {
+                    BarsSpacing = 30;
+                }
+                else if(HUD.m_LargeSizeGroup && HUD.m_LargeSizeGroup.gameObject.activeSelf)
+                {
+                    BarsSpacing = 90;
+                }
+
+
+                if (s_Bar.m_StatusBarType == StatusBar.StatusBarType.Condition && s_Bar.GetComponent<TeammateBar>() == null)
+                {
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        GameObject Clone = UnityEngine.Object.Instantiate<GameObject>(s_Bar.gameObject, s_Bar.gameObject.transform.parent);
+                        if (Clone)
+                        {
+                            Clone.name = s_Bar.gameObject.name + $" (Teammate {i})";
+
+                            TeammateBar Bar = Clone.AddComponent<TeammateBar>();
+                            Bar.m_IndexHandler = i-1;
+
+                            Clone.transform.localPosition = new Vector3(s_Bar.transform.localPosition.x, s_Bar.transform.localPosition.y + (BarsSpacing * i), s_Bar.transform.localPosition.z);
+
+                            
+                            if (HUD && HUD.m_NowhereToHide)
+                            {
+                                GameObject LableClone = UnityEngine.Object.Instantiate<GameObject>(HUD.m_NowhereToHide.m_WardGlyphRoot.transform.GetChild(1).gameObject, Clone.transform);
+                                if (LableClone)
+                                {
+                                    LableClone.name = "PlayerName";
+                                    UILabel Lable = LableClone.GetComponent<UILabel>();
+                                    if (Lable)
+                                    {
+                                        Lable.text = $"Teammate {i}";
+                                    }
+                                    Bar.m_NameLable = Lable;
+                                    UILocalize Loca = Lable.GetComponent<UILocalize>();
+                                    if (Loca)
+                                    {
+                                        UnityEngine.Object.Destroy(Loca);
+                                    }
+                                    UIAnchor Anch = Lable.GetComponent<UIAnchor>();
+                                    if (Loca)
+                                    {
+                                        UnityEngine.Object.Destroy(Anch);
+                                    }
+                                    LableClone.transform.localPosition = new Vector3(-15f, NamesSpacing, 0);
+                                }
+                            }
+
+                            UnityEngine.Object.Destroy(Clone.transform.GetChild(0).gameObject);
+                        }
+                    }
+                }
+            }
+
+            void Start()
+            {
+                s_Bar = GetComponent<GenericStatusBarSpawner>();
+
+                if (s_Bar)
+                {
+                    if (s_Bar.m_StatusBarType != StatusBar.StatusBarType.Condition)
+                    {
+                        if (s_Bar.m_SpawnedObject)
+                        {
+                            s_Bar.m_SpawnedObject.SetActive(!ModMain.IsMultiplayer());
+                        }
+                    }
+                    else
+                    {
+                        if(s_TeamBars.Count == 0)
+                        {
+                            AddTeamBar();
+                        }
+                    }
+                }
             }
         }
     }

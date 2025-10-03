@@ -13,20 +13,18 @@ namespace SkyCoopClient
         public static void RegisterCommands()
         {
             uConsole.RegisterCommand("RecursiveDebug", new Action(RecursiveDebug));
+            uConsole.RegisterCommand("sv_cmd", new Action(SV_CMD));
         }
 
+        // Keeping old command, just in case if it still being used by force of habit.
         public static void RecursiveDebug()
         {
-            if (ModMain.Server.m_PlayersData.m_RecursiveDebug)
-            {
-                ModMain.Server.m_PlayersData.m_RecursiveDebug = false;
-                Logger.Log("[DebugConsole] RecursiveDebug off");
-            }
-            else
-            {
-                ModMain.Server.m_PlayersData.m_RecursiveDebug = true;
-                Logger.Log("[DebugConsole] RecursiveDebug on");
-            }
+            ClientSend.SendSV_CMD("mimic");
+        }
+
+        public static void SV_CMD()
+        {
+            ClientSend.SendSV_CMD(uConsole.GetString());
         }
     }
 }

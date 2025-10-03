@@ -719,5 +719,39 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendAssignSquad(NetPeer Client, bool HasSquad)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientAssignSquad);
+
+            writer.Put(HasSquad);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendSquadMemberUpdate(NetPeer Client, int PlayerID, float Health, bool Debuffs, bool KnockedDown)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientSquadHealth);
+
+            writer.Put(PlayerID);
+            writer.Put(Health);
+            writer.Put(Debuffs);
+            writer.Put(KnockedDown);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendSquadHealthRequest(NetPeer Client)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ServerRequestSquadHealth);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

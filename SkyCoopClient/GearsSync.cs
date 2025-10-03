@@ -13,6 +13,8 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using static Il2CppSystem.Linq.Expressions.Interpreter.InitializeLocalInstruction;
 
 namespace SkyCoopClient
 {
@@ -349,10 +351,68 @@ namespace SkyCoopClient
             }
         }
 
+        public static void CanLauncherPatch(GearItem __instance)
+        {
+            if (__instance.name == "GEAR_CanLauncher")
+            {
+                GameObject FlareGunPrefab = AssetManager.GetAssetFromGame<GameObject>("GEAR_FlareGun");
+
+
+                GameObject AmmoPrefab = AssetManager.GetAssetFromGame<GameObject>("GEAR_NoiseMaker");
+                GameObject AmmoObject = UnityEngine.Object.Instantiate(AmmoPrefab);
+
+                GunItem GunItemDoner = FlareGunPrefab.GetComponent<GunItem>();
+                FirstPersonItem FPIDoner = FlareGunPrefab.GetComponent<FirstPersonItem>();
+
+                
+                GunItem GunItem = __instance.gameObject.AddComponent<GunItem>();
+                GunItem.m_AccuracyRange = GunItemDoner.m_AccuracyRange;
+                GunItem.m_AmmoSpriteName = "ico_units_noisemaker";
+                GunItem.m_AimButtonLabel = GunItemDoner.m_AimButtonLabel;
+
+                UnityEngine.AddressableAssets.AssetReferenceT < GearItemData > G = new UnityEngine.AddressableAssets.AssetReferenceT<GearItemData>(AmmoObject.GetComponent<GearItem>().m_GearItemData.PrefabReference.AssetGUID);
+                GunItem.m_AmmoReferences = new Il2CppSystem.Collections.Generic.List<AssetReferenceT<GearItemData>>();
+                GunItem.m_AmmoReferences.Add(G);
+                GunItem.m_CasingAudio = "";
+
+                GunItem.m_ClipSize = 1;
+                GunItem.m_DamageHP = 100;
+                GunItem.m_FireAudio = GunItemDoner.m_FireAudio;
+                GunItem.m_FireDelayAfterReload = 1.5f;
+                GunItem.m_FireDelayOnAim = 0.25f;
+                GunItem.m_FiringRateSeconds = 1f;
+
+                GunItem.m_DryFireAudio = GunItemDoner.m_DryFireAudio;
+                GunItem.m_FireDelayOnAim = GunItemDoner.m_FireDelayOnAim;
+                GunItem.m_GunType = GunType.FlareGun;
+                GunItem.m_MultiplierFire = 1;
+
+                __instance.m_GunItem = GunItem;
+
+                FirstPersonItem FPI = __instance.gameObject.AddComponent<FirstPersonItem>();
+                FPI.m_FirstPersonObjectName = "FlareGun";
+                FPI.m_ItemData = FPIDoner.m_ItemData;
+                FPI.m_PlayerStateTransitions = FPIDoner.m_PlayerStateTransitions;
+                FPI.m_UnwieldAudioEvent = FPIDoner.m_UnwieldAudioEvent;
+                FPI.m_WieldAudioEvent = FPIDoner.m_WieldAudioEvent;
+
+                __instance.m_FirstPersonItem = FPI;
+            }else if(__instance.name == "GEAR_NoiseMaker")
+            {
+                AmmoItem Ammo = __instance.gameObject.AddComponent<AmmoItem>();
+
+                Ammo.m_LoadedHudIconSpriteName = "ico_units_noisemaker";
+                Ammo.m_AmmoForGunType = GunType.FlareGun;
+
+                __instance.m_AmmoItem = Ammo;
+            }
+        }
+
         public static void GearManualPatch(GearItem __instance)
         {
             MeleeManager.MeeleWeaponPatch(__instance);
             CookpotHelmetPatch(__instance);
+            CanLauncherPatch(__instance);
             //SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
         }
 

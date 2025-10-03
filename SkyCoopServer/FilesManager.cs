@@ -49,6 +49,11 @@ namespace SkyCoopServer
             Rules.m_PVP = Save.PVP;
             Rules.m_StartingItems = Save.StartingGear;
             Rules.m_StartingItemsByTier = Save.StartingGearByTier;
+            // TODO: ADD PROPER CHECK OF CFG FOR ALL PARAMETERS!!!!
+            if(Rules.m_StartingItemsByTier == null)
+            {
+                Rules.m_StartingItemsByTier = Rules.m_StartingItemsByTier = new List<List<StartingGearData>>();
+            }
             Rules.m_Time = Save.Time;
             Rules.m_HUDMode = Save.HUDMode;
             Rules.m_Respawns = Save.Respawns;

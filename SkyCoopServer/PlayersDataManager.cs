@@ -316,8 +316,8 @@ namespace SkyCoopServer
                     }
                     else
                     {
-                        string SpeakerSquad = GetPlayerSquadIn(SpeakerID);
-                        string ListnerSquad = GetPlayerSquadIn(ListenerID);
+                        string SpeakerSquad = GetPlayerNameSquadIn(SpeakerID);
+                        string ListnerSquad = GetPlayerNameSquadIn(ListenerID);
 
                         if(!string.IsNullOrEmpty(SpeakerSquad) && !string.IsNullOrEmpty(ListnerSquad) && SpeakerSquad == ListnerSquad)
                         {
@@ -471,7 +471,7 @@ namespace SkyCoopServer
             {
                 if (Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
                 {
-                    if(GetPlayerSquadIn(Player.m_PlayerID) == "")
+                    if(GetPlayerNameSquadIn(Player.m_PlayerID) == "")
                     {
                         Squads++;
                     }
@@ -523,17 +523,38 @@ namespace SkyCoopServer
 
         public void AddPlayerToSquad(string SquadName, int PlayerID)
         {
-            if (!m_Squads.ContainsKey(SquadName))
+            if (m_Squads.ContainsKey(SquadName))
             {
-                m_Squads[SquadName].AddPlayer(PlayerID);
+                PlayersSquad Squad = m_Squads[SquadName];
+                if (Squad.AddPlayer(PlayerID))
+                {
+                    Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} added to squad {SquadName}");
+                    ServerSend.SendAssignSquad(s_Server.GetClient(PlayerID), true);
+
+                    foreach (int TeammateID in Squad.m_Players.ToList())
+                    {
+                        if(m_RecursiveDebug || TeammateID != PlayerID)
+                        {
+                            ServerSend.SendSquadHealthRequest(s_Server.GetClient(TeammateID));
+                        }
+                    }
+                    ServerSend.SendSquadHealthRequest(s_Server.GetClient(PlayerID));
+                }
+                else
+                {
+                    Logger.Log(ConsoleColor.Yellow, $"[Squads] Wasn't able to add player {PlayerID} to squad {SquadName}");
+                }
             }
         }
 
+
         public void RemovePlayerFromSquad(string SquadName, int PlayerID)
         {
-            if (!m_Squads.ContainsKey(SquadName))
+            if (m_Squads.ContainsKey(SquadName))
             {
-                m_Squads[SquadName].AddPlayer(PlayerID);
+                m_Squads[SquadName].RemovePlayer(PlayerID);
+                Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} removed from squad {SquadName}");
+                ServerSend.SendAssignSquad(s_Server.GetClient(PlayerID), false);
             }
         }
 
@@ -549,7 +570,7 @@ namespace SkyCoopServer
             return true;
         }
 
-        public string GetPlayerSquadIn(int PlayerID)
+        public string GetPlayerNameSquadIn(int PlayerID)
         {
             foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
             {
@@ -559,6 +580,60 @@ namespace SkyCoopServer
                 }
             }
             return "";
+        }
+
+        public PlayersSquad GetPlayerSquadIn(int PlayerID)
+        {
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                if (Squad.HasPlayer(PlayerID))
+                {
+                    return Squad;
+                }
+            }
+            return null;
+        }
+
+        public void CreateRandomSquadForPlayer(int PlayerID)
+        {
+            Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} requested to create random squad");
+            PlayersSquad OldSquad = GetPlayerSquadIn(PlayerID);
+            if (OldSquad == null)
+            {
+                PlayersSquad Squad = CreateSquad();
+
+                if(Squad != null)
+                {
+                    AddPlayerToSquad(Squad.m_Name, PlayerID);
+                }
+            }
+            else
+            {
+                Logger.Log(ConsoleColor.Yellow, $"[Squads] Player {PlayerID} already in another squad ({OldSquad.m_Name})");
+            }
+        }
+
+        public void JoinRandomSquad(int PlayerID)
+        {
+            Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} requested to join random squad");
+            PlayersSquad OldSquad = GetPlayerSquadIn(PlayerID);
+            if (OldSquad == null)
+            {
+                PlayersSquad Squad = GetRandomJoinableSquad(PlayerID);
+
+                if (Squad != null)
+                {
+                    AddPlayerToSquad(Squad.m_Name, PlayerID);
+                }
+                else
+                {
+                    Logger.Log(ConsoleColor.Yellow, $"[Squads] Wasn't able to add player {PlayerID} to any squad. There no joinable squads avalaible");
+                }
+            }
+            else
+            {
+                Logger.Log(ConsoleColor.Yellow, $"[Squads] Player {PlayerID} already in another squad ({OldSquad.m_Name})");
+            }
         }
 
         public string GetRandomSquadName()
@@ -623,9 +698,48 @@ namespace SkyCoopServer
             {
                 PlayersSquad NewSquad = new PlayersSquad(SquadName);
                 m_Squads.Add(SquadName, NewSquad);
+
+                Logger.Log(ConsoleColor.Cyan, $"[Squads] Squad {SquadName} created");
+
                 return NewSquad;
             }
+            Logger.Log(ConsoleColor.Yellow, $"[Squads] Failed to created Squad. Too many squads!");
             return null;
+        }
+
+        public PlayersSquad GetRandomJoinableSquad(int PlayerID)
+        {
+            List<PlayersSquad> Joinables = new List<PlayersSquad> ();
+
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                if(Squad.HasPlayer(PlayerID))
+                {
+                    continue;
+                }
+                Joinables.Add(Squad);
+            }
+
+            if(Joinables.Count > 0)
+            {
+                if(Joinables.Count == 1)
+                {
+                    return Joinables[0];
+                }
+                else
+                {
+                    System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
+                    return Joinables[RNG.Next(0, Joinables.Count)];
+                }
+            }
+            
+            return null;
+        }
+
+        public bool PlayerCanBeTrusted(PlayerData Player)
+        {
+            // Main idea is to check if player is operator that can use cheats.
+            return true;
         }
     }
 }
