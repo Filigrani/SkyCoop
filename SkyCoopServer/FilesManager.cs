@@ -1,4 +1,5 @@
-﻿using System.Numerics;
+﻿using System.Collections.Generic;
+using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using static SkyCoopServer.DataStr;
@@ -13,6 +14,8 @@ namespace SkyCoopServer
         public static string s_VictoryPlaceDirectory = "Victory";
         public static string s_PropsDirectory = "Props";
         public static string s_RulesFileName = "Rules";
+        public static string s_LootTablesDirectory = "LootTables";
+        public static string s_RadialLootSpawnersDirectory = "RadialLootSpawners";
         public static string s_DataDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData";
 
         public static GameRules GetRules(string GameMode)
@@ -58,6 +61,7 @@ namespace SkyCoopServer
             Rules.m_HUDMode = Save.HUDMode;
             Rules.m_Respawns = Save.Respawns;
             Rules.m_DeathPacks = Save.DeathPacks;
+            Rules.m_Clothing = Save.Clothing;
             return Rules;
         }
 
@@ -217,6 +221,93 @@ namespace SkyCoopServer
                 return null;
             }
             Save = JsonSerializer.Deserialize<PropDataSave>(JSON);
+            return Save;
+        }
+
+        public static Dictionary<string, PrefabTableJSON> GetAllLootTables()
+        {
+            Dictionary<string, PrefabTableJSON> Dict = new Dictionary<string, PrefabTableJSON>();
+            string _Path = $"{s_DataDirectory}/{s_LootTablesDirectory}";
+            if (Directory.Exists(_Path))
+            {
+                string[] AllFiles = Directory.GetFiles(_Path, "*", SearchOption.AllDirectories);
+
+                foreach (string FilePath in AllFiles)
+                {
+                    PrefabTableJSON Table = GetLootTable(FilePath);
+                    if (Table != null)
+                    {
+                        string Name = Path.GetFileNameWithoutExtension(FilePath);
+                        if (!Dict.ContainsKey(Name))
+                        {
+                            Dict.Add(Name, Table);
+                        }
+                    }
+                }
+            }
+            return Dict;
+        }
+
+        public static PrefabTableJSON GetLootTable(string Path)
+        {
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading loot table {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<PrefabTableJSON>(JSON);
+        }
+        public static RadialLootSpawnerSave GetRadialLootSpawners(string GameMode, string Scene)
+        {
+            RadialLootSpawnerSave Save = new RadialLootSpawnerSave();
+            string Path = $"{s_DataDirectory}/{GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_RadialLootSpawnersDirectory}/{Scene} not exist");
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {GameMode}/{s_RadialLootSpawnersDirectory}/{Scene} is empty");
+                return null;
+            }
+            Save = JsonSerializer.Deserialize<RadialLootSpawnerSave>(JSON);
             return Save;
         }
     }

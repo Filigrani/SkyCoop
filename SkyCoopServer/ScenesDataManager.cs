@@ -19,6 +19,43 @@ namespace SkyCoopServer
             m_ServerInstance = Server;
         }
 
+        public void PopulateLoot(string SceneName)
+        {
+            RadialLootSpawnerSave Data = FilesManager.GetRadialLootSpawners(m_ServerInstance.m_Config.m_GameMode, SceneName);
+
+            if(Data != null)
+            {
+                foreach (RadialLootSpawner Spawner in Data.spawners)
+                {
+                    if (Spawner != null)
+                    {
+                        int LootPerPoint = 5;
+                        List<Vector3> AvaliablePoints = new List<Vector3>();
+
+                        if(Spawner.m_AvaliblePoints.Count < LootPerPoint)
+                        {
+                            LootPerPoint = Spawner.m_AvaliblePoints.Count;
+                        }
+
+                        AvaliablePoints = Spawner.m_AvaliblePoints;
+
+                        Random RNG = new Random(Guid.NewGuid().GetHashCode());
+
+                        for (int i = 1; i <= LootPerPoint; i++)
+                        {
+                            int Index = RNG.Range(0, AvaliablePoints.Count);
+
+                            Vector3 Point = AvaliablePoints[Index];
+
+                            string GearName = LootTableManager.GetRandomLoot();
+                            AddGear(SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty);
+                            AvaliablePoints.RemoveAt(Index);
+                        }
+                    }
+                }
+            }
+        }
+
         public void LoadScene(string SceneName)
         {
             if (!m_LoadedScenes.ContainsKey(SceneName))

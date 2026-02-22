@@ -565,12 +565,17 @@ namespace SkyCoopServer
 
         public static void ProcessCMD(Server ServerInstance, string CMD, PlayerData Player)
         {
+            Logger.Log(ConsoleColor.Cyan, $"Player {Player.m_PlayerName} (ID {Player.m_PlayerID}) sent CMD {CMD}");
+
+            
+
             switch (CMD)
             {
                 case "recurs":
                 case "recursive":
                 case "mimic":
                     ServerInstance.m_PlayersData.m_RecursiveDebug = !ServerInstance.m_PlayersData.m_RecursiveDebug;
+                    Logger.Log(ConsoleColor.Green, $"New m_RecursiveDebug flag is {ServerInstance.m_PlayersData.m_RecursiveDebug}");
                     break;
                 case "addtier":
                     Player.AddTier(ServerInstance);
@@ -586,6 +591,14 @@ namespace SkyCoopServer
                     break;
                 case "join":
                     ServerInstance.m_PlayersData.JoinRandomSquad(Player.m_PlayerID);
+                    break;
+                case "pvp":
+                    ServerInstance.m_Rules.m_PVP = !ServerInstance.m_Rules.m_PVP;
+                    ServerSend.SendConfigUpdated(ServerInstance);
+                    Logger.Log(ConsoleColor.Green, $"New m_Rules.m_PVP flag is {ServerInstance.m_Rules.m_PVP}");
+                    break;
+                default:
+                    Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
                     break;
             }
         }

@@ -242,13 +242,16 @@ namespace SkyCoopClient
                     //}
                     }else if(gi.m_ClothingItem)
                     {
-                        if (gi.m_ClothingItem.IsWearing())
+                        if(ModMain.Client != null && !ModMain.Client.m_Rules.m_Clothing)
                         {
-                            __result = "GAMEPLAY_Takeoff";
-                        }
-                        else
-                        {
-                            __result = "GAMEPLAY_Wear";
+                            if (gi.m_ClothingItem.IsWearing())
+                            {
+                                __result = "GAMEPLAY_Takeoff";
+                            }
+                            else
+                            {
+                                __result = "GAMEPLAY_Wear";
+                            }
                         }
                     }
                 }

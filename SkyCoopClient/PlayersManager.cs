@@ -1220,7 +1220,11 @@ namespace SkyCoop
                         if (GearItem.m_ClothingItem)
                         {
                             GearItem.m_ClothingItem.PutOn();
-                            GearItem.m_NarrativeCollectibleItem = GearItem.gameObject.AddComponent<NarrativeCollectibleItem>();
+
+                            if(ModMain.Client != null && !ModMain.Client.m_Rules.m_Clothing)
+                            {
+                                GearItem.m_NarrativeCollectibleItem = GearItem.gameObject.AddComponent<NarrativeCollectibleItem>();
+                            }
                         }
                     }
                 }

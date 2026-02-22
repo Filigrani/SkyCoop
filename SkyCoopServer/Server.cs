@@ -88,6 +88,7 @@ namespace SkyCoopServer
             m_ScenesData = new ScenesDataManager(this);
 
             s_NextSecondCall = DateTime.Now.AddSeconds(1);
+            LootTableManager.Load();
         }
 
         public List<int> GetClientsIndexs()
@@ -205,6 +206,8 @@ namespace SkyCoopServer
             m_ScenesData.ChangeGameMode(GameMode);
             ServerSend.SendConfigUpdated(this);
             ServerSend.SendChangeMap(this);
+
+            m_ScenesData.PopulateLoot(m_Config.m_SceneToSpawn);
         }
 
         public void StartServer()

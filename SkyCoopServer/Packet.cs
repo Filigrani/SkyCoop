@@ -184,6 +184,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_HUDMode);
             Writer.Put(Rules.m_DeathPacks);
             Writer.Put(Rules.m_Respawns);
+            Writer.Put(Rules.m_Clothing);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -197,6 +198,7 @@ namespace SkyCoopServer
             Rules.m_HUDMode = Reader.GetString();
             Rules.m_DeathPacks = Reader.GetBool();
             Rules.m_Respawns = Reader.GetBool();
+            Rules.m_Clothing = Reader.GetBool();
 
             return Rules;
         }

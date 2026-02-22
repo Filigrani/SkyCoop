@@ -22,10 +22,16 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                bool Clothing = ModMain.Client != null && ModMain.Client.m_Rules.m_Clothing;
+
                 for (int i = __instance.m_ActiveElements.Count - 1; i >= 0; i--)
                 {
                     MiniTopNavButton butt = __instance.m_ActiveElements[i];
-                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteInventory"))
+                    if (butt.name == "SpriteClothing" && Clothing)
+                    {
+                        continue;
+                    }
+                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory"))
                     {
                         __instance.m_ActiveElements.RemoveAt(i);
                     }
@@ -33,7 +39,11 @@ namespace SkyCoopClient
                 for (int i = __instance.m_NavElements.Count - 1; i >= 0; i--)
                 {
                     MiniTopNavButton butt = __instance.m_NavElements[i];
-                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteInventory"))
+                    if (butt.name == "SpriteClothing" && Clothing)
+                    {
+                        continue;
+                    }
+                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory"))
                     {
                         butt.SetEnabled(false);
                         butt.gameObject.SetActive(false);
@@ -48,7 +58,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                return false;
+                return ModMain.Client != null && ModMain.Client.m_Rules.m_Clothing;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool)})]

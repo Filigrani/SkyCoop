@@ -7,6 +7,7 @@ using System.Text;
 using System.IO;
 using System.Linq;
 using static SkyCoopServer.DataStr;
+using System.ComponentModel.DataAnnotations;
 
 namespace SkyCoopServer
 {
@@ -15,13 +16,13 @@ namespace SkyCoopServer
         public class ServerConfig
         {
             public int m_MaxPlayers = 4;
-            public string m_StartingRegion = "CoastalRegion";
+            public string m_StartingRegion = "MarshRegion";
             public int m_Seed = 777777;
             public int m_VoicePort = 37850;
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "CoastalRegion";
-            public string m_GameMode = "GunGame";
+            public string m_SceneToSpawn = "MarshRegion";
+            public string m_GameMode = "Shrink";
         }
 
         public class GameRulesSave
@@ -34,6 +35,7 @@ namespace SkyCoopServer
             public string HUDMode { get; set; }
             public bool DeathPacks { get; set; }
             public bool Respawns { get; set; }
+            public bool Clothing { get; set; }
         }
 
         public class GameRules
@@ -46,6 +48,7 @@ namespace SkyCoopServer
             public string m_HUDMode = "";
             public bool m_DeathPacks = false;
             public bool m_Respawns = false;
+            public bool m_Clothing = false;
         }
 
         public class StartingGearData
@@ -1185,6 +1188,231 @@ namespace SkyCoopServer
             public float rotz { get; set; }
             public float rotw { get; set; }
             public string guid { get; set; }
+        }
+
+        public class RadialLootSpawnerSave
+        {
+            public List<RadialLootSpawner> spawners { get; set; }
+        }
+
+        public class RadialLootSpawner
+        {
+            public Vector3 m_Center = Vector3.Zero;
+            public float m_Top = 0;
+            public List<Vector3> m_AvaliblePoints = new List<Vector3>();
+        }
+
+        public class PrefabTable
+        {
+            public List<Loot> Items = new List<Loot>();
+            public List<LootTableInLootTable> LootTables = new List<LootTableInLootTable>();
+
+            private float m_TotalWeights = -1f;
+
+            public void CalculateWeights()
+            {
+                if (Items.Count == 0)
+                {
+                    CalculateLootTableWeights();
+                }
+                if (LootTables.Count == 0)
+                {
+                    CalculateItemWeights();
+                }
+                CalculateCombinedWeights();
+            }
+
+            public string GetRandomItemPrefab(int Seed = -1)
+            {
+                if (Items.Count == 0 && LootTables.Count == 0)
+                {
+                    return null;
+                }
+
+                if (Seed == -1)
+                {
+                    Seed = System.Guid.NewGuid().GetHashCode();
+                }
+
+                System.Random RNG = new System.Random(Seed);
+
+                if (Items.Count == 0)
+                {
+                    return GetRandomFromLootTables(RNG);
+                }
+                if (LootTables.Count == 0)
+                {
+                    return GetRandomFromItems(RNG);
+                }
+                return GetCombinedWeightedRandom(RNG);
+            }
+
+            private string GetRandomFromItems(System.Random RNG)
+            {
+                if (Items.Count == 1)
+                {
+                    if (RandomCheck(RNG, Items[0].Chance))
+                        return Items[0].Prefab;
+                    return null;
+                }
+                return GetWeightedRandomItem(RNG);
+            }
+
+            private string GetRandomFromLootTables(System.Random RNG)
+            {
+                if (LootTables.Count == 1)
+                {
+                    if (RandomCheck(RNG, LootTables[0].Chance))
+                        return LootTables[0].GetItem();
+                    return null;
+                }
+                return GetWeightedRandomLootTableItem(RNG);
+            }
+
+            private string GetCombinedWeightedRandom(System.Random RNG)
+            {
+                if (m_TotalWeights <= 0)
+                    return null;
+
+                float randomValue = RNG.Range(0f, m_TotalWeights);
+                float cumulativeWeight = 0f;
+
+                // Check items first
+                foreach (var loot in Items)
+                {
+                    cumulativeWeight += loot.Chance;
+                    if (randomValue <= cumulativeWeight)
+                    {
+                        return loot.Prefab;
+                    }
+                }
+
+                // Then check loot tables
+                foreach (var lootTable in LootTables)
+                {
+                    cumulativeWeight += lootTable.Chance;
+                    if (randomValue <= cumulativeWeight)
+                    {
+                        return lootTable.GetItem();
+                    }
+                }
+
+                // Fallback in case of floating point precision issues
+                if (Items.Count > 0)
+                    return Items[Items.Count - 1].Prefab;
+                else
+                    return LootTables[LootTables.Count - 1].GetItem();
+            }
+
+            private string GetWeightedRandomItem(System.Random RNG)
+            {
+                if (m_TotalWeights <= 0)
+                    return null;
+
+                float randomValue = RNG.Range(0f, m_TotalWeights);
+                float cumulativeWeight = 0f;
+
+                foreach (var loot in Items)
+                {
+                    cumulativeWeight += loot.Chance;
+                    if (randomValue <= cumulativeWeight)
+                    {
+                        return loot.Prefab;
+                    }
+                }
+
+                return Items[Items.Count - 1].Prefab;
+            }
+
+            private string GetWeightedRandomLootTableItem(System.Random RNG)
+            {
+                if (m_TotalWeights <= 0)
+                    return null;
+
+                float randomValue = RNG.Range(0f, m_TotalWeights);
+                float cumulativeWeight = 0f;
+
+                foreach (var lootTable in LootTables)
+                {
+                    cumulativeWeight += lootTable.Chance;
+                    if (randomValue <= cumulativeWeight)
+                    {
+                        return lootTable.GetItem();
+                    }
+                }
+
+                return LootTables[LootTables.Count - 1].GetItem();
+            }
+
+            private void CalculateCombinedWeights()
+            {
+                m_TotalWeights = 0f;
+                foreach (var loot in Items)
+                {
+                    m_TotalWeights += loot.Chance;
+                }
+                foreach (var lootTable in LootTables)
+                {
+                    m_TotalWeights += lootTable.Chance;
+                }
+            }
+
+            private void CalculateItemWeights()
+            {
+                m_TotalWeights = 0f;
+                foreach (var loot in Items)
+                {
+                    m_TotalWeights += loot.Chance;
+                }
+            }
+
+            private void CalculateLootTableWeights()
+            {
+                m_TotalWeights = 0f;
+                foreach (var lootTable in LootTables)
+                {
+                    m_TotalWeights += lootTable.Chance;
+                }
+            }
+
+            private bool RandomCheck(System.Random RNG, float chance)
+            {
+                return RNG.NextSingle() <= chance;
+            }
+        }
+
+        public class PrefabTableJSON
+        {
+            public List<Loot> Items { get; set; }
+            public List<LootTableInLootTableJSON> LootTables { get; set; }
+        }
+
+        public class Loot
+        {
+            public string Prefab { get; set; }
+            public float Chance { get; set; } // 0 - 1
+        }
+
+        public class LootTableInLootTableJSON
+        {
+            public string LootTable { get; set; }
+            public float Chance { get; set; } // 0 - 1
+        }
+
+        public class LootTableInLootTable
+        {
+            public string Name = string.Empty;
+            public PrefabTable LootTable { get; set; }
+            public float Chance { get; set; } // 0 - 1
+
+            public string GetItem()
+            {
+                if (LootTable != null)
+                {
+                    return LootTable.GetRandomItemPrefab();
+                }
+                return string.Empty;
+            }
         }
     }
 }
