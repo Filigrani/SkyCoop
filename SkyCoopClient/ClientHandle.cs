@@ -1,14 +1,9 @@
 ﻿using Il2Cpp;
-using Il2CppRewired;
-using Il2CppTLD.PDID;
 using Il2CppTMPro;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
-using static Il2Cppgw.gql.Interpreter;
-using static Il2CppParadoxNotion.Services.Logger;
-using static SkyCoop.Comps.PlayerDamageColider;
 using static SkyCoop.PlayersManager;
 
 namespace SkyCoop

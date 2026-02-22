@@ -222,14 +222,26 @@ namespace SkyCoop
             ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
             GameModeConfig SelectedMode = null;
             RegionSpecification SelectedRegion = null;
-            foreach (GameModeConfig Mode in EMM.m_AvailableGameModes)
+
+#warning TODO: need rework this shit
+            //I know is to shit solution
+            Il2CppSystem.Collections.Generic.IList<GameModeConfig> GameMods = EMM.GetAvailableGameModes();
+            for (int i = 0; i < 14; i++)
             {
-                if(ExperienceMode == Mode.name)
+                if (ExperienceMode == GameMods[i].name)
                 {
-                    SelectedMode = Mode;
+                    SelectedMode = GameMods[i];
                     break;
                 }
             }
+            //foreach (GameModeConfig Mode in ((IList<GameModeConfig>)EMM.GetAvailableGameModes()).ToList()) //ints didnt work
+            //{
+            //    if(ExperienceMode == Mode.name)
+            //    {
+            //        SelectedMode = Mode;
+            //        break;
+            //    }
+            //}
 
             Panel_SelectRegion_Map Panel_Regions = null;
 
@@ -259,7 +271,9 @@ namespace SkyCoop
 
         public static string GetNickName()
         {
-            string UserName = Settings.m_Options.m_UserName;
+#warning TODO: fix this to
+            //string UserName = Settings.m_Options.m_UserName;
+            string UserName = "";
 
             if (string.IsNullOrEmpty(UserName))
             {

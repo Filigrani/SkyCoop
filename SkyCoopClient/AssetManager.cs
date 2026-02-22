@@ -18,6 +18,7 @@ namespace SkyCoop
             if(s_MainBundle == null)
             {
                 s_MainBundle = AssetBundle.LoadFromFile(s_MainBundlePath);
+
                 if (s_MainBundle == null)
                 {
                     Logger.Log(ConsoleColor.Red,"Have problems with loading main asset bundle!");
@@ -55,7 +56,7 @@ namespace SkyCoop
                     && ComName != Il2CppType.Of<SphereCollider>().Name
                     && ComName != Il2CppType.Of<CapsuleCollider>().Name
                     && ComName != Il2CppType.Of<MeshCollider>().Name
-                    && ComName != Il2CppType.Of<PhysicMaterial>().Name
+                    && ComName != "PhysicMaterial"
                     && ComName != Il2CppType.Of<MeshFilter>().Name
                     && ComName != Il2CppType.Of<LODGroup>().Name
                     && ComName != Il2CppType.Of<Transform>().Name
@@ -92,7 +93,7 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<SphereCollider>().Name
                             && ComName != Il2CppType.Of<CapsuleCollider>().Name
                             && ComName != Il2CppType.Of<MeshCollider>().Name
-                            && ComName != Il2CppType.Of<PhysicMaterial>().Name
+                            && ComName != "PhysicMaterial"
                             && ComName != Il2CppType.Of<MeshFilter>().Name
                             && ComName != Il2CppType.Of<LODGroup>().Name
                             && ComName != Il2CppType.Of<Transform>().Name
@@ -132,7 +133,7 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<SphereCollider>().Name
                             && ComName != Il2CppType.Of<CapsuleCollider>().Name
                             && ComName != Il2CppType.Of<MeshCollider>().Name
-                            && ComName != Il2CppType.Of<PhysicMaterial>().Name
+                            && ComName != "PhysicMaterial"
                             && ComName != Il2CppType.Of<MeshFilter>().Name
                             && ComName != Il2CppType.Of<LODGroup>().Name
                             && ComName != Il2CppType.Of<Transform>().Name
@@ -186,7 +187,7 @@ namespace SkyCoop
         }
         public static void DumpPrefabsList()
         {
-            foreach (var item in Resources.LoadAll(""))
+            foreach (var item in Resources.LoadAll("", null))
             {
                 Logger.Log(ConsoleColor.Magenta, "[Resources] " + item.name);
             }

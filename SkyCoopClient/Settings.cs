@@ -17,11 +17,12 @@ namespace SkyCoopClient
     {
         internal static Settings m_Options = new Settings();
 
-        [Section("Generic Settings")]
+#warning TODO: fix this
+        //[Section("Generic Settings")]
 
-        [Name("User Name")]
-        [Description("Nickname other players will see. Leave empty to use your name from Steam.")]
-        public string m_UserName = "";
+        //[Name("User Name")]
+        //[Description("Nickname other players will see. Leave empty to use your name from Steam.")]
+        //public string m_UserName = "";
 
         [Section("Voice Chat")]
 

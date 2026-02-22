@@ -13,26 +13,28 @@ MonoBehaviour:
   m_Name: SkyCoop
   m_EditorClassIdentifier: 
   m_GroupName: SkyCoop
-  m_Data:
-    m_SerializedData: []
   m_GUID: 65883fe2772ea8348b9759289a701bce
   m_SerializeEntries:
-  - m_GUID: 0de88f04a02e185469f7051106af5d90
-    m_Address: GEAR_FishKnife
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-  - m_GUID: bac5c98130623374daeb83767ace981e
-    m_Address: ico_GearItem__FishKnife
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-  - m_GUID: b3ace995e6b00bb469be852aac7f36bb
-    m_Address: Titles_SkyCoopReborn_Texture
-    m_ReadOnly: 0
-    m_SerializedLabels: []
   - m_GUID: 0773d2fdf75945d46b4a9d1dce7a6220
     m_Address: GEAR_CanLauncher
     m_ReadOnly: 0
     m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 0de88f04a02e185469f7051106af5d90
+    m_Address: GEAR_FishKnife
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: b3ace995e6b00bb469be852aac7f36bb
+    m_Address: Titles_SkyCoopReborn_Texture
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: bac5c98130623374daeb83767ace981e
+    m_Address: ico_GearItem__FishKnife
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: efa755aa14ecd584594da22fb5be160b, type: 2}
   m_SchemaSet:

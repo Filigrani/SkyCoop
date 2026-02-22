@@ -686,7 +686,7 @@ namespace SkyCoopServer
                     {
                         SendEmptyCard = true;
                     }
-                    
+
                     foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
                     {
                         if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)

@@ -191,7 +191,7 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_OptionsMenu __instance)
             {
-                AddButton(__instance.m_BasicMenu, "GAMEPLAY_SkyCoopSettings", "GAMEPLAY_SkyCoopSettingsDescription", 7, new Action(ShowMultiplayerSettings));
+                AddButton(__instance.m_BasicMenu, "GAMEPLAY_SkyCoopSettings", "GAMEPLAY_SkyCoopSettingsDescription", 6, new Action(ShowMultiplayerSettings));
             }
         }
 
