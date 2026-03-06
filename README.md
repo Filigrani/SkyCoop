@@ -4,6 +4,17 @@ Multiplayer for The Long Dark game
 We don't own The Long Dark! The Long Dark belong to Hinterland Studio Inc. 
 This is a free modification that loads using MelonLoader.
 
+# Game Version Compatibility
+
+| Branch | Game Versions | Status |
+|--------|--------------|--------|
+| [BeforeTFTFT](https://github.com/Filigrani/SkyCoop/tree/BeforeTFTFT) | 2.01 – 2.02 | Playable (current stable) |
+| [Reborn](https://github.com/Filigrani/SkyCoop/tree/Reborn) | 2.04+ | In development (not yet playable) |
+| [main](https://github.com/Filigrani/SkyCoop/tree/main) | — | Legacy codebase (abandoned) |
+
+> If you want to play right now, use The Long Dark version **2.01–2.02** with the **BeforeTFTFT** branch.
+> For setup help, join the [Discord](https://discord.gg/ydmufU2HHj).
+
 # How to install mod & Play Online?
 
 <a href="https://github.com/RED1cat/SkyCoopInstaller/releases/latest"><img src="https://raw.githubusercontent.com/RED1cat/SkyCoopInstaller/master/SkyCoopInstaller/Resources/InstallerBanner1.png"></a>
