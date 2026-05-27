@@ -34,7 +34,7 @@
 		<!--This package contains almost everything a person could possibly need to reference while modding.-->
 		<PackageReference Include="LiteNetLib" Version="1.3.5" />
 		<PackageReference Include="OpenVoiceSharp" Version="1.0.3" />
-		<PackageReference Include="STBlade.Modding.TLD.Il2CppAssemblies.Windows" Version="2.51.0" />
+		<PackageReference Include="Waltz.Modding.TLD.Il2CppAssemblies.Windows" Version="2.52.0" />
 		<!--The package version here in this template may be outdated and need to be updated. Visual Studio can update package versions automatically.-->
 		<!--If the mod references any other mods (such as ModSettings), that NuGet package will also need to be listed here.-->
 	</ItemGroup>

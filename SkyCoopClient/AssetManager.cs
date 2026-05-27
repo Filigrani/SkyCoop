@@ -3,6 +3,7 @@ using Il2CppInterop.Runtime;
 using Il2CppSystem.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using System.Reflection;
 
 namespace SkyCoop
 {
@@ -13,11 +14,26 @@ namespace SkyCoop
         public static GameObject s_PistolBulletPrefab = null;
         public static GameObject s_RevolverBulletPrefab = null;
 
+        public static AssetBundle LoadAssetBundle(string name)
+        {
+            using (FileStream? stream = new FileStream(name, FileMode.Open))
+            {
+                MemoryStream? memory = new((int)stream.Length);
+                stream!.CopyTo(memory);
+
+                Il2CppSystem.IO.MemoryStream memoryStream = new(memory.ToArray());
+                AssetBundle bundle = AssetBundle.LoadFromStream(memoryStream);
+
+                return bundle;
+            }
+        }
+
         public static void PreloadMainBundle()
         {
             if(s_MainBundle == null)
             {
-                s_MainBundle = AssetBundle.LoadFromFile(s_MainBundlePath);
+                //s_MainBundle = AssetBundle.LoadFromFile(s_MainBundlePath);
+                s_MainBundle = LoadAssetBundle(s_MainBundlePath);
 
                 if (s_MainBundle == null)
                 {

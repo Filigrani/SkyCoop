@@ -15,11 +15,6 @@ MonoBehaviour:
   m_GroupName: SkyCoop
   m_GUID: 65883fe2772ea8348b9759289a701bce
   m_SerializeEntries:
-  - m_GUID: 0773d2fdf75945d46b4a9d1dce7a6220
-    m_Address: GEAR_CanLauncher
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 0de88f04a02e185469f7051106af5d90
     m_Address: GEAR_FishKnife
     m_ReadOnly: 0

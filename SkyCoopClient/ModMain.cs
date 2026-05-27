@@ -20,6 +20,8 @@ namespace SkyCoop
         public static Client Client;
         public static ClientVoice ClientVoice;
 
+        public static bool s_ModBooted = false;
+
         public static bool s_AppFocus = true;
 
         public override void OnInitializeMelon()
@@ -223,10 +225,8 @@ namespace SkyCoop
             GameModeConfig SelectedMode = null;
             RegionSpecification SelectedRegion = null;
 
-#warning TODO: need rework this shit
-            //I know is to shit solution
             Il2CppSystem.Collections.Generic.IList<GameModeConfig> GameMods = EMM.GetAvailableGameModes();
-            for (int i = 0; i < 14; i++)
+            for (int i = 0; GameMods[i] != null; i++)
             {
                 if (ExperienceMode == GameMods[i].name)
                 {
@@ -234,14 +234,6 @@ namespace SkyCoop
                     break;
                 }
             }
-            //foreach (GameModeConfig Mode in ((IList<GameModeConfig>)EMM.GetAvailableGameModes()).ToList()) //ints didnt work
-            //{
-            //    if(ExperienceMode == Mode.name)
-            //    {
-            //        SelectedMode = Mode;
-            //        break;
-            //    }
-            //}
 
             Panel_SelectRegion_Map Panel_Regions = null;
 

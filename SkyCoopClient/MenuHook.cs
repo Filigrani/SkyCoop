@@ -208,12 +208,16 @@ namespace SkyCoop
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(BootUpdate), "Start")]
-        internal static class InitializePatch
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Boot), "Update")]
+        internal static class Panel_Boot_Update
         {
-            private static void Prefix()
+            private static void Prefix(Panel_Boot __instance)
             {
-                ModMain.OnGameBoot();
+                if (!ModMain.s_ModBooted)
+                {
+                    ModMain.s_ModBooted = true;
+                    ModMain.OnGameBoot();
+                }
             }
         }
 

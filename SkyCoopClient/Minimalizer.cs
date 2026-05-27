@@ -14,6 +14,7 @@ namespace SkyCoopClient
     public class Minimalizer
     {
         public static string s_SceneSpawnOverride = "";
+        public static bool s_LoadingFlag = false;
         
         [HarmonyLib.HarmonyPatch(typeof(MiniTopNav), "Update")]
         private static class MiniTopNav_Update
@@ -365,14 +366,13 @@ namespace SkyCoopClient
                 RadialSpawnManager.m_RadialSpawnObjects.Clear();
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "AllScenesLoaded")]
-        private static class GameManager_AllScenesLoaded
-        {
-            private static void Postfix(GameManager __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
 
-                SkyCoop.Logger.Log(ConsoleColor.Cyan, "Scenes loaded");
+        public static void OnFinishedLoading()
+        {
+            SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Scenes loaded");
+
+            if(ModMain.Client != null && ModMain.Client.m_Instance != null)
+            {
 
                 for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
                 {
@@ -383,6 +383,27 @@ namespace SkyCoopClient
                     }
                 }
                 ClientSend.SendNewScene(ModMain.GetCurrentSceneName());
+            }
+        }
+
+        public static void OnStartedLoading()
+        {
+            s_LoadingFlag = true;
+            SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Start loading scenes...");
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Loading), "Update")]
+        private static class Panel_Loading_Update
+        {
+            private static void Postfix(Panel_Loading __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+                if (s_LoadingFlag && __instance.HasFinishedLoading() && __instance.HasFinishedHolding())
+                {
+                    s_LoadingFlag = false;
+                    OnFinishedLoading();
+                }
             }
         }
 
@@ -649,6 +670,7 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return true; }
 
                 SkyCoop.Logger.Log("LoadSceneWithLoadingScreen");
+                OnStartedLoading();
                 if (string.IsNullOrEmpty(s_SceneSpawnOverride))
                 {
                     return true;

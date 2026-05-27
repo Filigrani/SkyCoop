@@ -252,7 +252,12 @@ namespace SkyCoopServer
         {
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading loot table {Path}");
+            if (LootTableManager.c_DebugLogs)
+            {
+                Logger.Log($"[FilesManager] Loading loot table {Path}");
+            }
+
+            
             if (File.Exists(Path))
             {
                 try

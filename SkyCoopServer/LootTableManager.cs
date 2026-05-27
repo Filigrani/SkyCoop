@@ -11,15 +11,26 @@ namespace SkyCoopServer
     {
         public static Dictionary<string, DataStr.PrefabTable> s_LootTables = new Dictionary<string, DataStr.PrefabTable> ();
 
+        public const bool c_DebugLogs = false;
+
         public static string GetRandomLoot(string LootTableName = "Main")
         {
-            SkyCoopServer.Logger.Log($"GetRandomLoot from table {LootTableName}");
+            if (c_DebugLogs)
+            {
+                SkyCoopServer.Logger.Log($"GetRandomLoot from table {LootTableName}");
+            }
+            
+            
             DataStr.PrefabTable LootTable = null;
 
             if(s_LootTables.TryGetValue(LootTableName, out LootTable))
             {
                 string Prefab = LootTable.GetRandomItemPrefab();
-                SkyCoopServer.Logger.Log($"Got loot {Prefab}");
+                if (c_DebugLogs)
+                {
+                    SkyCoopServer.Logger.Log($"Got loot {Prefab}");
+                }
+                
                 return Prefab;
             }
 
@@ -90,34 +101,36 @@ namespace SkyCoopServer
                 Pair.Value.CalculateWeights();
             }
 
-            SkyCoopServer.Logger.Log($"Loaded {s_LootTables.Count} loot tables");
-
-
-            foreach (var item in s_LootTables)
+            if (c_DebugLogs)
             {
-                string tableName = item.Key;
-                DataStr.PrefabTable table = item.Value;
+                SkyCoopServer.Logger.Log($"Loaded {s_LootTables.Count} loot tables");
 
-                SkyCoopServer.Logger.Log($"=================={tableName}==================");
-                foreach (var _item in table.Items)
+                foreach (var item in s_LootTables)
                 {
-                    SkyCoopServer.Logger.Log($"Prefab - {_item.Prefab} Chance - {_item.Chance}");
-                }
+                    string tableName = item.Key;
+                    DataStr.PrefabTable table = item.Value;
 
-                foreach (var _subtables in table.LootTables)
-                {
-                    if(_subtables != null)
+                    SkyCoopServer.Logger.Log($"=================={tableName}==================");
+                    foreach (var _item in table.Items)
                     {
-                        if(_subtables.LootTable != null)
+                        SkyCoopServer.Logger.Log($"Prefab - {_item.Prefab} Chance - {_item.Chance}");
+                    }
+
+                    foreach (var _subtables in table.LootTables)
+                    {
+                        if (_subtables != null)
                         {
-                            SkyCoopServer.Logger.Log($"SubTable - {_subtables.Name} Chance {_subtables.Chance}");
-                            //foreach (var _item in _subtables.LootTable.Items)
-                            //{
-                            //    if (_item != null)
-                            //    {
-                            //        SkyCoopServer.Logger.Log($"============> Prefab - {_item.Prefab} Chance - {_item.Chance}");
-                            //    }
-                            //}
+                            if (_subtables.LootTable != null)
+                            {
+                                SkyCoopServer.Logger.Log($"SubTable - {_subtables.Name} Chance {_subtables.Chance}");
+                                //foreach (var _item in _subtables.LootTable.Items)
+                                //{
+                                //    if (_item != null)
+                                //    {
+                                //        SkyCoopServer.Logger.Log($"============> Prefab - {_item.Prefab} Chance - {_item.Chance}");
+                                //    }
+                                //}
+                            }
                         }
                     }
                 }
