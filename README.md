@@ -1,4 +1,16 @@
 # SkyCoop
+
+# Game Version Compatibility
+
+| Branch | Game Versions | Status |
+|--------|--------------|--------|
+| [BeforeTFTFT](https://github.com/Filigrani/SkyCoop/tree/BeforeTFTFT) | 2.01 – 2.02 | Playable (current stable) |
+| [Reborn](https://github.com/Filigrani/SkyCoop/tree/Reborn) | 2.04+ | In development (not yet playable) |
+| [main](https://github.com/Filigrani/SkyCoop/tree/main) | — | Legacy codebase (abandoned) |
+
+> If you want to play right now, use The Long Dark version **2.01–2.02** with the **BeforeTFTFT** branch.
+> For setup help, join the [Discord](https://discord.gg/ydmufU2HHj).
+
 Multiplayer for The Long Dark game
 
 We don't own The Long Dark! The Long Dark belong to Hinterland Studio Inc. 
