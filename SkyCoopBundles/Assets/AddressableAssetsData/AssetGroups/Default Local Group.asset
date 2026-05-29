@@ -14,7 +14,12 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_GroupName: Default Local Group
   m_GUID: 4f61fd85747076645a7423d89175d06d
-  m_SerializeEntries: []
+  m_SerializeEntries:
+  - m_GUID: 9e2182e2033a050419e48abffcd53236
+    m_Address: Assets/_ModComponent/SkyCoop/SkyCoop.asset
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: efa755aa14ecd584594da22fb5be160b, type: 2}
   m_SchemaSet:

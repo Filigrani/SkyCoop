@@ -1,0 +1,16 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3df780f930e2cf047af3a2ca3a2c1731, type: 3}
+  m_Name: GEAR_MilitaryParka
+  m_EditorClassIdentifier: 
+  Name: ico_GearItem__MilitaryParka
+  Icon: {fileID: 2800000, guid: 51623447679e2c74aa3d16e298e583dd, type: 3}

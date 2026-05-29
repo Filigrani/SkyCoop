@@ -21,7 +21,7 @@ MonoBehaviour:
   modGearSpawns: {fileID: 11400000, guid: 88a29c8779273774fad0efd2f6c97f3a, type: 2}
   modItemRarities: {fileID: 0}
   Items:
-  - {fileID: 5240960228646552211, guid: 0de88f04a02e185469f7051106af5d90, type: 3}
+  - {fileID: 8882982020441046099, guid: e4af4964cd8024a4e872820dbe6a04a4, type: 3}
   Icons:
   - {fileID: 2800000, guid: bac5c98130623374daeb83767ace981e, type: 3}
   - {fileID: 2800000, guid: b3ace995e6b00bb469be852aac7f36bb, type: 3}

@@ -182,10 +182,6 @@ namespace SkyCoopClient
             {
                 CanvasUI.m_PropsEditor.SetActive(!CanvasUI.m_PropsEditor.activeSelf);
             }
-            if (CanvasUI.m_SpawnPointEditor)
-            {
-                CanvasUI.m_SpawnPointEditor.SetActive(false);
-            }
         }
 
         public static void ApplyTransformFromVizualizer(Transform VizualizerTransform, int PropIndex)

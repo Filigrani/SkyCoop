@@ -24,7 +24,7 @@ namespace SkyCoopServer
             string Path = $"{s_DataDirectory}/{GameMode}/{s_RulesFileName}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_RulesFileName}");
+            Logger.Log($"[FilesManager] Loading file {Path}");
             if (File.Exists(Path))
             {
                 try
@@ -39,12 +39,12 @@ namespace SkyCoopServer
             }
             else
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_RulesFileName} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_RulesFileName} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return Rules;
             }
             GameRulesSave Save = JsonSerializer.Deserialize<GameRulesSave>(JSON);
@@ -58,6 +58,7 @@ namespace SkyCoopServer
                 Rules.m_StartingItemsByTier = Rules.m_StartingItemsByTier = new List<List<StartingGearData>>();
             }
             Rules.m_Time = Save.Time;
+            Rules.m_LootPerRadialSpawn = Save.LootPerRadialSpawn;
             Rules.m_HUDMode = Save.HUDMode;
             Rules.m_Respawns = Save.Respawns;
             Rules.m_DeathPacks = Save.DeathPacks;
@@ -92,7 +93,7 @@ namespace SkyCoopServer
             string Path = $"{s_DataDirectory}/{GameMode}/{s_SpawnPointsDirectory}/{Scene}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_SpawnPointsDirectory}/{Scene}");
+            Logger.Log($"[FilesManager] Loading file {Path}");
             if (File.Exists(Path))
             {
                 try
@@ -107,12 +108,12 @@ namespace SkyCoopServer
             }
             else
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return Points;
             }
             SpawnPointSave Save = JsonSerializer.Deserialize<SpawnPointSave>(JSON);
@@ -129,7 +130,7 @@ namespace SkyCoopServer
             string Path = $"{s_DataDirectory}/{GameMode}/{s_ZoneConfigDirectory}/{Scene}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_ZoneConfigDirectory}/{Scene}");
+            Logger.Log($"[FilesManager] Loading file {Path}");
             if (File.Exists(Path))
             {
                 try
@@ -144,13 +145,13 @@ namespace SkyCoopServer
             }
             else
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_ZoneConfigDirectory}/{Scene} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
                 return null;
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_ZoneConfigDirectory}/{Scene} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
             DangerCircleConfig CFG = JsonSerializer.Deserialize<DangerCircleConfig>(JSON);
@@ -163,7 +164,7 @@ namespace SkyCoopServer
             string Path = $"{s_DataDirectory}/{GameMode}/{s_VictoryPlaceDirectory}/{SceneName}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_VictoryPlaceDirectory}/{SceneName}");
+            Logger.Log($"[FilesManager] Loading file {Path}");
             if (File.Exists(Path))
             {
                 try
@@ -178,12 +179,12 @@ namespace SkyCoopServer
             }
             else
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_VictoryPlaceDirectory}/{SceneName} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_VictoryPlaceDirectory}/{SceneName} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return Position;
             }
             DangerCircleCenter Save = JsonSerializer.Deserialize<DangerCircleCenter>(JSON);
@@ -197,7 +198,7 @@ namespace SkyCoopServer
             string Path = $"{s_DataDirectory}/{GameMode}/{s_PropsDirectory}/{Scene}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_PropsDirectory}/{Scene}");
+            Logger.Log($"[FilesManager] Loading file {Path}");
             if (File.Exists(Path))
             {
                 try
@@ -212,12 +213,12 @@ namespace SkyCoopServer
             }
             else
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_SpawnPointsDirectory}/{Scene} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
             Save = JsonSerializer.Deserialize<PropDataSave>(JSON);
@@ -289,7 +290,7 @@ namespace SkyCoopServer
             string Path = $"{s_DataDirectory}/{GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}");
+            Logger.Log($"[FilesManager] Loading file {Path}");
             if (File.Exists(Path))
             {
                 try
@@ -304,12 +305,12 @@ namespace SkyCoopServer
             }
             else
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_RadialLootSpawnersDirectory}/{Scene} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {GameMode}/{s_RadialLootSpawnersDirectory}/{Scene} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
             Save = JsonSerializer.Deserialize<RadialLootSpawnerSave>(JSON);

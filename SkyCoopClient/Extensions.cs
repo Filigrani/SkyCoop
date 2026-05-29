@@ -63,6 +63,12 @@ namespace SkyCoop
             return v3;
         }
 
+        public static UnityEngine.Vector3 GetVector3Unity(this DataStr.JSONPoint Data)
+        {
+            UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Data.x, Data.y, Data.z);
+            return v3;
+        }
+
         public static UnityEngine.Quaternion GetQuaternionUnity(this DataStr.PropData Data)
         {
             UnityEngine.Quaternion quat = new UnityEngine.Quaternion(Data.rotx, Data.roty, Data.rotz, Data.rotw);

@@ -17,8 +17,6 @@ namespace SkyCoopClient
     {
         public static GameObject m_UIPanel;
         public static Transform m_KillFeedTransform;
-        public static GameObject m_SpawnPointEditor;
-        public static Transform m_SpawnPointEditorScrollParnet;
         public static GameObject m_PropsEditor;
         public static Transform m_PropsEditorScrollParnet;
 
@@ -111,7 +109,6 @@ namespace SkyCoopClient
                 {
                     m_UIPanel = UIPanel;
                     m_KillFeedTransform = m_UIPanel.transform.GetChild(0);
-                    m_SpawnPointEditor = m_UIPanel.transform.GetChild(1).gameObject;
 
                     m_PropsEditor = m_UIPanel.transform.GetChild(3).gameObject;
 
@@ -119,7 +116,6 @@ namespace SkyCoopClient
                     Action act2 = new Action(() => SpawnPointEditor.LoadCurrentSceneFile());
                     m_UIPanel.transform.GetChild(1).GetChild(2).GetComponent<Button>().onClick.AddListener(act);
                     m_UIPanel.transform.GetChild(1).GetChild(3).GetComponent<Button>().onClick.AddListener(act2);
-                    m_SpawnPointEditorScrollParnet = m_UIPanel.transform.GetChild(1).GetChild(1).GetChild(0).GetChild(0);
                     m_PropsEditorScrollParnet = m_UIPanel.transform.GetChild(3).GetChild(1).GetChild(0).GetChild(0);
 
                     s_ZoneDamageOverlay = m_UIPanel.transform.GetChild(2).GetComponent<Animator>();

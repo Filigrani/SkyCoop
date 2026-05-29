@@ -22,7 +22,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
-            public string m_GameMode = "GunGame";
+            public string m_GameMode = "Shrink";
         }
 
         public class GameRulesSave
@@ -32,6 +32,7 @@ namespace SkyCoopServer
             public List<StartingGearData> StartingGear { get; set; }
             public List<List<StartingGearData>> StartingGearByTier { get; set; }
             public int Time { get; set; }
+            public int LootPerRadialSpawn { get; set; }
             public string HUDMode { get; set; }
             public bool DeathPacks { get; set; }
             public bool Respawns { get; set; }
@@ -45,6 +46,7 @@ namespace SkyCoopServer
             public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
             public List<List<StartingGearData>> m_StartingItemsByTier = new List<List<StartingGearData>>();
             public int m_Time = 0;
+            public int m_LootPerRadialSpawn = 5;
             public string m_HUDMode = "";
             public bool m_DeathPacks = false;
             public bool m_Respawns = false;
@@ -1195,11 +1197,32 @@ namespace SkyCoopServer
             public List<RadialLootSpawner> spawners { get; set; }
         }
 
+        public class JSONPoint {
+            public float x { get; set; }
+            public float y { get; set; }
+            public float z { get; set; }
+
+            public Vector3 ToVector()
+            {
+                return new Vector3(x, y, z);
+            }
+
+            public JSONPoint(){}
+
+            public JSONPoint(float X, float Y, float Z) 
+            {
+                x = X; 
+                y = Y; 
+                z = Z;
+            }
+        }
+
         public class RadialLootSpawner
         {
-            public Vector3 m_Center = Vector3.Zero;
-            public float m_Top = 0;
-            public List<Vector3> m_AvaliblePoints = new List<Vector3>();
+            public JSONPoint center { get; set; }
+            public float top { get; set; }
+            public string loottable { get; set; }
+            public List<JSONPoint> points { get; set; }
         }
 
         public class PrefabTable

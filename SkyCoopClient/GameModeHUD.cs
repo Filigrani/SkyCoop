@@ -32,6 +32,7 @@ namespace SkyCoopClient
                 {
                     s_DarkwalkerHUDClone = UnityEngine.Object.Instantiate(Panel.m_NowhereToHide.gameObject, Panel.m_NowhereToHide.transform.parent);
                     s_DarkwalkerHUDClone.SetActive(true);
+                    s_DarkwalkerHUDClone.name = "GameModeHUD";
                     s_HUD = s_DarkwalkerHUDClone.GetComponent<HUDNowhereToHide>();
                     s_HUD.m_AfflictionRoot.SetActive(false);
                     s_HUD.m_EntityDistanceRoot.SetActive(false);
@@ -112,7 +113,7 @@ namespace SkyCoopClient
                 return;
             }
             s_SideLables[SideLableIndex].gameObject.SetActive(true);
-            s_SideLables[SideLableIndex].text = s_SideLablesPrefix[SideLableIndex]+Text;
+            s_SideLables[SideLableIndex].text = Localization.Get(s_SideLablesPrefix[SideLableIndex])+Localization.Get(Text);
         }
         public static void SetSideLablePrefix(int SideLableIndex, string Text)
         {

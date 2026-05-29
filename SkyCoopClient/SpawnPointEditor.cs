@@ -16,48 +16,35 @@ namespace SkyCoopClient
         public static List<GameObject> m_Visualizers = new List<GameObject>();
         public static string SpawnPointsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/Editor/SpawnPoints";
 
-        public static void UpdateList()
+        public static void DeleteVizualization()
         {
-            for (int i = m_Visualizers.Count-1; i >= 0; i--)
+            for (int i = m_Visualizers.Count - 1; i >= 0; i--)
             {
                 UnityEngine.Object.Destroy(m_Visualizers[i]);
             }
-            for (int i = CanvasUI.m_SpawnPointEditorScrollParnet.childCount - 1; i >= 0; i--)
-            {
-                UnityEngine.Object.DestroyImmediate(CanvasUI.m_SpawnPointEditorScrollParnet.GetChild(i).gameObject);
-            }
             m_Visualizers.Clear();
+        }
 
+        public static void UpdateVizualization()
+        {
+            DeleteVizualization();
             for (int i = 0; i < m_Vectors.Count; i++)
             {
                 GameObject Viszualizer = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetPlayerManagerComponent().m_OscarPrefab, m_Vectors[i], m_Quaternions[i]);
                 m_Visualizers.Add(Viszualizer);
-                GameObject NewElemenet = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromBundle<GameObject>("SpawnPointEditorElement"), CanvasUI.m_SpawnPointEditorScrollParnet);
-                
-                int NewIndex = CanvasUI.m_SpawnPointEditorScrollParnet.transform.childCount - 1;
-                NewElemenet.name = NewIndex.ToString();
-
-                Action act = new Action(() => Delete(NewElemenet));
-                NewElemenet.transform.GetChild(0).GetComponent<Button>().m_OnClick.AddListener(act);
-
-                Action act2 = new Action(() => Teleport(NewElemenet));
-                NewElemenet.transform.GetChild(1).GetComponent<Button>().m_OnClick.AddListener(act2);
             }
         }
 
-        public static void Delete(GameObject Obj)
+        public static void Delete(int Index)
         {
-            int Index = int.Parse(Obj.name);
             SkyCoop.Logger.Log("Delete " + Index);
             m_Vectors.RemoveAt(Index);
             m_Quaternions.RemoveAt(Index);
-            UpdateList();
+            UpdateVizualization();
         }
 
-        public static void Teleport(GameObject Obj)
+        public static void Teleport(int Index)
         {
-            int Index = int.Parse(Obj.name);
-            SkyCoop.Logger.Log("Teleport to index "+Index);
             GameManager.GetPlayerManagerComponent().TeleportPlayer(m_Vectors[Index], m_Quaternions[Index]);
         }
 
@@ -155,26 +142,14 @@ namespace SkyCoopClient
                 m_Vectors.Add(new Vector3(Point.posx, Point.posy, Point.posz));
                 m_Quaternions.Add(new Quaternion(Point.rotx, Point.roty, Point.rotz, Point.rotw));
             }
-            UpdateList();
-        }
-
-        public static void ToggleSpawnPointEditor()
-        {
-            if (CanvasUI.m_SpawnPointEditor)
-            {
-                CanvasUI.m_SpawnPointEditor.SetActive(!CanvasUI.m_SpawnPointEditor.activeSelf);
-            }
-            if (CanvasUI.m_PropsEditor)
-            {
-                CanvasUI.m_PropsEditor.SetActive(false);
-            }
+            UpdateVizualization();
         }
 
         public static void AddSpawnPoint()
         {
             m_Vectors.Add(GameManager.GetPlayerTransform().position);
             m_Quaternions.Add(GameManager.GetPlayerTransform().rotation);
-            UpdateList();
+            UpdateVizualization();
         }
     }
 }

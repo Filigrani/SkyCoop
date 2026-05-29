@@ -15,11 +15,6 @@ MonoBehaviour:
   m_GroupName: SkyCoop
   m_GUID: 65883fe2772ea8348b9759289a701bce
   m_SerializeEntries:
-  - m_GUID: 0de88f04a02e185469f7051106af5d90
-    m_Address: GEAR_FishKnife
-    m_ReadOnly: 0
-    m_SerializedLabels: []
-    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: b3ace995e6b00bb469be852aac7f36bb
     m_Address: Titles_SkyCoopReborn_Texture
     m_ReadOnly: 0
@@ -27,6 +22,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bac5c98130623374daeb83767ace981e
     m_Address: ico_GearItem__FishKnife
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: e4af4964cd8024a4e872820dbe6a04a4
+    m_Address: GEAR_FishKnife
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

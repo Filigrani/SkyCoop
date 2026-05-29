@@ -19,40 +19,64 @@ namespace SkyCoopServer
             m_ServerInstance = Server;
         }
 
-        public void PopulateLoot(string SceneName)
+        public void PopulateLoot(string SceneName, int LootPerPoint = 5)
         {
+            if(LootPerPoint == null || LootPerPoint == 0)
+            {
+                return;
+            }
+            
+            SkyCoopServer.Logger.Log(ConsoleColor.Cyan, $"Trying populate loot on {SceneName}");
             RadialLootSpawnerSave Data = FilesManager.GetRadialLootSpawners(m_ServerInstance.m_Config.m_GameMode, SceneName);
 
             if(Data != null)
             {
+                int PointIndex = 0;
                 foreach (RadialLootSpawner Spawner in Data.spawners)
                 {
                     if (Spawner != null)
                     {
-                        int LootPerPoint = 5;
-                        List<Vector3> AvaliablePoints = new List<Vector3>();
+                        List<JSONPoint> AvaliablePoints = new List<JSONPoint>();
 
-                        if(Spawner.m_AvaliblePoints.Count < LootPerPoint)
+                        if(Spawner.points != null)
                         {
-                            LootPerPoint = Spawner.m_AvaliblePoints.Count;
-                        }
+                            if(Spawner.points.Count < LootPerPoint)
+                            {
+                                LootPerPoint = Spawner.points.Count;
+                            }
+                            
+                            AvaliablePoints = Spawner.points;
 
-                        AvaliablePoints = Spawner.m_AvaliblePoints;
+                            Random RNG = new Random(Guid.NewGuid().GetHashCode());
 
-                        Random RNG = new Random(Guid.NewGuid().GetHashCode());
+                            for (int i = 1; i <= LootPerPoint; i++)
+                            {
+                                int Index = RNG.Range(0, AvaliablePoints.Count);
 
-                        for (int i = 1; i <= LootPerPoint; i++)
-                        {
-                            int Index = RNG.Range(0, AvaliablePoints.Count);
+                                Vector3 Point = AvaliablePoints[Index].ToVector();
 
-                            Vector3 Point = AvaliablePoints[Index];
+                                string LootTableName = "Main"; // Full random.
 
-                            string GearName = LootTableManager.GetRandomLoot();
-                            AddGear(SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty);
-                            AvaliablePoints.RemoveAt(Index);
+                                if (!string.IsNullOrEmpty(Spawner.loottable))
+                                {
+                                    LootTableName = Spawner.loottable;
+                                }
+
+                                string GearName = LootTableManager.GetRandomLoot(LootTableName);
+
+                                SkyCoopServer.Logger.Log($"[PopulateLoot] {SceneName} Point {PointIndex}({i}/{LootPerPoint}) picked {GearName}");
+
+                                AddGear(SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty);
+                                AvaliablePoints.RemoveAt(Index);
+                            }
                         }
                     }
+                    PointIndex++;
                 }
+            }
+            else
+            {
+                SkyCoopServer.Logger.Log(ConsoleColor.Yellow, $"Could not populate loot on {SceneName}");
             }
         }
 

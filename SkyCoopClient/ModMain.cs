@@ -86,6 +86,11 @@ namespace SkyCoop
             }
         }
 
+        public override void OnGUI()
+        {
+            DebugGUI.Render();
+        }
+
         public override void OnUpdate()
         {
             SetAppBackgroundMode();
@@ -123,22 +128,7 @@ namespace SkyCoop
             }
             if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F6))
             {
-                SpawnPointEditor.ToggleSpawnPointEditor();
-            }
-            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F9))
-            {
-                PropsSpawnsEditor.TogglePropsEditor();
-            }
-            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.P))
-            {
-                if (CanvasUI.m_SpawnPointEditor && CanvasUI.m_SpawnPointEditor.activeSelf)
-                {
-                    SpawnPointEditor.AddSpawnPoint();
-                }
-                if (CanvasUI.m_PropsEditor && CanvasUI.m_PropsEditor.activeSelf)
-                {
-                    PropsSpawnsEditor.AddProp();
-                }
+                DebugGUI.Toggle();
             }
 
             if (CanvasUI.s_SpeakingIndicator)

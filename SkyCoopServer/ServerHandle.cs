@@ -300,7 +300,7 @@ namespace SkyCoopServer
                 else if (ServerInstance.m_Rules.m_HUDMode == "GunGame")
                 {
                     ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Weapon Tier:", Data.GetTierString(ServerInstance), ServerInstance);
-                    ServerSend.SendHUDSideBar(Client, 1, "", $"Kills Required:", Data.GetTierProgressString(ServerInstance), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 1, "ico_xpModeInterloper", $"Kills Required:", Data.GetTierProgressString(ServerInstance), ServerInstance);
 
                     ServerSend.SendTimerPrefix(Client, "Time Remaining");
                 }
@@ -582,6 +582,20 @@ namespace SkyCoopServer
                     break;
                 case "removetier":
                     Player.RemoveTier(ServerInstance);
+                    break;
+                case "addkill":
+                case "addscore":
+                    Player.AddKill(ServerInstance);
+                    break;
+                case "removekill":
+                case "removescore":
+                    Player.RemoveKill(ServerInstance);
+                    break;
+                case "adddeath":
+                    Player.AddDeath(ServerInstance);
+                    break;
+                case "addassist":
+                    Player.AddAssist(ServerInstance);
                     break;
                 case "nextmap":
                     ServerInstance.ForceToOver();

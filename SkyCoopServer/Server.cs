@@ -207,7 +207,7 @@ namespace SkyCoopServer
             ServerSend.SendConfigUpdated(this);
             ServerSend.SendChangeMap(this);
 
-            m_ScenesData.PopulateLoot(m_Config.m_SceneToSpawn);
+            m_ScenesData.PopulateLoot(m_Config.m_SceneToSpawn, m_Rules.m_LootPerRadialSpawn);
         }
 
         public void StartServer()

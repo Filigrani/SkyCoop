@@ -1,16 +1,17 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine.UI;
-using System.Text.Json;
-using System.Reflection;
-using UnityEngine;
-using Il2Cpp;
+﻿using Il2Cpp;
+using Il2CppTMPro;
 using SkyCoop;
 using SkyCoopServer;
-using Il2CppTMPro;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Reflection;
+using System.Text;
+using System.Text.Json;
+using System.Threading.Tasks;
+using UnityEngine;
+using UnityEngine.UI;
+using static Il2CppRewired.Controller;
 using static SkyCoopServer.DataStr;
 
 namespace SkyCoopClient
@@ -25,10 +26,11 @@ namespace SkyCoopClient
         public static List<DataStr.RadialLootSpawner> s_Spawners = new List<DataStr.RadialLootSpawner>();
         public static List<GameObject> s_Vizualizers = new List<GameObject>();
 
-        public const float c_UpwardRaycastLength = 3f;
-        public const float c_SpawnerRange = 3.5f;
-        public const float c_MaxRaycastLength = 5f;
+        public static float s_UpwardRaycastLength = 3f;
+        public static float s_SpawnerRange = 3.5f;
+        public static string s_SpawnerLootTable = "";
         public const float c_MaxPointsPerSpawner = 30;
+
 
         public static GameObject CreateDebugPrimitive(PrimitiveType Type, string Name, UnityEngine.Color Color, Transform Parent = null)
         {
@@ -43,9 +45,10 @@ namespace SkyCoopClient
             return Obj;
         }
 
-        public static void Remove()
+        public static void Delete(int Index)
         {
-            s_Spawners.RemoveAt(s_Spawners.Count - 1);
+            s_Spawners.RemoveAt(Index);
+            UpdateVizualization();
         }
 
         public static void Save()
@@ -58,7 +61,7 @@ namespace SkyCoopClient
 
             string FileName = ModMain.GetCurrentSceneName();
 
-            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Saving PropDataSave for scene {FileName}");
+            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Saving RadialLootSpawners for scene {FileName}");
             try
             {
                 if (!Directory.Exists(s_RadialSpawnersDirectory))
@@ -71,6 +74,57 @@ namespace SkyCoopClient
             }
         }
 
+        public static string GetFileName()
+        {
+            return ModMain.GetCurrentSceneName();
+        }
+
+        public static void LoadCurrentSceneFile()
+        {
+            string FileName = GetFileName();
+            string JSON;
+
+            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Loading RadialLootSpawners for scene {FileName}");
+            try
+            {
+                if (!Directory.Exists(s_RadialSpawnersDirectory))
+                {
+                    SkyCoop.Logger.Log(ConsoleColor.Red, $"Directory {s_RadialSpawnersDirectory} not exists");
+                    return;
+                }
+                JSON = File.ReadAllText($"{s_RadialSpawnersDirectory}/{FileName}");
+                SkyCoop.Logger.Log(ConsoleColor.Green, $"Load was successful");
+            }
+            catch (Exception e)
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file because of an error: {e.Message}");
+                return;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"File {FileName} is empty");
+                return;
+            }
+            else
+            {
+                Load(JSON);
+            }
+        }
+
+        public static void Load(string JSON)
+        {
+            s_Spawners.Clear();
+
+            RadialLootSpawnerSave Save = JsonSerializer.Deserialize<RadialLootSpawnerSave>(JSON);
+            for (int i = 0; i < Save.spawners.Count; i++)
+            {
+                RadialLootSpawner Spawner = Save.spawners[i];
+                s_Spawners.Add(Spawner);
+            }
+            UpdateVizualization();
+        }
+
 
         public static void CreateSpawner()
         {
@@ -78,7 +132,7 @@ namespace SkyCoopClient
             {
                 Vector3 centerPos = GameManager.GetPlayerTransform().position;
 
-                float Top = c_UpwardRaycastLength;
+                float Top = s_UpwardRaycastLength;
 
                 LayerMask RayCastMask = (1 << vp_Layer.Default) |
                 (1 << vp_Layer.InteractiveProp) |
@@ -91,7 +145,7 @@ namespace SkyCoopClient
                 (1 << vp_Layer.Water) |
                 (1 << vp_Layer.TerrainObject);
 
-                List<System.Numerics.Vector3> Points = new List<System.Numerics.Vector3>();
+                List<JSONPoint> Points = new List<JSONPoint>();
 
                 if(Physics.Raycast(centerPos, Vector3.up, out RaycastHit _hit, Top, RayCastMask))
                 {
@@ -104,14 +158,16 @@ namespace SkyCoopClient
                 for (int i = 0; i < c_MaxPointsPerSpawner; i++)
                 {
                     float angle = UnityEngine.Random.Range(0f, 360f);
-                    float distance = UnityEngine.Random.Range(0f, c_SpawnerRange);
+                    float distance = UnityEngine.Random.Range(0f, s_SpawnerRange);
 
                     // Создаем направление от пиковой точки
                     Vector3 horizontalDirection = Quaternion.Euler(0, angle, 0) * Vector3.forward;
                     Vector3 rayOrigin = peakPoint + horizontalDirection * distance;
 
+                    float MaxRaycastLength = s_SpawnerRange + s_UpwardRaycastLength + 0.5f;
+
                     // Луч вниз от случайной точки вокруг пика
-                    if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, c_MaxRaycastLength, RayCastMask))
+                    if (Physics.Raycast(rayOrigin, Vector3.down, out RaycastHit hit, MaxRaycastLength, RayCastMask))
                     {
                         Vector3 surfaceNormal = hit.normal;
                         bool isWall = Mathf.Abs(surfaceNormal.y) < 0.1f;
@@ -120,7 +176,7 @@ namespace SkyCoopClient
                         if (!isWall && !isTooSteep)
                         {
                             //Vector3 spawnPos = hit.point + Vector3.up * 0.1f;
-                            Points.Add(hit.point.ConvertToSystem());
+                            Points.Add(new JSONPoint(hit.point.x, hit.point.y, hit.point.z));
                         }
                     }
                     else
@@ -129,17 +185,18 @@ namespace SkyCoopClient
                     }
                 }
                 DataStr.RadialLootSpawner Spawner = new DataStr.RadialLootSpawner();
-                Spawner.m_Center = centerPos.ConvertToSystem();
-                Spawner.m_AvaliblePoints = Points;
-                Spawner.m_Top = Top;
+                Spawner.center = new JSONPoint(centerPos.x, centerPos.y, centerPos.z);
+                Spawner.points = new List<JSONPoint>(Points);
+                Spawner.top = Top;
                 s_Spawners.Add(Spawner);
             }
+            UpdateVizualization();
         }
 
-        public static void Vizualize()
+        public static void DeleteVizualization()
         {
             //                                    да-да мин-максим проверяя только -1, и в тоже время пишим говно код, оптимизатор я от бога конечно.
-            for (int i = s_Vizualizers.Count-1; i != -1; i--)
+            for (int i = s_Vizualizers.Count - 1; i != -1; i--)
             {
                 GameObject Obj = s_Vizualizers[i];
                 if (Obj) // Если удалить объект он всё ещё будет налом в листе. Хер его знает, сцену там поменяешь, да ты и сам потом будешь орать когда удалишь в эксплорере.
@@ -149,22 +206,28 @@ namespace SkyCoopClient
             }
             s_Vizualizers.Clear();
 
-            foreach (DataStr.RadialLootSpawner Spawner in s_Spawners)
+        }
+
+        public static void UpdateVizualization(int Index)
+        {
+            DataStr.RadialLootSpawner Spawner = s_Spawners[Index];
+
+            if (Spawner != null)
             {
                 Transform Dummy = new GameObject("RadialLootSpawnerPoint").transform;
 
                 GameObject UpwardRay = CreateDebugPrimitive(PrimitiveType.Cube, "UpwardRay", UnityEngine.Color.green, Dummy);
-                UpwardRay.transform.localScale = new Vector3(0.3f, Spawner.m_Top, 0.3f);
+                UpwardRay.transform.localScale = new Vector3(0.3f, Spawner.top, 0.3f);
 
                 // У всех примитивов пивот в центре. По этому все "лучи" которые мы будем визиуализировать мы присираем в цетре а не в их начале.
-                Vector3 rayStart = Spawner.m_Center.ConvertToUnity();
-                Vector3 rayEnd = rayStart + Vector3.up * Spawner.m_Top;
+                Vector3 rayStart = Spawner.center.GetVector3Unity();
+                Vector3 rayEnd = rayStart + Vector3.up * Spawner.top;
                 UpwardRay.transform.position = (rayStart + rayEnd) * 0.5f;
 
-                foreach (System.Numerics.Vector3 Point in Spawner.m_AvaliblePoints)
+                foreach (JSONPoint Point in Spawner.points)
                 {
-                    Vector3 pointUnity = Point.ConvertToUnity();
-                    Vector3 pointRayEnd = pointUnity + Vector3.up * Spawner.m_Top;
+                    Vector3 pointUnity = Point.GetVector3Unity();
+                    Vector3 pointRayEnd = pointUnity + Vector3.up * Spawner.top;
 
                     Transform SubDummy = new GameObject("Point").transform;
                     SubDummy.position = pointUnity;
@@ -183,22 +246,32 @@ namespace SkyCoopClient
                     RayToPeak.transform.Rotate(90, 0, 0);
                     RayToPeak.transform.localScale = new Vector3(0.2f, Distance, 0.2f);
 
-                    //string GearName = LootTableManager.GetRandomLoot();
-                    //if (ModMain.Server != null && ModMain.Server.m_IsReady)
-                    //{
-                    //    if (ModMain.Server.m_ScenesData != null)
-                    //    {
-                    //        
-                    //        ModMain.Server.m_ScenesData.AddGear(PlayersManager.m_LocalPlayerData.m_LastSentScene, GearName, Point, Quaternion.Euler(0, UnityEngine.Random.Range(0, 360), 0).ConvertToSystem(), string.Empty);
-                    //    }
-                    //}
                     SubDummy.SetParent(Dummy);
                 }
 
-                //Dummy.gameObject.SetActive(false);
-
-                s_Vizualizers.Add(Dummy.gameObject);
+                if (s_Vizualizers.Count - 1 < Index)
+                {
+                    s_Vizualizers.Add(Dummy.gameObject);
+                }
+                else
+                {
+                    UnityEngine.Object.Destroy(s_Vizualizers[Index]);
+                    s_Vizualizers[Index] = Dummy.gameObject;
+                }
             }
+        }
+
+        public static void UpdateVizualization()
+        {
+            DeleteVizualization();
+            for (int i = 0; i < s_Spawners.Count; i++)
+            {
+                UpdateVizualization(i);
+            }
+        }
+        public static void Teleport(int Index)
+        {
+            GameManager.GetPlayerManagerComponent().TeleportPlayer(s_Spawners[Index].center.GetVector3Unity(), Quaternion.identity);
         }
     }
 }
