@@ -399,7 +399,14 @@ namespace SkyCoopClient
             private static void Postfix(Panel_Loading __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
-                if (s_LoadingFlag && __instance.HasFinishedLoading() && __instance.HasFinishedHolding())
+
+                bool IsLoading = !__instance.HasFinishedLoading();
+
+                if (IsLoading && !s_LoadingFlag)
+                {
+                    OnStartedLoading();
+                }
+                else if (s_LoadingFlag && __instance.HasFinishedLoading() && __instance.HasFinishedHolding())
                 {
                     s_LoadingFlag = false;
                     OnFinishedLoading();
@@ -670,7 +677,6 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return true; }
 
                 SkyCoop.Logger.Log("LoadSceneWithLoadingScreen");
-                OnStartedLoading();
                 if (string.IsNullOrEmpty(s_SceneSpawnOverride))
                 {
                     return true;

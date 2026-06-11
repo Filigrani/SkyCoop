@@ -361,6 +361,7 @@ namespace SkyCoop
             public GameObject m_Helmet = null;
             public GameObject m_Satchel = null;
             public GameObject m_TechnicalBackpack = null;
+            public GameObject m_Vest = null;
             public Transform m_BottomLip = null;
             public float m_MouthMinY = 0.03f;
             public float m_MouthMaxY = 0.053f;
@@ -570,6 +571,10 @@ namespace SkyCoop
                 {
                     m_TechnicalBackpack.SetActive(m_VisualData.m_ClothingData.m_TechPack);
                 }
+                if (m_Vest)
+                {
+                    m_Vest.SetActive(m_VisualData.m_ClothingData.m_Accs1 == "GEAR_BallisticVest" || m_VisualData.m_ClothingData.m_Accs2 == "GEAR_BallisticVest");
+                }
                 if (m_HairMesh)
                 {
                     m_HairMesh.SetActive(CanShowHairs());
@@ -746,6 +751,7 @@ namespace SkyCoop
                 m_Helmet = AddCookpot(new Vector3(0f, 0.245f, 0f), new Vector3(0, 180, 180), 1.03f);
                 m_Satchel = AddSatchel(new Vector3(0.23f, 0.23f, -0.42f), new Vector3(90, 0, -50), 1f);
                 m_TechnicalBackpack = AddTechPack(new Vector3(0, -0.44f, -0.19f), new Vector3(0, 0, 0), 1f);
+                m_Vest = AddVest(new Vector3(0, 0, -0.28f), new Vector3(90, 0, 0), new Vector3(1, 9, 1));
 
                 AddColider(m_Helmet);
 
@@ -956,6 +962,31 @@ namespace SkyCoop
                     Gear.transform.localPosition = Position;
                     Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
                     Gear.transform.localScale = new Vector3(Scale, Scale, Scale);
+                }
+                Gear.SetActive(false);
+                return Gear;
+            }
+
+            public GameObject AddVest(Vector3 Position, Vector3 Rotation, Vector3 Scale)
+            {
+                Transform Chest = GetBone(m_Animator, HumanBodyBones.Chest);
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_BallisticVest");
+                if (Gear)
+                {
+                    Rigidbody B = Gear.GetComponent<Rigidbody>();
+                    if (B)
+                    {
+                        UnityEngine.Object.Destroy(B);
+                    }
+                    BoxCollider Box = Gear.GetComponent<BoxCollider>();
+                    if (Box)
+                    {
+                        UnityEngine.Object.Destroy(Box);
+                    }
+                    Gear.transform.SetParent(Chest);
+                    Gear.transform.localPosition = Position;
+                    Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
+                    Gear.transform.localScale = Scale;
                 }
                 Gear.SetActive(false);
                 return Gear;

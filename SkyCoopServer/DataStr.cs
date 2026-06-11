@@ -22,7 +22,7 @@ namespace SkyCoopServer
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
-            public string m_GameMode = "Shrink";
+            public string m_GameMode = "GunGame";
         }
 
         public class GameRulesSave

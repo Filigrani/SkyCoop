@@ -2046,6 +2046,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: SkyCoopPlayer
       objectReference: {fileID: 0}
+    - target: {fileID: 6121099865305957567, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6151509243235084853, guid: e3d9e6ca25309c841b5ab48975657308, type: 3}
       propertyPath: m_IsActive
       value: 1

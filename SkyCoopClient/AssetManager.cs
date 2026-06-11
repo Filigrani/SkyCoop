@@ -4,6 +4,7 @@ using Il2CppSystem.Linq;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using System.Reflection;
+using Il2CppTLD.AddressableAssets;
 
 namespace SkyCoop
 {
@@ -189,6 +190,18 @@ namespace SkyCoop
                 return null;
             }
             return s_MainBundle.LoadAsset<T>(AssetName);
+        }
+
+        public static T GetAssetFromAddressables<T>(string AssetPath) where T : UnityEngine.Object
+        {
+            var Asset = AssetHelper.SafeLoadAssetAsync<T>(AssetPath);
+
+            if (Asset == null)
+            {
+                Logger.Log(ConsoleColor.Red, "GetAssetFromAddressables() Can't load asset " + AssetPath);
+                return null;
+            }
+            return Asset.WaitForCompletion();
         }
 
         public static void DumpAddressablesContent()
