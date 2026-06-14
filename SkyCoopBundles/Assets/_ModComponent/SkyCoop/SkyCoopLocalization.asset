@@ -292,3 +292,189 @@ MonoBehaviour:
       Italian: 
       Polish: 
       Ukrainian: 
+  - localizationKey: GAMEPLAY_ShutdownServer
+    languages:
+      English: Shutdown server
+      German: 
+      Russian: "\u041E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u0435\u0440\u0432\u0435\u0440"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_ShutdownServerDone
+    languages:
+      English: Server shutdown successfully!
+      German: 
+      Russian: "\u0421\u0435\u0440\u0432\u0435\u0440 \u0443\u0441\u043F\u0435\u0448\u043D\u043E
+        \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u043B\u0435\u043D!"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_AlreadyConnected
+    languages:
+      English: You already connected to the server!
+      German: 
+      Russian: "\u0412\u044B \u0443\u0436\u0435 \u043F\u043E\u0434\u043A\u043B\u044E\u0447\u0435\u043D\u043D\u044B
+        \u043A \u0441\u0435\u0440\u0432\u0435\u0440\u0443!"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_DisconnectConfirmation
+    languages:
+      English: Are you sure you want to disconnect from the server?
+      German: 
+      Russian: "\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B \u0447\u0442\u043E
+        \u0445\u043E\u0442\u0438\u0442\u0435 \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F?"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_Disconnect
+    languages:
+      English: Disconnect
+      German: 
+      Russian: "\u041E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_DisconnectConfirmationHost
+    languages:
+      English: Are you sure you want to disconnect from the server? You are the hosting
+        a server, once you disconnect, server will continue working, you can stop
+        the server in main menu, or simply quit the game.
+      German: 
+      Russian: "\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B \u0447\u0442\u043E
+        \u0445\u043E\u0442\u0438\u0442\u0435 \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u044C\u0441\u044F?
+        \u0412\u044B \u044F\u0432\u043B\u044F\u0435\u0442\u0435\u0441\u044C \u0441\u0435\u0440\u0432\u0435\u0440\u043E\u043C,
+        \u043A\u043E\u0433\u0434\u0430 \u0432\u044B \u043E\u0442\u043A\u043B\u044E\u0447\u0438\u0442\u0435\u0441\u044C,
+        \u0441\u0435\u0440\u0432\u0435\u0440 \u043F\u0440\u043E\u0434\u043E\u043B\u0436\u0438\u0442
+        \u0440\u0430\u0431\u043E\u0442\u0443, \u043C\u044B \u043C\u043E\u0436\u0435\u0442\u0435
+        \u0435\u0433\u043E \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C
+        \u0432 \u0433\u043B\u0430\u0432\u043D\u043E\u043C \u043C\u0435\u043D\u044E,
+        \u0438\u043B\u0438 \u043F\u0440\u043E\u0441\u0442\u043E \u0432\u044B\u0439\u0434\u044F
+        \u0438\u0437 \u0438\u0433\u0440\u044B."
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_ShutdownServerConfirmation
+    languages:
+      English: Are you sure you want to shutdown the server?
+      German: 
+      Russian: "\u0412\u044B \u0443\u0432\u0435\u0440\u0435\u043D\u044B \u0447\u0442\u043E
+        \u0445\u043E\u0442\u0438\u0442\u0435 \u043E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C
+        \u0441\u0435\u0440\u0432\u0435\u0440?"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_ShutdownServerDescription
+    languages:
+      English: Shutdown server that you currently hosting.
+      German: 
+      Russian: "\u041E\u0441\u0442\u0430\u043D\u043E\u0432\u0438\u0442\u044C \u0441\u0435\u0440\u0432\u0435\u0440
+        \u043A\u043E\u0442\u043E\u0440\u044B\u0439 \u0443 \u0432\u0430\u0441 \u0441\u0435\u0439\u0447\u0430\u0441
+        \u0437\u0430\u043F\u0443\u0449\u0435\u043D."
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 

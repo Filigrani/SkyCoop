@@ -1,8 +1,10 @@
 ﻿using Il2Cpp;
 using MelonLoader;
 using SkyCoopClient;
+using System.Text;
 using UnityEngine;
 using static Il2Cpp.Utils;
+using static Il2CppMono.Security.X509.X520;
 
 namespace SkyCoop
 {
@@ -86,6 +88,8 @@ namespace SkyCoop
             InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
 
+            GameAudioManager.PlayGUIButtonClick();
+
             UpdateSandboxMainWindow(InterfaceManager.GetPanel<Panel_Sandbox>().m_MainWindow);
         }
 
@@ -99,23 +103,23 @@ namespace SkyCoop
             {
                 T.gameObject.SetActive(false);
             }
+            GameAudioManager.PlayGUIButtonClick();
         }
 
         public static void OnHostPressed()
-        {
-            if (!Environment.GetCommandLineArgs().Contains("-JoeBiden"))
-            {
-                DoOKMessage("Stop it!", "No, you can't host yourself in this build.\nWait when we host.");
-                return;
-            }
-            
+        {            
             if (ModMain.Server.m_IsReady)
             {
-                RemovePleaseWait();
-                DoOKMessage("Server already up!", "You already hosting server!");
+                OnShutdownPressed();
             }
             else
             {
+                if (!Environment.GetCommandLineArgs().Contains("-JoeBiden"))
+                {
+                    DoOKMessage("Stop it!", "No, you can't host yourself in this build.\nWait when we host.");
+                    return;
+                }
+
                 ModMain.Server.StartServer();
                 Thread.Sleep(15);
                 ModMain.Client.ConnectToServer("localhost");
@@ -123,6 +127,65 @@ namespace SkyCoop
                 //OpenSandbox();
             }
         }
+
+        public static void OnShutdownConfirmed()
+        {
+            RemovePleaseWait();
+
+            byte[] ShutdownMessage = Encoding.Unicode.GetBytes("Server shutdown");
+            ModMain.Server.m_Instance.DisconnectAll(ShutdownMessage, 0, ShutdownMessage.Length);
+            ModMain.Server.m_Instance.Stop();
+            ModMain.Server.m_IsReady = false;
+            ModMain.Server.Dispose();
+            ModMain.Server = new SkyCoopServer.Server();
+
+            DoOKMessage("", "GAMEPLAY_ShutdownServerDone");
+
+            InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+            UpdateSandboxMainWindow();
+        }
+
+        public static void OnShutdownPressed()
+        {
+            RemovePleaseWait();
+            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Localization.Get("GAMEPLAY_ShutdownServerConfirmation"), Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_ShutdownServer", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnShutdownConfirmed), null);
+        }
+
+        public static void OnDisconnectConfirmed()
+        {
+            if(ModMain.Client != null && ModMain.Client.m_Instance != null)
+            {
+                ModMain.Client.m_Instance.DisconnectAll();
+                ModMain.Client.m_Instance.Stop();
+                ModMain.Client.Dispose();
+                ModMain.Client = new Client();
+            }
+            
+            
+            InterfaceManager.GetPanel<Panel_PauseMenu>().DoQuitGame();
+        }
+
+        public static void OnDisconnectPressed()
+        {
+            RemovePleaseWait();
+
+            if (ModMain.Client != null && ModMain.Client.m_Instance != null)
+            {
+                Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+                string TextLocID = "";
+                if (ModMain.Server.m_Instance == null)
+                {
+                    TextLocID = "GAMEPLAY_DisconnectConfirmation";
+                }
+                else
+                {
+                    TextLocID = "GAMEPLAY_DisconnectConfirmationHost";
+                }
+                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, TextLocID, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Disconnect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
+            }
+        }
+
 
         public static void OnJoinConfirm()
         {
@@ -132,10 +195,11 @@ namespace SkyCoop
 
         public static void OnJoinPressed()
         {
+            GameAudioManager.PlayGUIButtonClick();
             if (ModMain.Client.m_IsReady)
             {
                 RemovePleaseWait();
-                DoOKMessage("", "You already connected to the server!");
+                DoOKMessage("", "GAMEPLAY_AlreadyConnected");
             }
             else
             {
@@ -168,7 +232,15 @@ namespace SkyCoop
                     __instance.m_BasicMenu.Reset();
                     __instance.m_BasicMenu.UpdateTitle("", "", Vector3.zero);
 
-                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_Host", "GAMEPLAY_HostDescription", 0, new Action(OnHostPressed), !Environment.GetCommandLineArgs().Contains("-JoeBiden"));
+                    if(ModMain.Server != null && ModMain.Server.m_IsReady)
+                    {
+                        AddButton(__instance.m_BasicMenu, "GAMEPLAY_ShutdownServer", "GAMEPLAY_ShutdownServerDescription", 0, new Action(OnHostPressed));
+                    }
+                    else
+                    {
+                        AddButton(__instance.m_BasicMenu, "GAMEPLAY_Host", "GAMEPLAY_HostDescription", 0, new Action(OnHostPressed), !Environment.GetCommandLineArgs().Contains("-JoeBiden"));
+                    }
+
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Join", "GAMEPLAY_JoinDescription", 1, new Action(OnJoinPressed));
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Options", "GAMEPLAY_OptionsMultiplayerDescription", 2, new Action(OnSettingsPressed));
 
@@ -247,7 +319,7 @@ namespace SkyCoop
             {
                 return;
             }
-            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, title, "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, Localization.Get(title), "\n" + Localization.Get(txt), Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
         }
 
         public static void OpenSandbox()
@@ -349,6 +421,19 @@ namespace SkyCoop
                 s_RaisBetHook = null;
 
                 return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "OnQuitGame", null)]
+        public class Panel_PauseMenu_OnQuitGame
+        {
+            public static bool Prefix(Panel_PauseMenu __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                OnDisconnectPressed();
+
+                return false;
             }
         }
 

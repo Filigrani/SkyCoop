@@ -1,16 +1,13 @@
 ﻿using Il2Cpp;
-using Il2CppParadoxNotion.Services;
 using Il2CppSteamworks;
 using Il2CppTLD.Gameplay;
-using Il2CppTLD.SaveState;
 using Il2CppTLD.Scenes;
 using MelonLoader;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using System.Reflection;
-using AssetsTools.NET.Extra;
+using System.Text;
 
 namespace SkyCoop
 {
@@ -65,6 +62,20 @@ namespace SkyCoop
             AssetManager.PreloadMainBundle();
             AssetManager.RegisterIlegalGearsCommand();
             WeaponsManager.InitDescriptors();
+        }
+
+        [Obsolete]
+        public override void OnApplicationQuit()
+        {
+            if(Server != null && Server.m_IsReady)
+            {
+                byte[] ShutdownMessage = Encoding.Unicode.GetBytes("Server shutdown");
+                Server.m_Instance.DisconnectAll(ShutdownMessage, 0, ShutdownMessage.Length);
+                Server.m_Instance.Stop();
+                Server.Dispose();
+                Server = new SkyCoopServer.Server();
+            }
+            base.OnApplicationQuit();
         }
 
         [Obsolete]

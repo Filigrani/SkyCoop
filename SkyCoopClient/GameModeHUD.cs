@@ -57,6 +57,11 @@ namespace SkyCoopClient
 
                 }
             }
+
+            if (s_DarkwalkerHUDClone)
+            {
+                s_DarkwalkerHUDClone.SetActive(ModMain.IsMultiplayer());
+            }
         }
 
         public static UISprite FixSideIcon(Transform Root)
@@ -157,8 +162,8 @@ namespace SkyCoopClient
             {
                 if (__instance.m_ExperimentalBuildLabel)
                 {
-                    __instance.m_ExperimentalBuildLabel.gameObject.SetActive(true);
                     __instance.m_ExperimentalBuildLabel.text = $"{BuildInfo.ModName} {BuildInfo.ModVersion}";
+                    __instance.m_ExperimentalBuildLabel.gameObject.SetActive(ModMain.IsMultiplayer());
                 }
             }
         }

@@ -4,7 +4,7 @@ using SkyCoopServer;
 
 namespace SkyCoop
 {
-    public class Client
+    public class Client : IDisposable
     {
         public static int m_ConnectPort = 37855;
         public static int m_LocalPort = 37856;
@@ -213,6 +213,17 @@ namespace SkyCoop
                     }
                 }
             };
+        }
+
+        public void Dispose()
+        {
+            m_IsReady = false;
+
+            if(m_Instance != null)
+            {
+                m_Instance.Stop();
+            }
+            GC.Collect();
         }
 
         public void ProcessAllDelayedPackages()

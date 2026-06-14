@@ -1248,7 +1248,11 @@ namespace SkyCoop
             void OnDestroy()
             {
                 GameManager.GetPlayerAnimationComponent().ShowPlayer(true);
-                m_Camera.enabled = true;
+
+                if (m_Camera)
+                {
+                    m_Camera.enabled = true;
+                }
             }
         }
         public class DeathPackComp : MonoBehaviour
