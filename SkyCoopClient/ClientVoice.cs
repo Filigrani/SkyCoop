@@ -1,11 +1,12 @@
 ﻿using Il2Cpp;
 using LiteNetLib.Utils;
 using LiteNetLib;
+using NAudio.Wave;
 using OpenVoiceSharp;
-using System.Net;
 using SkyCoop;
-using UnityEngine;
 using SkyCoopServer;
+using System.Net;
+using UnityEngine;
 
 namespace SkyCoopClient
 {
@@ -37,6 +38,32 @@ namespace SkyCoopClient
             if (ModMain.ClientVoice != null)
             {
                 ModMain.ClientVoice.VoiceInterface.EnableNoiseSuppression = Settings.m_Options.m_NoiseSuppression;
+            }
+        }
+
+        public static void OnMicrophoneChanged(int Index)
+        {
+            if(ModMain.ClientVoice != null)
+            {
+                ModMain.ClientVoice.MicrophoneRecorder.SetMicrophone(Index);
+            }
+        }
+
+        public static string GetMicrophoneName(int Index)
+        {
+            if(Index < 0)
+            {
+                return $"Invalid";
+            }
+            WaveInCapabilities[] Array = BasicMicrophoneRecorder.GetMicrophones();
+
+            if (Index >= Array.Length)
+            {
+                return $"Unused {Index}";
+            }
+            else
+            {
+                return Array[Index].ProductName;
             }
         }
 

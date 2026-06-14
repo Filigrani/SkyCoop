@@ -1,15 +1,16 @@
-﻿using System;
+﻿using Il2Cpp;
+using Il2CppRewired.ComponentControls.Data;
+using Il2CppTLD.UI;
+using MelonLoader;
+using ModSettings;
+using SkyCoop;
+using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-
-using Il2CppRewired.ComponentControls.Data;
-using ModSettings;
-using MelonLoader;
 using UnityEngine;
-using System.Reflection;
-using Il2Cpp;
 
 namespace SkyCoopClient
 {
@@ -17,7 +18,6 @@ namespace SkyCoopClient
     {
         internal static Settings m_Options = new Settings();
 
-#warning TODO: fix this
         //[Section("Generic Settings")]
 
         //[Name("User Name")]
@@ -25,6 +25,22 @@ namespace SkyCoopClient
         //public string m_UserName = "";
 
         [Section("Voice Chat")]
+
+        [Name("Microphone")]
+        [Description("Microphone that will be used for voice chat.")]
+        [Choice(
+            "MODINTERNAL_Microphone0", 
+            "MODINTERNAL_Microphone1", 
+            "MODINTERNAL_Microphone2", 
+            "MODINTERNAL_Microphone3",
+            "MODINTERNAL_Microphone4",
+            "MODINTERNAL_Microphone5",
+            "MODINTERNAL_Microphone6",
+            "MODINTERNAL_Microphone7",
+            "MODINTERNAL_Microphone8",
+            "MODINTERNAL_Microphone9"
+            , Localize = true)]
+        public int m_MicrophoneDeviceNumber = 0;
 
         [Name("Push To Talk")]
         [Description("If enabled, your voice will be sent only when defined button is held.")]
@@ -62,6 +78,8 @@ namespace SkyCoopClient
         protected override void OnChange(FieldInfo field, object? oldValue, object? newValue)
         {
             base.OnChange(field, oldValue, newValue);
+
+            ClientVoice.OnMicrophoneChanged(m_MicrophoneDeviceNumber);
             ClientVoice.OnNoiseSuppressionChanged();
         }
 
@@ -125,6 +143,25 @@ namespace SkyCoopClient
                         box.gameObject.SetActive(false);
                     }
                 }
+            }
+        }
+    }
+
+    public static class SettingsHooks
+    {
+        [HarmonyLib.HarmonyPatch(typeof(Localization), "Get")]
+        private static class Localization_Get
+        {
+            private static void Postfix(string key, ref string __result)
+            {
+                if (!key.StartsWith("MODINTERNAL_"))
+                {
+                    return;
+                }
+
+                int Num = int.Parse(key.Replace("MODINTERNAL_Microphone", ""));
+
+                __result = ClientVoice.GetMicrophoneName(Num);
             }
         }
     }
