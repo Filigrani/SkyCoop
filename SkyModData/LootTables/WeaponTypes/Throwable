@@ -1,0 +1,13 @@
+{
+	"Items": [
+       {
+         "Prefab": "GEAR_Stone",
+         "Chance": 0.7
+       },
+       {
+         "Prefab": "GEAR_NoiseMaker",
+         "Chance": 0.3
+       }	  
+    ],
+    "LootTables": []
+}

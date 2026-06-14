@@ -19,7 +19,7 @@ namespace SkyCoopClient
         public static List<DataStr.PropData> m_Data = new List<DataStr.PropData>();
        
         public static List<GameObject> m_Visualizers = new List<GameObject>();
-        public static string PropsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/Editor/Props";
+        public static string PropsDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/GameModes/Editor/Props";
 
         public static void UpdateList()
         {

@@ -1,0 +1,21 @@
+{
+	"Items": [
+       {
+         "Prefab": "GEAR_Soda",
+         "Chance": 0.3
+       },
+       {
+         "Prefab": "GEAR_SodaGrape",
+         "Chance": 0.3
+       },	
+       {
+         "Prefab": "GEAR_SodaOrange",
+         "Chance": 0.3
+       },	   
+       {
+         "Prefab": "GEAR_SodaEnergy",
+         "Chance": 0.1
+       }	  
+    ],
+    "LootTables": []
+}

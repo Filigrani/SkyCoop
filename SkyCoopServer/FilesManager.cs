@@ -21,7 +21,7 @@ namespace SkyCoopServer
         public static GameRules GetRules(string GameMode)
         {
             GameRules Rules = new GameRules();
-            string Path = $"{s_DataDirectory}/{GameMode}/{s_RulesFileName}";
+            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_RulesFileName}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -63,12 +63,14 @@ namespace SkyCoopServer
             Rules.m_Respawns = Save.Respawns;
             Rules.m_DeathPacks = Save.DeathPacks;
             Rules.m_Clothing = Save.Clothing;
+            Rules.m_CanDropItems = Save.CanDropItems;
+            Rules.m_CanUseContainers = Save.CanUseContainers;
             return Rules;
         }
 
         public static string GetRandomSceneForGameMode(string GameMode)
         {
-            string _Path = $"{s_DataDirectory}/{GameMode}/{s_SpawnPointsDirectory}";
+            string _Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_SpawnPointsDirectory}";
             if (Directory.Exists(_Path))
             {
                 string[] Scenes = Directory.GetFiles(_Path);
@@ -90,7 +92,7 @@ namespace SkyCoopServer
         public static List<V3Quat> GetSpawnPoints(string GameMode, string Scene)
         {
             List<V3Quat> Points = new List<V3Quat>();
-            string Path = $"{s_DataDirectory}/{GameMode}/{s_SpawnPointsDirectory}/{Scene}";
+            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_SpawnPointsDirectory}/{Scene}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -127,7 +129,7 @@ namespace SkyCoopServer
 
         public static DangerCircleConfig GetZoneConfig(string GameMode, string Scene)
         {
-            string Path = $"{s_DataDirectory}/{GameMode}/{s_ZoneConfigDirectory}/{Scene}";
+            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_ZoneConfigDirectory}/{Scene}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -161,7 +163,7 @@ namespace SkyCoopServer
         public static Vector3 GetVictoryPosition(string GameMode, string SceneName)
         {
             Vector3 Position = new Vector3(0,0,0);
-            string Path = $"{s_DataDirectory}/{GameMode}/{s_VictoryPlaceDirectory}/{SceneName}";
+            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_VictoryPlaceDirectory}/{SceneName}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -195,7 +197,7 @@ namespace SkyCoopServer
         public static PropDataSave GetProps(string GameMode, string Scene)
         {
             PropDataSave Save = new PropDataSave();
-            string Path = $"{s_DataDirectory}/{GameMode}/{s_PropsDirectory}/{Scene}";
+            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_PropsDirectory}/{Scene}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -287,7 +289,7 @@ namespace SkyCoopServer
         public static RadialLootSpawnerSave GetRadialLootSpawners(string GameMode, string Scene)
         {
             RadialLootSpawnerSave Save = new RadialLootSpawnerSave();
-            string Path = $"{s_DataDirectory}/{GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}";
+            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");

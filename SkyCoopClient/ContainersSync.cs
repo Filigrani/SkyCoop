@@ -218,6 +218,13 @@ namespace SkyCoopClient
             private static void Postfix(Container __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if (ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanUseContainers)
+                {
+                    __instance.enabled = false;
+                }
+
+
                 Comps.ContainerDescriptorHook Hook = __instance.gameObject.GetComponent<Comps.ContainerDescriptorHook>();
                 if (Hook == null)
                 {

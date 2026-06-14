@@ -154,15 +154,21 @@ namespace SkyCoop
 
         public static void OnDisconnectConfirmed()
         {
-            if(ModMain.Client != null && ModMain.Client.m_Instance != null)
+            if(ModMain.Client != null && ModMain.Client.m_IsReady)
             {
                 ModMain.Client.m_Instance.DisconnectAll();
                 ModMain.Client.m_Instance.Stop();
                 ModMain.Client.Dispose();
                 ModMain.Client = new Client();
             }
-            
-            
+            if (ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady)
+            {
+                ModMain.ClientVoice.m_Instance.DisconnectAll();
+                ModMain.ClientVoice.m_Instance.Stop();
+                ModMain.ClientVoice.Dispose();
+                ModMain.ClientVoice = new ClientVoice();
+            }
+
             InterfaceManager.GetPanel<Panel_PauseMenu>().DoQuitGame();
         }
 
@@ -174,18 +180,28 @@ namespace SkyCoop
             {
                 Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
                 string TextLocID = "";
-                if (ModMain.Server.m_Instance == null)
+                if (ModMain.Server.m_IsReady)
                 {
-                    TextLocID = "GAMEPLAY_DisconnectConfirmation";
+                    TextLocID = "GAMEPLAY_DisconnectConfirmationHost";
                 }
                 else
                 {
-                    TextLocID = "GAMEPLAY_DisconnectConfirmationHost";
+                    TextLocID = "GAMEPLAY_DisconnectConfirmation";
                 }
                 InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, TextLocID, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Disconnect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
             }
         }
 
+        public static void OnDisconnected(string Reason = "Unknown")
+        {
+            RemovePleaseWait();
+
+            if (ModMain.Client != null && ModMain.Client.m_Instance != null)
+            {
+                Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+                Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, $"Server shutdown\nReason: {Reason}", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
+            }
+        }
 
         public static void OnJoinConfirm()
         {

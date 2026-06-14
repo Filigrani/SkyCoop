@@ -1,0 +1,17 @@
+{
+	"Items": [],
+    "LootTables": [
+      {
+        "LootTable": "FireArms",
+        "Chance": 0.15
+      },	
+      {
+        "LootTable": "Throwable",
+        "Chance": 0.25
+      },
+      {
+        "LootTable": "Melee",
+        "Chance": 0.60
+      }
+	]
+}

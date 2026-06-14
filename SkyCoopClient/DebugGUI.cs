@@ -233,7 +233,7 @@ namespace SkyCoopClient
                     GUI.Label(new Rect(20, __createButtonY + 100, 300, 20), $"Current Table: {RadialLootSpawnersEditor.s_SpawnerLootTable}");
                     if (GUI.Button(new Rect(20, __createButtonY + 120, 100, 30), "Set Table"))
                     {
-                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input name of any Loot Table from\n Mods\\SkyModData\\LootTables", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Sumbit", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnSetTable), null);
+                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input name of any Loot Table from\n Mods/SkyModData/LootTables", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Sumbit", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnSetTable), null);
                     }
                     break;
 

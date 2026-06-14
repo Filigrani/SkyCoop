@@ -1,6 +1,7 @@
 ﻿using Il2Cpp;
 using Il2CppEasyRoads3Dv3;
 using Il2CppTMPro;
+using MelonLoader;
 using SkyCoop;
 using SkyCoopServer;
 using System;
@@ -10,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
+using System.Diagnostics;
 
 namespace SkyCoopClient
 {
@@ -91,7 +93,7 @@ namespace SkyCoopClient
 
         public static void Update()
         {
-            bool DisplayIcon = Settings.m_Options.m_DisplayMicrophoneIcon && ((Settings.m_Options.m_PushToTalk && ClientVoice.PushToTalkisHeldRaw()) || (!Settings.m_Options.m_PushToTalk && ClientVoice.IsSpeaking()));
+            bool DisplayIcon = Settings.m_Options.m_DisplayMicrophoneIcon && ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady && ((Settings.m_Options.m_PushToTalk && ClientVoice.PushToTalkisHeldRaw()) || (!Settings.m_Options.m_PushToTalk && ClientVoice.IsSpeaking()));
             if (s_SpeakingIndicator)
             {
                 s_SpeakingIndicator.alpha = Mathf.Lerp(s_SpeakingIndicator.alpha, DisplayIcon ? 1 : 0, Time.deltaTime * 8);
@@ -185,11 +187,11 @@ namespace SkyCoopClient
 
         public static void AddJoinMessage(int PlayerID)
         {
-            AddTextMessage($"{GetPlayerName(PlayerID)} join");
+            AddTextMessage($"{GetPlayerName(PlayerID)} {Localization.Get("GAMEPLAY_PlayerJoin")}");
         }
         public static void AddLeaveMessage(int PlayerID)
         {
-            AddTextMessage($"{GetPlayerName(PlayerID)} leave");
+            AddTextMessage($"{GetPlayerName(PlayerID)} {Localization.Get("GAMEPLAY_PlayerLeft")}");
         }
 
         public static void AddKillFeedMessage(DataStr.KillFeedMessage Message)

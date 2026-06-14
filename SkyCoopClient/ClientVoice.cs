@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace SkyCoopClient
 {
-    public class ClientVoice
+    public class ClientVoice : IDisposable
     {
         public NetPacketProcessor m_PacketProcessor = new NetPacketProcessor();
         public EventBasedNetListener m_Listener;
@@ -348,8 +348,6 @@ namespace SkyCoopClient
 
         public void StartRecording()
         {
-            SkyCoop.Logger.Log(ConsoleColor.Green, "Start Voice chat");
-
             MicrophoneRecorder.DataAvailable += (pcmData, length) =>
             {
                 m_IsSpeakingFlag = false;
@@ -451,6 +449,17 @@ namespace SkyCoopClient
                     }
                 }
             }
+        }
+
+        public void Dispose()
+        {
+            m_IsReady = false;
+
+            if (m_Instance != null)
+            {
+                m_Instance.Stop();
+            }
+            GC.Collect();
         }
     }
 }

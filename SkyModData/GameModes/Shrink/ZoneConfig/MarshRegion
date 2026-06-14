@@ -1,0 +1,30 @@
+{
+    "ActualCenter": {
+        "x": 1106.625,
+        "y": -124.405,
+        "z": 973.6102
+    },
+    "StartingRadius": 9000,
+    "Stages": [
+        {
+            "ShrinkSpeed": 100,
+            "DamagePerSecond": 5,
+            "StageTime": 60
+        },
+        {
+            "ShrinkSpeed": 200,
+            "DamagePerSecond": 10,
+            "StageTime": 30
+        },
+        {
+            "ShrinkSpeed": 300,
+            "DamagePerSecond": 15,
+            "StageTime": 20
+        },
+        {
+            "ShrinkSpeed": 400,
+            "DamagePerSecond": 20,
+            "StageTime": 0
+        }
+    ]
+}

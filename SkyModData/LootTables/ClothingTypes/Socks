@@ -1,0 +1,17 @@
+{
+	"Items": [
+      {
+        "Prefab": "GEAR_CottonSocks",
+        "Chance": 0.5
+      },
+      {
+        "Prefab": "GEAR_WoolSocks",
+        "Chance": 0.35
+      },	
+      {
+        "Prefab": "GEAR_ClimbingSocks",
+        "Chance": 0.15
+      }
+    ],
+    "LootTables": []
+}

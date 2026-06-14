@@ -509,7 +509,10 @@ namespace SkyCoopServer
 
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
             {
-                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                if(Peer.Id != PlayerID)
+                {
+                    Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                }
             }
         }
 

@@ -10,7 +10,7 @@ namespace SkyCoop
 {
     internal class AssetManager
     {
-        public static string s_MainBundlePath = "Mods\\skycoop";
+        public static string s_MainBundlePath = "Mods/skycoop";
         public static AssetBundle s_MainBundle = null;
         public static GameObject s_PistolBulletPrefab = null;
         public static GameObject s_RevolverBulletPrefab = null;

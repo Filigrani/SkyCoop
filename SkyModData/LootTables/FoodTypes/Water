@@ -1,0 +1,13 @@
+{
+	"Items": [
+       {
+         "Prefab": "GEAR_Water1000ml",
+         "Chance": 0.3
+       },
+       {
+         "Prefab": "GEAR_Water500ml",
+         "Chance": 0.7
+       }	  
+    ],
+    "LootTables": []
+}

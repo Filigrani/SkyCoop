@@ -1,0 +1,17 @@
+{
+	"Items": [
+      {
+        "Prefab": "GEAR_Revolver",
+        "Chance": 0.45
+      },
+      {
+        "Prefab": "GEAR_Bow",
+        "Chance": 0.35
+      },	  
+      {
+        "Prefab": "GEAR_Rifle",
+        "Chance": 0.2
+      }
+    ],
+    "LootTables": []
+}

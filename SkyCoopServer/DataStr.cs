@@ -16,12 +16,12 @@ namespace SkyCoopServer
         public class ServerConfig
         {
             public int m_MaxPlayers = 4;
-            public string m_StartingRegion = "MarshRegion";
+            public string m_StartingRegion = "CoastalRegion";
             public int m_Seed = 777777;
             public int m_VoicePort = 37850;
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "MarshRegion";
+            public string m_SceneToSpawn = "CoastalRegion";
             public string m_GameMode = "GunGame";
         }
 
@@ -37,6 +37,8 @@ namespace SkyCoopServer
             public bool DeathPacks { get; set; }
             public bool Respawns { get; set; }
             public bool Clothing { get; set; }
+            public bool CanDropItems { get; set; }
+            public bool CanUseContainers { get; set; }
         }
 
         public class GameRules
@@ -51,6 +53,8 @@ namespace SkyCoopServer
             public bool m_DeathPacks = false;
             public bool m_Respawns = false;
             public bool m_Clothing = false;
+            public bool m_CanDropItems = true;
+            public bool m_CanUseContainers = true;
         }
 
         public class StartingGearData
@@ -619,12 +623,12 @@ namespace SkyCoopServer
             {
                 if (!s_Finished)
                 {
-                    return "Next zone movement";
+                    return "GAMEPLAY_TimeRemainingZone";
                 }else if (!s_NextStageTimerActive)
                 {
-                    return "Time Remaining";
+                    return "GAMEPLAY_TimeRemaining";
                 }
-                return "Time Remaining";
+                return "GAMEPLAY_TimeRemaining";
             }
 
             public DataStr.ShrinkStage GetCurrentStage()

@@ -1,0 +1,41 @@
+{
+	"Items": [
+       {
+         "Prefab": "GEAR_HeavyBandage",
+         "Chance": 0.18
+       },
+       {
+         "Prefab": "GEAR_BottlePainKillers",
+         "Chance": 0.16
+       },
+       {
+         "Prefab": "GEAR_BottleHydrogenPeroxide",
+         "Chance": 0.12
+       },
+       {
+         "Prefab": "GEAR_BottleAntibiotics",
+         "Chance": 0.08
+       },
+       {
+         "Prefab": "GEAR_RoseHipTea",
+         "Chance": 0.10
+       },
+       {
+         "Prefab": "GEAR_ReishiTea",
+         "Chance": 0.10
+       },
+       {
+         "Prefab": "GEAR_BirchbarkTea",
+         "Chance": 0.09
+       },	
+       {
+         "Prefab": "GEAR_WaterPurificationTablets",
+         "Chance": 0.11
+       },	   
+       {
+         "Prefab": "GEAR_EmergencyStim",
+         "Chance": 0.06
+       }	  
+    ],
+    "LootTables": []
+}

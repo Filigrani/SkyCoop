@@ -1,0 +1,17 @@
+{
+	"Items": [
+      {
+        "Prefab": "GEAR_Toque",
+        "Chance": 0.45
+      },
+      {
+        "Prefab": "GEAR_BaseballCap",
+        "Chance": 0.50
+      },	
+      {
+        "Prefab": "GEAR_CookingPot",
+        "Chance": 0.5
+      }
+    ],
+    "LootTables": []
+}

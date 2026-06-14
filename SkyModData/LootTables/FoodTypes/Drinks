@@ -1,0 +1,13 @@
+{
+	"Items": [],
+    "LootTables": [
+      {
+        "LootTable": "Water",
+        "Chance": 0.25
+      },	
+      {
+        "LootTable": "Soda",
+        "Chance": 0.70
+      }
+	]
+}

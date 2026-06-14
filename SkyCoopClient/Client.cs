@@ -1,5 +1,6 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
+using SkyCoopClient;
 using SkyCoopServer;
 
 namespace SkyCoop
@@ -130,62 +131,68 @@ namespace SkyCoop
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
                 Logger.Log(ConsoleColor.Red, "Disconnected: " + message.Reason);
-                Logger.Log(ConsoleColor.Red, message.AdditionalData);
 
-                if (peer.RemoteId == 0)
+                string Message = "Unknown reason";
+
+                if (message.Reason == DisconnectReason.RemoteConnectionClose)
                 {
-                    string Message = "Unknown reason";
-
-                    if (message.Reason == DisconnectReason.RemoteConnectionClose)
-                    {
-                        //TODO: Print Host message
-                    } else
-                    {
-                        switch (message.Reason)
-                        {
-                            case DisconnectReason.ConnectionFailed:
-                                Message = "Wasn't able to connect to the server.";
-                                break;
-                            case DisconnectReason.Timeout:
-                                Message = "Disconnected doe timeout.";
-                                break;
-                            case DisconnectReason.HostUnreachable:
-                                Message = "Server is unreachable.";
-                                break;
-                            case DisconnectReason.NetworkUnreachable:
-                                Message = "Network is unreachable.";
-                                break;
-                            case DisconnectReason.RemoteConnectionClose:
-                                break;
-                            case DisconnectReason.DisconnectPeerCalled:
-                                Message = "Disconnected by my request.";
-                                break;
-                            case DisconnectReason.ConnectionRejected:
-                                break;
-                            case DisconnectReason.InvalidProtocol:
-                                Message = "Invalid connection protocol.";
-                                break;
-                            case DisconnectReason.UnknownHost:
-                                Message = "Unknown host.";
-                                break;
-                            case DisconnectReason.Reconnect:
-                                Message = "Reconnect";
-                                break;
-                            case DisconnectReason.PeerToPeerConnection:
-                                Message = "Peer to Peer Connection";
-                                break;
-                            case DisconnectReason.PeerNotFound:
-                                Message = "Peer not found.";
-                                break;
-                            default:
-                                break;
-                        }
-                    }
-                    m_IsReady = false;
-                    m_Instance.Stop();
-                    MenuHook.RemovePleaseWait();
-                    MenuHook.DoOKMessage("Disconnected", Message);
+                    Message = "Server closed";
                 }
+                else
+                {
+                    switch (message.Reason)
+                    {
+                        case DisconnectReason.ConnectionFailed:
+                            Message = "Wasn't able to connect to the server.";
+                            break;
+                        case DisconnectReason.Timeout:
+                            Message = "Disconnected doe timeout.";
+                            break;
+                        case DisconnectReason.HostUnreachable:
+                            Message = "Server is unreachable.";
+                            break;
+                        case DisconnectReason.NetworkUnreachable:
+                            Message = "Network is unreachable.";
+                            break;
+                        case DisconnectReason.RemoteConnectionClose:
+                            break;
+                        case DisconnectReason.DisconnectPeerCalled:
+                            Message = "Disconnected by my request.";
+                            break;
+                        case DisconnectReason.ConnectionRejected:
+                            break;
+                        case DisconnectReason.InvalidProtocol:
+                            Message = "Invalid connection protocol.";
+                            break;
+                        case DisconnectReason.UnknownHost:
+                            Message = "Unknown host.";
+                            break;
+                        case DisconnectReason.Reconnect:
+                            Message = "Reconnect";
+                            break;
+                        case DisconnectReason.PeerToPeerConnection:
+                            Message = "Peer to Peer Connection";
+                            break;
+                        case DisconnectReason.PeerNotFound:
+                            Message = "Peer not found.";
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                m_IsReady = false;
+                m_Instance.Stop();
+                if (ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady)
+                {
+                    ModMain.ClientVoice.m_Instance.DisconnectAll();
+                    ModMain.ClientVoice.m_Instance.Stop();
+                    ModMain.ClientVoice.Dispose();
+                    ModMain.ClientVoice = new ClientVoice();
+                }
+                Dispose();
+                ModMain.Client = new Client();
+                MenuHook.RemovePleaseWait();
+                MenuHook.OnDisconnected(Message);
             };
 
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
@@ -239,7 +246,7 @@ namespace SkyCoop
 
         public void SendToHost(NetDataWriter writer)
         {
-            if (m_Instance != null)
+            if (m_Instance != null && m_HostEndPoint != null)
             {
                 m_HostEndPoint.Send(writer, DeliveryMethod.ReliableOrdered);
             }

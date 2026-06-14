@@ -46,6 +46,14 @@ namespace SkyCoopClient
             public static void Postfix(GearItem __instance, int numUnits, GearItem __result)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+
+                if (ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanDropItems)
+                {
+                    UnityEngine.Object.Destroy(__result.gameObject);
+                    return;
+                }
+
                 if (__instance.gameObject.GetComponent<Bed>() != null && __instance.gameObject.GetComponent<Bed>().m_BedRollState == BedRollState.Placed)
                 {
                     return;
@@ -64,6 +72,37 @@ namespace SkyCoopClient
                 if (__result && __result != __instance)
                 {
                     UnityEngine.Object.Destroy(__result.gameObject);
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(ItemDescriptionPage), "CanDrop", new System.Type[] { typeof(GearItem) })]
+        private static class ItemDescriptionPage_CanDrop
+        {
+            private static void Postfix(ItemDescriptionPage __instance, GearItem gi, ref bool __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (gi != null)
+                {
+                    if(ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanDropItems)
+                    {
+                        __result = false;
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Container), "ItemPassesFilter", new System.Type[] { typeof(GearItem), typeof(string) })]
+        private static class Panel_Container_ItemPassesFilter
+        {
+            private static void Postfix(Panel_Container __instance, GearItem pi, ref bool __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanDropItems)
+                {
+                    __result = false;
                 }
             }
         }
@@ -483,7 +522,10 @@ namespace SkyCoopClient
                 DataProxy = gear.Serialize();
                 string JSON = Utils.SerializeObject(DataProxy);
 
-                ClientSend.SendGear(gear.name, v3, rot, JSON);
+                if (ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanDropItems)
+                {
+                    ClientSend.SendGear(gear.name, v3, rot, JSON);
+                }
 
                 if (total < 2)
                 {

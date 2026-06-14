@@ -22,7 +22,7 @@ namespace SkyCoopClient
     
     public class RadialLootSpawnersEditor
     {
-        public static string s_RadialSpawnersDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/Editor/RadialLootSpawners";
+        public static string s_RadialSpawnersDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/GameModes/Editor/RadialLootSpawners";
         public static List<DataStr.RadialLootSpawner> s_Spawners = new List<DataStr.RadialLootSpawner>();
         public static List<GameObject> s_Vizualizers = new List<GameObject>();
 

@@ -13,27 +13,32 @@ namespace SkyCoopServer
         public static void Welcome(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string PlayerName = Reader.GetString();
-            Logger.Log(ConsoleColor.Green, $"[ServerHandle] Сlient {Client.Id} connected under name: {PlayerName}");
             ServerInstance.m_PlayersData.SetPlayerName(Client.Id, PlayerName);
-            ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            string NewPlayerName = ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_PlayerName;
+            Logger.Log(ConsoleColor.Green, $"[ServerHandle] Сlient {Client.Id} connected under name: {NewPlayerName}");
+            ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
+            ServerSend.SendClientName(Client, Client.Id, NewPlayerName);
+
+            foreach (NetPeer OtherPeer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
             {
-                ServerSend.SendClientName(Client, Peer.Id, ServerInstance.m_PlayersData.GetPlayer(Peer.Id).m_PlayerName);
-                if(Peer.Id != Client.Id)
+                if(OtherPeer.Id != Client.Id)
                 {
-                    ServerSend.SendClientName(Peer, Client.Id, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_PlayerName);
+                    // Старым клиентам от нового
+                    ServerSend.SendClientName(OtherPeer, Client.Id, NewPlayerName);
+                    // Новоему клиенту от старых клиентов
+                    ServerSend.SendClientName(Client, OtherPeer.Id, ServerInstance.m_PlayersData.GetPlayer(OtherPeer.Id).m_PlayerName);
                     if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
                     {
-                        ServerSend.SendHUDSideBar(Peer, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Peer.Id), ServerInstance);
+                        ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
                     }
                     if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
-                        ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                        ServerSend.SendHUDSideBarUpdate(Client, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                     }
                 }
-                ServerSend.SendClientStatus(Peer.Id, 1, ServerInstance);
             }
+            ServerSend.SendClientStatus(Client.Id, 1, ServerInstance);
             ServerSend.SendAssignSquad(Client, !string.IsNullOrEmpty(ServerInstance.m_PlayersData.GetPlayerNameSquadIn(Client.Id)));
         }
 
@@ -286,23 +291,23 @@ namespace SkyCoopServer
             {
                 if (ServerInstance.m_Rules.m_HUDMode == "DMStats")
                 {
-                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
-                    ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", $"Deaths:", Data.m_Deaths.ToString(), ServerInstance);
-                    ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", $"Assists:", Data.m_Assists.ToString(), ServerInstance);
-                    ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
-                    ServerSend.SendTimerPrefix(Client, "Time Remaining");
+                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", "GAMEPLAY_SideBarKills", Data.m_Kills.ToString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", "GAMEPLAY_SideBarDeaths", Data.m_Deaths.ToString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 2, "ico_Status_BuffPlus", "GAMEPLAY_SideBarAssists", Data.m_Assists.ToString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 3, "", "GAMEPLAY_SideBarScore", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
+                    ServerSend.SendTimerPrefix(Client, "GAMEPLAY_TimeRemaining");
                 }
                 else if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
                 {
-                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Kills:", Data.m_Kills.ToString(), ServerInstance);
-                    ServerSend.SendHUDSideBar(Client, 1, "ico_knowledge_people", $"Players Alive:", ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", "GAMEPLAY_SideBarKills", Data.m_Kills.ToString(), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 1, "ico_knowledge_people", "GAMEPLAY_SideBarPlayersAlive", ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                 }
                 else if (ServerInstance.m_Rules.m_HUDMode == "GunGame")
                 {
-                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", $"Weapon Tier:", Data.GetTierString(ServerInstance), ServerInstance);
-                    ServerSend.SendHUDSideBar(Client, 1, "ico_xpModeInterloper", $"Kills Required:", Data.GetTierProgressString(ServerInstance), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", "GAMEPLAY_SideBarWeaponTier", Data.GetTierString(ServerInstance), ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 1, "ico_xpModeInterloper", "GAMEPLAY_SideBarKillsRequired", Data.GetTierProgressString(ServerInstance), ServerInstance);
 
-                    ServerSend.SendTimerPrefix(Client, "Time Remaining");
+                    ServerSend.SendTimerPrefix(Client, "GAMEPLAY_TimeRemaining");
                 }
             }
 
