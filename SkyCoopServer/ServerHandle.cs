@@ -652,5 +652,10 @@ namespace SkyCoopServer
                 }
             }
         }
+        public static void ClientTilt(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            float Tilt = Reader.GetFloat();
+            ServerInstance.m_PlayersData.PlayerTilted(Client.Id, Tilt);
+        }
     }
 }

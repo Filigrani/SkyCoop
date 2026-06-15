@@ -28,6 +28,7 @@ namespace SkyCoop
         {
             public Vector3 m_LastSentPosition = Vector3.zero;
             public Quaternion m_LastSentRotation = Quaternion.identity;
+            public float m_LastSentTilt = 0;
             public string m_LastSentScene = "MainMenu";
 
             public string m_GearName = "";
@@ -59,6 +60,9 @@ namespace SkyCoop
 
                     Comps.NetworkPlayer NP = Player.AddComponent<Comps.NetworkPlayer>();
                     NP.m_Animator = Player.GetComponent<Animator>();
+
+                    NP.m_TiltTarget = NP.m_Animator.GetBoneTransform(HumanBodyBones.Spine);
+
                     NP.CreateColiders();
                     NP.LoadEquipment();
                     NP.AddInteraction();
@@ -246,6 +250,18 @@ namespace SkyCoop
                             m_LocalPlayerData.m_LastSentRotation = T.rotation;
                             ClientSend.SendRotation(T.rotation);
                         }
+
+                        vp_FPSCamera Cam = GameManager.GetVpFPSCamera();
+                        if (Cam)
+                        {
+                            if(m_LocalPlayerData.m_LastSentTilt != GameManager.GetVpFPSCamera().transform.localEulerAngles.x)
+                            {
+                                m_LocalPlayerData.m_LastSentTilt = GameManager.GetVpFPSCamera().transform.localEulerAngles.x;
+                                ClientSend.SendTilt(m_LocalPlayerData.m_LastSentTilt);
+                            }
+                        }
+
+                        
                         PlayerManager PM = GameManager.GetPlayerManagerComponent();
                         if (PM)
                         {

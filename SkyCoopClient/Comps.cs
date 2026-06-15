@@ -346,6 +346,8 @@ namespace SkyCoop
             public string m_PlayerName = "";
             public Vector3 m_Position = Vector3.zero;
             public Quaternion m_Rotation = Quaternion.identity;
+            public float m_Tilt = 0;
+            public Vector2 m_TiltLimits = new Vector2(float.NegativeInfinity, float.PositiveInfinity);
             public float m_SecondsBeforeHide = 5f;
             public Animator m_Animator = null;
             public Vector3 m_LastPosition = Vector3.zero;
@@ -381,7 +383,7 @@ namespace SkyCoop
             public AudioSource m_TalkingFishAudioSource;
 
             public CameraAttention m_CameraAttention;
-
+            public Transform m_TiltTarget = null;
             public enum GearHandPose
             {
                 None = 0,
@@ -430,6 +432,13 @@ namespace SkyCoop
             public void SetRotation(Quaternion rotation)
             {
                 m_Rotation = rotation;
+                KeepVisible();
+            }
+
+            public void SetTilt(float tilt)
+            {
+                m_Tilt = tilt;
+
                 KeepVisible();
             }
 
@@ -1158,6 +1167,32 @@ namespace SkyCoop
             void LateUpdate()
             {
                 AnimateMouth();
+
+                Vector3 Angle = new Vector3(m_Tilt, 0, 0);
+
+                if (m_Tilt < m_TiltLimits.x)
+                {
+                    m_Tilt = m_TiltLimits.x;
+                }
+                else if (m_Tilt > m_TiltLimits.y)
+                {
+                    m_Tilt = m_TiltLimits.y;
+                }
+
+                if (m_Action == Actions.Knocked || m_Action == Actions.Death || m_Action == Actions.Harvesting)
+                {
+                    Angle.x = 0;
+                }
+
+                if (m_TiltTarget)
+                {
+                    m_TiltTarget.SetLocalEulerAngles(Angle, RotationOrder.OrderXYZ);
+                }
+
+                if (m_CameraAttention)
+                {
+                    m_CameraAttention.m_Tilt = m_Tilt;
+                }
             }
 
             public Vector3 GetOffset()
@@ -1219,6 +1254,7 @@ namespace SkyCoop
         {
             public CameraAttention(IntPtr ptr) : base(ptr) { }
             public Transform m_OffsetTranform;
+            public float m_Tilt = 0;
 
             vp_FPSCamera m_Camera;
             void Start()
@@ -1242,6 +1278,10 @@ namespace SkyCoop
                         m_Camera.transform.position = m_OffsetTranform.position;
                         m_Camera.transform.rotation = m_OffsetTranform.rotation;
                     }
+                    Vector3 Euler = m_Camera.transform.localEulerAngles;
+                    Euler.x = m_Tilt;
+
+                    m_Camera.transform.SetLocalEulerAngles(Euler, RotationOrder.OrderXYZ);
                 }
             }
 
@@ -1408,7 +1448,7 @@ namespace SkyCoop
 
             public Vector3 GetScale()
             {
-                return new Vector3(m_TargetScale, m_TargetScale, 4300);
+                return new Vector3(m_TargetScale, 4300, m_TargetScale);
             }
 
             public void SetForced()

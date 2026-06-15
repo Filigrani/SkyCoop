@@ -22,7 +22,6 @@ namespace SkyCoopClient
     
     public class RadialLootSpawnersEditor
     {
-        public static string s_RadialSpawnersDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData/GameModes/Editor/RadialLootSpawners";
         public static List<DataStr.RadialLootSpawner> s_Spawners = new List<DataStr.RadialLootSpawner>();
         public static List<GameObject> s_Vizualizers = new List<GameObject>();
 
@@ -51,27 +50,9 @@ namespace SkyCoopClient
             UpdateVizualization();
         }
 
-        public static void Save()
+        public static List<RadialLootSpawner> Save()
         {
-            RadialLootSpawnerSave Save = new RadialLootSpawnerSave();
-            Save.spawners = new List<RadialLootSpawner>(s_Spawners);
-
-            string JSON = JsonSerializer.Serialize<RadialLootSpawnerSave>(Save);
-            SkyCoop.Logger.Log(JSON);
-
-            string FileName = ModMain.GetCurrentSceneName();
-
-            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Saving RadialLootSpawners for scene {FileName}");
-            try
-            {
-                if (!Directory.Exists(s_RadialSpawnersDirectory))
-                    Directory.CreateDirectory(s_RadialSpawnersDirectory);
-                File.WriteAllText($"{s_RadialSpawnersDirectory}/{FileName}", JSON);
-            }
-            catch (Exception e)
-            {
-                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file! Error: {e.Message}");
-            }
+            return new List<RadialLootSpawner>(s_Spawners);
         }
 
         public static string GetFileName()
@@ -79,49 +60,11 @@ namespace SkyCoopClient
             return ModMain.GetCurrentSceneName();
         }
 
-        public static void LoadCurrentSceneFile()
-        {
-            string FileName = GetFileName();
-            string JSON;
-
-            SkyCoop.Logger.Log(ConsoleColor.Blue, $"Loading RadialLootSpawners for scene {FileName}");
-            try
-            {
-                if (!Directory.Exists(s_RadialSpawnersDirectory))
-                {
-                    SkyCoop.Logger.Log(ConsoleColor.Red, $"Directory {s_RadialSpawnersDirectory} not exists");
-                    return;
-                }
-                JSON = File.ReadAllText($"{s_RadialSpawnersDirectory}/{FileName}");
-                SkyCoop.Logger.Log(ConsoleColor.Green, $"Load was successful");
-            }
-            catch (Exception e)
-            {
-                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file because of an error: {e.Message}");
-                return;
-            }
-
-            if (string.IsNullOrEmpty(JSON))
-            {
-                SkyCoop.Logger.Log(ConsoleColor.Red, $"File {FileName} is empty");
-                return;
-            }
-            else
-            {
-                Load(JSON);
-            }
-        }
-
-        public static void Load(string JSON)
+        public static void Load(List<RadialLootSpawner> Spawners)
         {
             s_Spawners.Clear();
+            s_Spawners = new List<RadialLootSpawner>(Spawners);
 
-            RadialLootSpawnerSave Save = JsonSerializer.Deserialize<RadialLootSpawnerSave>(JSON);
-            for (int i = 0; i < Save.spawners.Count; i++)
-            {
-                RadialLootSpawner Spawner = Save.spawners[i];
-                s_Spawners.Add(Spawner);
-            }
             UpdateVizualization();
         }
 
@@ -145,7 +88,7 @@ namespace SkyCoopClient
                 (1 << vp_Layer.Water) |
                 (1 << vp_Layer.TerrainObject);
 
-                List<JSONPoint> Points = new List<JSONPoint>();
+                List<Vector3JSON> Points = new List<Vector3JSON>();
 
                 if(Physics.Raycast(centerPos, Vector3.up, out RaycastHit _hit, Top, RayCastMask))
                 {
@@ -176,7 +119,7 @@ namespace SkyCoopClient
                         if (!isWall && !isTooSteep)
                         {
                             //Vector3 spawnPos = hit.point + Vector3.up * 0.1f;
-                            Points.Add(new JSONPoint(hit.point.x, hit.point.y, hit.point.z));
+                            Points.Add(new Vector3JSON(hit.point.x, hit.point.y, hit.point.z));
                         }
                     }
                     else
@@ -185,8 +128,8 @@ namespace SkyCoopClient
                     }
                 }
                 DataStr.RadialLootSpawner Spawner = new DataStr.RadialLootSpawner();
-                Spawner.center = new JSONPoint(centerPos.x, centerPos.y, centerPos.z);
-                Spawner.points = new List<JSONPoint>(Points);
+                Spawner.center = new Vector3JSON(centerPos.x, centerPos.y, centerPos.z);
+                Spawner.points = new List<Vector3JSON>(Points);
                 Spawner.top = Top;
                 s_Spawners.Add(Spawner);
             }
@@ -224,7 +167,7 @@ namespace SkyCoopClient
                 Vector3 rayEnd = rayStart + Vector3.up * Spawner.top;
                 UpwardRay.transform.position = (rayStart + rayEnd) * 0.5f;
 
-                foreach (JSONPoint Point in Spawner.points)
+                foreach (Vector3JSON Point in Spawner.points)
                 {
                     Vector3 pointUnity = Point.GetVector3Unity();
                     Vector3 pointRayEnd = pointUnity + Vector3.up * Spawner.top;

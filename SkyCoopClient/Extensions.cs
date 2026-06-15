@@ -57,22 +57,16 @@ namespace SkyCoop
             return Quaternion;
         }
 
-        public static UnityEngine.Vector3 GetVector3Unity(this DataStr.PropData Data)
-        {
-            UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Data.posx, Data.posy, Data.posz);
-            return v3;
-        }
-
-        public static UnityEngine.Vector3 GetVector3Unity(this DataStr.JSONPoint Data)
+        public static UnityEngine.Vector3 GetVector3Unity(this DataStr.Vector3JSON Data)
         {
             UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Data.x, Data.y, Data.z);
             return v3;
         }
 
-        public static UnityEngine.Quaternion GetQuaternionUnity(this DataStr.PropData Data)
+        public static UnityEngine.Quaternion GetQuaternionUnity(this DataStr.QuaternionJSON Data)
         {
-            UnityEngine.Quaternion quat = new UnityEngine.Quaternion(Data.rotx, Data.roty, Data.rotz, Data.rotw);
-            return quat;
+            UnityEngine.Quaternion q = new UnityEngine.Quaternion(Data.x, Data.y, Data.z, Data.w);
+            return q;
         }
     }
 }

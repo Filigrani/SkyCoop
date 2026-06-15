@@ -231,11 +231,11 @@ namespace SkyCoop
         public static void ClientRequestRespawn(NetDataReader Reader)
         {
             Vector3 Position = Reader.GetVector3Unity();
-            Quaternion Quaternion = Reader.GetQuaternionUnity();
+            Quaternion Rotation = Reader.GetQuaternionUnity();
             bool RespawnAnim = Reader.GetBool();
 
             PlayersManager.DeactivateAllSpectatingTargets();
-            PlayersManager.RespawnOnPoint(Position, Quaternion, RespawnAnim);
+            PlayersManager.RespawnOnPoint(Position, Rotation, RespawnAnim);
         }
 
         public static void ClientInjectedItem(NetDataReader Reader)
@@ -390,11 +390,12 @@ namespace SkyCoop
                 WinnersNames.Add(PlayersManager.GetPlayerName(Reader.GetInt()));
             }
             Vector3 Position = Reader.GetVector3Unity();
+            Quaternion Rotation = Reader.GetQuaternionUnity();
 
             GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("Victory");
             if (Reference)
             {
-                GameObject Obj = UnityEngine.Object.Instantiate(Reference, Position, Quaternion.identity);
+                GameObject Obj = UnityEngine.Object.Instantiate(Reference, Position, Rotation);
                 if (Obj)
                 {
                     for (int i = 0; i < Count;i++)
@@ -607,6 +608,18 @@ namespace SkyCoop
         public static void ServerRequestSquadHealth(NetDataReader Reader)
         {
             ClientSend.SendSquadHealth(m_LocalPlayerData.m_Health, m_LocalPlayerData.m_HasDebuffs, m_LocalPlayerData.m_KnockedDown);
+        }
+
+        public static void ClientTilt(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            float Tilt = Reader.GetFloat();
+
+            Comps.NetworkPlayer Player = PlayersManager.GetPlayer(PlayerID);
+            if (Player)
+            {
+                Player.SetTilt(Tilt);
+            }
         }
     }
 }

@@ -64,6 +64,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientGetTier, ServerHandle.ClientGetTier },
             { (int)Packet.Type.ClientSV_CMD, ServerHandle.ClientSV_CMD },
             { (int)Packet.Type.ClientSquadHealth, ServerHandle.ClientSquadHealth },
+            { (int)Packet.Type.ClientTilt, ServerHandle.ClientTilt },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -167,10 +168,19 @@ namespace SkyCoopServer
                         foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
                         {
                             ServerSend.SendFreeze(Peer);
-                            m_PlayersData.GetPlayer(Peer.Id).m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
-                            ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), FilesManager.GetVictoryPosition(m_Config.m_GameMode, m_Config.m_SceneToSpawn), this);
+                            DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
+                            string PlayerScene = PlayerData.m_Scene;
+                            PlayerData.m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
+                            DataStr.SceneData SceneData = m_ScenesData.m_LoadedScenes[PlayerScene];
+
+                            if (SceneData != null)
+                            {
+                                ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, this);
+                            }
+
+                            m_PlayersData.GetPlayer(Peer.Id).m_Scene = "";
                         }
-                        m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
+                        m_ScenesData.UnloadSceneNobodyOn(this);
                     }
                 }
             }
@@ -179,35 +189,36 @@ namespace SkyCoopServer
                 m_PendingGameModeOverTimer--;
                 if(m_PendingGameModeOverTimer == 0)
                 {
-                    m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
-                    ChangeGameMode(m_Config.m_GameMode, true);
-                    m_PlayersData.ResetFrags();
+                    ChangeGameMode(m_Config.m_GameMode);
                 }
             }
-            //m_ScenesData.UnloadSceneNobodyOn(this);
             m_ScenesData.UpdateZone();
         }
 
-        public string GetRandomSceneForGameMode(string GameMode)
-        {
-            return FilesManager.GetRandomSceneForGameMode(GameMode);
-        }
-
-        public void ChangeGameMode(string GameMode, bool RollRandomMap = false)
+        public void ChangeGameMode(string GameMode)
         {
             m_Config.m_GameMode = GameMode;
-            //m_ScenesData.UnloadScene(m_Config.m_SceneToSpawn);
 
-            if (string.IsNullOrEmpty(m_Config.m_SceneToSpawn) || RollRandomMap)
-            {
-                m_Config.m_SceneToSpawn = GetRandomSceneForGameMode(m_Config.m_GameMode);
-            }
+            // Грузим по новой даже если режим тот же, файл режима мог быть отредактирован.
             m_Rules = FilesManager.GetRules(GameMode);
-            m_ScenesData.ChangeGameMode(GameMode);
-            ServerSend.SendConfigUpdated(this);
-            ServerSend.SendChangeMap(this);
 
-            m_ScenesData.PopulateLoot(m_Config.m_SceneToSpawn, m_Rules.m_LootPerRadialSpawn);
+            string MapName = m_Rules.GetRandomMap(m_Config.m_SceneToSpawn);
+            DataStr.MapData MapData = FilesManager.GetMapData(MapName);
+
+            if(MapData != null)
+            {
+                m_Config.m_SceneToSpawn = MapData.Scene;
+                m_PlayersData.ResetGameScores();
+                m_ScenesData.UnloadSceneNobodyOn(this);
+                m_ScenesData.LoadScene(MapData);
+
+                ServerSend.SendConfigUpdated(this);
+                ServerSend.SendChangeMap(this);
+            }
+            else
+            {
+                Logger.Log(ConsoleColor.Red, "Server can't load map for the server!!!!!!!!!!!!!");
+            }
         }
 
         public void StartServer()

@@ -69,6 +69,7 @@ namespace SkyCoopServer
             ClientSquadHealth,
             ClientAssignSquad,
             ServerRequestSquadHealth,
+            ClientTilt,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -355,14 +356,14 @@ namespace SkyCoopServer
 
         public static void Put(this NetDataWriter Writer, DataStr.PropData Data)
         {
-            Writer.Put(Data.posx);
-            Writer.Put(Data.posy);
-            Writer.Put(Data.posz);
+            Writer.Put(Data.position.x);
+            Writer.Put(Data.position.y);
+            Writer.Put(Data.position.z);
 
-            Writer.Put(Data.rotx);
-            Writer.Put(Data.roty);
-            Writer.Put(Data.rotz);
-            Writer.Put(Data.rotw);
+            Writer.Put(Data.rotation.x);
+            Writer.Put(Data.rotation.y);
+            Writer.Put(Data.rotation.z);
+            Writer.Put(Data.rotation.w);
 
             Writer.Put(Data.guid);
             Writer.Put(Data.prefabname);
@@ -374,14 +375,14 @@ namespace SkyCoopServer
         {
             DataStr.PropData Data = new DataStr.PropData();
 
-            Data.posx = Reader.GetFloat();
-            Data.posy = Reader.GetFloat();
-            Data.posz = Reader.GetFloat();
+            Data.position.x = Reader.GetFloat();
+            Data.position.y = Reader.GetFloat();
+            Data.position.z = Reader.GetFloat();
 
-            Data.rotx = Reader.GetFloat();
-            Data.roty = Reader.GetFloat();
-            Data.rotz = Reader.GetFloat();
-            Data.rotw = Reader.GetFloat();
+            Data.rotation.x = Reader.GetFloat();
+            Data.rotation.y = Reader.GetFloat();
+            Data.rotation.z = Reader.GetFloat();
+            Data.rotation.w = Reader.GetFloat();
 
             Data.guid = Reader.GetString();
             Data.prefabname = Reader.GetString();

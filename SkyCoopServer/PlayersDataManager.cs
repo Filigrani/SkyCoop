@@ -126,6 +126,36 @@ namespace SkyCoopServer
             }
         }
 
+        public void PlayerTilted(int Index, float Tilt, bool Broadcast = true)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player != null)
+            {
+                Player.m_Tilt = Tilt;
+
+                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                {
+                    return;
+                }
+
+                if (Broadcast)
+                {
+                    if (s_Server != null)
+                    {
+                        List<DataStr.PlayerData> Players = GetPlayersOnScene(Player.m_Scene);
+
+                        foreach (DataStr.PlayerData OnScenePlayer in Players)
+                        {
+                            if (OnScenePlayer.m_PlayerID != Player.m_PlayerID || m_RecursiveDebug)
+                            {
+                                ServerSend.SendTilt(s_Server.GetClient(OnScenePlayer.m_PlayerID), Tilt, Player.m_PlayerID);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         public void SceneAlign()
         {
             Logger.Log("[PlayersDataManager] SceneAlign");
@@ -501,7 +531,7 @@ namespace SkyCoopServer
             return $"{GetPlayersAlive()} ({Squads} Squad{s})";
         }
 
-        public void ResetFrags()
+        public void ResetGameScores()
         {
             foreach (DataStr.PlayerData Player in m_Players)
             {

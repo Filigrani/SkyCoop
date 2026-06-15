@@ -1,13 +1,14 @@
 ﻿using LiteNetLib;
 using System;
-using System.IO.Compression;
-using System.Numerics;
-using System.Text.RegularExpressions;
-using System.Text;
-using System.IO;
-using System.Linq;
-using static SkyCoopServer.DataStr;
 using System.ComponentModel.DataAnnotations;
+using System.Drawing;
+using System.IO;
+using System.IO.Compression;
+using System.Linq;
+using System.Numerics;
+using System.Text;
+using System.Text.RegularExpressions;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -25,24 +26,32 @@ namespace SkyCoopServer
             public string m_GameMode = "GunGame";
         }
 
-        public class GameRulesSave
+        public class MapData
         {
-            public bool Knockdowns { get; set; }
-            public bool PVP { get; set; }
-            public List<StartingGearData> StartingGear { get; set; }
-            public List<List<StartingGearData>> StartingGearByTier { get; set; }
-            public int Time { get; set; }
-            public int LootPerRadialSpawn { get; set; }
-            public string HUDMode { get; set; }
-            public bool DeathPacks { get; set; }
-            public bool Respawns { get; set; }
-            public bool Clothing { get; set; }
-            public bool CanDropItems { get; set; }
-            public bool CanUseContainers { get; set; }
+            public string Scene { get; set; }
+            public List<V3QuatJSON> SpawnPoints { get; set; }
+            public V3QuatJSON VictoryPoint { get; set; }
+
+            public DangerCircleConfig ZoneConfig { get; set; }
+
+            public List<RadialLootSpawner> RadialLootSpawners { get; set; }
+
+            public List<PropData> Props { get; set; }
+
+            public MapData() 
+            {
+                Scene = "";
+                SpawnPoints = new List<V3QuatJSON>();
+                VictoryPoint = null;
+                ZoneConfig = null;
+                RadialLootSpawners = new List<RadialLootSpawner>();
+                Props = new List<PropData>();
+            }
         }
 
         public class GameRules
         {
+            public List<string> m_Maps = new List<string>();
             public bool m_PlayerCanBeKnocked = false;
             public bool m_PVP = true;
             public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
@@ -55,6 +64,94 @@ namespace SkyCoopServer
             public bool m_Clothing = false;
             public bool m_CanDropItems = true;
             public bool m_CanUseContainers = true;
+
+            public string GetRandomMap(string CurrentMap = "")
+            {
+                List<string> MapPool = new List<string>(m_Maps);
+
+                MapPool.Remove(CurrentMap);
+
+                if(MapPool.Count == 0)
+                {
+                    return CurrentMap;
+                }else if(MapPool.Count == 1)
+                {
+                    return MapPool[0];
+                }
+                else
+                {
+                    return MapPool[new System.Random(Guid.NewGuid().GetHashCode()).Next(0, MapPool.Count)];
+                }
+            }
+        }
+
+        public class GameRulesJson
+        {
+            public List<string> Maps { get; set; }
+            public bool Knockdowns { get; set; }
+            public bool PVP { get; set; }
+            public List<StartingGearData> StartingGear { get; set; }
+            public List<List<StartingGearData>> StartingGearByTier { get; set; }
+            public int Time { get; set; }
+            public int LootPerRadialSpawn { get; set; }
+            public string HUDMode { get; set; }
+            public bool DeathPacks { get; set; }
+            public bool Respawns { get; set; }
+            public bool Clothing { get; set; }
+            public bool CanDropItems { get; set; }
+            public bool CanUseContainers { get; set; }
+
+            public GameRules Load()
+            {
+                GameRules Inst = new GameRules();
+
+
+                if (Maps != null)
+                {
+                    foreach (string Map in Maps)
+                    {
+                        Inst.m_Maps.Add(Map);
+                    }
+                }
+
+                Inst.m_PlayerCanBeKnocked = Knockdowns;
+                Inst.m_PVP = PVP;
+
+                if(StartingGear != null)
+                {
+                    foreach (StartingGearData GearData in StartingGear)
+                    {
+                        Inst.m_StartingItems.Add(GearData);
+                    }
+                }
+                if (StartingGearByTier != null)
+                {
+                    foreach (List<StartingGearData> Tier in StartingGearByTier)
+                    {
+                        Inst.m_StartingItemsByTier.Add(new List<StartingGearData>(Tier));
+                    }
+                }
+                if(Time != null)
+                {
+                    Inst.m_Time = Time;
+                }
+                if(LootPerRadialSpawn != null)
+                {
+                    Inst.m_LootPerRadialSpawn = LootPerRadialSpawn;
+                }
+                if (HUDMode != null)
+                {
+                    Inst.m_HUDMode = HUDMode;
+                }
+
+                Inst.m_DeathPacks = DeathPacks;
+                Inst.m_Respawns = Respawns;
+                Inst.m_Clothing = Clothing;
+                Inst.m_CanDropItems = CanDropItems;
+                Inst.m_CanUseContainers = CanUseContainers;
+
+                return Inst;
+            }
         }
 
         public class StartingGearData
@@ -78,7 +175,11 @@ namespace SkyCoopServer
                     return Variants[new Random(Guid.NewGuid().GetHashCode()).Next(0, Count)];
                 }
             }
-            public StartingGearData() { }
+            public StartingGearData() 
+            {
+                Variants = new List<string>();
+                Units = 0;
+            }
             public StartingGearData(string GearName, int Units = 1)
             {
                 Variants = new List<string> { GearName };
@@ -97,6 +198,7 @@ namespace SkyCoopServer
 
             public Vector3 m_Position = new Vector3(0, 0, 0);
             public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
+            public float m_Tilt = 0;
 
             public string m_Scene = "";
 
@@ -470,7 +572,142 @@ namespace SkyCoopServer
             
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
-            public DataStr.DangerCircleData m_ActiveZone = null;
+            public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
+
+            public DangerCircleConfig m_ZoneConfig = null;
+            public DangerCircleData m_ActiveZone = null;
+            public V3Quat m_VictoryPoint = new V3Quat();
+
+            public void Unload()
+            {
+                if (m_ActiveZone != null)
+                {
+                    // TO DO Диспоснуть текущую зону, ибо следующая карта может не иметь зоны.
+                    // Нужно ещё отправить клиенту сигнла что бы он снёс зону у себя тоже.
+                }
+            }
+
+            public void LoadMapData(Server ServerInstance, MapData MapData)
+            {
+                if (MapData != null)
+                {
+                    if(MapData.Scene != null)
+                    {
+                        m_SceneName = MapData.Scene;
+                    }
+
+                    m_SpawnPoints.Clear();
+                    if (MapData.SpawnPoints != null)
+                    {
+                        foreach (V3QuatJSON Point in MapData.SpawnPoints)
+                        {
+                            m_SpawnPoints.Add(new V3Quat(Point.position, Point.rotation));
+                        }
+                    }
+                    else
+                    {
+                        // Если не задали ни одного спавно, добавляем одну точку на нулях. Если игрок получит 0 0 0 он сам выберет точку.
+                        m_SpawnPoints.Add(new V3Quat());
+                    }
+
+
+                    m_ZoneConfig = MapData.ZoneConfig;
+
+                    if(m_ActiveZone != null)
+                    {
+                        // TO DO Диспоснуть текущую зону, ибо следующая карта может не иметь зоны.
+                        // Нужно ещё отправить клиенту сигнла что бы он снёс зону у себя тоже.
+                    }
+                    if(m_ZoneConfig != null)
+                    {
+                        m_ActiveZone = new DangerCircleData(m_ZoneConfig, m_SceneName, ServerInstance);
+                        m_ActiveZone.Start();
+                    }
+
+                    m_Props.Clear();
+                    if (MapData.Props != null)
+                    {
+                        foreach (PropData Prop in MapData.Props)
+                        {
+                            m_Props.Add(Prop.guid, Prop);
+                            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                            {
+                                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == m_SceneName)
+                                {
+                                    ServerSend.SendPropCreated(Peer, Prop);
+                                }
+                            }
+                        }
+                    }
+
+                    m_RadialLootSpawners.Clear();
+                    if (MapData.RadialLootSpawners != null)
+                    {
+                        foreach (RadialLootSpawner LootSpawner in MapData.RadialLootSpawners)
+                        {
+                            MapData.RadialLootSpawners.Add(LootSpawner);
+                        }
+                    }
+
+                    if (MapData.VictoryPoint != null)
+                    {
+                        m_VictoryPoint = new V3Quat(MapData.VictoryPoint.position, MapData.VictoryPoint.rotation);
+                    }
+                }
+            }
+
+            public void PopulateLoot(Server ServerInstance, int LootPerPoint = 5)
+            {
+                if (LootPerPoint == null || LootPerPoint == 0)
+                {
+                    return;
+                }
+
+                SkyCoopServer.Logger.Log(ConsoleColor.Cyan, $"Trying populate loot on {m_SceneName}");
+
+                int PointIndex = 0;
+                foreach (RadialLootSpawner Spawner in m_RadialLootSpawners)
+                {
+                    if (Spawner != null)
+                    {
+                        List<Vector3JSON> AvaliablePoints = new List<Vector3JSON>();
+
+                        if (Spawner.points != null)
+                        {
+                            if (Spawner.points.Count < LootPerPoint)
+                            {
+                                LootPerPoint = Spawner.points.Count;
+                            }
+
+                            AvaliablePoints = Spawner.points;
+
+                            Random RNG = new Random(Guid.NewGuid().GetHashCode());
+
+                            for (int i = 1; i <= LootPerPoint; i++)
+                            {
+                                int Index = RNG.Range(0, AvaliablePoints.Count);
+
+                                Vector3 Point = AvaliablePoints[Index].ToVector();
+
+                                string LootTableName = "Main"; // Full random.
+
+                                if (!string.IsNullOrEmpty(Spawner.loottable))
+                                {
+                                    LootTableName = Spawner.loottable;
+                                }
+
+                                string GearName = LootTableManager.GetRandomLoot(LootTableName);
+
+                                SkyCoopServer.Logger.Log($"[PopulateLoot] {m_SceneName} Point {PointIndex}({i}/{LootPerPoint}) picked {GearName}");
+
+                                ServerInstance.m_ScenesData.AddGear(m_SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty);
+                                AvaliablePoints.RemoveAt(Index);
+                            }
+                        }
+                    }
+                    PointIndex++;
+                }
+            }
         }
 
         public struct DMScore : IComparable<DMScore>
@@ -553,26 +790,10 @@ namespace SkyCoopServer
             Stone,
         }
 
-        public class SpawnPoint
-        {
-            public float posx { get; set; }
-            public float posy { get; set; }
-            public float posz { get; set; }
-
-            public float rotx { get; set; }
-            public float roty { get; set; }
-            public float rotz { get; set; }
-            public float rotw { get; set; }
-        }
-        public class SpawnPointSave
-        {
-            public List<SpawnPoint> points { get; set; }
-        }
-
         public class V3Quat
         {
             public Vector3 m_Position = new Vector3(0, 0, 0);
-            public Quaternion m_Rotation = new Quaternion(0,0,0,0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
 
             public V3Quat(float posx, float posy, float posz, float rotx, float roty, float rotz, float rotw)
             {
@@ -580,7 +801,26 @@ namespace SkyCoopServer
                 m_Rotation = new Quaternion(rotx, roty, rotz, rotw);
             }
 
+            public V3Quat(Vector3JSON Position, QuaternionJSON Rotation)
+            {
+                m_Position = Position.ToVector();
+                m_Rotation = Rotation.ToQuaternion();
+            }
+
             public V3Quat() { }
+        }
+
+        public class V3QuatJSON
+        {
+            public Vector3JSON position { get; set; }
+
+            public QuaternionJSON rotation { get; set; }
+
+            public V3QuatJSON() 
+            {
+                position = new Vector3JSON();
+                rotation = new QuaternionJSON();
+            }
         }
 
         public class InjectedItem
@@ -597,6 +837,13 @@ namespace SkyCoopServer
             public float ShrinkSpeed { get; set; }
             public float DamagePerSecond { get; set; }
             public int StageTime { get; set; }
+
+            public ShrinkStage()
+            {
+                ShrinkSpeed = 0;
+                DamagePerSecond = 35;
+                StageTime = 0;
+            }
         }
 
         public class DangerCircleData
@@ -686,7 +933,7 @@ namespace SkyCoopServer
             public Vector3 GetNewRandomCenter()
             {
                 // Legal bounds for zone that ever can be is radius from ActualCenter to MaximumRadius
-                Vector3 ActualCenter = new Vector3(m_Config.ActualCenter.x, m_Config.ActualCenter.y, m_Config.ActualCenter.z);
+                Vector3 ActualCenter = m_Config.ActualCenter.ToVector();
                 float MaximumRadius = m_Config.StartingRadius;
 
                 // Current bounds of zone
@@ -832,9 +1079,9 @@ namespace SkyCoopServer
                     PlayerData PlayerData = s_ServerInstance.GetPlayerDataByNetPeer(Peer);
                     if(PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
                     {
-                        float Distance = Vector2.Distance(new Vector2(PlayerData.m_Position.X, PlayerData.m_Position.Z), new Vector2(m_Config.ActualCenter.x, m_Config.ActualCenter.z)) * 100;
-                        //SkyCoopServer.Logger.Log($"DangerCircleData PlayerID {Peer.Id} Distance {Distance}/{m_CurrentRadius}");
-                        if (Distance > m_CurrentRadius)
+                        float Distance = Vector2.Distance(new Vector2(PlayerData.m_Position.X, PlayerData.m_Position.Z), new Vector2(m_Config.ActualCenter.x, m_Config.ActualCenter.z));
+                        //SkyCoopServer.Logger.Log($"DangerCircleData PlayerID {Peer.Id} Distance {Distance}/{m_CurrentRadius/2}");
+                        if (Distance  > m_CurrentRadius/2)
                         {
                             ServerSend.SendDamageToPlayer(Peer, GetCurrentStage().DamagePerSecond, Peer.Id, 1, "ZONE");
                         }
@@ -902,18 +1149,18 @@ namespace SkyCoopServer
             }
         }
 
-        public class DangerCircleCenter
-        {
-            public float x { get; set; }
-            public float y { get; set; }
-            public float z { get; set; }
-        }
-
         public class DangerCircleConfig
         {
-            public DangerCircleCenter ActualCenter { get; set; }
+            public Vector3JSON ActualCenter { get; set; }
             public float StartingRadius { get; set; }
             public List<ShrinkStage> Stages { get; set; }
+
+            public DangerCircleConfig()
+            {
+                ActualCenter = new Vector3JSON();
+                StartingRadius = 0;
+                Stages = new List<ShrinkStage>();
+            }
         }
 
         public class ClothingData
@@ -1177,31 +1424,16 @@ namespace SkyCoopServer
                 }
             }
         }
-        public class PropDataSave
-        {
-            public List<PropData> props { get; set; }
-        }
         public class PropData
         {
             public string prefabname { get; set; }
             public bool frombundle { get; set; }
-            public float posx { get; set; }
-            public float posy { get; set; }
-            public float posz { get; set; }
-
-            public float rotx { get; set; }
-            public float roty { get; set; }
-            public float rotz { get; set; }
-            public float rotw { get; set; }
+            public Vector3JSON position { get; set; }
+            public QuaternionJSON rotation { get; set; }
             public string guid { get; set; }
         }
 
-        public class RadialLootSpawnerSave
-        {
-            public List<RadialLootSpawner> spawners { get; set; }
-        }
-
-        public class JSONPoint {
+        public class Vector3JSON {
             public float x { get; set; }
             public float y { get; set; }
             public float z { get; set; }
@@ -1211,9 +1443,14 @@ namespace SkyCoopServer
                 return new Vector3(x, y, z);
             }
 
-            public JSONPoint(){}
+            public Vector3JSON()
+            {
+                x = 0;
+                y = 0;
+                z = 0;
+            }
 
-            public JSONPoint(float X, float Y, float Z) 
+            public Vector3JSON(float X, float Y, float Z) 
             {
                 x = X; 
                 y = Y; 
@@ -1221,12 +1458,49 @@ namespace SkyCoopServer
             }
         }
 
+        public class QuaternionJSON
+        {
+            public float x { get; set; }
+            public float y { get; set; }
+            public float z { get; set; }
+            public float w { get; set; }
+
+            public Quaternion ToQuaternion()
+            {
+                return new Quaternion(x, y, z, w);
+            }
+
+            public QuaternionJSON() 
+            {
+                x = 0;
+                y = 0;
+                z = 0;
+                w = 0;
+            }
+
+            public QuaternionJSON(float X, float Y, float Z, float W)
+            {
+                x = X;
+                y = Y;
+                z = Z;
+                w = W;
+            }
+        }
+
         public class RadialLootSpawner
         {
-            public JSONPoint center { get; set; }
+            public Vector3JSON center { get; set; }
             public float top { get; set; }
             public string loottable { get; set; }
-            public List<JSONPoint> points { get; set; }
+            public List<Vector3JSON> points { get; set; }
+
+            public RadialLootSpawner()
+            {
+                center = new Vector3JSON();
+                points = new List<Vector3JSON>();
+                loottable = "";
+                points = new List<Vector3JSON>();
+            }
         }
 
         public class PrefabTable
@@ -1412,18 +1686,36 @@ namespace SkyCoopServer
         {
             public List<Loot> Items { get; set; }
             public List<LootTableInLootTableJSON> LootTables { get; set; }
+
+            public PrefabTableJSON()
+            {
+                Items = new List<Loot>();
+                LootTables = new List<LootTableInLootTableJSON>();
+            }
         }
 
         public class Loot
         {
             public string Prefab { get; set; }
             public float Chance { get; set; } // 0 - 1
+
+            public Loot()
+            {
+                Prefab = "";
+                Chance = 0;
+            }
         }
 
         public class LootTableInLootTableJSON
         {
             public string LootTable { get; set; }
             public float Chance { get; set; } // 0 - 1
+
+            public LootTableInLootTableJSON()
+            {
+                LootTable = "";
+                Chance = 0;
+            }
         }
 
         public class LootTableInLootTable

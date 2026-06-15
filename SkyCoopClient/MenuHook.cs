@@ -1,4 +1,5 @@
 ﻿using Il2Cpp;
+using Il2CppSteamworks;
 using MelonLoader;
 using SkyCoopClient;
 using System.Text;
@@ -33,6 +34,13 @@ namespace SkyCoop
             s_SkyCoopSettingsForced = true;
             GameAudioManager.PlayGUIButtonClick();
             Settings.ForceToShow();
+        }
+
+        public static void ShowServerSettings()
+        {
+            s_SkyCoopSettingsForced = true;
+            GameAudioManager.PlayGUIButtonClick();
+            Settings.ForceToShow(true);
         }
 
         public static void SetMenuOverrideMode(string mode)
@@ -174,6 +182,7 @@ namespace SkyCoop
 
         public static void OnDisconnectPressed()
         {
+            ModMain.s_MapEditor = false;
             RemovePleaseWait();
 
             if (ModMain.Client != null && ModMain.Client.m_Instance != null)
@@ -235,6 +244,28 @@ namespace SkyCoop
             public static void Postfix(Panel_MainMenu __instance)
             {
                 AddButton(__instance.m_BasicMenu, "GAMEPLAY_Multiplayer", "GAMEPLAY_MultiplayerDescription", __instance.m_BasicMenu.m_ItemModelList.Count-1, new Action(OnMultiplayerPressed));
+
+                if (!ModMain.s_MenuEverLoaded)
+                {
+                    ModMain.s_MenuEverLoaded = true;
+                }
+            }
+        }
+
+        public static void OnMapEditorTools()
+        {
+
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "ConfigureMenu", null)]
+        public class Panel_PauseMenu_ConfigureMenu
+        {
+            public static void Postfix(Panel_PauseMenu __instance)
+            {
+                if (ModMain.s_MapEditor)
+                {
+                    AddButton(__instance.m_BasicMenu, "MAP EDITOR", "Opens map editor tools", 0, new Action(OnMapEditorTools));
+                }
             }
         }
 
@@ -269,9 +300,19 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_OptionsMenu __instance)
             {
-                SetMenuOverrideMode(s_CurrenetMenuOverride);
-                UpdateSandboxMainWindow();
+                if (!ModMain.IsGameplayScene())
+                {
+                    SetMenuOverrideMode(s_CurrenetMenuOverride);
+                    UpdateSandboxMainWindow();
+                }
             }
+        }
+
+        public static void GoToMapEditor()
+        {
+            InterfaceManager.TrySetPanelEnabled<Panel_OptionsMenu>(false);
+            ModMain.s_MapEditor = true;
+            ModMain.SetupSurvivalSettings("Stalker", -666, "CoastalRegion");
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_OptionsMenu), "ConfigureMenu", null)]
@@ -280,6 +321,12 @@ namespace SkyCoop
             public static void Postfix(Panel_OptionsMenu __instance)
             {
                 AddButton(__instance.m_BasicMenu, "GAMEPLAY_SkyCoopSettings", "GAMEPLAY_SkyCoopSettingsDescription", 6, new Action(ShowMultiplayerSettings));
+                //AddButton(__instance.m_BasicMenu, "Server Setting Test", "Server Setting Test", 7, new Action(ShowServerSettings));
+
+                if(!ModMain.IsGameplayScene() && !ModMain.Client.m_IsReady)
+                {
+                    AddButton(__instance.m_BasicMenu, "Map editor", "Don't go here unless you know what you are doing!", 6, new Action(GoToMapEditor));
+                }
             }
         }
 

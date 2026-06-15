@@ -19,100 +19,28 @@ namespace SkyCoopServer
             m_ServerInstance = Server;
         }
 
-        public void PopulateLoot(string SceneName, int LootPerPoint = 5)
+        public void LoadScene(MapData MapData)
         {
-            if(LootPerPoint == null || LootPerPoint == 0)
+            if(MapData == null)
             {
                 return;
             }
             
-            SkyCoopServer.Logger.Log(ConsoleColor.Cyan, $"Trying populate loot on {SceneName}");
-            RadialLootSpawnerSave Data = FilesManager.GetRadialLootSpawners(m_ServerInstance.m_Config.m_GameMode, SceneName);
-
-            if(Data != null)
-            {
-                int PointIndex = 0;
-                foreach (RadialLootSpawner Spawner in Data.spawners)
-                {
-                    if (Spawner != null)
-                    {
-                        List<JSONPoint> AvaliablePoints = new List<JSONPoint>();
-
-                        if(Spawner.points != null)
-                        {
-                            if(Spawner.points.Count < LootPerPoint)
-                            {
-                                LootPerPoint = Spawner.points.Count;
-                            }
-                            
-                            AvaliablePoints = Spawner.points;
-
-                            Random RNG = new Random(Guid.NewGuid().GetHashCode());
-
-                            for (int i = 1; i <= LootPerPoint; i++)
-                            {
-                                int Index = RNG.Range(0, AvaliablePoints.Count);
-
-                                Vector3 Point = AvaliablePoints[Index].ToVector();
-
-                                string LootTableName = "Main"; // Full random.
-
-                                if (!string.IsNullOrEmpty(Spawner.loottable))
-                                {
-                                    LootTableName = Spawner.loottable;
-                                }
-
-                                string GearName = LootTableManager.GetRandomLoot(LootTableName);
-
-                                SkyCoopServer.Logger.Log($"[PopulateLoot] {SceneName} Point {PointIndex}({i}/{LootPerPoint}) picked {GearName}");
-
-                                AddGear(SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty);
-                                AvaliablePoints.RemoveAt(Index);
-                            }
-                        }
-                    }
-                    PointIndex++;
-                }
-            }
-            else
-            {
-                SkyCoopServer.Logger.Log(ConsoleColor.Yellow, $"Could not populate loot on {SceneName}");
-            }
+            LoadScene(MapData.Scene, MapData);
         }
 
-        public void LoadScene(string SceneName)
+        public void LoadScene(string SceneName, MapData MapData = null)
         {
             if (!m_LoadedScenes.ContainsKey(SceneName))
             {
                 //TODO load from file.
                 SceneData sceneData = new SceneData();
-                sceneData.m_SpawnPoints = FilesManager.GetSpawnPoints(m_ServerInstance.m_Config.m_GameMode, SceneName);
-
-                DataStr.DangerCircleConfig ZoneCFG = FilesManager.GetZoneConfig(m_ServerInstance.m_Config.m_GameMode, SceneName);
-                if(ZoneCFG != null)
-                {
-                    sceneData.m_ActiveZone = new DangerCircleData(ZoneCFG, SceneName, m_ServerInstance);
-                    sceneData.m_ActiveZone.Start();
-                }
-
-                DataStr.PropDataSave PropsSave = FilesManager.GetProps(m_ServerInstance.m_Config.m_GameMode, SceneName);
-
-                if(PropsSave != null)
-                {
-                    foreach (DataStr.PropData Prop in PropsSave.props)
-                    {
-                        sceneData.m_Props.Add(Prop.guid, Prop);
-                        foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
-                        {
-                            if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
-                            {
-                                ServerSend.SendPropCreated(Peer, Prop);
-                            }
-                        }
-                    }
-                }
-
                 sceneData.m_SceneName = SceneName;
+
+                if (MapData != null)
+                {
+                    sceneData.LoadMapData(m_ServerInstance, MapData);
+                }
                 m_LoadedScenes.Add(SceneName, sceneData);
             }
         }
@@ -121,12 +49,12 @@ namespace SkyCoopServer
         {
             if (m_LoadedScenes.ContainsKey(SceneName))
             {
-                //TODO flag WipeSave, to delete save file.
+                //TODO Тут ещё нужно будет удалять файл сохранения сцены, но пока мы не сохраняем ни чего.
                 SceneData Data = m_LoadedScenes[SceneName];
 
-                if (Data != null && Data.m_ActiveZone != null)
+                if (Data != null)
                 {
-                    Data.m_ActiveZone = null;
+                    Data.Unload();
                 }
 
                 m_LoadedScenes.Remove(SceneName);
@@ -236,17 +164,6 @@ namespace SkyCoopServer
                 else
                 {
                     SceneData.m_Openables.Add(GUID, OpenState);
-                }
-            }
-        }
-
-        public void ChangeGameMode(string GameMode)
-        {
-            foreach (string Key in m_LoadedScenes.Keys.ToList())
-            {
-                if (m_LoadedScenes.ContainsKey(Key))
-                {
-                    m_LoadedScenes[Key].m_SpawnPoints = FilesManager.GetSpawnPoints(GameMode, Key);
                 }
             }
         }
@@ -464,13 +381,9 @@ namespace SkyCoopServer
                 NewProp.prefabname = "TexasHoldEmGamePrefab";
                 NewProp.frombundle = true;
 
-                NewProp.posx = PropData.posx;
-                NewProp.posy = PropData.posy;
-                NewProp.posz = PropData.posz;
+                NewProp.position = PropData.position;
 
-                NewProp.rotx = PropData.rotx;
-                NewProp.roty = PropData.roty;
-                NewProp.rotz = PropData.rotz;
+                NewProp.rotation = PropData.rotation;
 
                 NewProp.guid = Guid.NewGuid().ToString();
 

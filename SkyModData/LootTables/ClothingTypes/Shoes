@@ -1,9 +1,0 @@
-{
-	"Items": [
-      {
-        "Prefab": "GEAR_BasicShoes",
-        "Chance": 1
-      }
-    ],
-    "LootTables": []
-}

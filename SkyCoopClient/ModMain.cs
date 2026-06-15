@@ -16,8 +16,10 @@ namespace SkyCoop
         public static Server Server;
         public static Client Client;
         public static ClientVoice ClientVoice;
+        public static bool s_MapEditor = false;
 
         public static bool s_ModBooted = false;
+        public static bool s_MenuEverLoaded = false;
 
         public static bool s_AppFocus = true;
 
@@ -27,6 +29,7 @@ namespace SkyCoop
             Client = new Client();
             DebugConsole.RegisterCommands();
             Settings.Init();
+            FilesManager.InitFolders();
         }
 
         public static void SetAppBackgroundMode()
@@ -48,7 +51,7 @@ namespace SkyCoop
 
         public static bool IsMultiplayer()
         {
-            if(MenuHook.s_CurrenetMenuOverride == "Multiplayer" || (Client != null && Client.m_IsReady))
+            if(MenuHook.s_CurrenetMenuOverride == "Multiplayer" || (Client != null && Client.m_IsReady) || s_MapEditor)
             {
                 return true;
             }
@@ -205,7 +208,7 @@ namespace SkyCoop
             {
                 Scene = GetCurrentSceneName();
             }
-            if(Scene == "Empty" || Scene == "Boot" || Scene == "MainMenu")
+            if(Scene == "Empty" || Scene == "Boot" || Scene.StartsWith("MainMenu"))
             {
                 return false;
             }
@@ -217,6 +220,13 @@ namespace SkyCoop
             DataStr.ServerConfig CFG = Client.m_Config;
             EmptyScene.s_SceneLoadFromEmpty = Client.m_Config.m_SceneToSpawn;
             Minimalizer.s_SceneSpawnOverride = Client.m_Config.m_SceneToSpawn;
+            SceneManager.LoadEmptyScene();
+        }
+
+        public static void ChangeMap(string Scene)
+        {
+            EmptyScene.s_SceneLoadFromEmpty = Scene;
+            Minimalizer.s_SceneSpawnOverride = Scene;
             SceneManager.LoadEmptyScene();
         }
 

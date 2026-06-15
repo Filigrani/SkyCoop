@@ -450,7 +450,7 @@ namespace SkyCoopServer
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
         }
-        public static void SendLeaders(List<int> Leaders, Vector3 Position ,Server ServerInstance)
+        public static void SendLeaders(List<int> Leaders, Vector3 Position, Quaternion Rotation ,Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerLeaders);
@@ -463,6 +463,7 @@ namespace SkyCoopServer
             }
 
             writer.Put(Position);
+            writer.Put(Rotation);
 
             foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
             {
@@ -755,6 +756,16 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ServerRequestSquadHealth);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendTilt(NetPeer Client, float Tilt, int FromClient)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientTilt);
+            writer.Put(FromClient);
+            writer.Put(Tilt);
+            Client.Send(writer, DeliveryMethod.Unreliable);
         }
     }
 }

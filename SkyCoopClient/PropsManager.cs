@@ -30,7 +30,7 @@ namespace SkyCoopClient
 
             if (Reference)
             {
-                GameObject PropObj = UnityEngine.Object.Instantiate<GameObject>(Reference, PropData.GetVector3Unity(), PropData.GetQuaternionUnity());
+                GameObject PropObj = UnityEngine.Object.Instantiate<GameObject>(Reference, PropData.position.GetVector3Unity(), PropData.rotation.GetQuaternionUnity());
                 if (PropObj)
                 {
                     ObjectGuid GUIDObj = PropObj.GetComponent<ObjectGuid>();

@@ -426,5 +426,14 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+
+        public static void SendTilt(float Tilt)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientTilt);
+            writer.Put(Tilt);
+            SendToHost(writer);
+        }
     }
 }

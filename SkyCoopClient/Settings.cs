@@ -68,11 +68,34 @@ namespace SkyCoopClient
         [Description("Show icon when you sending voice.")]
         public bool m_DisplayMicrophoneIcon = true;
 
+        //[Name("Max players")]
+        //[Description("How many players can connect to the server.")]
+        //[Slider(2, 32)]
+        //public int m_ServerSetting_MaxPlayers = 4;
+
+        // Rest of the settings only when modsetting updated to have strings fields.
+
         public static void Init()
         {
             m_Options = new Settings();
             m_Options.RefreshGUI();
             m_Options.AddToModSettings("Sky Co-op: Reborn");
+            ToggleSettingsMode(false);
+        }
+
+        public static void ToggleSettingsMode(bool ServerSettings = false)
+        {
+            m_Options.SetFieldVisible("m_MicrophoneDeviceNumber", !ServerSettings);
+            m_Options.SetFieldVisible("m_PushToTalk", !ServerSettings);
+            m_Options.SetFieldVisible("m_VoiceButton", !ServerSettings);
+            m_Options.SetFieldVisible("m_ReceivedVoiceVolume", !ServerSettings);
+            m_Options.SetFieldVisible("m_MicrophoneVoice", !ServerSettings);
+            m_Options.SetFieldVisible("m_NoiseSuppression", !ServerSettings);
+            m_Options.SetFieldVisible("m_DisplayMicrophoneIcon", !ServerSettings);
+
+            //m_Options.SetFieldVisible("m_ServerSetting_MaxPlayers", ServerSettings);
+
+            m_Options.RefreshGUI();
         }
 
         protected override void OnChange(FieldInfo field, object? oldValue, object? newValue)
@@ -109,9 +132,12 @@ namespace SkyCoopClient
             }
         }
 
-        public static void ForceToShow()
+        public static void ForceToShow(bool ServerSettings = false)
         {
             Panel_OptionsMenu Options = InterfaceManager.GetPanel<Panel_OptionsMenu>();
+
+
+            ToggleSettingsMode(ServerSettings);
 
             if (Options)
             {

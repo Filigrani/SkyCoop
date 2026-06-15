@@ -1,4 +1,5 @@
-﻿using LiteNetLib;
+﻿using Il2Cpp;
+using LiteNetLib;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
@@ -77,6 +78,7 @@ namespace SkyCoop
             { (int)Packet.Type.ClientAssignSquad, ClientHandle.ClientAssignSquad },
             { (int)Packet.Type.ClientSquadHealth, ClientHandle.ClientSquadHealth },
             { (int)Packet.Type.ServerRequestSquadHealth, ClientHandle.ServerRequestSquadHealth },
+            { (int)Packet.Type.ClientTilt, ClientHandle.ClientTilt },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)
@@ -231,6 +233,15 @@ namespace SkyCoop
                 m_Instance.Stop();
             }
             GC.Collect();
+        }
+
+        public string GetServerAddress()
+        {
+            if (m_IsReady)
+            {
+                return m_HostEndPoint.Address.ToString();
+            }
+            return "";
         }
 
         public void ProcessAllDelayedPackages()

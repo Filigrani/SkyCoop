@@ -3,25 +3,43 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using static SkyCoopServer.DataStr;
+using System.IO;
 
 namespace SkyCoopServer
 {
     public class FilesManager
     {
-        public static string s_SpawnPointsDirectory = "SpawnPoints";
-        public static string s_ZoneConfigDirectory = "ZoneConfig";
-        public static string s_StartingGearFileName = "StartingGear";
-        public static string s_VictoryPlaceDirectory = "Victory";
-        public static string s_PropsDirectory = "Props";
-        public static string s_RulesFileName = "Rules";
-        public static string s_LootTablesDirectory = "LootTables";
-        public static string s_RadialLootSpawnersDirectory = "RadialLootSpawners";
+        // Main Data folder
         public static string s_DataDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData";
+
+        // Sub folders
+        public static string s_GameModesDirectory = "GameModes";
+        public static string s_LootTablesDirectory = "LootTables";
+        public static string s_MapsDirectory = "Maps";
+
+        public static void InitFolders()
+        {
+            if (!Directory.Exists(s_DataDirectory))
+            {
+                Directory.CreateDirectory(s_DataDirectory);
+            }
+            if (!Directory.Exists($"{s_DataDirectory}/{s_GameModesDirectory}"))
+            {
+                Directory.CreateDirectory($"{s_DataDirectory}/{s_GameModesDirectory}");
+            }
+            if (!Directory.Exists($"{s_DataDirectory}/{s_MapsDirectory}"))
+            {
+                Directory.CreateDirectory($"{s_DataDirectory}/{s_MapsDirectory}");
+            }
+            if (!Directory.Exists($"{s_DataDirectory}/{s_LootTablesDirectory}"))
+            {
+                Directory.CreateDirectory($"{s_DataDirectory}/{s_LootTablesDirectory}");
+            }
+        }
 
         public static GameRules GetRules(string GameMode)
         {
-            GameRules Rules = new GameRules();
-            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_RulesFileName}";
+            string Path = $"{s_DataDirectory}/{s_GameModesDirectory}/{GameMode}";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -34,7 +52,7 @@ namespace SkyCoopServer
                 catch (Exception e)
                 {
                     Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return Rules;
+                    return new GameRules();
                 }
             }
             else
@@ -45,67 +63,76 @@ namespace SkyCoopServer
             if (string.IsNullOrEmpty(JSON))
             {
                 Logger.Log($"[FilesManager] File {Path} is empty");
-                return Rules;
+                return new GameRules();
             }
-            GameRulesSave Save = JsonSerializer.Deserialize<GameRulesSave>(JSON);
-            Rules.m_PlayerCanBeKnocked = Save.Knockdowns;
-            Rules.m_PVP = Save.PVP;
-            Rules.m_StartingItems = Save.StartingGear;
-            Rules.m_StartingItemsByTier = Save.StartingGearByTier;
-            // TODO: ADD PROPER CHECK OF CFG FOR ALL PARAMETERS!!!!
-            if(Rules.m_StartingItemsByTier == null)
-            {
-                Rules.m_StartingItemsByTier = Rules.m_StartingItemsByTier = new List<List<StartingGearData>>();
-            }
-            Rules.m_Time = Save.Time;
-            Rules.m_LootPerRadialSpawn = Save.LootPerRadialSpawn;
-            Rules.m_HUDMode = Save.HUDMode;
-            Rules.m_Respawns = Save.Respawns;
-            Rules.m_DeathPacks = Save.DeathPacks;
-            Rules.m_Clothing = Save.Clothing;
-            Rules.m_CanDropItems = Save.CanDropItems;
-            Rules.m_CanUseContainers = Save.CanUseContainers;
-            return Rules;
+            GameRulesJson JsonData = JsonSerializer.Deserialize<GameRulesJson>(JSON);
+            return JsonData == null ? new GameRules() : JsonData.Load();
         }
 
-        public static string GetRandomSceneForGameMode(string GameMode)
+
+        public static List<string> GetMapsList()
         {
-            string _Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_SpawnPointsDirectory}";
-            if (Directory.Exists(_Path))
+            string path = $"{s_DataDirectory}/{s_MapsDirectory}";
+
+            if (Directory.Exists(path))
             {
-                string[] Scenes = Directory.GetFiles(_Path);
-                if(Scenes.Length == 0)
+                List<string> FileNames = new List<string>(Directory.GetFiles(path));
+                for (int i = 0; i < FileNames.Count; i++)
                 {
+                    FileNames[i] = Path.GetFileName(FileNames[i]);
+                }
+                return FileNames;
+            }
+            return new List<string>();
+        }
+
+        public static MapData GetMapData(string MapName)
+        {
+            string Path = $"{s_DataDirectory}/{s_MapsDirectory}/{MapName}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<MapData>(JSON);
+        }
+
+        public static string GetSceneByMapName(string MapName)
+        {
+            string Path = $"{s_DataDirectory}/{s_MapsDirectory}/{MapName}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return "";
-                }else if(Scenes.Length == 1)
-                {
-                    return Path.GetFileNameWithoutExtension(Scenes[0]);
-                }
-                else
-                {
-                    return Path.GetFileNameWithoutExtension(Scenes[new System.Random(Guid.NewGuid().GetHashCode()).Next(0, Scenes.Length)]);
-                }
-            }
-            return "";
-        }
-
-        public static List<V3Quat> GetSpawnPoints(string GameMode, string Scene)
-        {
-            List<V3Quat> Points = new List<V3Quat>();
-            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_SpawnPointsDirectory}/{Scene}";
-            string JSON = "";
-
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
-            {
-                try
-                {
-                    JSON = File.ReadAllText(Path);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return Points;
                 }
             }
             else
@@ -116,115 +143,10 @@ namespace SkyCoopServer
             if (string.IsNullOrEmpty(JSON))
             {
                 Logger.Log($"[FilesManager] File {Path} is empty");
-                return Points;
+                return "";
             }
-            SpawnPointSave Save = JsonSerializer.Deserialize<SpawnPointSave>(JSON);
-            for (int i = 0; i < Save.points.Count; i++)
-            {
-                SpawnPoint Point = Save.points[i];
-                Points.Add(new V3Quat(Point.posx, Point.posy, Point.posz, Point.rotx, Point.roty, Point.rotz, Point.rotw));
-            }
-            return Points;
-        }
-
-        public static DangerCircleConfig GetZoneConfig(string GameMode, string Scene)
-        {
-            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_ZoneConfigDirectory}/{Scene}";
-            string JSON = "";
-
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
-            {
-                try
-                {
-                    JSON = File.ReadAllText(Path);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return null;
-                }
-            }
-            else
-            {
-                Logger.Log($"[FilesManager] File {Path} not exist");
-                return null;
-            }
-
-            if (string.IsNullOrEmpty(JSON))
-            {
-                Logger.Log($"[FilesManager] File {Path} is empty");
-                return null;
-            }
-            DangerCircleConfig CFG = JsonSerializer.Deserialize<DangerCircleConfig>(JSON);
-            return CFG;
-        }
-
-        public static Vector3 GetVictoryPosition(string GameMode, string SceneName)
-        {
-            Vector3 Position = new Vector3(0,0,0);
-            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_VictoryPlaceDirectory}/{SceneName}";
-            string JSON = "";
-
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
-            {
-                try
-                {
-                    JSON = File.ReadAllText(Path);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return Position;
-                }
-            }
-            else
-            {
-                Logger.Log($"[FilesManager] File {Path} not exist");
-            }
-
-            if (string.IsNullOrEmpty(JSON))
-            {
-                Logger.Log($"[FilesManager] File {Path} is empty");
-                return Position;
-            }
-            DangerCircleCenter Save = JsonSerializer.Deserialize<DangerCircleCenter>(JSON);
-
-            return new Vector3(Save.x, Save.y, Save.z);
-        }
-
-        public static PropDataSave GetProps(string GameMode, string Scene)
-        {
-            PropDataSave Save = new PropDataSave();
-            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_PropsDirectory}/{Scene}";
-            string JSON = "";
-
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
-            {
-                try
-                {
-                    JSON = File.ReadAllText(Path);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return null;
-                }
-            }
-            else
-            {
-                Logger.Log($"[FilesManager] File {Path} not exist");
-            }
-
-            if (string.IsNullOrEmpty(JSON))
-            {
-                Logger.Log($"[FilesManager] File {Path} is empty");
-                return null;
-            }
-            Save = JsonSerializer.Deserialize<PropDataSave>(JSON);
-            return Save;
+            MapData JsonData = JsonSerializer.Deserialize<MapData>(JSON);
+            return JsonData == null ? "" : JsonData.Scene;
         }
 
         public static Dictionary<string, PrefabTableJSON> GetAllLootTables()
@@ -285,38 +207,6 @@ namespace SkyCoopServer
                 return null;
             }
             return JsonSerializer.Deserialize<PrefabTableJSON>(JSON);
-        }
-        public static RadialLootSpawnerSave GetRadialLootSpawners(string GameMode, string Scene)
-        {
-            RadialLootSpawnerSave Save = new RadialLootSpawnerSave();
-            string Path = $"{s_DataDirectory}/GameModes/{GameMode}/{s_RadialLootSpawnersDirectory}/{Scene}";
-            string JSON = "";
-
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
-            {
-                try
-                {
-                    JSON = File.ReadAllText(Path);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return null;
-                }
-            }
-            else
-            {
-                Logger.Log($"[FilesManager] File {Path} not exist");
-            }
-
-            if (string.IsNullOrEmpty(JSON))
-            {
-                Logger.Log($"[FilesManager] File {Path} is empty");
-                return null;
-            }
-            Save = JsonSerializer.Deserialize<RadialLootSpawnerSave>(JSON);
-            return Save;
         }
     }
 }
