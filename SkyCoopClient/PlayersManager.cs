@@ -29,7 +29,6 @@ namespace SkyCoop
             public Vector3 m_LastSentPosition = Vector3.zero;
             public Quaternion m_LastSentRotation = Quaternion.identity;
             public float m_LastSentTilt = 0;
-            public string m_LastSentScene = "MainMenu";
 
             public string m_GearName = "";
             public int m_GearVariant = 0;
@@ -103,6 +102,20 @@ namespace SkyCoop
                 Player.UpdateName();
             }
         }
+
+        public static void DestoryPlayers()
+        {
+            for (int i = s_Players.Count-1; i >= 0; i--)
+            {
+                Comps.NetworkPlayer NetPlayer = s_Players[i];
+                if (NetPlayer)
+                {
+                    UnityEngine.Object.Destroy(NetPlayer.gameObject);
+                }
+            }
+            s_Players.Clear();
+        }
+
         public static void InitilizePlayers(int PlayersCount)
         {
             m_LocalPlayerData = new LocalPlayerData();
@@ -307,12 +320,6 @@ namespace SkyCoop
                             }
                         }
                     }
-                }
-
-                if (m_LocalPlayerData.m_LastSentScene != Scene)
-                {
-                    m_LocalPlayerData.m_LastSentScene = Scene;
-                    ClientSend.SendScene(Scene);
                 }
                 DataStr.ClothingData NewClothingData = ClothingCombininizer.GetClothing();
                 if (!m_LocalPlayerData.m_ClothingData.Equals(NewClothingData) || s_ForceUpdateClothing)

@@ -10,7 +10,17 @@ namespace SkyCoop
     public static class DangerCircleManager
     {
         public static Comps.DangerCircleZone s_DangerCircle;
-        
+
+        public static void RemoveDangerCircle()
+        {
+            if (s_DangerCircle)
+            {
+                UnityEngine.Object.Destroy(s_DangerCircle);
+                s_DangerCircle = null;
+            }
+        }
+
+
         public static void HandleDangerCircleSync(Vector3 Center, float Radius)
         {
             if(s_DangerCircle == null)

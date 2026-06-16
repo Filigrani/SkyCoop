@@ -107,9 +107,9 @@ namespace SkyCoopClient
                     m_UIPanel = UIPanel;
                     m_KillFeedTransform = m_UIPanel.transform.GetChild(0);
 
-                    s_ZoneDamageOverlay = m_UIPanel.transform.GetChild(2).GetComponent<Animator>();
+                    s_ZoneDamageOverlay = m_UIPanel.transform.GetChild(1).GetComponent<Animator>();
 
-                    s_SpeakingIndicator = m_UIPanel.transform.GetChild(4).GetComponent<CanvasGroup>();
+                    s_SpeakingIndicator = m_UIPanel.transform.GetChild(2).GetComponent<CanvasGroup>();
                     s_SpeakingIndicator.alpha = 0;
 
                     SkyCoop.Logger.Log(ConsoleColor.Cyan, "Canvas UI created!");

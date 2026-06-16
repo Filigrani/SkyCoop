@@ -224,12 +224,12 @@ namespace SkyCoopClient
             }
         }
 
-        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtraFloat)
+        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, bool PlayEffect, float ExtraFloat)
         {
-            HandleProjectileSync(ShooterID, Position, Rotation, ProjectileName, Vector3.zero, Vector3.zero, ExtraFloat);
+            HandleProjectileSync(ShooterID, Position, Rotation, ProjectileName, PlayEffect, Vector3.zero, Vector3.zero, ExtraFloat);
         }
 
-        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, Vector3 Velocity, Vector3 AngularVelocity, float Fuse)
+        public static void HandleProjectileSync(int ShooterID, Vector3 Position, Quaternion Rotation, string ProjectileName, bool PlayEffect, Vector3 Velocity, Vector3 AngularVelocity, float Fuse)
         {
             //SkyCoop.Logger.Log("HandleProjectileSync " + ProjectileName);
             //SkyCoop.Logger.Log("HandleProjectileSync Body.velocity " + Velocity.ToString());
@@ -610,7 +610,7 @@ namespace SkyCoopClient
                     Transform playerTransform = GameManager.GetPlayerTransform();
                     Vector3 Position = playerTransform.TransformPoint(transform.position);
                     Quaternion Rotation = playerTransform.rotation * transform.rotation;
-                    ClientSend.SendProjectile(Position, Rotation, __instance.m_GearArrow.name, __instance.m_GearArrow.GetNormalizedCondition());
+                    ClientSend.SendProjectile(Position, Rotation, __instance.m_GearArrow.name, true, __instance.m_GearArrow.GetNormalizedCondition());
                 }
             }
         }

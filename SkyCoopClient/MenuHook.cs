@@ -162,7 +162,8 @@ namespace SkyCoop
 
         public static void OnDisconnectConfirmed()
         {
-            if(ModMain.Client != null && ModMain.Client.m_IsReady)
+            PlayersManager.DestoryPlayers();
+            if (ModMain.Client != null && ModMain.Client.m_IsReady)
             {
                 ModMain.Client.m_Instance.DisconnectAll();
                 ModMain.Client.m_Instance.Stop();

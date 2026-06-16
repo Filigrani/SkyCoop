@@ -124,6 +124,7 @@ namespace SkyCoop
                 MenuHook.DoOKMessage("Connection failed", error.ToString());
                 m_IsReady = false;
                 m_Instance.Stop();
+                PlayersManager.DestoryPlayers();
             };
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
             {
@@ -183,6 +184,7 @@ namespace SkyCoop
                     }
                 }
                 m_IsReady = false;
+                PlayersManager.DestoryPlayers();
                 m_Instance.Stop();
                 if (ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady)
                 {

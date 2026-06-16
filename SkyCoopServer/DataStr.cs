@@ -9,6 +9,7 @@ using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
 using static SkyCoopServer.DataStr;
+using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
@@ -110,14 +111,14 @@ namespace SkyCoopServer
                 {
                     foreach (string Map in Maps)
                     {
+                        Logger.Log($"    {Map}");
                         Inst.m_Maps.Add(Map);
                     }
                 }
 
                 Inst.m_PlayerCanBeKnocked = Knockdowns;
-                Inst.m_PVP = PVP;
 
-                if(StartingGear != null)
+                if (StartingGear != null)
                 {
                     foreach (StartingGearData GearData in StartingGear)
                     {
@@ -149,6 +150,7 @@ namespace SkyCoopServer
                 Inst.m_Clothing = Clothing;
                 Inst.m_CanDropItems = CanDropItems;
                 Inst.m_CanUseContainers = CanUseContainers;
+
 
                 return Inst;
             }
@@ -231,6 +233,12 @@ namespace SkyCoopServer
                 m_PlayerID = PlayerID;
             }
 
+            public void SetGameplayState(GamePlayState State)
+            {
+                m_GamePlayState = State;
+                Logger.Log($"[DataStr.PlayerData] Client {m_GamePlayState} new gamepaly state {State}");
+            }
+
             public void DealDamage(int Killer, float Damage, DamageType DamageType)
             {
                 if(m_GamePlayState != GamePlayState.Alive)
@@ -273,13 +281,12 @@ namespace SkyCoopServer
                     
                     if (ServerInstance.m_Rules.m_Respawns)
                     {
-                        m_GamePlayState = GamePlayState.Dead;
+                        SetGameplayState(GamePlayState.Dead);
                     }
                     else
                     {
-                        m_GamePlayState = GamePlayState.Spectator;
+                        SetGameplayState(GamePlayState.Spectator);
                     }
-                    Logger.Log("[DataStr] PlayerID " + m_PlayerID + " m_GamePlayState: " + m_GamePlayState.ToString());
 
                     if(ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
@@ -397,7 +404,7 @@ namespace SkyCoopServer
 
                 if (Reviver == -2)
                 {
-                    m_GamePlayState = GamePlayState.Alive;
+                    SetGameplayState(GamePlayState.Alive);
                     if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
                         foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
@@ -645,9 +652,19 @@ namespace SkyCoopServer
                     {
                         foreach (RadialLootSpawner LootSpawner in MapData.RadialLootSpawners)
                         {
-                            MapData.RadialLootSpawners.Add(LootSpawner);
+                            m_RadialLootSpawners.Add(LootSpawner);
                         }
                     }
+
+                    if(ServerInstance.m_Rules.m_LootPerRadialSpawn != null && ServerInstance.m_Rules.m_LootPerRadialSpawn > 0)
+                    {
+                        PopulateLoot(ServerInstance, ServerInstance.m_Rules.m_LootPerRadialSpawn);
+                    }
+                    else
+                    {
+                        PopulateLoot(ServerInstance);
+                    }
+
 
                     if (MapData.VictoryPoint != null)
                     {

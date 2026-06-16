@@ -46,6 +46,7 @@ namespace SkyCoop
             ApplyConfig(CFG);
             ApplyRules(Rules);
 
+            PlayersManager.DestoryPlayers();
             PlayersManager.InitilizePlayers(CFG.m_MaxPlayers);
 
             ModMain.Client.m_IsReady = true;
@@ -193,7 +194,8 @@ namespace SkyCoop
             Quaternion Rot = Reader.GetQuaternionUnity();
             string ProjectileName = Reader.GetString();
             float ExtraFloat = Reader.GetFloat();
-            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, ExtraFloat);
+            bool PlayEffect = Reader.GetBool();
+            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, PlayEffect, ExtraFloat);
         }
         public static void ClientProjectileThrow(NetDataReader Reader)
         {
@@ -204,7 +206,7 @@ namespace SkyCoop
             Vector3 Velocity = Reader.GetVector3Unity();
             Vector3 AngularVelocity = Reader.GetVector3Unity();
             float Fuse = Reader.GetFloat();
-            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, Velocity, AngularVelocity, Fuse);
+            WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, true, Velocity, AngularVelocity, Fuse);
         }
         public static void KillFeedMessage(NetDataReader Reader)
         {
@@ -314,10 +316,19 @@ namespace SkyCoop
 
         public static void ClientZoneUpdated(NetDataReader Reader)
         {
-            Vector3 Center = Reader.GetVector3Unity();
-            float Radius = Reader.GetFloat();
+            bool Active = Reader.GetBool();
 
-            DangerCircleManager.HandleDangerCircleSync(Center, Radius);
+            if (Active)
+            {
+                Vector3 Center = Reader.GetVector3Unity();
+                float Radius = Reader.GetFloat();
+
+                DangerCircleManager.HandleDangerCircleSync(Center, Radius);
+            }
+            else
+            {
+                DangerCircleManager.RemoveDangerCircle();
+            }
         }
 
         public static void ClientGameModeTimer(NetDataReader Reader)

@@ -1,6 +1,7 @@
 ﻿using LiteNetLib;
 using LiteNetLib.Utils;
 using System;
+using static SkyCoopServer.DataStr.PlayerData;
 
 namespace SkyCoopServer
 {
@@ -170,7 +171,7 @@ namespace SkyCoopServer
                             ServerSend.SendFreeze(Peer);
                             DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
                             string PlayerScene = PlayerData.m_Scene;
-                            PlayerData.m_GamePlayState = DataStr.PlayerData.GamePlayState.Unassigned;
+                            PlayerData.SetGameplayState(GamePlayState.Unassigned);
                             DataStr.SceneData SceneData = m_ScenesData.m_LoadedScenes[PlayerScene];
 
                             if (SceneData != null)
@@ -197,6 +198,7 @@ namespace SkyCoopServer
 
         public void ChangeGameMode(string GameMode)
         {
+            SkyCoopServer.Logger.Log($"ChangeGameMode {GameMode}");
             m_Config.m_GameMode = GameMode;
 
             // Грузим по новой даже если режим тот же, файл режима мог быть отредактирован.
@@ -205,7 +207,7 @@ namespace SkyCoopServer
             string MapName = m_Rules.GetRandomMap(m_Config.m_SceneToSpawn);
             DataStr.MapData MapData = FilesManager.GetMapData(MapName);
 
-            if(MapData != null)
+            if (MapData != null)
             {
                 m_Config.m_SceneToSpawn = MapData.Scene;
                 m_PlayersData.ResetGameScores();
@@ -261,6 +263,7 @@ namespace SkyCoopServer
             {
                 //Logger.Log(ConsoleColor.Gray, $"[Server] Ping to Client {peer.Id}: {ping}");
             };
+
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
                 int PacketID = dataReader.GetInt();
@@ -293,7 +296,11 @@ namespace SkyCoopServer
             m_IsReady = false;
             if (m_VoiceServer != null)
                 m_VoiceServer.Dispose();
-            m_NetworkHelper.Dispose();
+
+            if(m_NetworkHelper != null)
+            {
+                m_NetworkHelper.Dispose();
+            }
             m_Instance.Stop();
             GC.Collect();
         }

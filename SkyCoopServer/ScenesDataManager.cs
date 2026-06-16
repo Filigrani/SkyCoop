@@ -33,6 +33,7 @@ namespace SkyCoopServer
         {
             if (!m_LoadedScenes.ContainsKey(SceneName))
             {
+                SkyCoopServer.Logger.Log($"Trying to load Scene {SceneName}");
                 //TODO load from file.
                 SceneData sceneData = new SceneData();
                 sceneData.m_SceneName = SceneName;
@@ -41,11 +42,16 @@ namespace SkyCoopServer
                 {
                     sceneData.LoadMapData(m_ServerInstance, MapData);
                 }
+                SkyCoopServer.Logger.Log($"Currently loaded scenes:");
+                foreach (var item in m_LoadedScenes)
+                {
+                    SkyCoopServer.Logger.Log($"Key {item.Key} SceneName = {item.Value.m_SceneName}");
+                }
                 m_LoadedScenes.Add(SceneName, sceneData);
             }
         }
 
-        public void UnloadScene(string SceneName)
+        public void UnloadScene(Server ServerInstance, string SceneName)
         {
             if (m_LoadedScenes.ContainsKey(SceneName))
             {
@@ -76,7 +82,7 @@ namespace SkyCoopServer
                 }
                 if (CanUnload)
                 {
-                    UnloadScene(LoadedSceneName);
+                    UnloadScene(ServerInstance, LoadedSceneName);
                     SkyCoopServer.Logger.Log($"Scene unloaded because no body on there {LoadedSceneName}");
                 }
             }
@@ -176,7 +182,7 @@ namespace SkyCoopServer
                 SceneData SceneData = m_LoadedScenes[SceneName];
                 if (SceneData.m_ActiveZone != null)
                 {
-                    ServerSend.SendZoneUpdate(Client, SceneName, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
+                    ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
                     ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
                 }
             }

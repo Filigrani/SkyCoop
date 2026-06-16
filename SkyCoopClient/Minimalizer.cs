@@ -371,7 +371,7 @@ namespace SkyCoopClient
         {
             SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Scenes loaded");
 
-            if(ModMain.Client != null && ModMain.Client.m_Instance != null)
+            if(ModMain.Client.m_IsReady)
             {
 
                 for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
@@ -390,6 +390,10 @@ namespace SkyCoopClient
         {
             s_LoadingFlag = true;
             SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Start loading scenes...");
+            if (ModMain.Client.m_IsReady)
+            {
+                ClientSend.SendNewScene("Empty");
+            }
         }
 
 

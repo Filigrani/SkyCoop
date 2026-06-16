@@ -231,6 +231,14 @@ namespace SkyCoopServer
                 }
             }
         }
+        public void SetGameplayState(int Index, DataStr.PlayerData.GamePlayState State)
+        {
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player == null)
+            {
+                Player.SetGameplayState(State);
+            }
+        }
 
         public void PlayerChangeScene(int Index, string Scene, bool Broadcast = true)
         {
@@ -539,6 +547,7 @@ namespace SkyCoopServer
                 Player.m_Deaths = 0;
                 Player.m_Assists = 0;
                 Player.m_Tier = 0;
+                Player.m_TierProgress = 0;
             }
         }
 

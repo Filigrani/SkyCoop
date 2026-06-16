@@ -76,7 +76,6 @@ namespace SkyCoop
                 Server.m_Instance.DisconnectAll(ShutdownMessage, 0, ShutdownMessage.Length);
                 Server.m_Instance.Stop();
                 Server.Dispose();
-                Server = new SkyCoopServer.Server();
             }
             base.OnApplicationQuit();
         }

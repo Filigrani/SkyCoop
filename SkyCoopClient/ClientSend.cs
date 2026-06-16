@@ -43,16 +43,6 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendScene(string Scene)
-        {
-            NetDataWriter writer = new NetDataWriter();
-
-            writer.Put((int)Packet.Type.ClientScene);
-            writer.Put(Scene);
-
-            SendToHost(writer);
-        }
-
         public static void SendHoldingGear(string GearName, int GearVariant)
         {
             NetDataWriter writer = new NetDataWriter();
@@ -104,7 +94,7 @@ namespace SkyCoop
             writer.Put(Killer);
             SendToHost(writer);
         }
-        public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtaFloat = 1)
+        public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName, bool PlaySound = true, float ExtaFloat = 1)
         {
             //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
             NetDataWriter writer = new NetDataWriter();
@@ -113,6 +103,7 @@ namespace SkyCoop
             writer.Put(Rotation);
             writer.Put(ProjectileName);
             writer.Put(ExtaFloat);
+            writer.Put(PlaySound);
             SendToHost(writer);
         }
         public static void SendDeath(DataStr.DamageType DamageType, bool Knocked, bool HeadShot)
@@ -225,6 +216,8 @@ namespace SkyCoop
             writer.Put((int)Packet.Type.ClientLoadedScene);
 
             writer.Put(SceneName);
+
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"ClientSend.SendNewScene {SceneName}");
 
             SendToHost(writer);
         }

@@ -157,7 +157,10 @@ namespace SkyCoopServer
 
             m_IsReady = false;
             m_Instance.Stop();
-            m_NetworkHelper.Dispose();
+            if (m_NetworkHelper != null)
+            {
+                m_NetworkHelper.Dispose();
+            }
         }
     }
 }

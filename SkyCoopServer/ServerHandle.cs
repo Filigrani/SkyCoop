@@ -56,9 +56,7 @@ namespace SkyCoopServer
 
         public static void ClientScene(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
-            string Scene = Reader.GetString();
-            Logger.Log($"[ServerHandle] (ClientScene) Client {Client.Id} sent Scene {Scene}");
-            ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, Scene);
+            Logger.Log(ConsoleColor.Red, $"[ServerHandle] (ClientScene) Client {Client.Id} sent Legacy scene change packet!");
         }
 
         public static void ClientHoldingGear(NetPeer Client, NetDataReader Reader, Server ServerInstance)
@@ -121,7 +119,8 @@ namespace SkyCoopServer
             Quaternion Rot = Reader.GetQuaternion();
             string ProjectileName = Reader.GetString();
             float ExtaFloat = Reader.GetFloat();
-            ServerSend.SendProjectile(Client, Pos, Rot, ProjectileName, ExtaFloat, ServerInstance);
+            bool PlaySound = Reader.GetBool();
+            ServerSend.SendProjectile(Client, Pos, Rot, ProjectileName, ExtaFloat, PlaySound, ServerInstance);
         }
         public static void ClientDied(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
@@ -275,6 +274,16 @@ namespace SkyCoopServer
         public static void ClientLoadedScene(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string SceneName = Reader.GetString();
+
+            Logger.Log($"[ServerHandle] (ClientScene) Client {Client.Id} sent Scene {SceneName}");
+            ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, SceneName);
+
+            if(SceneName == "" || SceneName == "Empty" || SceneName.StartsWith("Menu"))
+            {
+                ServerInstance.m_PlayersData.SetGameplayState(Client.Id, PlayerData.GamePlayState.Unassigned);
+                return;
+            }
+
             ServerInstance.m_ScenesData.SendAllGears(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllOpenables(SceneName, Client);
             ServerInstance.m_ScenesData.SendZone(SceneName, Client);
