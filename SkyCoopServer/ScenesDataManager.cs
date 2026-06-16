@@ -29,6 +29,17 @@ namespace SkyCoopServer
             LoadScene(MapData.Scene, MapData);
         }
 
+        public SceneData GetSceneData(string SceneName)
+        {
+            SceneData sceneData = null;
+            if (m_LoadedScenes.TryGetValue(SceneName, out sceneData))
+            {
+                return sceneData;
+            }
+            
+            return null;
+        }
+
         public void LoadScene(string SceneName, MapData MapData = null)
         {
             if (!m_LoadedScenes.ContainsKey(SceneName))
@@ -38,16 +49,12 @@ namespace SkyCoopServer
                 SceneData sceneData = new SceneData();
                 sceneData.m_SceneName = SceneName;
 
+                m_LoadedScenes.Add(SceneName, sceneData);
+
                 if (MapData != null)
                 {
                     sceneData.LoadMapData(m_ServerInstance, MapData);
                 }
-                SkyCoopServer.Logger.Log($"Currently loaded scenes:");
-                foreach (var item in m_LoadedScenes)
-                {
-                    SkyCoopServer.Logger.Log($"Key {item.Key} SceneName = {item.Value.m_SceneName}");
-                }
-                m_LoadedScenes.Add(SceneName, sceneData);
             }
         }
 
@@ -90,20 +97,23 @@ namespace SkyCoopServer
 
         public V3Quat GetSpawnPoint(string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                List<V3Quat> SpawnPoints = m_LoadedScenes[SceneName].m_SpawnPoints;
-                if(SpawnPoints.Count > 0)
+                Logger.Log(ConsoleColor.Red, $"[GetSpawnPoint] called on scene {SceneName} that not exist!");
+                return new V3Quat();
+            }
+
+            List<V3Quat> SpawnPoints = SceneData.m_SpawnPoints;
+            if (SpawnPoints.Count > 0)
+            {
+                if (SpawnPoints.Count == 1)
                 {
-                    if(SpawnPoints.Count == 1)
-                    {
-                        return SpawnPoints[0];
-                    }
-                    else
-                    {
-                        return SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, SpawnPoints.Count)];
-                    }
+                    return SpawnPoints[0];
+                }
+                else
+                {
+                    return SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, SpawnPoints.Count)];
                 }
             }
             return new V3Quat();
@@ -111,31 +121,36 @@ namespace SkyCoopServer
 
         public void AddGear(string SceneName, GearDataContainer DataContainer)
         {
-            LoadScene(SceneName);
-            if(m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                m_LoadedScenes[SceneName].m_Gears.Add(DataContainer.m_Data.m_GUID, DataContainer);
-
-                ServerSend.SendGearVisual(DataContainer.m_Visual, SceneName, m_ServerInstance);
+                Logger.Log(ConsoleColor.Red, $"[AddGear] called on scene {SceneName} that not exist!");
+                return;
             }
+
+            SceneData.m_Gears.Add(DataContainer.m_Data.m_GUID, DataContainer);
+
+            ServerSend.SendGearVisual(DataContainer.m_Visual, SceneName, m_ServerInstance);
         }
 
         public GearDataContainer GetGear(string SceneName, string GUID, bool Remove = false)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_Gears.ContainsKey(GUID))
+                Logger.Log(ConsoleColor.Red, $"[GetGear] called on scene {SceneName} that not exist!");
+                return null;
+            }
+
+            if (SceneData.m_Gears.ContainsKey(GUID))
+            {
+                GearDataContainer Data = SceneData.m_Gears[GUID];
+                if (Remove)
                 {
-                    GearDataContainer Data = SceneData.m_Gears[GUID];
-                    if (Remove)
-                    {
-                        SceneData.m_Gears.Remove(GUID);
-                        ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
-                    }
-                    return Data;
+                    SceneData.m_Gears.Remove(GUID);
+                    ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
                 }
+                return Data;
             }
             return null;
         }
@@ -159,220 +174,239 @@ namespace SkyCoopServer
 
         public void AddOpenableState(string SceneName, string GUID, bool OpenState)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_Openables.ContainsKey(GUID))
-                {
-                    SceneData.m_Openables[GUID] = OpenState;
-                }
-                else
-                {
-                    SceneData.m_Openables.Add(GUID, OpenState);
-                }
+                Logger.Log(ConsoleColor.Red, $"[AddOpenableState] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_Openables.ContainsKey(GUID))
+            {
+                SceneData.m_Openables[GUID] = OpenState;
+            }
+            else
+            {
+                SceneData.m_Openables.Add(GUID, OpenState);
             }
         }
 
         public void SendZone(string SceneName, NetPeer Client)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_ActiveZone != null)
-                {
-                    ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
-                    ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
-                }
+                Logger.Log(ConsoleColor.Red, $"[SendZone] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_ActiveZone != null)
+            {
+                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
+                ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
             }
         }
 
         public void AddContainer(string GUID, string CompressedJSON, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_Containers.ContainsKey(GUID))
-                {
-                    SceneData.m_Containers.Remove(GUID);
-                }
-                SceneData.m_Containers.Add(GUID, CompressedJSON);
+                Logger.Log(ConsoleColor.Red, $"[AddContainer] called on scene {SceneName} that not exist!");
+                return;
             }
+
+            if (SceneData.m_Containers.ContainsKey(GUID))
+            {
+                SceneData.m_Containers.Remove(GUID);
+            }
+            SceneData.m_Containers.Add(GUID, CompressedJSON);
         }
 
         public void RemoveContainer(string GUID, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_Containers.ContainsKey(GUID))
-                {
-                    SceneData.m_Containers.Remove(GUID);
-                }
+                Logger.Log(ConsoleColor.Red, $"[RemoveContainer] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_Containers.ContainsKey(GUID))
+            {
+                SceneData.m_Containers.Remove(GUID);
             }
         }
 
         public void AddDeathPack(DataStr.DeathPack Pack, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_DeathPacks.ContainsKey(Pack.m_GUID))
-                {
-                    SceneData.m_DeathPacks.Remove(Pack.m_GUID);
-                }
-                SceneData.m_DeathPacks.Add(Pack.m_GUID, Pack);
+                Logger.Log(ConsoleColor.Red, $"[AddDeathPack] called on scene {SceneName} that not exist!");
+                return;
             }
+
+            if (SceneData.m_DeathPacks.ContainsKey(Pack.m_GUID))
+            {
+                SceneData.m_DeathPacks.Remove(Pack.m_GUID);
+            }
+            SceneData.m_DeathPacks.Add(Pack.m_GUID, Pack);
         }
 
         public void RemoveDeathPack(string GUID, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_DeathPacks.ContainsKey(GUID))
-                {
-                    SceneData.m_DeathPacks.Remove(GUID);
-                }
+                Logger.Log(ConsoleColor.Red, $"[RemoveDeathPack] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_DeathPacks.ContainsKey(GUID))
+            {
+                SceneData.m_DeathPacks.Remove(GUID);
             }
         }
 
         public string GetContainerContent(string GUID, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_Containers.ContainsKey(GUID))
-                {
-                    return SceneData.m_Containers[GUID];
-                }
+                Logger.Log(ConsoleColor.Red, $"[GetContainerContent] called on scene {SceneName} that not exist!");
                 return "";
+            }
+            if (SceneData.m_Containers.ContainsKey(GUID))
+            {
+                return SceneData.m_Containers[GUID];
             }
             return "";
         }
 
         public int GetContainerState(string GUID, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_ContainerStats.ContainsKey(GUID))
-                {
-                    return SceneData.m_ContainerStats[GUID];
-                }
+                Logger.Log(ConsoleColor.Red, $"[GetContainerState] called on scene {SceneName} that not exist!");
                 return 0;
+            }
+            if (SceneData.m_ContainerStats.ContainsKey(GUID))
+            {
+                return SceneData.m_ContainerStats[GUID];
             }
             return 0;
         }
 
         public void SetContainerState(string GUID, int State, string SceneName)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_ContainerStats.ContainsKey(GUID))
-                {
-                    SceneData.m_ContainerStats[GUID] = State;
-                }
+                Logger.Log(ConsoleColor.Red, $"[SetContainerState] called on scene {SceneName} that not exist!");
+                return;
+            }
+            if (SceneData.m_ContainerStats.ContainsKey(GUID))
+            {
+                SceneData.m_ContainerStats[GUID] = State;
             }
         }
 
         public void SendAllOpenables(string SceneName, NetPeer Client)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-
-                foreach (string GUID in SceneData.m_Openables.Keys.ToList())
-                {
-                    ServerSend.SendOpenableState(Client, GUID, SceneData.m_Openables[GUID], false);
-                }
+                Logger.Log(ConsoleColor.Red, $"[SendAllOpenables] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+            foreach (string GUID in SceneData.m_Openables.Keys.ToList())
+            {
+                ServerSend.SendOpenableState(Client, GUID, SceneData.m_Openables[GUID], false);
             }
         }
 
         public void SendAllGears(string SceneName, NetPeer Client)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-
-                foreach (GearDataContainer Data in SceneData.m_Gears.Values.ToList())
-                {
-                    ServerSend.SendGearVisual(Data.m_Visual, Client);
-                }
+                Logger.Log(ConsoleColor.Red, $"[SendAllGears] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+            foreach (GearDataContainer Data in SceneData.m_Gears.Values.ToList())
+            {
+                ServerSend.SendGearVisual(Data.m_Visual, Client);
             }
         }
 
         public void SendAllDeathContainers(string SceneName, NetPeer Client)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-
-                foreach (string GUID in SceneData.m_DeathPacks.Keys.ToList())
-                {
-                    ServerSend.SendDeathPack(Client, SceneData.m_DeathPacks[GUID], m_ServerInstance);
-                }
+                Logger.Log(ConsoleColor.Red, $"[SendAllDeathContainers] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+            foreach (string GUID in SceneData.m_DeathPacks.Keys.ToList())
+            {
+                ServerSend.SendDeathPack(Client, SceneData.m_DeathPacks[GUID], m_ServerInstance);
             }
         }
         public void SendAllContainerStates(string SceneName, NetPeer Client)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
-            {
-                SceneData SceneData = m_LoadedScenes[SceneName];
+            SceneData SceneData = GetSceneData(SceneName);
 
-                foreach (string GUID in SceneData.m_ContainerStats.Keys.ToList())
-                {
-                    ServerSend.SendContainerState(Client, GUID, SceneData.m_ContainerStats[GUID], m_ServerInstance);
-                }
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[SendAllContainerStates] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+            foreach (string GUID in SceneData.m_ContainerStats.Keys.ToList())
+            {
+                ServerSend.SendContainerState(Client, GUID, SceneData.m_ContainerStats[GUID], m_ServerInstance);
             }
         }
 
         public void RemoveProp(string SceneName, string GUID)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
-            {
-                SceneData SceneData = m_LoadedScenes[SceneName];
+            SceneData SceneData = GetSceneData(SceneName);
 
-                if(SceneData.m_Props.ContainsKey(GUID))
-                {
-                    SceneData.m_Props.Remove(GUID);
-                }
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[RemoveProp] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_Props.ContainsKey(GUID))
+            {
+                SceneData.m_Props.Remove(GUID);
             }
         }
 
         public void UseProp(string SceneName, string GUID, bool Remove = false)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData SceneData = GetSceneData(SceneName);
+
+            if (SceneData == null)
             {
-                SceneData SceneData = m_LoadedScenes[SceneName];
-                if (SceneData.m_Props.ContainsKey(GUID))
+                Logger.Log(ConsoleColor.Red, $"[UseProp] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_Props.ContainsKey(GUID))
+            {
+                PropData Data = SceneData.m_Props[GUID];
+                OnPropUsed(SceneName, Data);
+                if (Remove)
                 {
-                    PropData Data = SceneData.m_Props[GUID];
-                    OnPropUsed(SceneName, Data);
-                    if (Remove)
+                    SceneData.m_Props.Remove(GUID);
+                    foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
                     {
-                        SceneData.m_Props.Remove(GUID);
-                        foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                         {
-                            if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
-                            {
-                                ServerSend.SendPropRemoved(Peer, GUID);
-                            }
+                            ServerSend.SendPropRemoved(Peer, GUID);
                         }
                     }
                 }
@@ -407,15 +441,17 @@ namespace SkyCoopServer
 
         public void SendAllProps(string SceneName, NetPeer Client)
         {
-            LoadScene(SceneName);
-            if (m_LoadedScenes.ContainsKey(SceneName))
-            {
-                SceneData SceneData = m_LoadedScenes[SceneName];
+            SceneData SceneData = GetSceneData(SceneName);
 
-                foreach (string GUID in SceneData.m_Props.Keys.ToList())
-                {
-                    ServerSend.SendPropCreated(Client, SceneData.m_Props[GUID]);
-                }
+            if(SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[SendAllProps] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+
+            foreach (string GUID in SceneData.m_Props.Keys.ToList())
+            {
+                ServerSend.SendPropCreated(Client, SceneData.m_Props[GUID]);
             }
         }
 

@@ -596,6 +596,7 @@ namespace SkyCoopServer
 
             public void LoadMapData(Server ServerInstance, MapData MapData)
             {
+                SkyCoopServer.Logger.Log($"Trying to load Map");
                 if (MapData != null)
                 {
                     if(MapData.Scene != null)
