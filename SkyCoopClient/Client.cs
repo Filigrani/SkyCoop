@@ -79,6 +79,7 @@ namespace SkyCoop
             { (int)Packet.Type.ClientSquadHealth, ClientHandle.ClientSquadHealth },
             { (int)Packet.Type.ServerRequestSquadHealth, ClientHandle.ServerRequestSquadHealth },
             { (int)Packet.Type.ClientTilt, ClientHandle.ClientTilt },
+            { (int)Packet.Type.ServerSquadEliminated, ClientHandle.ServerSquadEliminated },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

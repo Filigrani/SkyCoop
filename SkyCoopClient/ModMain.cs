@@ -8,6 +8,7 @@ using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using System.Text;
+using Il2CppTLD.Interactions;
 
 namespace SkyCoop
 {
@@ -104,6 +105,13 @@ namespace SkyCoop
             DebugGUI.Render();
         }
 
+        public override void OnFixedUpdate()
+        {
+            base.OnFixedUpdate();
+
+            GearsSync.Update();
+        }
+
         public override void OnUpdate()
         {
             SetAppBackgroundMode();
@@ -133,13 +141,62 @@ namespace SkyCoop
             {
                 if (GameManager.m_NewPlayerAnimation)
                 {
-                    if (GameManager.m_NewPlayerAnimation.CanTransitionToState(PlayerAnimation.State.Throwing))
+                    
+                    if (GameManager.m_PlayerManager)
                     {
-                      MeleeManager.TryToAttack();
+                        IInteraction Inter = GameManager.m_PlayerManager.ActiveInteraction;
+
+                        bool CanHit = true;
+
+                        if(Inter == null)
+                        {
+                            CanHit = true;
+                        }
+                        else
+                        {
+                            GameObject Obj = Inter.GetInteractiveObject();
+                            if (Obj)
+                            {
+                                Comps.NetworkPlayer Player = Obj.GetComponent<Comps.NetworkPlayer>();
+                                if (Player)
+                                {
+                                    CanHit = true;
+                                }
+                                else
+                                {
+                                    CanHit = false;
+                                }
+                            }
+                        }
+
+                        if (CanHit && GameManager.m_NewPlayerAnimation.CanTransitionToState(PlayerAnimation.State.Throwing))
+                        {
+                            MeleeManager.TryToAttack();
+                        }
                     }
                 }
             }
-            if(InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F6))
+            if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
+            {
+                if (GameManager.m_PlayerManager)
+                {
+                    IInteraction Inter = GameManager.m_PlayerManager.ActiveInteraction;
+
+                    if (Inter != null)
+                    {
+                        GameObject Obj = Inter.GetInteractiveObject();
+                        if (Obj)
+                        {
+                            Comps.DroppedGearVisual Gear = Obj.GetComponent<Comps.DroppedGearVisual>();
+                            if (Gear)
+                            {
+                                GameManager.GetPlayerManagerComponent().InteractiveObjectsProcessAltFire();
+                            }
+                        }
+                    }
+                }
+            }
+            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F6))
             {
                 DebugGUI.Toggle();
             }

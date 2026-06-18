@@ -8,8 +8,6 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
-using static SkyCoopServer.DataStr;
-using static System.Formats.Asn1.AsnWriter;
 
 namespace SkyCoopServer
 {
@@ -18,13 +16,13 @@ namespace SkyCoopServer
         public class ServerConfig
         {
             public int m_MaxPlayers = 4;
-            public string m_StartingRegion = "CoastalRegion";
+            public string m_StartingRegion = "MarshRegion";
             public int m_Seed = 777777;
             public int m_VoicePort = 37850;
             //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "CoastalRegion";
-            public string m_GameMode = "GunGame";
+            public string m_SceneToSpawn = "MarshRegion";
+            public string m_GameMode = "Shrink";
         }
 
         public class MapData
@@ -233,10 +231,47 @@ namespace SkyCoopServer
                 m_PlayerID = PlayerID;
             }
 
-            public void SetGameplayState(GamePlayState State)
+            public void SetGameplayState(GamePlayState State, Server ServerInstance)
             {
                 m_GamePlayState = State;
                 Logger.Log($"[DataStr.PlayerData] Client {m_GamePlayState} new gamepaly state {State}");
+
+                foreach (PlayerData OtherPlayerData in ServerInstance.m_PlayersData.GetPlayersOnScene(m_Scene))
+                {
+                    if(OtherPlayerData != null)
+                    {
+                        NetPeer Player = ServerInstance.GetClient(m_PlayerID);
+                        NetPeer OtherPlayer = ServerInstance.GetClient(OtherPlayerData.m_PlayerID);
+
+                        if(Player != OtherPlayer || ServerInstance.m_PlayersData.m_RecursiveDebug)
+                        {
+                            switch (m_GamePlayState)
+                            {
+                                case GamePlayState.Unassigned:
+                                    ServerSend.SendPlayerSceneNotification(OtherPlayer, false, m_PlayerID);
+                                    break;
+                                case GamePlayState.Alive:
+                                    ServerSend.SendPlayerSceneNotification(OtherPlayer, true, m_PlayerID);
+                                    ServerSend.SendPlayerAction(OtherPlayer, 0, m_PlayerID);
+                                    ServerSend.SendPlayerCrouch(OtherPlayer, false, m_PlayerID);
+                                    break;
+                                case GamePlayState.Dead:
+                                    ServerSend.SendPlayerAction(OtherPlayer, 5, m_PlayerID);
+                                    ServerSend.SendRemoveAllInjectedItem(m_PlayerID, ServerInstance);
+                                    ServerInstance.m_PlayersData.PlayerChangeGear(m_PlayerID, "", 0, true);
+                                    break;
+                                case GamePlayState.Spectator:
+                                    ServerSend.SendPlayerAction(OtherPlayer, 5, m_PlayerID);
+                                    ServerInstance.m_PlayersData.PlayerChangeGear(m_PlayerID, "", 0, true);
+                                    ServerSend.SendPlayerSceneNotification(OtherPlayer, false, m_PlayerID);
+                                    ServerSend.SendRemoveAllInjectedItem(m_PlayerID, ServerInstance);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
             }
 
             public void DealDamage(int Killer, float Damage, DamageType DamageType)
@@ -281,11 +316,11 @@ namespace SkyCoopServer
                     
                     if (ServerInstance.m_Rules.m_Respawns)
                     {
-                        SetGameplayState(GamePlayState.Dead);
+                        SetGameplayState(GamePlayState.Dead, ServerInstance);
                     }
                     else
                     {
-                        SetGameplayState(GamePlayState.Spectator);
+                        SetGameplayState(GamePlayState.Spectator, ServerInstance);
                     }
 
                     if(ServerInstance.m_Rules.m_HUDMode == "Shrink")
@@ -307,6 +342,17 @@ namespace SkyCoopServer
                 if (HeadShot)
                 {
                     Message.m_Flags.Add(KillFeedFlag.HeadShot);
+                }
+
+                if (!Knocked)
+                {
+                    PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(m_PlayerID);
+
+                    if (Squad != null)
+                    {
+                        ServerSend.SendSquadEliminated(ServerInstance, Squad.m_Name);
+                    }
+                    ServerInstance.m_PlayersData.DoSquadsCheck();
                 }
 
                 if (m_Damagers.Count > 0)
@@ -404,7 +450,7 @@ namespace SkyCoopServer
 
                 if (Reviver == -2)
                 {
-                    SetGameplayState(GamePlayState.Alive);
+                    SetGameplayState(GamePlayState.Alive, ServerInstance);
                     if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
                         foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
@@ -483,6 +529,13 @@ namespace SkyCoopServer
                         {
                             ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, GetTierString(ServerInstance), ServerInstance);
                             ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 1, GetTierProgressString(ServerInstance), ServerInstance);
+                        }
+                    }
+                    else
+                    {
+                        if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "GunGame")
+                        {
+                            ServerInstance.ForceToOver();
                         }
                     }
                 }

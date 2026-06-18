@@ -47,7 +47,7 @@ namespace SkyCoopServer
         public List<DataStr.PlayerData> GetPlayersOnScene(string Scene)
         {
             List<DataStr.PlayerData> ScenePlayers = new List<DataStr.PlayerData>();
-            if (Scene == "Empty" || Scene == "" || Scene == "Boot" || Scene == "MainMenu")
+            if (Scene == "Empty" || Scene == "" || Scene == "Boot" || Scene.StartsWith("MainMenu"))
             {
                 return ScenePlayers;
             }
@@ -188,7 +188,7 @@ namespace SkyCoopServer
                 Player.m_VisualData.m_GearInHands = GearName;
                 Player.m_VisualData.m_GearVariant = GearVariant;
 
-                if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
+                if(GearName != "" && Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
                 {
                     return;
                 }
@@ -236,7 +236,7 @@ namespace SkyCoopServer
             DataStr.PlayerData Player = GetPlayer(Index);
             if (Player == null)
             {
-                Player.SetGameplayState(State);
+                Player.SetGameplayState(State, s_Server);
             }
         }
 
@@ -495,14 +495,9 @@ namespace SkyCoopServer
             int Squads = 0;
             foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
             {
-                foreach (int PlayerID in Squad.m_Players)
+                if (SquadIsAlive(Squad))
                 {
-                    PlayerData Player = GetPlayer(PlayerID);
-                    if(Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
-                    {
-                        Squads++;
-                        break;
-                    }
+                    Squads++;
                 }
             }
             foreach (PlayerData Player in m_Players)
@@ -531,12 +526,25 @@ namespace SkyCoopServer
             return Alive;
         }
 
+        public void DoSquadsCheck()
+        {
+            if (s_Server.m_Rules.m_HUDMode == "Shrink")
+            {
+                if (GetSquadsAlive() <= 1)
+                {
+                    s_Server.ForceToOver();
+                }
+            }
+        }
+
         public string GetShrinkModeString()
         {
             int Squads = GetSquadsAlive();
+            int Players = GetPlayersAlive();
+
             string s = (Squads > 1 || Squads == 0) ? "s" : "";
 
-            return $"{GetPlayersAlive()} ({Squads} Squad{s})";
+            return $"{Players} ({Squads} Squad{s})";
         }
 
         public void ResetGameScores()
@@ -578,6 +586,13 @@ namespace SkyCoopServer
                         }
                     }
                     ServerSend.SendSquadHealthRequest(s_Server.GetClient(PlayerID));
+                    if (s_Server.m_Rules.m_HUDMode == "Shrink")
+                    {
+                        foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
+                        }
+                    }
                 }
                 else
                 {
@@ -594,6 +609,13 @@ namespace SkyCoopServer
                 m_Squads[SquadName].RemovePlayer(PlayerID);
                 Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} removed from squad {SquadName}");
                 ServerSend.SendAssignSquad(s_Server.GetClient(PlayerID), false);
+                if (s_Server.m_Rules.m_HUDMode == "Shrink")
+                {
+                    foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                    {
+                        ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
+                    }
+                }
             }
         }
 
@@ -619,6 +641,26 @@ namespace SkyCoopServer
                 }
             }
             return "";
+        }
+
+        public bool SquadIsAlive(PlayersSquad Squad)
+        {
+            if (Squad != null)
+            {
+                foreach (int Index in Squad.m_Players)
+                {
+                    PlayerData Data = GetPlayer(Index);
+                    if(Data != null)
+                    {
+                        if(Data.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                        {
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
         }
 
         public PlayersSquad GetPlayerSquadIn(int PlayerID)

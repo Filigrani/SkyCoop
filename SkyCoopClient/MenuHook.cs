@@ -290,7 +290,8 @@ namespace SkyCoop
                     }
 
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Join", "GAMEPLAY_JoinDescription", 1, new Action(OnJoinPressed));
-                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_Options", "GAMEPLAY_OptionsMultiplayerDescription", 2, new Action(OnSettingsPressed));
+                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_MapEditor", "GAMEPLAY_MapEditorDescription", 2, new Action(GoToMapEditor));
+                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_Options", "GAMEPLAY_OptionsMultiplayerDescription", 3, new Action(OnSettingsPressed));
 
                     __instance.m_BasicMenu.SetBackAction(new Action(OnMuliplayerBackPressed));
                 }
@@ -323,11 +324,6 @@ namespace SkyCoop
             {
                 AddButton(__instance.m_BasicMenu, "GAMEPLAY_SkyCoopSettings", "GAMEPLAY_SkyCoopSettingsDescription", 6, new Action(ShowMultiplayerSettings));
                 //AddButton(__instance.m_BasicMenu, "Server Setting Test", "Server Setting Test", 7, new Action(ShowServerSettings));
-
-                if(!ModMain.IsGameplayScene() && !ModMain.Client.m_IsReady)
-                {
-                    AddButton(__instance.m_BasicMenu, "Map editor", "Don't go here unless you know what you are doing!", 6, new Action(GoToMapEditor));
-                }
             }
         }
 

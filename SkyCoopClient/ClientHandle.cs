@@ -223,6 +223,11 @@ namespace SkyCoop
             }
             CanvasUI.AddKillFeedMessage(Message);
         }
+        public static void ServerSquadEliminated(NetDataReader Reader)
+        {
+            string SquadName = Reader.GetString();
+            CanvasUI.AddTextMessage($"Squad {SquadName} Eliminated!");
+        }
         public static void ClientName(NetDataReader Reader)
         {
             string ClientName = Reader.GetString();
@@ -393,6 +398,8 @@ namespace SkyCoop
 
         public static void ServerLeaders(NetDataReader Reader)
         {
+            PlayersManager.DeactivateAllSpectatingTargets();
+
             int Count = Reader.GetInt();
             string Str = "";
             List<string> WinnersNames = new List<string>();

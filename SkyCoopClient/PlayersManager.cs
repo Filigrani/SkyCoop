@@ -181,7 +181,8 @@ namespace SkyCoop
                 return Comps.NetworkPlayer.Actions.Harvesting;
             }
             PlayerManager PM = GameManager.GetPlayerManagerComponent();
-            if (PM.ActiveInteraction != null && PM.ActiveInteraction.GetInteractiveObject().GetComponent<HarvestableInteraction>())
+
+            if (PM.ActiveInteraction != null && PM.ActiveInteraction.GetInteractiveObject() != null && PM.ActiveInteraction.GetInteractiveObject().GetComponent<HarvestableInteraction>())
             {
                 return Comps.NetworkPlayer.Actions.Harvesting;
             }
@@ -1199,6 +1200,7 @@ namespace SkyCoop
 
             if ((StartingGear == null || StartingGear.Count == 0) && (StartingGearByTier == null || StartingGearByTier.Count == 0))
             {
+                s_ForceUpdateClothing = true;
                 return true;
             }
 
@@ -1221,7 +1223,7 @@ namespace SkyCoop
                     GiveoutKit(StartingGearByTier[Tier]);
                 }
             }
-
+            s_ForceUpdateClothing = true;
             return false; // Return false, vanila starting kit won't be given.
         }
 
@@ -1309,7 +1311,6 @@ namespace SkyCoop
                 {
                     MeleeManager.MeleeUnstove();
                 }
-
             }
             else
             {

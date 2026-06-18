@@ -779,5 +779,17 @@ namespace SkyCoopServer
             writer.Put(Tilt);
             Client.Send(writer, DeliveryMethod.Unreliable);
         }
+        public static void SendSquadEliminated(Server ServerInstance, string SquadName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ServerSquadEliminated);
+            writer.Put(SquadName);
+
+            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
     }
 }

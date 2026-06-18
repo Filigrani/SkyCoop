@@ -171,8 +171,8 @@ namespace SkyCoopServer
                             ServerSend.SendFreeze(Peer);
                             DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
                             string PlayerScene = PlayerData.m_Scene;
-                            PlayerData.SetGameplayState(GamePlayState.Unassigned);
-                            DataStr.SceneData SceneData = m_ScenesData.m_LoadedScenes[PlayerScene];
+                            PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
+                            DataStr.SceneData SceneData = m_ScenesData.GetSceneData(PlayerScene);
 
                             if (SceneData != null)
                             {

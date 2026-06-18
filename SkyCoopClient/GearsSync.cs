@@ -14,8 +14,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using static Il2CppSystem.Linq.Expressions.Interpreter.InitializeLocalInstruction;
-
 namespace SkyCoopClient
 {
     public class GearsSync
@@ -23,6 +21,62 @@ namespace SkyCoopClient
         public static GameObject s_InteractiveObjectUnderCrosshair = null;
         public static PlayerControlMode s_ControlModeBeforePickingUp = PlayerControlMode.Normal;
         public static bool s_PlaceModeAfterPickup = false;
+        public static bool s_NoSyncFlag = false;
+        public static Vector3 s_LastPickedGearPosition = Vector3.zero;
+        public static Quaternion s_LastPickedGearQuaternion = Quaternion.identity;
+        public static GearItem s_PendingRefuseGear = null;
+        public static int s_PendingRefuseGearTimerFrames = 0;
+
+        public static void Update()
+        {
+            if (s_PendingRefuseGearTimerFrames > 0)
+            {
+                s_PendingRefuseGearTimerFrames--;
+
+                if (s_PendingRefuseGearTimerFrames == 0)
+                {
+                    if (s_PendingRefuseGear)
+                    {
+                        foreach (GearItem item in GameManager.GetInventoryComponent().m_Items)
+                        {
+                            if (item && item.gameObject.GetComponent<GearItem>() == s_PendingRefuseGear)
+                            {
+                                s_PendingRefuseGear = null; // Предмет был взят.
+                                return;
+                            }
+                        }
+
+                        if (!s_PendingRefuseGear.IsInsideContainer())
+                        {
+                            SkyCoop.Logger.Log($"Gear {s_PendingRefuseGear.name} refused");
+                            SendDropItem(s_PendingRefuseGear, 0, 0, true);
+                        }
+                        else
+                        {
+                            SkyCoop.Logger.Log($"Gear {s_PendingRefuseGear.name} put back to container");
+                            //SendDropItem(s_PendingRefuseGear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
+
+                            if (s_PendingRefuseGear.m_LastContainer)
+                            {
+                                ContainersSync.HandleContainerClose(s_PendingRefuseGear.m_LastContainer);
+                            }
+                        }
+
+                        s_PendingRefuseGear = null;
+                    }
+                }
+            }
+        }
+
+        public static void SetPendingRefuseGear(GearItem Gear)
+        {
+            s_PendingRefuseGear = Gear;
+            if(s_PendingRefuseGear != null)
+            {
+                s_PendingRefuseGearTimerFrames = 2;
+            }
+        }
+
 
         [HarmonyLib.HarmonyPatch(typeof(GearItem), "Drop")]
         public class GearItem_Drop
@@ -47,6 +101,10 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
 
                 if (ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanDropItems)
                 {
@@ -83,6 +141,11 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
+
                 if (gi != null)
                 {
                     if(ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanDropItems)
@@ -100,6 +163,11 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
+
                 if (ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanDropItems)
                 {
                     __result = false;
@@ -113,6 +181,11 @@ namespace SkyCoopClient
             internal static bool Prefix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (s_NoSyncFlag)
+                {
+                    return true;
+                }
 
                 if (__instance.ActiveInteraction != null)
                 {
@@ -141,6 +214,11 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
+
                 if (__instance.ActiveInteraction != null)
                 {
                     GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
@@ -149,7 +227,7 @@ namespace SkyCoopClient
                         Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
                         if (Visual)
                         {
-                            TryPickUp(Visual.m_GUID, false);
+                            TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, false);
                         }
                         Comps.CardGameProp CardGameProp = OBJ.GetComponent<Comps.CardGameProp>();
                         if(CardGameProp)
@@ -182,7 +260,10 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                SkyCoop.Logger.Log("InteractiveObjectsProcessAltFire");
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
                 if (__instance.ActiveInteraction != null)
                 {
                     GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
@@ -191,7 +272,7 @@ namespace SkyCoopClient
                         Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
                         if (Visual)
                         {
-                            TryPickUp(Visual.m_GUID, true);
+                            TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, true);
                         }
                     }
                 }
@@ -224,6 +305,11 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
+
                 if (__result)
                 {
                     SendDropItem(__result, 0, 0, false);
@@ -236,6 +322,11 @@ namespace SkyCoopClient
             private static void Postfix(AssetReferenceGearItem assetReference, int numUnits, GearItem __result)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
 
                 if (__result && __result.name.Contains("GEAR_RevolverAmmoCasing"))
                 {
@@ -250,6 +341,11 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
+
                 SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
             }
@@ -260,6 +356,11 @@ namespace SkyCoopClient
             private static void Postfix(PlayerManager __instance, AssetReferenceGearItem assetReference, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
 
                 SkyCoop.Logger.Log($"InstantiateItemAtLocation GUID {assetReference.AssetGUID} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
@@ -272,11 +373,20 @@ namespace SkyCoopClient
             private static GameObject saveObj;
             internal static void Prefix(PlayerManager __instance)
             {
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
                 saveObj = __instance.m_ObjectToPlace;
             }
             internal static void Postfix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
 
                 if (saveObj)
                 {
@@ -295,11 +405,20 @@ namespace SkyCoopClient
             private static GameObject saveObj;
             internal static void Prefix(PlayerManager __instance)
             {
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
                 saveObj = __instance.m_ObjectToPlace;
             }
             internal static void Postfix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_NoSyncFlag)
+                {
+                    return;
+                }
 
                 if (saveObj)
                 {
@@ -312,32 +431,16 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")] // It supposed to check "Leave it" action to drop gear to server.
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")]
         private static class PlayerManager_ExitInspectGearMode
         {
-            private static GearItem gear;
-            internal static void Prefix(PlayerManager __instance)
-            {
-                gear = __instance.m_Gear;
-            }
             internal static void Postfix(PlayerManager __instance)
             {
-                //Broken. It leads to dublication bug. Because ExitInspectGearMode called even if you pickup item.
-                // and for some reason, it can't find it in inventory, and I can't check if player actaully left gear or not.
-
-                //if (gear && !gear.m_InPlayerInventory && !gear.m_InsideContainer)
-                //{
-                //    foreach (GearItem item in GameManager.GetInventoryComponent().m_Items)
-                //    {
-                //        if(item == gear)
-                //        {
-                //            return;
-                //        }
-                //    }
-                //    SkyCoop.Logger.Log("ExitInspectGearMode");
-                //    SendDropItem(gear, 0, 0, true);
-                //}
-                //__instance.m_Gear = null;
+                if (__instance.m_Gear)
+                {
+                    SetPendingRefuseGear(__instance.m_Gear);
+                }
             }
         }
 
@@ -492,6 +595,9 @@ namespace SkyCoopClient
             {
                 GameObject obj = gear.gameObject;
 
+                Vector3 v3 = gear.gameObject.transform.position;
+                Quaternion rot = gear.gameObject.transform.rotation;
+
                 if (samepose == false)
                 {
                     if (Around == null)
@@ -504,11 +610,10 @@ namespace SkyCoopClient
                         float num = UnityEngine.Random.Range(0, 1.1f);
                         Vector3 vector3 = Quaternion.Euler(0.0f, UnityEngine.Random.Range(0, 359), 0.0f) * Vector3.forward;
                         gear.StickToGroundAndOrientOnSlope(pos + vector3 * num, NavMeshCheck.IgnoreNavMesh, 0.5f);
+                        v3 = gear.gameObject.transform.position;
+                        rot = gear.gameObject.transform.rotation;
                     }
                 }
-
-                Vector3 v3 = gear.gameObject.transform.position;
-                Quaternion rot = gear.gameObject.transform.rotation;
 
                 GearItemSaveDataProxy DataProxy;
                 if (nums > 0)
@@ -593,7 +698,7 @@ namespace SkyCoopClient
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
             if (reference)
             {
-                GameObject GearObject = UnityEngine.Object.Instantiate(reference);
+                GameObject GearObject = UnityEngine.Object.Instantiate(reference, s_LastPickedGearPosition, s_LastPickedGearQuaternion);
                 GearObject.name = GearName;
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Going to deserialize...");
 
@@ -601,6 +706,8 @@ namespace SkyCoopClient
                 GearItem Gi = GearObject.GetComponent<GearItem>();
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
                 Gi.Deserialize(DataProxy, true);
+                Gi.transform.position = s_LastPickedGearPosition;
+                Gi.transform.rotation = s_LastPickedGearQuaternion;
                 GearManualPatch(Gi);
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Gear deserialized!");
 
@@ -638,7 +745,7 @@ namespace SkyCoopClient
             CanclePickingUp();
         }
 
-        public static void TryPickUp(string GUID, bool PlaceMode = false)
+        public static void TryPickUp(string GUID, Vector3 Position, Quaternion Rotation, bool PlaceMode = false)
         {
             Panel_HUD Panel;
             if(InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
@@ -648,6 +755,8 @@ namespace SkyCoopClient
                 Panel.StartItemProgressBar(10, "Picking Up...", null, new System.Action(PickUpFailedSilent));
             }
             s_PlaceModeAfterPickup = PlaceMode;
+            s_LastPickedGearPosition = Position;
+            s_LastPickedGearQuaternion = Rotation;
             ClientSend.SendGearPickUp(GUID);
         }
     }

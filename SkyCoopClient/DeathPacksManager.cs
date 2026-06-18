@@ -101,6 +101,28 @@ namespace SkyCoopClient
             Container Box = HandleDeathPack(Prefab, Position, Rotation, GUID, OwnerName);
             if (Box)
             {
+                for (int i = 0; i < GameManager.GetBloodLossComponent().GetAfflictionsCount(); i++)
+                {
+                    string Case = GameManager.GetBloodLossComponent().GetAfflictionCauseLocalizationId(i);
+
+                    if (Case.StartsWith("_ARROW_"))
+                    {
+                        string GearName = Case == "_ARROW_" ? "GEAR_Arrow" : "GEAR_ArrowHardened";
+
+                        GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
+                        if (reference)
+                        {
+                            GameObject GearObject = UnityEngine.Object.Instantiate(reference);
+                            GearItem item = GearObject.GetComponent<GearItem>();
+                            if (item != null)
+                            {
+                                item.CompleteSpawnFromCONSOLE();
+                                GameManager.GetInventoryComponent().AddGear(item);
+                            }
+                        }
+                    }
+                }
+
                 Inventory Inv = GameManager.GetInventoryComponent();
                 List<GearItem> Gears = new List<GearItem>();
                 for (int index = 0; index < Inv.m_Items.Count; ++index)

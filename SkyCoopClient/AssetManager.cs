@@ -1,10 +1,12 @@
 ﻿using Il2Cpp;
 using Il2CppInterop.Runtime;
 using Il2CppSystem.Linq;
+using Il2CppTLD.AddressableAssets;
+using Il2CppTLD.Scenes;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using System.Reflection;
-using Il2CppTLD.AddressableAssets;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using Il2CppCollection = Il2CppSystem.Collections.Generic;
 
 namespace SkyCoop
 {
@@ -46,6 +48,7 @@ namespace SkyCoop
             }
             //DumpAddressablesContent();
             //DumpPrefabsList();
+            //DumpScenes();
         }
 
         public static T GetAssetFromGame<T>(string AssetName) where T : UnityEngine.Object
@@ -222,6 +225,18 @@ namespace SkyCoop
             }
         }
 
+        public static void DumpScenes()
+        {
+            Il2CppCollection.List<IResourceLocation> scenes = AssetHelper.FindAllAssetsLocations<SceneSet>().Cast<Il2CppCollection.List<IResourceLocation>>();
+            Il2CppCollection.List<string> sceneParamaters = new Il2CppCollection.List<string>();
+
+            foreach (IResourceLocation sceneResource in scenes)
+            {
+                Logger.Log(ConsoleColor.Magenta, $"{sceneResource.PrimaryKey}");
+            }
+            sceneParamaters.Sort();
+        }
+
         public static void DumpLocalizationKeysList()
         {
             foreach (StringTableData Data in Localization.s_CurrentLanguageStringTable.m_DataFiles)
@@ -232,6 +247,22 @@ namespace SkyCoop
                 }
             }
         }
+
+        public static GearItem GetGearPrefab(string GearName)
+        {
+            GameObject reference = GetAssetFromGame<GameObject>(GearName);
+            if (reference)
+            {
+                GearItem GearItemPrefab = reference.GetComponent<GearItem>();
+
+                if (GearItemPrefab)
+                {
+                    return GearItemPrefab;
+                }
+            }
+            return null;
+        }
+
 
         public static void RegisterIlegalGearsCommand()
         {
@@ -250,7 +281,6 @@ namespace SkyCoop
                     item.CompleteSpawnFromCONSOLE();
                     GameManager.GetInventoryComponent().AddGear(item);
                 }
-
             }
         }
     }

@@ -1,6 +1,7 @@
 ﻿using AssetsTools.NET.Extra;
 using Il2Cpp;
 using Il2CppTLD.Gameplay;
+using MelonLoader;
 using SkyCoop;
 using UnityEngine;
 using static SkyCoop.Comps;
@@ -257,6 +258,8 @@ namespace SkyCoopClient
                 }
             }
         }
+
+
         [HarmonyLib.HarmonyPatch(typeof(vp_FPSCamera), "SetWeapon")]
         private static class ItemDescriptionPage_SetWeapon
         {

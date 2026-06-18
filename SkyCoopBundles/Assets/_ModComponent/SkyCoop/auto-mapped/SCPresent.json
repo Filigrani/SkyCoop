@@ -1,0 +1,35 @@
+{
+  "ModGenericComponent": {
+    "DisplayNameLocalizationId": "GAMEPLAY_SCPresent",
+    "DescriptionLocalizatonId": "GAMEPLAY_SCPresentDescription",
+    "InventoryActionLocalizationId": "GAMEPLAY_Open",
+    "WeightKG": 1.0,
+    "DaysToDecay": 0,
+    "MaxHP": 100.0,
+    "InitialCondition": "Random",
+    "InventoryCategory": "Tool",
+    "PickUpAudio": "Play_SndInvBandageCloth",
+    "PutBackAudio": "Play_SndInvBandageCloth",
+    "StowAudio": "Play_InventoryStow",
+    "WornOutAudio": "",
+    "InspectOnPickup": true,
+    "InspectDistance": 0.4,
+    "InspectAngles": [
+      0.0,
+      0.0,
+      0.0
+    ],
+    "InspectOffset": [
+      0.0,
+      0.03,
+      0.0
+    ],
+    "InspectScale": [
+      0.4,
+      0.4,
+      0.4
+    ],
+    "NormalModel": "",
+    "InspectModel": ""
+  }
+}

@@ -453,6 +453,14 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return; }
 
                 Comps.OtherPlayerBullet OPB = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>();
+                Comps.BulletWallBangHook BWH = __instance.gameObject.GetComponent<Comps.BulletWallBangHook>();
+                if (BWH == null)
+                {
+                    BWH = __instance.gameObject.AddComponent<Comps.BulletWallBangHook>();
+                    BWH.m_ShootPosition = __instance.transform.position;
+                    BWH.m_ShootRotation = __instance.transform.rotation;
+                    BWH.m_ShootDirection = __instance.transform.forward;
+                }
                 if (OPB == null)
                 {
                     string ProjectileName = "";
@@ -464,15 +472,7 @@ namespace SkyCoopClient
                     {
                         ProjectileName = "Revolver";
                     }
-                    ClientSend.SendProjectile(__instance.transform.position, __instance.transform.rotation, ProjectileName);
-                }
-                Comps.BulletWallBangHook BWH = __instance.gameObject.GetComponent<Comps.BulletWallBangHook>();
-                if(BWH == null)
-                {
-                    BWH = __instance.gameObject.AddComponent<Comps.BulletWallBangHook>();
-                    BWH.m_ShootPosition = __instance.transform.position;
-                    BWH.m_ShootRotation = __instance.transform.rotation;
-                    BWH.m_ShootDirection = __instance.transform.forward;
+                    ClientSend.SendProjectile(__instance.transform.position, __instance.transform.rotation, ProjectileName, BWH.m_WallBangs == 3);
                 }
             }
         }

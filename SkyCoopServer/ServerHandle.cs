@@ -581,8 +581,6 @@ namespace SkyCoopServer
         {
             Logger.Log(ConsoleColor.Cyan, $"Player {Player.m_PlayerName} (ID {Player.m_PlayerID}) sent CMD {CMD}");
 
-            
-
             switch (CMD)
             {
                 case "recurs":
@@ -624,6 +622,18 @@ namespace SkyCoopServer
                     ServerInstance.m_Rules.m_PVP = !ServerInstance.m_Rules.m_PVP;
                     ServerSend.SendConfigUpdated(ServerInstance);
                     Logger.Log(ConsoleColor.Green, $"New m_Rules.m_PVP flag is {ServerInstance.m_Rules.m_PVP}");
+                    break;
+                case "gungame":
+                    ServerInstance.ForceToOver();
+                    ServerInstance.m_Config.m_GameMode = "GunGame";
+                    break;
+                case "dm":
+                    ServerInstance.ForceToOver();
+                    ServerInstance.m_Config.m_GameMode = "DM";
+                    break;
+                case "shrink":
+                    ServerInstance.ForceToOver();
+                    ServerInstance.m_Config.m_GameMode = "Shrink";
                     break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
