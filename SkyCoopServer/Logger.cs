@@ -3,7 +3,6 @@ namespace SkyCoopServer
 {
     public class Logger
     {
-        public static List<LogData> Logsbuffer = new List<LogData>();
         public struct LogData
         {
             public ConsoleColor m_Color = ConsoleColor.White;
@@ -21,11 +20,11 @@ namespace SkyCoopServer
 
         public static void Log(ConsoleColor Color, string Message)
         {
-            Logsbuffer.Add(new LogData(Color, Message));
+            Server.OnLog(new LogData(Color, Message));
         }
         public static void Log(string Message)
         {
-            Logsbuffer.Add(new LogData(Message));
+            Server.OnLog(new LogData(Message));
         }
     }
 }

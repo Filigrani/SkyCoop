@@ -428,5 +428,14 @@ namespace SkyCoop
             writer.Put(Tilt);
             SendToHost(writer);
         }
+
+        public static void SendRequestPresent()
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRequestPresent);
+            writer.Put(true);
+            SendToHost(writer);
+        }
     }
 }

@@ -1,5 +1,6 @@
 ﻿using MelonLoader;
 using SkyCoopClient;
+using SkyCoopServer;
 
 namespace SkyCoop
 {
@@ -27,6 +28,9 @@ namespace SkyCoop
             MelonLogger.Msg(Color, obj);
             DebugConsole.ConsoleLog(obj.ToString());
         }
-
+        public static void HandleServerLog(SkyCoopServer.Logger.LogData Data)
+        {
+            MelonLogger.Msg(Data.m_Color, $"[SERVER] {Data.m_Message}");
+        }
     }
 }

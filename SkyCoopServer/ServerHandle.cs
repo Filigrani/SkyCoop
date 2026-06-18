@@ -676,5 +676,23 @@ namespace SkyCoopServer
             float Tilt = Reader.GetFloat();
             ServerInstance.m_PlayersData.PlayerTilted(Client.Id, Tilt);
         }
+
+        public static void ClientRequestPresent(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            bool Bool = Reader.GetBool();
+
+            string GearName = LootTableManager.GetRandomLoot("Present");
+
+            Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} requrest gear from present giving them {GearName}");
+
+            if (!string.IsNullOrEmpty(GearName))
+            {
+                ServerSend.SendPickUpGear(Client, GearName, "", true);
+            }
+            else
+            {
+                ServerSend.SendPickUpGearFailed(Client);
+            }
+        }
     }
 }

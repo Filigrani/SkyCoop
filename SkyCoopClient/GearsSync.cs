@@ -691,7 +691,7 @@ namespace SkyCoopClient
             }
         }
 
-        public static void HandleGearPickUp(string GearName, string JSON)
+        public static void HandleGearPickUp(string GearName, string JSON, bool DropAround)
         {
             CanclePickingUp();
             //SkyCoop.Logger.Log(ConsoleColor.Green, $"HandleGearPickUp {GearName}");
@@ -699,15 +699,25 @@ namespace SkyCoopClient
             if (reference)
             {
                 GameObject GearObject = UnityEngine.Object.Instantiate(reference, s_LastPickedGearPosition, s_LastPickedGearQuaternion);
+
                 GearObject.name = GearName;
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Going to deserialize...");
 
                 GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(JSON);
                 GearItem Gi = GearObject.GetComponent<GearItem>();
+
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
                 Gi.Deserialize(DataProxy, true);
-                Gi.transform.position = s_LastPickedGearPosition;
-                Gi.transform.rotation = s_LastPickedGearQuaternion;
+                if (DropAround)
+                {
+                    Gi.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
+                }
+                else
+                {
+                    Gi.transform.position = s_LastPickedGearPosition;
+                    Gi.transform.rotation = s_LastPickedGearQuaternion;
+                }
+
                 GearManualPatch(Gi);
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Gear deserialized!");
 

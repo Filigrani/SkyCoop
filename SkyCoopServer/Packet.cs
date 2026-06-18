@@ -71,6 +71,7 @@ namespace SkyCoopServer
             ServerRequestSquadHealth,
             ClientTilt,
             ServerSquadEliminated,
+            ClientRequestPresent,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

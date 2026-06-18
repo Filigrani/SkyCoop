@@ -22,6 +22,14 @@ namespace SkyCoopServer
         public PlayersDataManager m_PlayersData;
         public ScenesDataManager m_ScenesData;
 
+        public delegate void LogEvent(Logger.LogData Data);
+        public static event LogEvent? OnLogEvent;
+
+        public static void OnLog(Logger.LogData Data)
+        {
+            OnLogEvent?.Invoke(Data);
+        }
+
         private DateTime s_NextSecondCall;
 
 
@@ -66,6 +74,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientSV_CMD, ServerHandle.ClientSV_CMD },
             { (int)Packet.Type.ClientSquadHealth, ServerHandle.ClientSquadHealth },
             { (int)Packet.Type.ClientTilt, ServerHandle.ClientTilt },
+            { (int)Packet.Type.ClientRequestPresent, ServerHandle.ClientRequestPresent },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

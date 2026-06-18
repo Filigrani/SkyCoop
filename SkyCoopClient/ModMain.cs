@@ -31,6 +31,8 @@ namespace SkyCoop
             DebugConsole.RegisterCommands();
             Settings.Init();
             FilesManager.InitFolders();
+
+            Server.OnLogEvent += Logger.HandleServerLog;
         }
 
         public static void SetAppBackgroundMode()
@@ -128,13 +130,6 @@ namespace SkyCoop
             if(Server != null && Server.m_IsReady)
             {
                 Server.Update();
-
-                if(SkyCoopServer.Logger.Logsbuffer.Count > 0)
-                {
-                    SkyCoopServer.Logger.LogData log = SkyCoopServer.Logger.Logsbuffer[0];
-                    SkyCoopServer.Logger.Logsbuffer.Remove(log);
-                    Logger.Log(log.m_Color, log.m_Message);
-                }
             }
 
             if (InputManager.GetFirePressed(InputManager.m_CurrentContext))

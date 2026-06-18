@@ -315,7 +315,7 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON)
+        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON, bool DropAround = false)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientPickUpGear);
@@ -323,6 +323,7 @@ namespace SkyCoopServer
             writer.Put(true); // First bool here because ClientPickUpGear also re-use failed pickup packet, so, if client reads first bool as false, it's indicated this is failed pickup package.
             writer.Put(GearName);
             writer.Put(JSON);
+            writer.Put(DropAround);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
