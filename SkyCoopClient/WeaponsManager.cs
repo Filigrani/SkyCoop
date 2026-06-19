@@ -333,7 +333,7 @@ namespace SkyCoopClient
                         if (ProjectileName == "GEAR_NoiseMaker")
                         {
                             component1.PrepareForThrow();
-                            component.m_NoiseMakerItem.m_Thrown = true;
+                            component1.m_Thrown = true;
                             Rigidbody rigidbody = component.GetComponent<Rigidbody>();
                             if (rigidbody == null)
                             {
@@ -775,6 +775,31 @@ namespace SkyCoopClient
                 UnityEngine.Object.Destroy(__instance.gameObject);
 
                 return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerAnimation), "Update")]
+        public class PlayerAnimation_Update
+        {
+            public static void Prefix(PlayerAnimation __instance)
+            {
+                // Stupid hack for noisemaker not fix vanila game bug, about droping noisemaker leads to animation controller soft lock, if lit noisemaker droped.
+                if (__instance.m_State == PlayerAnimation.State.Explode)
+                {
+                    if(__instance.m_PlayerStateTransitions == null)
+                    {
+                        GameObject Obj = AssetManager.GetAssetFromGame<GameObject>("GEAR_NoiseMaker");
+                        if (Obj)
+                        {
+                            FirstPersonItem FPI = Obj.GetComponent<FirstPersonItem>();
+                            if(FPI && FPI.m_PlayerStateTransitions)
+                            {
+                                __instance.m_PlayerStateTransitions = FPI.m_PlayerStateTransitions;
+                                __instance.MaybeSetState(PlayerAnimation.State.Hidden);
+                            }
+                        }
+                    }
+                }
             }
         }
     }

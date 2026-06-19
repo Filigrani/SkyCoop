@@ -695,6 +695,16 @@ namespace SkyCoopClient
         {
             CanclePickingUp();
             //SkyCoop.Logger.Log(ConsoleColor.Green, $"HandleGearPickUp {GearName}");
+
+            bool Explosive = false;
+
+            if (GearName.EndsWith("_Boom"))
+            {
+                GearName = GearName.Replace("_Boom", "");
+                Explosive = true;
+            }
+
+
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
             if (reference)
             {
@@ -716,6 +726,15 @@ namespace SkyCoopClient
                 {
                     Gi.transform.position = s_LastPickedGearPosition;
                     Gi.transform.rotation = s_LastPickedGearQuaternion;
+                }
+
+                if (Explosive)
+                {
+                    if (Gi.m_NoiseMakerItem)
+                    {
+                        Gi.m_NoiseMakerItem.Ignite();
+                        Gi.SetNormalizedHP(0.3f);
+                    }
                 }
 
                 GearManualPatch(Gi);
