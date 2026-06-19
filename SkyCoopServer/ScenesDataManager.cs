@@ -79,7 +79,9 @@ namespace SkyCoopServer
             foreach (string LoadedSceneName in m_LoadedScenes.Keys.ToArray())
             {
                 bool CanUnload = true;
-                foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == LoadedSceneName)
                     {
@@ -402,7 +404,9 @@ namespace SkyCoopServer
                 if (Remove)
                 {
                     SceneData.m_Props.Remove(GUID);
-                    foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                    List<NetPeer> peers = new List<NetPeer>();
+                    m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
                     {
                         if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                         {
@@ -429,7 +433,9 @@ namespace SkyCoopServer
 
                 CardGamesManager.StartNewGame(NewProp.guid, SceneName, m_ServerInstance);
 
-                foreach (NetPeer Peer in m_ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                     {

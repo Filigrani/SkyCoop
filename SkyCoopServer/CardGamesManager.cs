@@ -51,7 +51,10 @@ namespace SkyCoopServer
                 SkyCoopServer.Logger.Log($"CardGamesManager TryJoinGame {GUID} ClinetID {PlayerID} GamePlayerID {PokerID}");
                 m_Games[GUID].SetNewPlayer(PokerID, PlayerID);
                 string SceneName = ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene;
-                foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+
+                List<NetPeer> peers = new List<NetPeer>();
+                ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                     {
@@ -629,7 +632,9 @@ namespace SkyCoopServer
 
             public void SendCurrentTurnPlayer()
             {
-                foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                s_Server.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)
                     {
@@ -639,7 +644,9 @@ namespace SkyCoopServer
             }
             public void SendCurrentDealer()
             {
-                foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                s_Server.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)
                     {
@@ -652,7 +659,9 @@ namespace SkyCoopServer
             {
                 for (int i = 0; i < PlayerChips.Count; i++)
                 {
-                    foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
                     {
                         if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)
                         {
@@ -666,7 +675,9 @@ namespace SkyCoopServer
             {
                 for (int i = 0; i < CurrentBets.Count; i++)
                 {
-                    foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
                     {
                         if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)
                         {
@@ -687,7 +698,9 @@ namespace SkyCoopServer
                         SendEmptyCard = true;
                     }
 
-                    foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
                     {
                         if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)
                         {
@@ -717,7 +730,9 @@ namespace SkyCoopServer
                             SendEmptyCard = true;
                         }
 
-                        foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                        List<NetPeer> peers = new List<NetPeer>();
+                        s_Server.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
                         {
                             if (s_Server.GetPlayerDataByNetPeer(Peer).m_Scene == s_Scene)
                             {

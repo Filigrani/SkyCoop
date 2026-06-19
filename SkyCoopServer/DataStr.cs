@@ -325,7 +325,9 @@ namespace SkyCoopServer
 
                     if(ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
-                        foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        List<NetPeer> peers = new List<NetPeer>();
+                        ServerInstance.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
                         {
                             ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                         }
@@ -453,7 +455,9 @@ namespace SkyCoopServer
                     SetGameplayState(GamePlayState.Alive, ServerInstance);
                     if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
-                        foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                        List<NetPeer> peers = new List<NetPeer>();
+                        ServerInstance.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
                         {
                             ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                         }
@@ -691,7 +695,9 @@ namespace SkyCoopServer
                         foreach (PropData Prop in MapData.Props)
                         {
                             m_Props.Add(Prop.guid, Prop);
-                            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                            List<NetPeer> peers = new List<NetPeer>();
+                            ServerInstance.m_Instance.GetConnectedPeers(peers);
+                            foreach (NetPeer Peer in peers.ToArray())
                             {
                                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == m_SceneName)
                                 {
@@ -1145,7 +1151,9 @@ namespace SkyCoopServer
 
             public void DamageCheck()
             {
-                foreach (NetPeer Peer in s_ServerInstance.m_Instance.ConnectedPeerList.ToList())
+                List<NetPeer> peers = new List<NetPeer>();
+                s_ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToList())
                 {
                     PlayerData PlayerData = s_ServerInstance.GetPlayerDataByNetPeer(Peer);
                     if(PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)

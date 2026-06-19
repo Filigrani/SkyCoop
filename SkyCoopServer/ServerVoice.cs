@@ -27,7 +27,9 @@ namespace SkyCoopServer
             List<int> Indexes = new List<int>();
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     Indexes.Add(Peer.Id);
                 }
@@ -39,7 +41,9 @@ namespace SkyCoopServer
         {
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if (Peer.Id == Index)
                     {
@@ -77,7 +81,9 @@ namespace SkyCoopServer
 
         public void SendVoiceToAll(NetPeer Peer, byte[] Data, int ClientId)
         {
-            foreach (NetPeer _Peer in m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer _Peer in peers.ToArray())
             {
                 DataStr.PlayerHearing HearingMode = m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(ClientId, _Peer.Id);
 

@@ -20,7 +20,9 @@ namespace SkyCoopServer
             ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
             ServerSend.SendClientName(Client, Client.Id, NewPlayerName);
 
-            foreach (NetPeer OtherPeer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer OtherPeer in peers.ToArray())
             {
                 if(OtherPeer.Id != Client.Id)
                 {
@@ -197,7 +199,9 @@ namespace SkyCoopServer
 
             ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID)).m_VisualData.m_InjectedItems.Add(injectedItem);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -212,7 +216,9 @@ namespace SkyCoopServer
             string GearName = Reader.GetString();
             int DamageZone = Reader.GetInt();
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -320,7 +326,9 @@ namespace SkyCoopServer
                 }
             }
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != Client.Id)
                 {
@@ -350,7 +358,9 @@ namespace SkyCoopServer
             string GUID = Reader.GetString();
             bool OpenState = Reader.GetBool();
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != Client.Id)
                 {
@@ -373,7 +383,9 @@ namespace SkyCoopServer
             PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
             Data.m_VisualData.m_ClothingData = ClothingData;
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != Client.Id || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -394,7 +406,10 @@ namespace SkyCoopServer
             }
             string GUID = Reader.GetString();
             bool BindItNow = Reader.GetBool();
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Peer);
                 if (Peer.Id != Client.Id)
@@ -422,7 +437,9 @@ namespace SkyCoopServer
 
             if (!string.IsNullOrEmpty(GUID))
             {
-                foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     PlayerData OtherData = ServerInstance.GetPlayerDataByNetPeer(Peer);
 
@@ -454,7 +471,9 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.AddDeathPack(Pack, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
             ServerInstance.m_ScenesData.AddContainer(Pack.m_GUID, JSONCompressed, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != Client.Id)
                 {
@@ -472,7 +491,9 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.RemoveDeathPack(GUID, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
             ServerInstance.m_ScenesData.RemoveContainer(GUID, ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene)
                 {
@@ -515,7 +536,9 @@ namespace SkyCoopServer
             string Scene = ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene;
             ServerInstance.m_ScenesData.SetContainerState(GUID, State, Scene);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Scene)
                 {
@@ -556,7 +579,9 @@ namespace SkyCoopServer
         {
             string Scene = ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_Scene;
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Scene)
                 {
@@ -577,9 +602,12 @@ namespace SkyCoopServer
             }
         }
 
-        public static void ProcessCMD(Server ServerInstance, string CMD, PlayerData Player)
+        public static void ProcessCMD(Server ServerInstance, string CMD, PlayerData Player = null)
         {
-            Logger.Log(ConsoleColor.Cyan, $"Player {Player.m_PlayerName} (ID {Player.m_PlayerID}) sent CMD {CMD}");
+            if (Player != null)
+            {
+                Logger.Log(ConsoleColor.Cyan, $"Player {Player.m_PlayerName} (ID {Player.m_PlayerID}) sent CMD {CMD}");
+            }
 
             switch (CMD)
             {
@@ -590,33 +618,57 @@ namespace SkyCoopServer
                     Logger.Log(ConsoleColor.Green, $"New m_RecursiveDebug flag is {ServerInstance.m_PlayersData.m_RecursiveDebug}");
                     break;
                 case "addtier":
-                    Player.AddTier(ServerInstance);
+                    if (Player != null)
+                    {
+                        Player.AddTier(ServerInstance);
+                    }
                     break;
                 case "removetier":
-                    Player.RemoveTier(ServerInstance);
+                    if (Player != null)
+                    {
+                        Player.RemoveTier(ServerInstance);
+                    }
                     break;
                 case "addkill":
                 case "addscore":
-                    Player.AddKill(ServerInstance);
+                    if (Player != null)
+                    {
+                        Player.AddKill(ServerInstance);
+                    }
                     break;
                 case "removekill":
                 case "removescore":
-                    Player.RemoveKill(ServerInstance);
+                    if (Player != null)
+                    {
+                        Player.RemoveKill(ServerInstance);
+                    }
                     break;
                 case "adddeath":
-                    Player.AddDeath(ServerInstance);
+                    if (Player != null)
+                    {
+                        Player.AddDeath(ServerInstance);
+                    }
                     break;
                 case "addassist":
-                    Player.AddAssist(ServerInstance);
+                    if (Player != null)
+                    {
+                        Player.AddAssist(ServerInstance);
+                    }
                     break;
                 case "nextmap":
                     ServerInstance.ForceToOver();
                     break;
                 case "squad":
-                    ServerInstance.m_PlayersData.CreateRandomSquadForPlayer(Player.m_PlayerID);
+                    if (Player != null)
+                    {
+                        ServerInstance.m_PlayersData.CreateRandomSquadForPlayer(Player.m_PlayerID);
+                    }
                     break;
                 case "join":
-                    ServerInstance.m_PlayersData.JoinRandomSquad(Player.m_PlayerID);
+                    if (Player != null)
+                    {
+                        ServerInstance.m_PlayersData.JoinRandomSquad(Player.m_PlayerID);
+                    }
                     break;
                 case "pvp":
                     ServerInstance.m_Rules.m_PVP = !ServerInstance.m_Rules.m_PVP;

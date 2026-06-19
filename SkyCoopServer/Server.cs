@@ -107,7 +107,9 @@ namespace SkyCoopServer
             List<int> Indexes = new List<int>();
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     Indexes.Add(Peer.Id);
                 }
@@ -128,7 +130,9 @@ namespace SkyCoopServer
         {
             if (m_Instance != null)
             {
-                foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     if(Peer.Id == Index)
                     {
@@ -175,7 +179,9 @@ namespace SkyCoopServer
                     {
                         m_PendingGameModeOverTimer = 25;
 
-                        foreach (NetPeer Peer in m_Instance.ConnectedPeerList.ToArray())
+                        List<NetPeer> peers = new List<NetPeer>();
+                        m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
                         {
                             ServerSend.SendFreeze(Peer);
                             DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);

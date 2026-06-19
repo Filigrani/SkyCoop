@@ -116,7 +116,9 @@ namespace SkyCoopServer
             writer.Put(PlaySound);
 
             DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if(Peer.Id != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -183,7 +185,9 @@ namespace SkyCoopServer
             }
             Logger.Log($"[ServerSend] SendKillFeed\n- m_Killer: {Message.m_Killer}\n- m_Victim: {Message.m_Victim}\n- m_Assist: {Message.m_Assist}\n - m_DeathReason: {Message.m_DeathReason.ToString()}\n- m_Flags:{frags}");
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
@@ -203,7 +207,9 @@ namespace SkyCoopServer
 
             DataStr.PlayerData Shooter = ServerInstance.m_PlayersData.GetPlayer(Client.Id);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != Shooter.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -266,7 +272,9 @@ namespace SkyCoopServer
         public static void SendRemoveAllInjectedItem(int PlayerID, Server ServerInstance)
         {
             DataStr.PlayerData Data = ServerInstance.m_PlayersData.GetPlayer(PlayerID);
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -288,7 +296,9 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientGettingDamage);
             writer.Put(PlayerID);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                 {
@@ -298,7 +308,9 @@ namespace SkyCoopServer
         }
         public static void SendGearVisual(DataStr.GearDataVisual Visual, string SceneName, Server ServerInstance)
         {
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
@@ -345,7 +357,9 @@ namespace SkyCoopServer
 
             writer.Put(GUID);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
@@ -389,7 +403,9 @@ namespace SkyCoopServer
 
         public static void SendZoneUpdate(string SceneName, Vector3 Center, float Radius, Server ServerInstance)
         {
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
@@ -404,7 +420,9 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientGameModeTimer);
 
             writer.Put(Seconds);
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
@@ -448,7 +466,9 @@ namespace SkyCoopServer
             writer.Put(ServerInstance.m_Config);
             writer.Put(ServerInstance.m_Rules);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToList())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
@@ -458,7 +478,9 @@ namespace SkyCoopServer
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerChangesMap);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToList())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
@@ -478,7 +500,9 @@ namespace SkyCoopServer
             writer.Put(Position);
             writer.Put(Rotation);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToList())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
@@ -521,7 +545,9 @@ namespace SkyCoopServer
             writer.Put(PlayerID);
             writer.Put(Status);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToList())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToList())
             {
                 if(Peer.Id != PlayerID)
                 {
@@ -594,7 +620,9 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientHUDTimerPrefix);
             writer.Put(Prefix);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
@@ -787,7 +815,9 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ServerSquadEliminated);
             writer.Put(SquadName);
 
-            foreach (NetPeer Peer in ServerInstance.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }

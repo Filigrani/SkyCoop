@@ -54,7 +54,9 @@ namespace SkyCoopServer
 
             if(s_Server != null)
             {
-                foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                List<NetPeer> peers = new List<NetPeer>();
+                s_Server.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
                 {
                     DataStr.PlayerData Data = s_Server.GetPlayerDataByNetPeer(Peer);
                     if (Data != null && Data.m_Scene == Scene)
@@ -434,7 +436,9 @@ namespace SkyCoopServer
         {
             m_Players[PlayerID] = new PlayerData(PlayerID);
 
-            foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            s_Server.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 if (Peer.Id != PlayerID)
                 {
@@ -476,7 +480,9 @@ namespace SkyCoopServer
             List<int> Leaders = new List<int>();
             List<DataStr.DMScore> Scores = new List<DMScore>();
 
-            foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+            List<NetPeer> peers = new List<NetPeer>();
+            s_Server.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
             {
                 Scores.Add(GetScore(Peer.Id));
             }
@@ -588,7 +594,9 @@ namespace SkyCoopServer
                     ServerSend.SendSquadHealthRequest(s_Server.GetClient(PlayerID));
                     if (s_Server.m_Rules.m_HUDMode == "Shrink")
                     {
-                        foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                        List<NetPeer> peers = new List<NetPeer>();
+                        s_Server.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
                         {
                             ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
                         }
@@ -611,7 +619,9 @@ namespace SkyCoopServer
                 ServerSend.SendAssignSquad(s_Server.GetClient(PlayerID), false);
                 if (s_Server.m_Rules.m_HUDMode == "Shrink")
                 {
-                    foreach (NetPeer Peer in s_Server.m_Instance.ConnectedPeerList.ToArray())
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
                     {
                         ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
                     }
