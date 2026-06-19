@@ -162,6 +162,8 @@ namespace SkyCoop
 
         public static void OnDisconnectConfirmed()
         {
+            ModMain.s_MapEditor = false;
+            DebugGUI.s_Open = false;
             PlayersManager.DestoryPlayers();
             if (ModMain.Client != null && ModMain.Client.m_IsReady)
             {
@@ -183,13 +185,13 @@ namespace SkyCoop
 
         public static void OnDisconnectPressed()
         {
-            ModMain.s_MapEditor = false;
             RemovePleaseWait();
+            Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+            string TextLocID = "";
+            string DisconnectLocID = "";
 
-            if (ModMain.Client != null && ModMain.Client.m_Instance != null)
+            if (ModMain.Client.m_IsReady)
             {
-                Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
-                string TextLocID = "";
                 if (ModMain.Server.m_IsReady)
                 {
                     TextLocID = "GAMEPLAY_DisconnectConfirmationHost";
@@ -198,19 +200,22 @@ namespace SkyCoop
                 {
                     TextLocID = "GAMEPLAY_DisconnectConfirmation";
                 }
-                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, TextLocID, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Disconnect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
+                DisconnectLocID = "GAMEPLAY_Disconnect";
             }
+            else
+            {
+                TextLocID = "GAMEPLAY_CloseMapEditorConfirmation";
+                DisconnectLocID = "GAMEPLAY_Quit";
+            }
+            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, TextLocID, Panel_Confirmation.ButtonLayout.Button_2, DisconnectLocID, "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
         }
 
         public static void OnDisconnected(string Reason = "Unknown")
         {
             RemovePleaseWait();
 
-            if (ModMain.Client != null && ModMain.Client.m_Instance != null)
-            {
-                Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
-                Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, $"Server shutdown\nReason: {Reason}", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
-            }
+            Panel_Confirmation Con = InterfaceManager.GetPanel<Panel_Confirmation>();
+            Con.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, $"Server shutdown\nReason: {Reason}", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, new Action(OnDisconnectConfirmed), null);
         }
 
         public static void OnJoinConfirm()
@@ -255,7 +260,7 @@ namespace SkyCoop
 
         public static void OnMapEditorTools()
         {
-
+            DebugGUI.Toggle();
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "ConfigureMenu", null)]

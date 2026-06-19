@@ -25,6 +25,7 @@ namespace SkyCoopClient
 
             if (ModMain.Client.m_IsReady)
             {
+                GearsSync.s_PlaceModeAfterPickup = false;
                 ClientSend.SendRequestPresent();
             }
         }

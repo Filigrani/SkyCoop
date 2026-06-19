@@ -191,10 +191,6 @@ namespace SkyCoop
                     }
                 }
             }
-            if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.F6))
-            {
-                DebugGUI.Toggle();
-            }
 
             if (CanvasUI.s_SpeakingIndicator)
             {

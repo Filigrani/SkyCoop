@@ -3,10 +3,10 @@
     "DisplayNameLocalizationId": "GAMEPLAY_SCPresent",
     "DescriptionLocalizatonId": "GAMEPLAY_SCPresentDescription",
     "InventoryActionLocalizationId": "GAMEPLAY_Open",
-    "WeightKG": 1.0,
+    "WeightKG": 0.5,
     "DaysToDecay": 0,
     "MaxHP": 100.0,
-    "InitialCondition": "Random",
+    "InitialCondition": "Perfect",
     "InventoryCategory": "Tool",
     "PickUpAudio": "Play_SndInvBandageCloth",
     "PutBackAudio": "Play_SndInvBandageCloth",
@@ -21,13 +21,13 @@
     ],
     "InspectOffset": [
       0.0,
-      0.03,
+      -0.06,
       0.0
     ],
     "InspectScale": [
-      0.4,
-      0.4,
-      0.4
+      0.3,
+      0.3,
+      0.3
     ],
     "NormalModel": "",
     "InspectModel": ""
