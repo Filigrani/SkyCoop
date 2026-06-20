@@ -249,6 +249,11 @@ namespace SkyCoopClient
                         {
                             Vizual.Place();
                         }
+                        Comps.NetworkPlayer Player = OBJ.GetComponent<Comps.NetworkPlayer>();
+                        if (Player)
+                        {
+                            //PlayersManager.TryReviveOtherPlayer(Player);
+                        }
                     }
                 }
             }

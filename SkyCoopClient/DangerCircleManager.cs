@@ -33,7 +33,7 @@ namespace SkyCoop
 
             if (s_DangerCircle)
             {
-                s_DangerCircle.m_TargetScale = Radius;
+                s_DangerCircle.m_TargetRadius = Radius;
                 s_DangerCircle.m_Center = Center;
             }
         }

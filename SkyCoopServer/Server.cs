@@ -31,7 +31,10 @@ namespace SkyCoopServer
             OnLogEvent?.Invoke(Data);
         }
 
+        // Time
         private DateTime s_NextSecondCall;
+        private DateTime s_PreviousTickTime;
+        private float s_DeltaTime = 0;
 
 
         public delegate void PacketHandler(NetPeer Client, NetDataReader Reader, Server ServerInstance);
@@ -146,6 +149,8 @@ namespace SkyCoopServer
 
         public void Update()
         {
+            s_DeltaTime = (float)(DateTime.Now - s_PreviousTickTime).TotalSeconds;
+
             if (m_Instance != null && m_IsReady)
             {
                 m_Instance.PollEvents();
@@ -155,6 +160,10 @@ namespace SkyCoopServer
                 s_NextSecondCall = DateTime.Now.AddSeconds(1);
                 EverySecond();
             }
+
+            m_ScenesData.UpdateZone(s_DeltaTime);
+
+            s_PreviousTickTime = DateTime.Now;
         }
 
         public bool CanRespawn()
@@ -209,7 +218,6 @@ namespace SkyCoopServer
                     ChangeGameMode(m_Config.m_GameMode);
                 }
             }
-            m_ScenesData.UpdateZone();
         }
 
         public void ChangeGameMode(string GameMode)

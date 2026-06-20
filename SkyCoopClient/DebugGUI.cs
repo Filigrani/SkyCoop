@@ -515,7 +515,7 @@ namespace SkyCoopClient
                             float yPos = i * ___listItemHeight;
 
                             GUI.Label(new Rect(5, yPos, ___listItemWidth, ___listItemHeight),
-                                $"Speed {ZoneEditor.m_Config.Stages[i].ShrinkSpeed}, Time {ZoneEditor.m_Config.Stages[i].StageTime}, Damage {ZoneEditor.m_Config.Stages[i].DamagePerSecond}");
+                                $"Shrink {ZoneEditor.m_Config.Stages[i].ShrinkTime}, Time {ZoneEditor.m_Config.Stages[i].StageTime}, Damage {ZoneEditor.m_Config.Stages[i].DamagePerSecond}");
                         }
                     }
 
@@ -528,19 +528,19 @@ namespace SkyCoopClient
                     {
                         float SliderY = 85 + ___scrollViewHeight;
 
-                        float PreviousRadius = ZoneEditor.m_Config.StartingRadius;
+                        float PreviousRadius = ZoneEditor.m_Config.Stages[0].Radius;
 
                         GUI.Label(new Rect(20, SliderY, 60, 20), "Radius:");
-                        ZoneEditor.m_Config.StartingRadius = GUI.HorizontalSlider(
+                        ZoneEditor.m_Config.Stages[0].Radius = GUI.HorizontalSlider(
                             new Rect(85, SliderY + 5, 150, 20),
-                            ZoneEditor.m_Config.StartingRadius,
+                            ZoneEditor.m_Config.Stages[0].Radius,
                             0,
                             10000
                         );
                         GUI.Label(new Rect(240, SliderY, 30, 20),
-                            ZoneEditor.m_Config.StartingRadius.ToString("F1"));
+                            ZoneEditor.m_Config.Stages[0].Radius.ToString("F1"));
 
-                        if(PreviousRadius != ZoneEditor.m_Config.StartingRadius)
+                        if(PreviousRadius != ZoneEditor.m_Config.Stages[0].Radius)
                         {
                             ZoneEditor.UpdateVizualization();
                         }

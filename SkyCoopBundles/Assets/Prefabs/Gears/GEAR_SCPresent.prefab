@@ -10,6 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3862851835927971407}
   - component: {fileID: 6590934043071806651}
+  - component: {fileID: -4607467490793049073}
   m_Layer: 0
   m_Name: GEAR_SCPresent
   m_TagString: Untagged
@@ -54,6 +55,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.45940304, y: 0.46415305, z: 0.46415293}
   m_Center: {x: 0.0038232803, y: 0.22447646, z: 0.015930615}
+--- !u!114 &-4607467490793049073
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7398894916808627567}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b791cf8328f045d45bf04b4f116cb5bc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  DisplayNameLocalizationId: GAMEPLAY_SCPresent
+  DescriptionLocalizatonId: GAMEPLAY_SCPresentDescription
+  InventoryActionLocalizationId: GAMEPLAY_Open
+  WeightKG: 0.5
+  DaysToDecay: 0
+  MaxHP: 100
+  InitialCondition: 1
+  InventoryCategory: 6
+  PickUpAudio: {fileID: 11400000, guid: 3040a073b7e9e6241bfb748cd3728450, type: 2}
+  PutBackAudio: {fileID: 11400000, guid: 3040a073b7e9e6241bfb748cd3728450, type: 2}
+  StowAudio: {fileID: 11400000, guid: 72c1f909a76850144b1126ce2f3dc387, type: 2}
+  WornOutAudio: {fileID: 0}
+  InspectOnPickup: 1
+  InspectDistance: 0.4
+  InspectAngles: {x: 0, y: 0, z: 0}
+  InspectOffset: {x: 0, y: -0.06, z: 0}
+  InspectScale: {x: 0.3, y: 0.3, z: 0.3}
+  NormalModel: {fileID: 0}
+  InspectModel: {fileID: 0}
 --- !u!1001 &5881366672455805005
 PrefabInstance:
   m_ObjectHideFlags: 0

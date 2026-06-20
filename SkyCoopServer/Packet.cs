@@ -190,6 +190,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_Clothing);
             Writer.Put(Rules.m_CanDropItems);
             Writer.Put(Rules.m_CanUseContainers);
+            Writer.Put(Rules.m_CanUseMap);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -206,6 +207,7 @@ namespace SkyCoopServer
             Rules.m_Clothing = Reader.GetBool();
             Rules.m_CanDropItems = Reader.GetBool();
             Rules.m_CanUseContainers = Reader.GetBool();
+            Rules.m_CanUseMap = Reader.GetBool();
 
             return Rules;
         }

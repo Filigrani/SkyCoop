@@ -24,39 +24,31 @@ namespace SkyCoopClient
             }
         }
 
-        public static void PreviewStage()
-        {
-
-        }
-
-        public static void SetStartingRadius(float Radius)
-        {
-            if (m_Config != null)
-            {
-                m_Config.StartingRadius = Radius;
-            }
-        }
-
         public static void UpdateVizualization()
         {
-            if (m_Visualizer == null && m_Config != null)
-            {
-                GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("Zone");
-                if (Reference)
-                {
-                    GameObject Obj = UnityEngine.Object.Instantiate(Reference, m_Config.ActualCenter.GetVector3Unity(), Quaternion.identity);
-                    if (Obj)
-                    {
-                        m_Visualizer = Obj;
-                    }
-                }
-            }
             if(m_Config == null)
             {
                 DeleteVizualization();
-            }else if (m_Visualizer)
+            }
+            else
             {
-                m_Visualizer.transform.localScale = new Vector3(m_Config.StartingRadius, 4300, m_Config.StartingRadius);
+                if (m_Visualizer == null)
+                {
+                    GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("Zone");
+                    if (Reference)
+                    {
+                        GameObject Obj = UnityEngine.Object.Instantiate(Reference, m_Config.ActualCenter.GetVector3Unity(), Quaternion.identity);
+                        if (Obj)
+                        {
+                            m_Visualizer = Obj;
+                        }
+                    }
+                }
+                else
+                {
+                    m_Visualizer.transform.localScale = new Vector3(m_Config.Stages[0].Radius, 4300, m_Config.Stages[0].Radius);
+                    m_Visualizer.transform.position = m_Config.ActualCenter.GetVector3Unity();
+                }
             }
         }
 
@@ -92,13 +84,13 @@ namespace SkyCoopClient
             if(m_Config == null)
             {
                 m_Config = new DangerCircleConfig();
-                m_Config.StartingRadius = 3000;
                 m_Config.Stages = new List<ShrinkStage>();
 
                 ShrinkStage Stage = new ShrinkStage();
-                Stage.ShrinkSpeed = 0;
-                Stage.DamagePerSecond = 35;
+                Stage.Radius = 3000;
+                Stage.ShrinkTime = 0;
                 Stage.StageTime = 0;
+                Stage.DamagePerSecond = 35;
                 m_Config.Stages.Add(Stage);
             }
             m_Config.ActualCenter = new Vector3JSON(position.x, position.y, position.z);

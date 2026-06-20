@@ -69,7 +69,35 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                return false;
+                bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
+
+                if (CanUseMap)
+                {
+                    Panel_Map Panel = InterfaceManager.GetPanel<Panel_Map>();
+
+                    string Scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+                    if (!Panel.IsRegionUnlocked(Scene))
+                    {
+                        Panel.UnlockRegionMap(Scene);
+                        Panel.DoNearbyDetailsCheck(10000f, true, false, Vector3.zero, true);
+                        if (Panel.m_MapElementData.ContainsKey(Scene))
+                        {
+                            Il2CppSystem.Collections.Generic.List<MapElementSaveData> list = Panel.m_MapElementData[Scene];
+                            for (int j = 0; j < list.Count; j++)
+                            {
+                                MapElementSaveData Element = list[j];
+
+                                if (Element != null)
+                                {
+                                    Element.m_NameIsKnown = !Element.m_IsDetail;
+                                }
+                            }
+                        }
+                    }
+                    Panel_Map.s_ForceShowPlayerIcon = true;
+                }
+
+                return CanUseMap;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "Enable")]

@@ -461,13 +461,14 @@ namespace SkyCoopServer
             }
         }
 
-        public void UpdateZone()
+        public void UpdateZone(float dt)
         {
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
                 if (Data.m_ActiveZone != null)
                 {
-                    Data.m_ActiveZone.Update();
+                    //Logger.Log($"[UpdateZone] Scene {Data.m_SceneName} has active zone updating it...");
+                    Data.m_ActiveZone.Update(dt);
                 }
             }
         }

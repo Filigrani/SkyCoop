@@ -23,6 +23,7 @@ namespace SkyCoop
         public static bool s_ForceUpdateClothing = false;
         public static bool s_Spectator = false;
         public static bool s_InSquad = false;
+        public static Comps.NetworkPlayer s_ReviveTarget = null;
 
         public class LocalPlayerData
         {
@@ -414,6 +415,23 @@ namespace SkyCoop
             GameManager.GetSprainPainComponent().ApplyAffliction(location, causeID, AfflictionOptions.PlayFX);
         }
 
+        public static float GetProtectionForBodyArea(ClothingRegion Region)
+        {
+            Il2CppSystem.Collections.Generic.List<GearItem> Gears = new Il2CppSystem.Collections.Generic.List<GearItem>();
+            GameManager.GetPlayerManagerComponent().GetAllClothingInRegion(Region, Gears);
+
+            float Protection = 0;
+
+            foreach (GearItem Gear in Gears)
+            {
+                if(Gear && Gear.m_ClothingItem)
+                {
+                    Protection += Gear.m_ClothingItem.m_Toughness;
+                }
+            }
+            return Protection / 100;
+        }
+
         public static void OtherPlayerDamageMe(float damage, int from, Comps.PlayerDamageColider.DamageZone bodypart, string Weapon)
         {
             if (damage <= 0)
@@ -454,8 +472,6 @@ namespace SkyCoop
 
             m_LastDamageType = DmgInfo.m_DamageType;
             m_LastDamageZone = bodypart;
-            SkyCoop.Logger.Log("OtherPlayerDamageMe Damage " + damage + " from " + from + " to the " + bodypart.ToString()+" using "+Weapon+" dealing damage type "+ DmgInfo.m_DamageType);
-            GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
             AfflictionBodyArea BodyArea = AfflictionBodyArea.Head;
 
             switch (bodypart)
@@ -479,6 +495,44 @@ namespace SkyCoop
                     BodyArea = AfflictionBodyArea.LegLeft;
                     break;
             }
+
+            ClothingRegion Region = ClothingRegion.Chest;
+
+            switch (BodyArea)
+            {
+                case AfflictionBodyArea.Head:
+                    Region = ClothingRegion.Head;
+                    break;
+                case AfflictionBodyArea.ArmLeft:
+                    Region = ClothingRegion.Hands;
+                    break;
+                case AfflictionBodyArea.ArmRight:
+                    Region = ClothingRegion.Hands;
+                    break;
+                case AfflictionBodyArea.Chest:
+                    Region = ClothingRegion.Chest;
+                    break;
+                case AfflictionBodyArea.LegLeft:
+                    Region = ClothingRegion.Legs;
+                    break;
+                case AfflictionBodyArea.LegRight:
+                    Region = ClothingRegion.Legs;
+                    break;
+            }
+
+            float Protection = GetProtectionForBodyArea(Region);
+
+            if (Protection > 0)
+            {
+                float NewDamage = damage - (damage * Protection);
+
+                SkyCoop.Logger.Log($"Сlothing blocked {Protection * 100}% of damaged, delt to {bodypart.ToString()} damage: {damage} -> {NewDamage}");
+
+                damage = NewDamage;
+            }
+
+            SkyCoop.Logger.Log("OtherPlayerDamageMe Damage: " + damage + " from " + from + " to the " + bodypart.ToString() + " using " + Weapon + " dealing damage type " + DmgInfo.m_DamageType);
+            GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
 
             if (!HasArmor && !HasHelemet)
             {
@@ -521,30 +575,6 @@ namespace SkyCoop
                     {
                         AddLocalizedSprain(BodyArea, DamageCase);
                     }
-                }
-
-                ClothingRegion Region = ClothingRegion.Chest;
-
-                switch (BodyArea)
-                {
-                    case AfflictionBodyArea.Head:
-                        Region = ClothingRegion.Head;
-                        break;
-                    case AfflictionBodyArea.ArmLeft:
-                        Region = ClothingRegion.Hands;
-                        break;
-                    case AfflictionBodyArea.ArmRight:
-                        Region = ClothingRegion.Hands;
-                        break;
-                    case AfflictionBodyArea.Chest:
-                        Region = ClothingRegion.Chest;
-                        break;
-                    case AfflictionBodyArea.LegLeft:
-                        Region = ClothingRegion.Legs;
-                        break;
-                    case AfflictionBodyArea.LegRight:
-                        Region = ClothingRegion.Legs;
-                        break;
                 }
                 if (DmgInfo.m_ClothingTearing)
                 {
@@ -1315,6 +1345,25 @@ namespace SkyCoop
             else
             {
                 PrepareWeaponSwitch();
+            }
+        }
+
+        public static void RevivedOtherPlayer()
+        {
+            if(s_ReviveTarget != null)
+            {
+                // To do Send Revive
+            }
+        }
+
+        public static void TryReviveOtherPlayer(Comps.NetworkPlayer Player)
+        {
+            Panel_HUD Panel;
+            if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
+            {
+                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+                s_ReviveTarget = Player;
+                Panel.StartItemProgressBar(10, "Reviving...", null, new System.Action(RevivedOtherPlayer));
             }
         }
 

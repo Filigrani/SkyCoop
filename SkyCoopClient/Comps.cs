@@ -1443,18 +1443,12 @@ namespace SkyCoop
             public DangerCircleZone(IntPtr ptr) : base(ptr) { }
             public float m_Smoother = 8;
             public Vector3 m_Center = Vector3.zero;
-            public float m_TargetScale = 0;
+            public float m_TargetRadius = 0;
 
 
             public Vector3 GetScale()
             {
-                return new Vector3(m_TargetScale, 4300, m_TargetScale);
-            }
-
-            public void SetForced()
-            {
-                transform.localScale = GetScale();
-                transform.position = m_Center;
+                return new Vector3(m_TargetRadius, 4300, m_TargetRadius);
             }
 
             void Update()
