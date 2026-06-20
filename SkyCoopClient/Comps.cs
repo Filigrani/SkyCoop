@@ -1,17 +1,14 @@
 ﻿
-using UnityEngine;
+using Harmony;
 using Il2Cpp;
 using Il2CppInterop.Runtime.Injection;
-using SkyCoopServer;
 using Il2CppTLD.Interactions;
-using SkyCoopClient;
-using static SkyCoopServer.DataStr;
-using Harmony;
-using Il2CppRewired;
 using Il2CppTMPro;
-using UnityEngine.UIElements;
-using Il2CppNodeCanvas.BehaviourTrees;
-using Il2CppNodeCanvas.StateMachines;
+using SkyCoopClient;
+using SkyCoopServer;
+using UnityEngine;
+using static Il2Cpp.UIAtlas;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
 {
@@ -45,6 +42,8 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<PropsEditorVisuzlier>();
             ClassInjector.RegisterTypeInIl2Cpp<GenericStatusBarSpawnerHook>();
             ClassInjector.RegisterTypeInIl2Cpp<TeammateBar>();
+            ClassInjector.RegisterTypeInIl2Cpp<TeammateMapIcon>();
+            ClassInjector.RegisterTypeInIl2Cpp<ZoneMapIcon>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -2062,6 +2061,120 @@ namespace SkyCoop
                             }
                         }
                     }
+                }
+            }
+        }
+
+        public class TeammateMapIcon : MonoBehaviour
+        {
+            public TeammateMapIcon(IntPtr ptr) : base(ptr) { }
+
+            public int m_IndexHandler = 0;
+            public Panel_Map m_Panel;
+            public UISprite m_Sprite;
+
+            void Update()
+            {
+                if (m_Panel)
+                {
+                    NetworkPlayer Player = PlayersManager.GetPlayer(m_IndexHandler);
+
+                    if (Player)
+                    {
+                        m_Sprite.enabled = Player.m_Action != NetworkPlayer.Actions.Death && Player.gameObject.activeSelf && SquadHUD.IsTeammate(m_IndexHandler);
+                    }
+                    else
+                    {
+                        m_Sprite.enabled = false;
+                    }
+
+                    transform.localPosition = m_Panel.WorldPositionToMapPosition(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Player.m_Position);
+                    transform.localRotation = m_Panel.WorldRotationToMapRotation(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Player.m_Rotation);
+                }
+            }
+        }
+
+        public class ZoneMapIcon : MonoBehaviour
+        {
+            public ZoneMapIcon(IntPtr ptr) : base(ptr) { }
+
+            public Panel_Map m_Panel;
+            public UISprite m_Sprite;
+            public Vector2 m_WorldRadius = new Vector2(1, 1);
+            public bool m_IsNextZone = false;
+
+            void Update()
+            {
+                if (m_Panel)
+                {
+                    float realRadiusInMeters = 0;
+                    Vector3 Position = Vector3.zero;
+
+                    if (!m_IsNextZone)
+                    {
+                        realRadiusInMeters = DangerCircleManager.s_DangerCircle.m_TargetRadius;
+                        Position = DangerCircleManager.s_DangerCircle.m_Center;
+                        if (DangerCircleManager.s_DangerCircle)
+                        {
+                            m_Sprite.enabled = true;
+                        }
+                        else
+                        {
+                            m_Sprite.enabled = false;
+                        }
+                    }
+                    else
+                    {
+                        realRadiusInMeters = DangerCircleManager.s_NextZoneRadius;
+                        Position = DangerCircleManager.s_NextZoneCenter;
+                        if (DangerCircleManager.s_NextZoneRadius == 0 || DangerCircleManager.s_NextZoneCenter == Vector3.zero)
+                        {
+                            m_Sprite.enabled = false;
+                        }
+                        else
+                        {
+                            m_Sprite.enabled = true;
+                        }
+                    }
+
+                    transform.localPosition = m_Panel.WorldPositionToMapPosition(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Position);
+
+                    string regionName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+                    Vector3 WorldScale = Vector3.one;
+
+                    for (int i = 0; i < m_Panel.m_MapObjects.Count; i++)
+                    {
+                        if (regionName == m_Panel.m_MapObjects[i].m_RegionName)
+                        {
+                            m_WorldRadius = m_Panel.m_MapObjects[i].m_RadiusOfScene;
+
+                            Vector3 Vect = m_Panel.m_MapObjects[i].m_RadiusOfScene;
+                            m_WorldRadius.x = Vect.x;
+                            m_WorldRadius.y = Vect.z;
+                        }
+                    }
+
+                    // x 0.018 y 0.018 карты = реальному соотвествует 1 метру когда m_WorldRadius x 1153.3 y 1159.6
+
+                    Vector2 baseMetersPerUnit = new Vector2(
+                        1f / 0.018f, 
+                        1f / 0.018f
+                    );
+
+                    Vector2 currentMetersPerUnit = new Vector2(
+                        baseMetersPerUnit.x * (1153.3f / m_WorldRadius.x),
+                        baseMetersPerUnit.y * (1159.6f / m_WorldRadius.y)
+                    );
+
+
+
+                    Vector2 realWorldToMapScale = new Vector2(
+                        realRadiusInMeters / currentMetersPerUnit.x,
+                        realRadiusInMeters / currentMetersPerUnit.y
+                    );
+
+                    transform.localScale = new Vector3(realWorldToMapScale.x, realWorldToMapScale.y, 1);
                 }
             }
         }

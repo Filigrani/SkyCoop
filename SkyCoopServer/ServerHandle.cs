@@ -687,6 +687,15 @@ namespace SkyCoopServer
                     ServerInstance.ForceToOver();
                     ServerInstance.m_Config.m_GameMode = "Shrink";
                     break;
+                case "nextzone":
+                    ServerInstance.ForceNextZone();
+                    break;
+                case "zonenodamage":
+                    ServerInstance.ForceZoneNoDamage();
+                    break;
+                case "zonerestart":
+                    ServerInstance.ZoneRestart();
+                    break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
                     break;

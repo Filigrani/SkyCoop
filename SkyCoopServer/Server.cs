@@ -176,6 +176,21 @@ namespace SkyCoopServer
             m_Rules.m_Time = 1;
         }
 
+        public void ForceNextZone()
+        {
+            m_ScenesData.ForceNextZone();
+        }
+
+        public void ForceZoneNoDamage()
+        {
+            m_ScenesData.ForceZoneNoDamage();
+        }
+
+        public void ZoneRestart()
+        {
+            m_ScenesData.ZoneRestart();
+        }
+
         public void EverySecond()
         {
             //SkyCoopServer.Logger.Log("EverySecond");

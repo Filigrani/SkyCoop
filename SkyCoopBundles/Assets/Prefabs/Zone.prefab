@@ -61,12 +61,20 @@ PrefabInstance:
       value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -5087798319111289757, guid: ee47f6119903b8d43b31d49744f78bad, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -5087798319111289757, guid: ee47f6119903b8d43b31d49744f78bad, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: a326c023efd20454cbfcb3137354b5cf, type: 2}
     - target: {fileID: 919132149155446097, guid: ee47f6119903b8d43b31d49744f78bad, type: 3}
       propertyPath: m_Name
-      value: ZoneNew
+      value: Zone
+      objectReference: {fileID: 0}
+    - target: {fileID: 3369906136111688320, guid: ee47f6119903b8d43b31d49744f78bad, type: 3}
+      propertyPath: m_CastShadows
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

@@ -1,4 +1,5 @@
 ﻿using Il2Cpp;
+using Il2CppRewired;
 using Il2CppTLD.Gameplay;
 using Il2CppTLD.Gear;
 using Il2CppTLD.ModularElectrolizer;
@@ -73,31 +74,106 @@ namespace SkyCoopClient
 
                 if (CanUseMap)
                 {
-                    Panel_Map Panel = InterfaceManager.GetPanel<Panel_Map>();
+                    __instance.UnlockMapCurrentScene();
+                    __instance.RevealFogForScene(__instance.GetMapNameOfCurrentScene());
+                }
+                Panel_Map.s_ForceShowPlayerIcon = CanUseMap;
 
-                    string Scene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
-                    if (!Panel.IsRegionUnlocked(Scene))
+                return CanUseMap;
+            }
+
+            private static void Postfix(Panel_Map __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
+
+                if (CanUseMap)
+                {
+                    if (__instance.m_MapElementsTransform.FindChild($"PlayerIcon_0") == null)
                     {
-                        Panel.UnlockRegionMap(Scene);
-                        Panel.DoNearbyDetailsCheck(10000f, true, false, Vector3.zero, true);
-                        if (Panel.m_MapElementData.ContainsKey(Scene))
+                        foreach (NetworkPlayer Player in PlayersManager.s_Players)
                         {
-                            Il2CppSystem.Collections.Generic.List<MapElementSaveData> list = Panel.m_MapElementData[Scene];
-                            for (int j = 0; j < list.Count; j++)
+                            if (Player)
                             {
-                                MapElementSaveData Element = list[j];
-
-                                if (Element != null)
+                                GameObject OtherPlayerArrow = GameObject.Instantiate(__instance.m_PlayerIcon.gameObject, __instance.m_PlayerIcon.parent);
+                                if (OtherPlayerArrow)
                                 {
-                                    Element.m_NameIsKnown = !Element.m_IsDetail;
+                                    OtherPlayerArrow.name = $"PlayerIcon_{Player.m_PlayerID}";
+                                    OtherPlayerArrow.transform.localScale = new Vector3(0.8f, 0.8f, 1);
+                                    OtherPlayerArrow.transform.SetSiblingIndex(0);
+                                    Comps.TeammateMapIcon TMI = OtherPlayerArrow.AddComponent<Comps.TeammateMapIcon>();
+                                    if (TMI)
+                                    {
+                                        TMI.m_IndexHandler = Player.m_PlayerID;
+                                        TMI.m_Sprite = OtherPlayerArrow.GetComponent<UISprite>();
+                                        if (TMI.m_Sprite)
+                                        {
+                                            TMI.m_Sprite.color = Color.green;
+                                        }
+                                        TMI.m_Panel = __instance;
+                                    }
                                 }
                             }
                         }
+                        __instance.m_PlayerIcon.SetSiblingIndex(0);
                     }
-                    Panel_Map.s_ForceShowPlayerIcon = true;
+                    if (__instance.m_MapElementsTransform.FindChild($"ZoneIcon") == null)
+                    {
+                        GameObject ZoneIconObject = GameObject.Instantiate(__instance.m_PlayerIcon.gameObject, __instance.m_PlayerIcon.parent);
+                        if (ZoneIconObject)
+                        {
+                            ZoneIconObject.SetActive(true);
+                            ZoneIconObject.name = "ZoneIcon";
+                            ZoneIconObject.transform.SetSiblingIndex(0);
+                            Comps.ZoneMapIcon ZMI = ZoneIconObject.AddComponent<Comps.ZoneMapIcon>();
+                            if (ZMI)
+                            {
+                                ZMI.m_Sprite = ZoneIconObject.GetComponent<UISprite>();
+                                ZMI.m_Sprite.atlas = GameModeHUD.s_BaseAtlas;
+                                ZMI.m_Sprite.spriteName = "outerGlow_circle";
+                                if (ZMI.m_Sprite)
+                                {
+                                    ZMI.m_Sprite.color = Color.blue;
+                                }
+                                ZMI.m_Panel = __instance;
+                            }
+                        }
+                        GameObject NextZoneIconObject = GameObject.Instantiate(__instance.m_PlayerIcon.gameObject, __instance.m_PlayerIcon.parent);
+                        if (NextZoneIconObject)
+                        {
+                            NextZoneIconObject.SetActive(true);
+                            NextZoneIconObject.name = "NextZoneIcon";
+                            NextZoneIconObject.transform.SetSiblingIndex(0);
+                            Comps.ZoneMapIcon ZMI = NextZoneIconObject.AddComponent<Comps.ZoneMapIcon>();
+                            if (ZMI)
+                            {
+                                ZMI.m_Sprite = NextZoneIconObject.GetComponent<UISprite>();
+                                ZMI.m_Sprite.atlas = GameModeHUD.s_BaseAtlas;
+                                ZMI.m_Sprite.spriteName = "outerGlow_circle";
+                                ZMI.m_IsNextZone = true;
+                                if (ZMI.m_Sprite)
+                                {
+                                    ZMI.m_Sprite.color = new Color(1, 1, 1, 0.6f);
+                                }
+                                ZMI.m_Panel = __instance;
+                            }
+                        }
+                    }
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "ShouldCenterOnPlayer")]
+        private static class Panel_Map_ShouldCenterOnPlayer
+        {
+            private static void Postfix(Panel_Map __instance, ref bool __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                return CanUseMap;
+                
+                bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
+
+                __result = CanUseMap;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "Enable")]

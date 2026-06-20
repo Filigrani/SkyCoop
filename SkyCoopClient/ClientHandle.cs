@@ -328,8 +328,10 @@ namespace SkyCoop
             {
                 Vector3 Center = Reader.GetVector3Unity();
                 float Radius = Reader.GetFloat();
+                Vector3 NextCenter = Reader.GetVector3Unity();
+                float NextRadius = Reader.GetFloat();
 
-                DangerCircleManager.HandleDangerCircleSync(Center, Radius);
+                DangerCircleManager.HandleDangerCircleSync(Center, Radius, NextCenter, NextRadius);
             }
             else
             {

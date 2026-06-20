@@ -10,6 +10,8 @@ namespace SkyCoop
     public static class DangerCircleManager
     {
         public static Comps.DangerCircleZone s_DangerCircle;
+        public static float s_NextZoneRadius = 0;
+        public static Vector3 s_NextZoneCenter = Vector3.zero;
 
         public static void RemoveDangerCircle()
         {
@@ -21,7 +23,7 @@ namespace SkyCoop
         }
 
 
-        public static void HandleDangerCircleSync(Vector3 Center, float Radius)
+        public static void HandleDangerCircleSync(Vector3 Center, float Radius, Vector3 NextCenter, float NextRadius)
         {
             if(s_DangerCircle == null)
             {
@@ -36,6 +38,8 @@ namespace SkyCoop
                 s_DangerCircle.m_TargetRadius = Radius;
                 s_DangerCircle.m_Center = Center;
             }
+            s_NextZoneCenter = NextCenter;
+            s_NextZoneRadius = NextRadius;
         }
     }
 }

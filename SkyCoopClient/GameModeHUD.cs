@@ -19,6 +19,7 @@ namespace SkyCoopClient
         public static List<string> s_SideLablesPrefix = new List<string>() { "", "", "", "" };
         public static string s_TimerPrefix = "GAMEPLAY_TimeRemaining";
         public static UILabel s_BottomLable = null;
+        public static UIAtlas s_BaseAtlas = null;
 
         public static void Reintilize()
         {
@@ -31,8 +32,12 @@ namespace SkyCoopClient
                 if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
                 {
                     s_DarkwalkerHUDClone = UnityEngine.Object.Instantiate(Panel.m_NowhereToHide.gameObject, Panel.m_NowhereToHide.transform.parent);
+
+                    s_BaseAtlas = s_DarkwalkerHUDClone.transform.GetChild(0).GetChild(2).GetComponent<UISprite>().atlas;
+
                     s_DarkwalkerHUDClone.SetActive(true);
                     s_DarkwalkerHUDClone.name = "GameModeHUD";
+
                     s_HUD = s_DarkwalkerHUDClone.GetComponent<HUDNowhereToHide>();
                     s_HUD.m_AfflictionRoot.SetActive(false);
                     s_HUD.m_EntityDistanceRoot.SetActive(false);
@@ -44,7 +49,6 @@ namespace SkyCoopClient
                     s_HUD.m_ToxicFogIndicatorLabel.gameObject.SetActive(false);
                     s_HUD.m_ToxicFogIndicatorLabel.text = "";
                     s_BottomLable = s_HUD.m_ToxicFogIndicatorLabel;
-
 
                     s_SideIcons.Add(FixSideIcon(s_HUD.m_WardGlyphRoot.transform));
                     s_SideIcons.Add(FixSideIcon(s_HUD.m_LureGlyphRoot.transform));

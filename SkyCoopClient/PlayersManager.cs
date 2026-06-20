@@ -449,26 +449,9 @@ namespace SkyCoop
             }
             DamageCase = DamageCase + Extra;
 
-            bool HasArmor = false;
-            bool HasHelemet = false;
+            bool HasArmor = GameManager.GetDamageProtection().HasBallisticVest();
+            bool HasHelemet = GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid) == "GEAR_CookingPot";
 
-            if (bodypart == Comps.PlayerDamageColider.DamageZone.Chest) // If Chest
-            {
-                HasArmor = GameManager.GetDamageProtection().HasBallisticVest();
-                if (HasArmor)
-                {
-                    damage = damage / 10;
-                }
-            }
-
-            if (bodypart == Comps.PlayerDamageColider.DamageZone.Head) // If Head
-            {
-                if (GetClothForSlot(ClothingRegion.Head, ClothingLayer.Mid) == "GEAR_CookingPot")
-                {
-                    damage = (20 * damage) / 100;
-                    HasHelemet = true;
-                }
-            }
 
             m_LastDamageType = DmgInfo.m_DamageType;
             m_LastDamageZone = bodypart;
@@ -522,11 +505,41 @@ namespace SkyCoop
 
             float Protection = GetProtectionForBodyArea(Region);
 
+            switch (Region)
+            {
+                case ClothingRegion.Head:
+                    Protection = GetProtectionForBodyArea(ClothingRegion.Face) + GetProtectionForBodyArea(ClothingRegion.Neck) + GetProtectionForBodyArea(ClothingRegion.Head);
+                    break;
+                case ClothingRegion.Hands:
+                case ClothingRegion.Chest:
+                    Protection = GetProtectionForBodyArea(ClothingRegion.Hands) + GetProtectionForBodyArea(ClothingRegion.Chest);
+                    break;
+                case ClothingRegion.Legs:
+                case ClothingRegion.Feet:
+                    Protection = GetProtectionForBodyArea(ClothingRegion.Legs) + GetProtectionForBodyArea(ClothingRegion.Feet);
+                    break;
+                default:
+                    break;
+            }
+
+            if(Region == ClothingRegion.Chest)
+            {
+                if (HasArmor)
+                {
+                    Protection = Protection+50;
+                }
+            }
+
+
             if (Protection > 0)
             {
                 float NewDamage = damage - (damage * Protection);
 
                 SkyCoop.Logger.Log($"Сlothing blocked {Protection * 100}% of damaged, delt to {bodypart.ToString()} damage: {damage} -> {NewDamage}");
+
+                float Blocked = damage-NewDamage;
+
+                PlayerDamageEvent.SpawnAfflictionEvent($"Damage blocked {Math.Round(Blocked).ToString()}", "GAMEPLAY_ClothingProtection", "ico_clothingStats_toughness", Color.cyan);
 
                 damage = NewDamage;
             }
@@ -534,64 +547,37 @@ namespace SkyCoop
             SkyCoop.Logger.Log("OtherPlayerDamageMe Damage: " + damage + " from " + from + " to the " + bodypart.ToString() + " using " + Weapon + " dealing damage type " + DmgInfo.m_DamageType);
             GameManager.GetConditionComponent().AddHealth(-damage, DamageSource.BulletWound);
 
-            if (!HasArmor && !HasHelemet)
+            if (BodyArea == AfflictionBodyArea.Chest && HasArmor)
             {
-                if (DmgInfo.m_BloodLoss)
-                {
-                    GameManager.GetBloodLossComponent().BloodLossStartOverrideArea(BodyArea, DamageCase, true, AfflictionOptions.PlayFX);
-                }
-                if (DmgInfo.m_Pain)
-                {
-                    if (BodyArea == AfflictionBodyArea.Head)
-                    {
-                        if (!GameManager.GetHeadacheComponent().HasHeadache())
-                        {
-                            HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
-                            HeadacheData headacheData = new HeadacheData();
-                            headacheData.m_Cause = HeadacheCause.None;
-                            LocalizedString Case = new LocalizedString();
-                            Case.m_LocalizationID = DamageCase;
-                            headacheData.m_CausedByLocalizedId = Case;
-                            headacheData.m_TreatmentRequiredDescription = Stock.m_TreatmentRequiredDescription;
-                            headacheData.m_HoursRequiredOutdoorToGetAffliction = Stock.m_HoursRequiredOutdoorToGetAffliction;
-                            headacheData.m_HoursRequiredIndoorToExitAffliction = Stock.m_HoursRequiredIndoorToExitAffliction;
-                            headacheData.m_HealedAfflictionLocalizedId = Stock.m_HealedAfflictionLocalizedId;
-                            headacheData.m_HeadacheStartAudio = Stock.m_HeadacheStartAudio;
-                            headacheData.m_HeadachePulseFrequencyStart = Stock.m_HeadachePulseFrequencyStart;
-                            headacheData.m_HeadachePulseFrequencyEnd = Stock.m_HeadachePulseFrequencyEnd;
-                            headacheData.m_HeadachePulseEvent = Stock.m_HeadachePulseEvent;
-                            headacheData.m_HeadacheDurationHours = Stock.m_HeadacheDurationHours;
-                            headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
-                            headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
-                            headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
+                DmgInfo.m_BloodLoss = false;
+                DmgInfo.m_ClothingTearing = false;
+                DmgInfo.m_Burn = false;
+                DmgInfo.m_Pain = false;
 
-                            GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
-                        }
-                    }
-                    else if (BodyArea == AfflictionBodyArea.ArmRight
-                        || BodyArea == AfflictionBodyArea.ArmLeft
-                        || BodyArea == AfflictionBodyArea.LegLeft
-                        || BodyArea == AfflictionBodyArea.LegRight)
-                    {
-                        AddLocalizedSprain(BodyArea, DamageCase);
-                    }
-                }
-                if (DmgInfo.m_ClothingTearing)
-                {
-                    var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
-                    GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothingRegion(Region, clothingRNG);
-                }
-            }
-            else
-            {
                 var RNG = new System.Random(); int ribBroke = RNG.Next(0, 100);
                 if (!DmgInfo.m_IsMelee && ribBroke <= 5)
                 {
                     GameManager.GetBrokenRibComponent().BrokenRibStart(DamageCase, true, false, true, false);
                 }
-                if (HasHelemet)
+            }
+            if (BodyArea == AfflictionBodyArea.Head && HasHelemet)
+            {
+                DmgInfo.m_BloodLoss = false;
+                DmgInfo.m_ClothingTearing = false;
+                DmgInfo.m_Burn = false;
+                DmgInfo.m_Pain = true;
+            }
+
+            if (DmgInfo.m_BloodLoss)
+            {
+                GameManager.GetBloodLossComponent().BloodLossStartOverrideArea(BodyArea, DamageCase, true, AfflictionOptions.PlayFX);
+            }
+
+            if (DmgInfo.m_Pain)
+            {
+                if (BodyArea == AfflictionBodyArea.Head)
                 {
-                    if (GameManager.GetHeadacheComponent().HasHeadache())
+                    if (!GameManager.GetHeadacheComponent().HasHeadache())
                     {
                         HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
                         HeadacheData headacheData = new HeadacheData();
@@ -611,9 +597,22 @@ namespace SkyCoop
                         headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
                         headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
                         headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
+
                         GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
                     }
                 }
+                else if (BodyArea == AfflictionBodyArea.ArmRight
+                    || BodyArea == AfflictionBodyArea.ArmLeft
+                    || BodyArea == AfflictionBodyArea.LegLeft
+                    || BodyArea == AfflictionBodyArea.LegRight)
+                {
+                    AddLocalizedSprain(BodyArea, DamageCase);
+                }
+            }
+            if (DmgInfo.m_ClothingTearing)
+            {
+                var RNG = new System.Random(); int clothingRNG = RNG.Next(20, 40);
+                GameManager.GetPlayerManagerComponent().ApplyDamageToWornClothingRegion(Region, clothingRNG);
             }
 
             if (DmgInfo.m_Burn)

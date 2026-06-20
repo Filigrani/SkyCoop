@@ -28,6 +28,11 @@ namespace SkyCoopClient
             }
         }
 
+        public static bool IsTeammate(int PlayerID)
+        {
+            return GetMember(PlayerID) != null;
+        }
+
         public static SquadMember GetMember(int PlayerID)
         {
             for (int i = 0; i < s_SquadMembers.Count; i++)

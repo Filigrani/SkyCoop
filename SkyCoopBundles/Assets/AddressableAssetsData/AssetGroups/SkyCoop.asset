@@ -15,6 +15,11 @@ MonoBehaviour:
   m_GroupName: SkyCoop
   m_GUID: 65883fe2772ea8348b9759289a701bce
   m_SerializeEntries:
+  - m_GUID: 00d1a0f44deb7374393d41a7d68fe122
+    m_Address: PaperDoll_POT
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 925e778fb9c003f49a058aebe477d66a
     m_Address: ico_GearItem__SCPresent
     m_ReadOnly: 0
@@ -32,6 +37,11 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: bac5c98130623374daeb83767ace981e
     m_Address: ico_GearItem__FishKnife
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: d45cf8470f7f01f46b06144a35a8acee
+    m_Address: PaperDoll_POT_F
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

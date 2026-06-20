@@ -379,7 +379,7 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendZoneUpdate(NetPeer Client, Vector3 Center, float Radius, Server ServerInstance)
+        public static void SendZoneUpdate(NetPeer Client, Vector3 Center, float Radius, Vector3 NextCenter, float NextRadius, Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientZoneUpdated);
@@ -387,6 +387,8 @@ namespace SkyCoopServer
             writer.Put(true);
             writer.Put(Center);
             writer.Put(Radius);
+            writer.Put(NextCenter);
+            writer.Put(NextRadius);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -401,7 +403,7 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendZoneUpdate(string SceneName, Vector3 Center, float Radius, Server ServerInstance)
+        public static void SendZoneUpdate(string SceneName, Vector3 Center, float Radius, Vector3 NextCenter, float NextRadius, Server ServerInstance)
         {
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
@@ -409,7 +411,7 @@ namespace SkyCoopServer
             {
                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
-                    SendZoneUpdate(Peer, Center, Radius, ServerInstance);
+                    SendZoneUpdate(Peer, Center, Radius, NextCenter, NextRadius, ServerInstance);
                 }
             }
         }

@@ -204,7 +204,7 @@ namespace SkyCoopServer
 
             if (SceneData.m_ActiveZone != null)
             {
-                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, m_ServerInstance);
+                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, SceneData.m_ActiveZone.GetNextCenter(), SceneData.m_ActiveZone.GetNextRadius(), m_ServerInstance);
                 ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
             }
         }
@@ -469,6 +469,39 @@ namespace SkyCoopServer
                 {
                     //Logger.Log($"[UpdateZone] Scene {Data.m_SceneName} has active zone updating it...");
                     Data.m_ActiveZone.Update(dt);
+                }
+            }
+        }
+
+        public void ForceNextZone()
+        {
+            foreach (SceneData Data in m_LoadedScenes.Values.ToList())
+            {
+                if (Data.m_ActiveZone != null)
+                {
+                    Data.m_ActiveZone.ForceNextZone();
+                }
+            }
+        }
+
+        public void ForceZoneNoDamage()
+        {
+            foreach (SceneData Data in m_LoadedScenes.Values.ToList())
+            {
+                if (Data.m_ActiveZone != null)
+                {
+                    Data.m_ActiveZone.ToggleNoDamage();
+                }
+            }
+        }
+
+        public void ZoneRestart()
+        {
+            foreach (SceneData Data in m_LoadedScenes.Values.ToList())
+            {
+                if (Data.m_ActiveZone != null)
+                {
+                    Data.m_ActiveZone.Restart();
                 }
             }
         }
