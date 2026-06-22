@@ -80,6 +80,7 @@ namespace SkyCoop
             { (int)Packet.Type.ServerRequestSquadHealth, ClientHandle.ServerRequestSquadHealth },
             { (int)Packet.Type.ClientTilt, ClientHandle.ClientTilt },
             { (int)Packet.Type.ServerSquadEliminated, ClientHandle.ServerSquadEliminated },
+            { (int)Packet.Type.ServerGearSpawnerMarker, ClientHandle.ServerGearSpawnerMarker },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

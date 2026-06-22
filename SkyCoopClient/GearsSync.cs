@@ -26,6 +26,8 @@ namespace SkyCoopClient
         public static Quaternion s_LastPickedGearQuaternion = Quaternion.identity;
         public static GearItem s_PendingRefuseGear = null;
         public static int s_PendingRefuseGearTimerFrames = 0;
+        public static List<Vector3> s_SpawnersMarkers = new List<Vector3>();
+        public static List<GameObject> s_SpawnersMarkersObjects = new List<GameObject>();
 
         public static void Update()
         {
@@ -53,13 +55,9 @@ namespace SkyCoopClient
                         }
                         else
                         {
-                            SkyCoop.Logger.Log($"Gear {s_PendingRefuseGear.name} put back to container");
-                            //SendDropItem(s_PendingRefuseGear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
+                            SkyCoop.Logger.Log($"Gear {s_PendingRefuseGear.name} dropped next to container");
 
-                            if (s_PendingRefuseGear.m_LastContainer)
-                            {
-                                ContainersSync.HandleContainerClose(s_PendingRefuseGear.m_LastContainer);
-                            }
+                            SendDropItem(s_PendingRefuseGear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
                         }
 
                         s_PendingRefuseGear = null;

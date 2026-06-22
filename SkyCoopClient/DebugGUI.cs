@@ -264,7 +264,7 @@ namespace SkyCoopClient
                     }
                     if (GUI.Button(new Rect(200, 40, 80, 25), "Back"))
                     {
-                        SpawnPointEditor.DeleteVizualization();
+                        //SpawnPointEditor.DeleteVizualization();
                         SetState(State.SelectTool);
                     }
                     float scrollViewHeight = 200;
@@ -308,7 +308,7 @@ namespace SkyCoopClient
 
                     if (GUI.Button(new Rect(200, 40, 80, 25), "Back"))
                     {
-                        RadialLootSpawnersEditor.DeleteVizualization();
+                        //RadialLootSpawnersEditor.DeleteVizualization();
                         SetState(State.SelectTool);
                     }
                     float __scrollViewHeight = 200;

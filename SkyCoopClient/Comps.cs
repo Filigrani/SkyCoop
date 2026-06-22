@@ -30,7 +30,6 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<CameraAttention>();
             ClassInjector.RegisterTypeInIl2Cpp<DeathPackComp>();
             ClassInjector.RegisterTypeInIl2Cpp<ContainerDescriptorHook>();
-            ClassInjector.RegisterTypeInIl2Cpp<NetworkPlayerDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<DangerCircleZone>();
             ClassInjector.RegisterTypeInIl2Cpp<ForcedFire>();
             ClassInjector.RegisterTypeInIl2Cpp<CardGameProp>();
@@ -1228,25 +1227,28 @@ namespace SkyCoop
                     m_CameraAttention.m_OffsetTranform.position = new Vector3(m_CameraAttention.m_OffsetTranform.position.x, GetBone(m_Animator, HumanBodyBones.LeftEye).position.y, m_CameraAttention.m_OffsetTranform.position.z);
                 }
 
-                Vector3 TargetPosition = m_Position + GetOffset();
-
-                // That way, we can avoid stupid situations when previous position of the objects was too far away
-                // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
-                if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
+                if(m_PlayerID != -1) // if not Victory Dummy
                 {
-                    transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
-                }
-                else
-                {
-                    transform.position = TargetPosition;
-                }
+                    Vector3 TargetPosition = m_Position + GetOffset();
 
-                //if (m_AudioSourceRadio && m_AudioSourceRadioBG)
-                //{
-                //    m_AudioSourceRadioBG.gameObject.SetActive(m_LastRadioSample != null);
-                //}
+                    // That way, we can avoid stupid situations when previous position of the objects was too far away
+                    // would lead to character slide on high speed. This mostly noticable when player loads from Vector3.zero.
+                    if (Vector3.Distance(transform.position, TargetPosition) > s_InterpolationSkipDistance)
+                    {
+                        transform.position = Vector3.Lerp(transform.position, TargetPosition, Time.deltaTime * s_DeltaMultiplayer);
+                    }
+                    else
+                    {
+                        transform.position = TargetPosition;
+                    }
 
-                transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
+                    //if (m_AudioSourceRadio && m_AudioSourceRadioBG)
+                    //{
+                    //    m_AudioSourceRadioBG.gameObject.SetActive(m_LastRadioSample != null);
+                    //}
+
+                    transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * s_DeltaMultiplayer);
+                }
             }
         }
         public class CameraAttention : MonoBehaviour
@@ -1354,89 +1356,7 @@ namespace SkyCoop
                 }
             }
         }
-        public class NetworkPlayerDummy : MonoBehaviour
-        {
-            public NetworkPlayerDummy(IntPtr ptr) : base(ptr) { }
-            public NetworkPlayer m_Original;
-            public ClothingData m_ClothingData;
 
-            public List<GameObject> m_ClothingMeshes = new List<GameObject>();
-
-            public GameObject m_HairMesh = null;
-            public GameObject m_BeardMesh = null;
-            public GameObject m_EyebrowsMesh = null;
-
-            public bool m_IsMe = false;
-
-            public void ClonePlayer(NetworkPlayer Player)
-            {
-                m_HairMesh = transform.FindChild("Hair_mesh").gameObject;
-                m_BeardMesh = transform.FindChild("Beard_mesh").gameObject;
-                m_EyebrowsMesh = transform.FindChild("Eyebrows_mesh").gameObject;
-                if (Player != null)
-                {
-                    m_Original = Player;
-
-                    if (ModMain.Client != null && m_Original.m_PlayerID == ModMain.Client.GetMyId())
-                    {
-                        m_ClothingData = PlayersManager.m_LocalPlayerData.m_ClothingData;
-                    }
-                    else
-                    {
-                        m_ClothingData = m_Original.m_VisualData.m_ClothingData;
-                    }
-                    foreach (GameObject OriginalMesh in m_Original.m_ClothingMeshes)
-                    {
-                        AddClothingMesh(OriginalMesh);
-                    }
-                    UpdateClothing();
-                }
-            }
-
-            public void AddClothingMesh(GameObject OriginalModelMesh)
-            {
-                Transform T = transform.FindChild(OriginalModelMesh.name);
-                if (T)
-                {
-                    m_ClothingMeshes.Add(T.gameObject);
-                    Renderer Mesh = T.GetComponent<Renderer>();
-                    Renderer OriginalMesh = OriginalModelMesh.GetComponent<Renderer>();
-
-                    Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(OriginalMesh.materials.Length);
-                    for (int i = 0; i < NewMatsArr.Length; i++)
-                    {
-                        NewMatsArr[i] = OriginalMesh.materials[i];
-                    }
-                    Mesh.SetMaterialArray(NewMatsArr);
-                }
-            }
-
-            public void UpdateClothing()
-            {
-                if (m_Original)
-                {
-                    if (m_HairMesh)
-                    {
-                        m_HairMesh.SetActive(m_Original.m_HairMesh.activeSelf);
-                    }
-                    if (m_BeardMesh)
-                    {
-                        m_BeardMesh.SetActive(m_Original.m_BeardMesh.activeSelf);
-                    }
-                    if (m_EyebrowsMesh)
-                    {
-                        m_EyebrowsMesh.SetActive(m_Original.m_EyebrowsMesh.activeSelf);
-                    }
-                }
-
-                ClothingData Data = m_ClothingData;
-                foreach (GameObject Mesh in m_ClothingMeshes)
-                {
-                    bool HasIt = Data.HasThis(Mesh.name);
-                    Mesh.SetActive(HasIt);
-                }
-            }
-        }
         public class DangerCircleZone : MonoBehaviour
         {
             public DangerCircleZone(IntPtr ptr) : base(ptr) { }
@@ -2079,15 +1999,22 @@ namespace SkyCoop
                 {
                     NetworkPlayer Player = PlayersManager.GetPlayer(m_IndexHandler);
 
-                    if (Player)
+                    if(!m_Panel.IsWorldMapActive() && m_Panel.m_RegionSelectedIndex == m_Panel.GetIndexOfCurrentScene())
                     {
-                        m_Sprite.enabled = Player.m_Action != NetworkPlayer.Actions.Death && Player.gameObject.activeSelf && SquadHUD.IsTeammate(m_IndexHandler);
+                        if (Player)
+                        {
+                            m_Sprite.enabled = Player.m_Action != NetworkPlayer.Actions.Death && Player.gameObject.activeSelf && SquadHUD.IsTeammate(m_IndexHandler);
+                        }
+                        else
+                        {
+                            m_Sprite.enabled = false;
+                        }
                     }
                     else
                     {
                         m_Sprite.enabled = false;
                     }
-
+                    
                     transform.localPosition = m_Panel.WorldPositionToMapPosition(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Player.m_Position);
                     transform.localRotation = m_Panel.WorldRotationToMapRotation(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Player.m_Rotation);
                 }
@@ -2110,33 +2037,40 @@ namespace SkyCoop
                     float realRadiusInMeters = 0;
                     Vector3 Position = Vector3.zero;
 
-                    if (!m_IsNextZone)
+                    if (!m_Panel.IsWorldMapActive() && m_Panel.m_RegionSelectedIndex == m_Panel.GetIndexOfCurrentScene() && DangerCircleManager.s_DangerCircle)
                     {
-                        realRadiusInMeters = DangerCircleManager.s_DangerCircle.m_TargetRadius;
-                        Position = DangerCircleManager.s_DangerCircle.m_Center;
-                        if (DangerCircleManager.s_DangerCircle)
+                        if (!m_IsNextZone)
                         {
-                            m_Sprite.enabled = true;
+                            realRadiusInMeters = DangerCircleManager.s_DangerCircle.m_TargetRadius;
+                            Position = DangerCircleManager.s_DangerCircle.m_Center;
+                            if (DangerCircleManager.s_DangerCircle)
+                            {
+                                m_Sprite.enabled = true;
+                            }
+                            else
+                            {
+                                m_Sprite.enabled = false;
+                            }
                         }
                         else
                         {
-                            m_Sprite.enabled = false;
+                            realRadiusInMeters = DangerCircleManager.s_NextZoneRadius;
+                            Position = DangerCircleManager.s_NextZoneCenter;
+                            if (DangerCircleManager.s_NextZoneRadius == 0 || DangerCircleManager.s_NextZoneCenter == Vector3.zero)
+                            {
+                                m_Sprite.enabled = false;
+                            }
+                            else
+                            {
+                                m_Sprite.enabled = true;
+                            }
                         }
                     }
                     else
                     {
-                        realRadiusInMeters = DangerCircleManager.s_NextZoneRadius;
-                        Position = DangerCircleManager.s_NextZoneCenter;
-                        if (DangerCircleManager.s_NextZoneRadius == 0 || DangerCircleManager.s_NextZoneCenter == Vector3.zero)
-                        {
-                            m_Sprite.enabled = false;
-                        }
-                        else
-                        {
-                            m_Sprite.enabled = true;
-                        }
+                        m_Sprite.enabled = false;
                     }
-
+                    
                     transform.localPosition = m_Panel.WorldPositionToMapPosition(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Position);
 
                     string regionName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;

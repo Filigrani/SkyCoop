@@ -298,6 +298,17 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendAllProps(SceneName, Client);
             ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
 
+
+            SceneData SceneData = ServerInstance.m_ScenesData.GetSceneData(SceneName);
+
+            if(SceneData != null)
+            {
+                ServerSend.SendSpawnersMarkers(Client, SceneData.GetGearSpawnersMarkers());
+            }
+
+            
+            
+
             PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
 
             ServerSend.SendTier(Client, Data.m_Tier);
@@ -339,7 +350,7 @@ namespace SkyCoopServer
                         ServerSend.SendClothing(Client, PeerData.m_VisualData.m_ClothingData, Peer.Id);
                         ServerSend.SendPosition(Client, PeerData.m_Position, Peer.Id);
                         ServerSend.SendRotation(Client, PeerData.m_Rotation, Peer.Id);
-                        ServerSend.SendPlayerAction(Client, PeerData.m_VisualData.m_LatAction, Peer.Id);
+                        ServerSend.SendPlayerAction(Client, PeerData.m_VisualData.m_LastAction, Peer.Id);
                         ServerSend.SendPlayerChangeGear(Client, PeerData.m_VisualData.m_GearInHands, PeerData.m_VisualData.m_GearVariant, Peer.Id);
                     }
                 }

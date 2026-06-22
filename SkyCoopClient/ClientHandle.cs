@@ -404,12 +404,13 @@ namespace SkyCoop
             PlayersManager.DeactivateAllSpectatingTargets();
 
             int Count = Reader.GetInt();
-            string Str = "";
-            List<string> WinnersNames = new List<string>();
+            List<DataStr.LeaderData> LeadersList = new List<DataStr.LeaderData>();
             for (int i = 0; i < Count; i++)
             {
-                WinnersNames.Add(PlayersManager.GetPlayerName(Reader.GetInt()));
+                LeadersList.Add(Reader.GetLeaderData());
             }
+
+
             Vector3 Position = Reader.GetVector3Unity();
             Quaternion Rotation = Reader.GetQuaternionUnity();
 
@@ -421,20 +422,20 @@ namespace SkyCoop
                 {
                     for (int i = 0; i < Count;i++)
                     {
-                        Comps.NetworkPlayer PlayerObj = PlayersManager.GetPlayer(i);
+                        DataStr.LeaderData Data = LeadersList[i];
                         GameObject VictoryDoll = Obj.transform.GetChild(i).gameObject;
-                        if (PlayerObj && VictoryDoll)
+                        if (VictoryDoll)
                         {
                             VictoryDoll.gameObject.SetActive(true);
                             VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", i + 1);
-                            Comps.NetworkPlayerDummy Dummy = VictoryDoll.AddComponent<Comps.NetworkPlayerDummy>();
-                            if (Dummy)
+                            Comps.NetworkPlayer PlayerComp = PlayersManager.ApplyPlayer(VictoryDoll, -1);
+                            if (PlayerComp)
                             {
-                                Dummy.ClonePlayer(PlayerObj);
+                                PlayerComp.SetClothing(Data.m_ClothingData);
                             }
                         }
                         Obj.transform.GetChild(i+3).gameObject.SetActive(true);
-                        Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(WinnersNames[i]);
+                        Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(CanvasUI.GetPlayerName(Data.m_ID));
                     }
                     Transform Cam = Obj.transform.FindChild("Camera");
                     Cam.GetComponent<Camera>().enabled = false;
@@ -640,6 +641,28 @@ namespace SkyCoop
             if (Player)
             {
                 Player.SetTilt(Tilt);
+            }
+        }
+
+        public static void ServerGearSpawnerMarker(NetDataReader Reader)
+        {
+            GearsSync.s_SpawnersMarkers.Clear();
+
+            for (int i = GearsSync.s_SpawnersMarkersObjects.Count-1; i >= 0; i--)
+            {
+                GameObject Obj = GearsSync.s_SpawnersMarkersObjects[i];
+                if (Obj)
+                {
+                    UnityEngine.Object.Destroy(Obj);
+                }
+            }
+            GearsSync.s_SpawnersMarkersObjects.Clear();
+
+            int Count = Reader.GetInt();
+
+            for (int i = 0; i < Count; i++)
+            {
+                GearsSync.s_SpawnersMarkers.Add(Reader.GetVector3Unity());
             }
         }
     }

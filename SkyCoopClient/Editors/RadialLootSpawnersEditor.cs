@@ -148,7 +148,16 @@ namespace SkyCoopClient
                 }
             }
             s_Vizualizers.Clear();
-
+            for (int i = GearsSync.s_SpawnersMarkersObjects.Count - 1; i >= 0; i--)
+            {
+                GameObject Obj = GearsSync.s_SpawnersMarkersObjects[i];
+                if (Obj)
+                {
+                    UnityEngine.Object.Destroy(Obj);
+                }
+            }
+            GearsSync.s_SpawnersMarkersObjects.Clear();
+            GearsSync.s_SpawnersMarkers.Clear();
         }
 
         public static void UpdateVizualization(int Index)
@@ -161,6 +170,8 @@ namespace SkyCoopClient
 
                 GameObject UpwardRay = CreateDebugPrimitive(PrimitiveType.Cube, "UpwardRay", UnityEngine.Color.green, Dummy);
                 UpwardRay.transform.localScale = new Vector3(0.3f, Spawner.top, 0.3f);
+
+                GearsSync.s_SpawnersMarkers.Add(Spawner.center.GetVector3Unity());
 
                 // У всех примитивов пивот в центре. По этому все "лучи" которые мы будем визиуализировать мы присираем в цетре а не в их начале.
                 Vector3 rayStart = Spawner.center.GetVector3Unity();

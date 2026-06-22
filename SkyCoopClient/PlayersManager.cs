@@ -1,15 +1,16 @@
 ﻿using Il2Cpp;
+using Il2CppRewired;
 using Il2CppTLD.Interactions;
+using Il2CppTLD.PDID;
 using Il2CppTLD.Stats;
 using SkyCoopClient;
-using UnityEngine;
-using static Il2Cpp.PlayerManager;
-using UnityEngine.AddressableAssets;
 using SkyCoopServer;
-using static SkyCoop.Comps.PlayerDamageColider;
-using Il2CppTLD.PDID;
-using static SkyCoopServer.DataStr;
+using UnityEngine;
+using UnityEngine.AddressableAssets;
 using UnityEngine.UIElements;
+using static Il2Cpp.PlayerManager;
+using static SkyCoop.Comps.PlayerDamageColider;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
 {
@@ -47,7 +48,25 @@ namespace SkyCoop
             public DataStr.ClothingData m_ClothingData = new DataStr.ClothingData();
         }
 
-        public static Comps.NetworkPlayer CreatePlayer(int PlayerID)
+        public static Comps.NetworkPlayer ApplyPlayer(GameObject PlayerObj, int PlayerID)
+        {
+            Comps.NetworkPlayer NP = PlayerObj.AddComponent<Comps.NetworkPlayer>();
+            NP.m_Animator = PlayerObj.GetComponent<Animator>();
+
+            NP.m_TiltTarget = NP.m_Animator.GetBoneTransform(HumanBodyBones.Spine);
+
+            NP.CreateColiders();
+            NP.LoadEquipment();
+            NP.AddInteraction();
+            NP.AddAudioSource();
+            NP.UpdateClothing();
+            NP.AddSpectatorTarget();
+
+            NP.m_PlayerID = PlayerID;
+            return NP;
+        }
+
+        public static Comps.NetworkPlayer CreatePlayer(int PlayerID, bool DDON = true)
         {
             GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("SkyCoopPlayer");
 
@@ -56,25 +75,12 @@ namespace SkyCoop
                 GameObject Player = GameObject.Instantiate(Reference);
                 if(Player)
                 {
-                    UnityEngine.Object.DontDestroyOnLoad(Player); // if scence change, this object won't be destroyed.
-
-                    Comps.NetworkPlayer NP = Player.AddComponent<Comps.NetworkPlayer>();
-                    NP.m_Animator = Player.GetComponent<Animator>();
-
-                    NP.m_TiltTarget = NP.m_Animator.GetBoneTransform(HumanBodyBones.Spine);
-
-                    NP.CreateColiders();
-                    NP.LoadEquipment();
-                    NP.AddInteraction();
-                    NP.AddAudioSource();
-                    NP.UpdateClothing();
-                    NP.AddSpectatorTarget();
-
-                    NP.m_PlayerID = PlayerID;
-
+                    if (DDON)
+                    {
+                        UnityEngine.Object.DontDestroyOnLoad(Player); // if scence change, this object won't be destroyed.
+                    }
                     Player.SetActive(false);
-
-                    return NP;
+                    return ApplyPlayer(Player, PlayerID);
                 }
             }
 
@@ -1005,10 +1011,10 @@ namespace SkyCoop
         {
             if (s_Spectator)
             {
-                if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
+                if (Il2Cpp.InputManager.GetFirePressed(Il2Cpp.InputManager.m_CurrentContext))
                 {
                     NextSpectatingTarget();
-                }else if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
+                }else if (Il2Cpp.InputManager.GetAltFirePressed(Il2Cpp.InputManager.m_CurrentContext))
                 {
                     PreviousSpectatingTarget();
                 }

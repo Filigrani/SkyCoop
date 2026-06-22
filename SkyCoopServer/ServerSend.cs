@@ -154,8 +154,6 @@ namespace SkyCoopServer
                     }
                 }
 
-                List<int> Leaders = ServerInstance.m_PlayersData.GetDMLeaders();
-
                 if (ServerInstance.m_Rules.m_HUDMode == "DM")
                 {
                     if (Message.m_Killer != -1)
@@ -487,7 +485,7 @@ namespace SkyCoopServer
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
         }
-        public static void SendLeaders(List<int> Leaders, Vector3 Position, Quaternion Rotation ,Server ServerInstance)
+        public static void SendLeaders(List<DataStr.LeaderData> Leaders, Vector3 Position, Quaternion Rotation ,Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerLeaders);
@@ -823,6 +821,20 @@ namespace SkyCoopServer
             {
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
+        }
+        public static void SendSpawnersMarkers(NetPeer Client, List<Vector3> Points)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerGearSpawnerMarker);
+
+            writer.Put(Points.Count);
+
+            for (int i = 0; i < Points.Count; i++)
+            {
+                writer.Put(Points[i]);
+            }
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
     }
 }

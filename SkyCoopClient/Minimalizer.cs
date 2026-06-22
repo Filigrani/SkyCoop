@@ -33,7 +33,7 @@ namespace SkyCoopClient
                     {
                         continue;
                     }
-                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory"))
+                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteJournal"))
                     {
                         __instance.m_ActiveElements.RemoveAt(i);
                     }
@@ -45,7 +45,7 @@ namespace SkyCoopClient
                     {
                         continue;
                     }
-                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory"))
+                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteJournal"))
                     {
                         butt.SetEnabled(false);
                         butt.gameObject.SetActive(false);
@@ -63,6 +63,60 @@ namespace SkyCoopClient
                 return ModMain.Client != null && ModMain.Client.m_Rules.m_Clothing;
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "ToggleWorldMap")]
+        private static class Panel_Map_ToggleWorldMap
+        {
+            private static void Postfix(Panel_Map __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                foreach (GameObject Obj in GearsSync.s_SpawnersMarkersObjects)
+                {
+                    if (Obj)
+                    {
+                        UISprite Sprite = Obj.GetComponent<UISprite>();
+                        if (Sprite)
+                        {
+                            Sprite.enabled = !__instance.IsWorldMapActive();
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "ResetToNormal")]
+        private static class Panel_Map_ResetToNormal
+        {
+            private static void Postfix(Panel_Map __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                foreach (GameObject Obj in GearsSync.s_SpawnersMarkersObjects)
+                {
+                    if (Obj)
+                    {
+                        UISprite Sprite = Obj.GetComponent<UISprite>();
+                        if (Sprite)
+                        {
+                            Sprite.enabled = __instance.m_RegionSelectedIndex == __instance.GetIndexOfCurrentScene();
+                        }
+                    }
+                }
+                foreach (GameObject Obj in SpawnPointEditor.m_MapMarkers)
+                {
+                    if (Obj)
+                    {
+                        UISprite Sprite = Obj.GetComponent<UISprite>();
+                        if (Sprite)
+                        {
+                            Sprite.enabled = __instance.m_RegionSelectedIndex == __instance.GetIndexOfCurrentScene();
+                        }
+                    }
+                }
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool)})]
         private static class Panel_Map_Enable
         {
@@ -70,12 +124,14 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
+                bool CanUseMap = ModMain.s_MapEditor || ModMain.Client.m_Rules.m_CanUseMap;
 
                 if (CanUseMap)
                 {
                     __instance.UnlockMapCurrentScene();
                     __instance.RevealFogForScene(__instance.GetMapNameOfCurrentScene());
+
+
                 }
                 Panel_Map.s_ForceShowPlayerIcon = CanUseMap;
 
@@ -86,7 +142,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
+                bool CanUseMap = ModMain.s_MapEditor || ModMain.Client.m_Rules.m_CanUseMap;
 
                 if (CanUseMap)
                 {
@@ -160,6 +216,73 @@ namespace SkyCoopClient
                             }
                         }
                     }
+                    if (__instance.m_MapElementsTransform.FindChild($"GearSpawnMarker") == null)
+                    {
+                        foreach (Vector3 Position in GearsSync.s_SpawnersMarkers)
+                        {
+                            GameObject GearSpawner = GameObject.Instantiate(__instance.m_PlayerIcon.gameObject, __instance.m_PlayerIcon.parent);
+                            if (GearSpawner)
+                            {
+                                GearSpawner.transform.rotation = Quaternion.identity;
+                                GearSpawner.SetActive(true);
+                                GearSpawner.name = "GearSpawnMarker";
+                                GearSpawner.transform.localScale = new Vector3(0.5f, 0.5f, 1);
+                                GearSpawner.transform.localPosition = __instance.WorldPositionToMapPosition(__instance.m_UnlockedRegionNames[__instance.m_RegionSelectedIndex], Position);
+
+                                UISprite Sprite = GearSpawner.GetComponent<UISprite>();
+                                Sprite.atlas = GameModeHUD.s_BaseAtlas;
+                                Sprite.spriteName = "icoMap_Generic";
+                                Sprite.color = Color.magenta;
+                                GearsSync.s_SpawnersMarkersObjects.Add(GearSpawner);
+                            }
+                        }
+                    }
+
+                    if (ModMain.s_MapEditor)
+                    {
+                        for (int i = SpawnPointEditor.m_MapMarkers.Count - 1; i >= 0; i--)
+                        {
+                            UnityEngine.Object.Destroy(SpawnPointEditor.m_MapMarkers[i]);
+                        }
+                        SpawnPointEditor.m_MapMarkers.Clear();
+                        foreach (DataStr.V3Quat V3Q in SpawnPointEditor.m_Points)
+                        {
+                            GameObject PlayerSpawner = GameObject.Instantiate(__instance.m_PlayerIcon.gameObject, __instance.m_PlayerIcon.parent);
+                            if (PlayerSpawner)
+                            {
+                                PlayerSpawner.transform.rotation = Quaternion.identity;
+                                PlayerSpawner.SetActive(true);
+                                PlayerSpawner.name = "PlayerSpawner";
+                                PlayerSpawner.transform.localScale = new Vector3(0.5f, 0.5f, 1);
+                                PlayerSpawner.transform.localPosition = __instance.WorldPositionToMapPosition(__instance.m_UnlockedRegionNames[__instance.m_RegionSelectedIndex], V3Q.m_Position.ConvertToUnity());
+
+                                UISprite Sprite = PlayerSpawner.GetComponent<UISprite>();
+                                Sprite.atlas = GameModeHUD.s_BaseAtlas;
+                                Sprite.spriteName = "ico_knowledge_people";
+                                Sprite.color = Color.green;
+                                SpawnPointEditor.m_MapMarkers.Add(PlayerSpawner);
+                            }
+                        }
+                    }
+
+                    string mapNameOfCurrentScene = __instance.GetMapNameOfCurrentScene();
+                    if (!string.IsNullOrEmpty(mapNameOfCurrentScene))
+                    {
+                        if (__instance.m_MapElementData.ContainsKey(mapNameOfCurrentScene))
+                        {
+                            Il2CppSystem.Collections.Generic.List<MapElementSaveData> list = __instance.m_MapElementData[mapNameOfCurrentScene];
+                            for (int i = 0; i < list.Count; i++)
+                            {
+                                MapElementSaveData Element = list[i];
+
+                                if (Element.m_IsArea || Element.m_BigSprite)
+                                {
+                                    Element.m_NameIsKnown = true;
+                                }
+                            }
+                            return;
+                        }
+                    }
                 }
             }
         }
@@ -179,11 +302,61 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "Enable")]
         private static class Panel_Log_Enable
         {
-            private static bool Prefix(Panel_Log __instance)
+            private static void Postfix(Panel_Log __instance)
             {
-                if (!ModMain.IsMultiplayer()) { return true; }
+                if (!ModMain.IsMultiplayer()) { return; }
+                __instance.EnterState(PanelLogState.WhatIKnow);
 
-                return false;
+                if (__instance.m_SectionNav)
+                {
+                    __instance.m_SectionNav.SetActive(false);
+                }
+                if (__instance.m_LogSectionObject)
+                {
+                    __instance.m_LogSectionObject.SetActive(false);
+                }
+                if (__instance.m_WhatIKnowSectionObject)
+                {
+                    __instance.m_WhatIKnowSectionObject.SetActive(true);
+                }
+                if (__instance.m_SelectScreenOnly)
+                {
+                    Transform T = __instance.m_SelectScreenOnly.transform.GetChild(0);
+                    if (T)
+                    {
+                        UILocalize Loca = T.GetComponent<UILocalize>();
+                        Loca.key = "GAMEPLAY_PEOPLE";
+                        Loca.OnLocalize();
+                    }
+                }
+                //if (__instance.m_WhatIKnowScrollList)
+                //{
+                //    GameObject CloneVictim = __instance.m_WhatIKnowScrollList.m_ScrollObjects[0];
+                //    for (int i = __instance.m_WhatIKnowScrollList.transform.childCount-1; i > 0 ; i--)
+                //    {
+                //        GameObject Obj = __instance.m_WhatIKnowScrollList.transform.GetChild(i).gameObject;
+                //        UnityEngine.Object.Destroy(Obj);
+                //    }
+                //    __instance.m_WhatIKnowScrollList.m_ScrollObjects.Clear();
+
+                //    // Scroll test
+                //    for (int i = 0; i < 12; i++)
+                //    {
+                //        GameObject NewElement = GameObject.Instantiate(CloneVictim, __instance.m_WhatIKnowScrollList.transform);
+                //        __instance.m_WhatIKnowScrollList.m_ScrollObjects.Add(NewElement);
+                //    }
+                //    __instance.m_WhatIKnowScrollList.RefreshPositioning();
+                //    __instance.m_WhatIKnowScrollList.RefreshVisibility();
+                //    //foreach (NetworkPlayer Player in PlayersManager.s_Players)
+                //    //{
+                //    //    if (Player)
+                //    //    {
+                //    //        GameObject NewElement = GameObject.Instantiate(CloneVictim, __instance.m_WhatIKnowScrollList.transform);
+                //    //        __instance.m_WhatIKnowScrollList.m_ScrollObjects.Add(NewElement);
+                //    //    }
+                //    //}
+                //    UnityEngine.Object.Destroy(CloneVictim);
+                //}
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_RecipeBook), "Enable")]
@@ -193,7 +366,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                return false;
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "Enable", new System.Type[] { typeof(bool) })]

@@ -206,17 +206,21 @@ namespace SkyCoopServer
 
                         List<NetPeer> peers = new List<NetPeer>();
                         m_Instance.GetConnectedPeers(peers);
+
+                        List<DataStr.LeaderData> Leaders = m_PlayersData.GetLeaders();
+
                         foreach (NetPeer Peer in peers.ToArray())
                         {
                             ServerSend.SendFreeze(Peer);
                             DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
                             string PlayerScene = PlayerData.m_Scene;
+
                             PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
                             DataStr.SceneData SceneData = m_ScenesData.GetSceneData(PlayerScene);
 
                             if (SceneData != null)
                             {
-                                ServerSend.SendLeaders(m_PlayersData.GetDMLeaders(), SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, this);
+                                ServerSend.SendLeaders(Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, this);
                             }
 
                             m_PlayersData.GetPlayer(Peer.Id).m_Scene = "";

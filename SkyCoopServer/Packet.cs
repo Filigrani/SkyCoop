@@ -72,6 +72,7 @@ namespace SkyCoopServer
             ClientTilt,
             ServerSquadEliminated,
             ClientRequestPresent,
+            ServerGearSpawnerMarker
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -391,6 +392,24 @@ namespace SkyCoopServer
             Data.guid = Reader.GetString();
             Data.prefabname = Reader.GetString();
             Data.frombundle = Reader.GetBool();
+
+            return Data;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.LeaderData Data)
+        {
+            Writer.Put(Data.m_ID);
+            Writer.Put(Data.m_Score);
+            Writer.Put(Data.m_ClothingData);
+        }
+
+        public static DataStr.LeaderData GetLeaderData(this NetDataReader Reader)
+        {
+            DataStr.LeaderData Data = new DataStr.LeaderData();
+
+            Data.m_ID = Reader.GetInt();
+            Data.m_Score = Reader.GetInt();
+            Data.m_ClothingData = Reader.GetClothingData();
 
             return Data;
         }

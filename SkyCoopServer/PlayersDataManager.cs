@@ -374,7 +374,7 @@ namespace SkyCoopServer
             DataStr.PlayerData Player = GetPlayer(Index);
             if (Player != null)
             {
-                Player.m_VisualData.m_LatAction = Action;
+                Player.m_VisualData.m_LastAction = Action;
 
                 if (Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
                 {
@@ -470,25 +470,88 @@ namespace SkyCoopServer
         public string GetPlayerScoreString(int PlayerID)
         {
             DataStr.PlayerData Player = GetPlayer(PlayerID);
-            List<int> Leaders = GetDMLeaders();
+            List<int> Leaders = GetLeadersIDs(true);
             int Score = GetScore(PlayerID).GetFinalScore();
             return $"{Score} Place: {Leaders.IndexOf(PlayerID)+1}/{Leaders.Count}";
         }
 
-        public List<int> GetDMLeaders()
+        public List<DataStr.LeaderData> GetLeaders(bool Unlimited = false)
+        {
+            List<int> GetLeadersIDs = this.GetLeadersIDs(Unlimited);
+
+            List<DataStr.LeaderData> Data = new List<LeaderData>();
+
+            foreach (int PlayerID in GetLeadersIDs)
+            {
+                PlayerData PlayerData = GetPlayer(PlayerID);
+
+                if(PlayerData != null)
+                {
+                    Data.Add(new LeaderData(PlayerData, GetScore(PlayerID).GetFinalScore()));
+                }
+            }
+            return Data;
+        }
+
+        public List<int> GetLeadersIDs(bool Unlimited = false)
         {
             List<int> Leaders = new List<int>();
             List<DataStr.DMScore> Scores = new List<DMScore>();
 
-            List<NetPeer> peers = new List<NetPeer>();
-            s_Server.m_Instance.GetConnectedPeers(peers);
-            foreach (NetPeer Peer in peers.ToArray())
+            if(s_Server.m_Config.m_GameMode != "Shrink")
             {
-                Scores.Add(GetScore(Peer.Id));
+                List<NetPeer> peers = new List<NetPeer>();
+                s_Server.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
+                {
+                    Scores.Add(GetScore(Peer.Id));
+                }
             }
+            else
+            {
+                bool FoundSquad = false;
+                foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+                {
+                    if (SquadIsAlive(Squad))
+                    {
+                        foreach (int PlayerID in Squad.m_Players)
+                        {
+                            Scores.Add(GetScore(PlayerID));
+                        }
+                        FoundSquad = true;
+                        break;
+                    }
+                }
+                if (!FoundSquad)
+                {
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
+                    {
+                        DataStr.PlayerData PlayerData = GetPlayer(Peer.Id);
+                        if(PlayerData != null && PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                        {
+                            Scores.Add(GetScore(Peer.Id));
+                        }
+                    }
+                }
+            }
+
+
             Scores.Sort();
 
-            for (int i = 0; i < (Scores.Count < 3 ? Scores.Count : 3); i++)
+            int Count = 0;
+
+            if (Unlimited)
+            {
+                Count = Scores.Count;
+            }
+            else
+            {
+                Count = Scores.Count < 3 ? Scores.Count : 3;
+            }
+
+            for (int i = 0; i < Count; i++)
             {
                 Leaders.Add(Scores[i].PlayerID);
             }
@@ -764,6 +827,7 @@ namespace SkyCoopServer
                 "Dogma",
                 "Cinema",
                 "Sintarians",
+                "UwU",
             };
             System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
             while (CurrentAttempt <= MaxAttempts)

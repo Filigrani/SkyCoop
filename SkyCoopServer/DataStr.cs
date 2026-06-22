@@ -604,7 +604,7 @@ namespace SkyCoopServer
             public bool m_InVehicle = false;
             public string m_GearInHands = "";
             public int m_GearVariant = 0;
-            public int m_LatAction = 0;
+            public int m_LastAction = 0;
             public List<InjectedItem> m_InjectedItems = new List<InjectedItem>();
             public DataStr.ClothingData m_ClothingData = new DataStr.ClothingData();
 
@@ -653,6 +653,22 @@ namespace SkyCoopServer
                     // TO DO Диспоснуть текущую зону, ибо следующая карта может не иметь зоны.
                     // Нужно ещё отправить клиенту сигнла что бы он снёс зону у себя тоже.
                 }
+            }
+
+            public List<Vector3> GetGearSpawnersMarkers()
+            {
+                List<Vector3> Points = new List<Vector3>();
+                if(m_RadialLootSpawners != null)
+                {
+                    foreach (RadialLootSpawner Spawner in m_RadialLootSpawners)
+                    {
+                        if (Spawner != null)
+                        {
+                            Points.Add(Spawner.center.ToVector());
+                        }
+                    }
+                }
+                return Points;
             }
 
             public void LoadMapData(Server ServerInstance, MapData MapData)
@@ -1312,6 +1328,32 @@ namespace SkyCoopServer
 
             public bool m_TechPack = false;
 
+            public ClothingData GetCopy()
+            {
+                ClothingData Clone = new ClothingData();
+
+                Clone.m_Hat1 = m_Hat1;
+                Clone.m_Hat2 = m_Hat2;
+                Clone.m_Body = m_Body;
+                Clone.m_Gloves = m_Gloves;
+                Clone.m_Pants = m_Pants;
+                Clone.m_Boots = m_Boots;
+
+                Clone.m_Accs1 = m_Accs1;
+                Clone.m_Accs2 = m_Accs2;
+
+                Clone.m_Hat1Damage = m_Hat1Damage;
+                Clone.m_Hat2Damage = m_Hat2Damage;
+                Clone.m_BodyDamage = m_BodyDamage;
+                Clone.m_GlovesDamage = m_GlovesDamage;
+                Clone.m_PantsDamage = m_PantsDamage;
+                Clone.m_BootsDamage = m_BootsDamage;
+
+                Clone.m_TechPack = m_TechPack;
+
+                return Clone;
+            }
+
             public bool Equals(ClothingData Other)
             {
                 if(m_Hat1 == Other.m_Hat1 
@@ -1859,6 +1901,22 @@ namespace SkyCoopServer
                     return LootTable.GetRandomItemPrefab();
                 }
                 return string.Empty;
+            }
+        }
+
+        public class LeaderData
+        {
+            public int m_ID = 0;
+            public int m_Score = 0;
+            public ClothingData m_ClothingData = new ClothingData();
+
+            public LeaderData(){}
+
+            public LeaderData(PlayerData PlayerData, int Score = 0)
+            {
+                m_ID = PlayerData.m_PlayerID;
+                m_Score = Score;
+                m_ClothingData = PlayerData.m_VisualData.m_ClothingData.GetCopy();
             }
         }
     }

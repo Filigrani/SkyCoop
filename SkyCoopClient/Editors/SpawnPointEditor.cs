@@ -13,6 +13,7 @@ namespace SkyCoopClient
     {
         public static List<V3Quat> m_Points = new List<V3Quat>();
         public static List<GameObject> m_Visualizers = new List<GameObject>();
+        public static List<GameObject> m_MapMarkers = new List<GameObject>();
 
         public static void DeleteVizualization()
         {
