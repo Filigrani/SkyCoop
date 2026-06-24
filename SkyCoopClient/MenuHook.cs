@@ -13,6 +13,7 @@ namespace SkyCoop
     {
         public static string s_CurrenetMenuOverride = "Original";
         public static bool s_SkyCoopSettingsForced = false;
+        public static string s_PendingSquadInvite = "";
 
         public static Comps.TexasHoldEmPlay s_RaisBetHook;
 
@@ -263,6 +264,24 @@ namespace SkyCoop
             DebugGUI.Toggle();
         }
 
+        public static void SendSquadName()
+        {
+            ClientSend.SendCreateSquadRequest(InterfaceManager.GetPanel<Panel_Confirmation>().m_CurrentGroup.m_InputField.GetText());
+        }
+
+        public static void OnCreateSquad()
+        {
+            InterfaceManager.TrySetPanelEnabled<Panel_PauseMenu>(false);
+            RemovePleaseWait();
+            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input name for squad", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Confirm", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(SendSquadName), null);
+        }
+
+        public static void OnLeaveSquad()
+        {
+            InterfaceManager.TrySetPanelEnabled<Panel_PauseMenu>(false);
+            ClientSend.SendLeaveSquadRequest();
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_PauseMenu), "ConfigureMenu", null)]
         public class Panel_PauseMenu_ConfigureMenu
         {
@@ -271,6 +290,17 @@ namespace SkyCoop
                 if (ModMain.s_MapEditor)
                 {
                     AddButton(__instance.m_BasicMenu, "MAP EDITOR", "Opens map editor tools", 0, new Action(OnMapEditorTools));
+                }else if (ModMain.Client.m_IsReady && ModMain.Client.m_Config.m_GameMode == "Lobby")
+                {
+                    if (!PlayersManager.s_InSquad)
+                    {
+                        AddButton(__instance.m_BasicMenu, "Create Squad", "Create Squad", 1, new Action(OnCreateSquad));
+
+                    }
+                    else
+                    {
+                        AddButton(__instance.m_BasicMenu, "Leave Squad", "Leave Squad", 1, new Action(OnLeaveSquad));
+                    }
                 }
             }
         }
@@ -393,6 +423,24 @@ namespace SkyCoop
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
         }
 
+        public static void AcceptSquadInvite()
+        {
+            ClientSend.SendAcceptSquadInvite(s_PendingSquadInvite);
+            s_PendingSquadInvite = "";
+        }
+
+        public static void RefuseSquadInvite()
+        {
+            ClientSend.SendRefuseJoinSquad(s_PendingSquadInvite);
+            s_PendingSquadInvite = "";
+        }
+
+        public static void DoInviteSquadMessage(string SquadName)
+        {
+            s_PendingSquadInvite = SquadName;
+            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, $"Do you want to join squad {SquadName}?", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Join", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(AcceptSquadInvite), null);
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_PickUnits), "Refresh", null)]
         public class Panel_PickUnits_Refresh
         {
@@ -502,38 +550,16 @@ namespace SkyCoop
             }
         }
 
-        //TODO: Move it to different class
-        [HarmonyLib.HarmonyPatch(typeof(vp_FPSShooter), "Fire", null)]
-        public class vp_FPSShooter_Fire
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Confirmation), "CancelConfirmation", null)]
+        public class Panel_Confirmation_CancelConfirmation
         {
-            public static void Prefix(vp_FPSShooter __instance)
+            public static void Prefix(Panel_Confirmation __instance)
             {
-                if(!ModMain.IsMultiplayer()) { return; }
-                
-                
-                if (__instance.m_Weapon == null || (double)Time.time < (double)__instance.m_NextAllowedFireTime || (__instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire)) || GameManager.GetPlayerAnimationComponent().IsReloading())
-                {
-                    return;
-                }
-                if (__instance.m_Weapon.GetAmmoCount() < 1)
-                {
-                    //TODO: Dry fire sound sync
-                    //SendMultiplayerAudio("PLAY_RIFLE_DRY_3D");
-                    return;
-                } else
-                {
-                    if (__instance.m_Weapon.m_GunItem.m_IsJammed)
-                    {
-                        //TODO: Jammed sound sync
-                        //SendMultiplayerAudio("PLAY_RIFLE_DRY_3D");
-                        return;
-                    }
-                }
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                //TODO: Projectile fire sync
-                if (__instance.ProjectilePrefab.name == "PistolBullet")
+                if (!string.IsNullOrEmpty(s_PendingSquadInvite))
                 {
-                    ClientSend.SendFire();
+                    RefuseSquadInvite();
                 }
             }
         }

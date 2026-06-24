@@ -124,6 +124,7 @@ namespace SkyCoopClient
 
             WeaponDescripter Zone = new WeaponDescripter();
             Zone.m_DamageType = DataStr.DamageType.Unknown;
+            Zone.m_IgnoreArmor = true;
             AddDescriptor("ZONE", Zone);
         }
 
@@ -164,6 +165,7 @@ namespace SkyCoopClient
             public float m_AttackSpeed = 1;
             public DataStr.DamageType m_DamageType = DataStr.DamageType.Unknown;
             public bool m_IsMelee = false;
+            public bool m_IgnoreArmor = false;
         }
 
         public static string GetGearNameByGunType(GunType Weapon)
@@ -578,6 +580,11 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (__instance.m_Weapon == null || (double)Time.time < (double)__instance.m_NextAllowedFireTime || (__instance.m_Weapon.ReloadInProgress() || !GameManager.GetPlayerAnimationComponent().IsAllowedToFire(__instance.m_Weapon.m_GunItem.m_AllowHipFire)) || GameManager.GetPlayerAnimationComponent().IsReloading())
+                {
+                    return;
+                }
+
                 if (__instance.m_Weapon.GetAmmoCount() < 1)
                 {
                     ClientSend.SendProjectile(GameManager.GetPlayerTransform().position, GameManager.GetPlayerTransform().rotation, "DryFire");
@@ -590,6 +597,10 @@ namespace SkyCoopClient
                         ClientSend.SendProjectile(GameManager.GetPlayerTransform().position, GameManager.GetPlayerTransform().rotation, "DryFire");
                         return;
                     }
+                }
+                if (__instance.ProjectilePrefab.name == "PistolBullet")
+                {
+                    ClientSend.SendFire();
                 }
                 if (__instance.ProjectilePrefab.name == "GEAR_FlareGunAmmoSingle")
                 {

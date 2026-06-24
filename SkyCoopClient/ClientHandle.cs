@@ -410,11 +410,14 @@ namespace SkyCoop
                 LeadersList.Add(Reader.GetLeaderData());
             }
 
-
             Vector3 Position = Reader.GetVector3Unity();
             Quaternion Rotation = Reader.GetQuaternionUnity();
 
-            GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>("Victory");
+            string SquadName = Reader.GetString();
+
+            string PrefabName = ModMain.Client.m_Config.m_GameMode != "Shrink" ? "Victory" : "Victory_Squad";
+
+            GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>(PrefabName);
             if (Reference)
             {
                 GameObject Obj = UnityEngine.Object.Instantiate(Reference, Position, Rotation);
@@ -436,6 +439,19 @@ namespace SkyCoop
                         }
                         Obj.transform.GetChild(i+3).gameObject.SetActive(true);
                         Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(CanvasUI.GetPlayerName(Data.m_ID));
+                    }
+
+                    if(PrefabName == "Victory_Squad")
+                    {
+                        if (!string.IsNullOrEmpty(SquadName))
+                        {
+                            Obj.transform.GetChild(6).gameObject.SetActive(true);
+                            Obj.transform.GetChild(6).GetComponent<TextMeshPro>().SetText(SquadName);
+                        }
+                        else
+                        {
+                            Obj.transform.GetChild(6).gameObject.SetActive(false);
+                        }
                     }
                     Transform Cam = Obj.transform.FindChild("Camera");
                     Cam.GetComponent<Camera>().enabled = false;
@@ -614,6 +630,15 @@ namespace SkyCoop
         {
             bool HasSquad = Reader.GetBool();
 
+            if (HasSquad)
+            {
+                HUDMessage.AddMessage("You joined squad!", true, true);
+                GameAudioManager.PlayGUIButtonClick();
+            }
+            else
+            {
+                SquadHUD.s_SquadMembers.Clear();
+            }
             PlayersManager.s_InSquad = HasSquad;
         }
 
@@ -664,6 +689,70 @@ namespace SkyCoop
             {
                 GearsSync.s_SpawnersMarkers.Add(Reader.GetVector3Unity());
             }
+        }
+
+        public static void ServerSquadMemberLeft(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+
+            SquadHUD.RemoveMember(PlayerID);
+        }
+
+        public static void ServerSquadResponce(NetDataReader Reader)
+        {
+            int Reason = Reader.GetInt();
+
+            if(Reason == 0)
+            {
+                HUDMessage.AddMessage("Wasn't able to create squad!", true, true);
+                GameAudioManager.PlayGUIError();
+            }
+            else if(Reason == 1)
+            {
+                HUDMessage.AddMessage("Squad created!", true, true);
+                GameAudioManager.PlayGUIButtonClick();
+            }
+            else if(Reason == 2)
+            {
+                HUDMessage.AddMessage("You not in squad!", true, true);
+                GameAudioManager.PlayGUIError();
+            }
+            else if (Reason == 3)
+            {
+                HUDMessage.AddMessage("You left squad!", true, true);
+                GameAudioManager.PlayGUIButtonClick();
+            }
+            else if (Reason == 4)
+            {
+                HUDMessage.AddMessage("You already in squad!", true, true);
+                GameAudioManager.PlayGUIError();
+            }
+            else if (Reason == 5)
+            {
+                HUDMessage.AddMessage("You are not invited!", true, true);
+                GameAudioManager.PlayGUIError();
+            }
+            else if (Reason == 6)
+            {
+                HUDMessage.AddMessage("Invite sent", true, true);
+                GameAudioManager.PlayGUIButtonClick();
+            }
+            else if (Reason == 7)
+            {
+                HUDMessage.AddMessage("Squad not exist!", true, true);
+                GameAudioManager.PlayGUIButtonClick();
+            }
+        }
+        public static void ServerSquadCreated(NetDataReader Reader)
+        {
+            string SquadName = Reader.GetString();
+            CanvasUI.AddTextMessage($"Squad {SquadName} Created!");
+        }
+
+        public static void ClientInviteToSquad(NetDataReader Reader)
+        {
+            string SquadName = Reader.GetString();
+            MenuHook.DoInviteSquadMessage(SquadName);
         }
     }
 }

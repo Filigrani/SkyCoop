@@ -437,5 +437,50 @@ namespace SkyCoop
             writer.Put(true);
             SendToHost(writer);
         }
+
+        public static void SendCreateSquadRequest(string SquadName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRequestNewSquad);
+            writer.Put(SquadName);
+            SendToHost(writer);
+        }
+
+        public static void SendLeaveSquadRequest()
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRequestLeaveSquad);
+            writer.Put(true);
+            SendToHost(writer);
+        }
+
+        public static void SendInviteToSquad(int ClientID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientInviteToSquad);
+            writer.Put(ClientID);
+            SendToHost(writer);
+        }
+
+        public static void SendAcceptSquadInvite(string SquadName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientAcceptInviteToSquad);
+            writer.Put(SquadName);
+            SendToHost(writer);
+        }
+
+        public static void SendRefuseJoinSquad(string SquadName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientRefuseJoinToSquad);
+            writer.Put(SquadName);
+            SendToHost(writer);
+        }
     }
 }

@@ -67,7 +67,7 @@ namespace SkyCoopClient
 
         public static void RemoveMember(int PlayerID)
         {
-            for(int i = s_SquadMembers.Count; i >= 0; i--)
+            for(int i = s_SquadMembers.Count-1; i >= 0; i--)
             {
                 if (s_SquadMembers[i].m_ID == PlayerID)
                 {

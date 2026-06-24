@@ -72,7 +72,15 @@ namespace SkyCoopServer
             ClientTilt,
             ServerSquadEliminated,
             ClientRequestPresent,
-            ServerGearSpawnerMarker
+            ServerGearSpawnerMarker,
+            ServerSquadMemberLeft,
+            ClientRequestNewSquad,
+            ServerSquadResponce,
+            ClientRequestLeaveSquad,
+            ServerSquadCreated,
+            ClientInviteToSquad,
+            ClientAcceptInviteToSquad,
+            ClientRefuseJoinToSquad,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)

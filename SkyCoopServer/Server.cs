@@ -79,6 +79,11 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientSquadHealth, ServerHandle.ClientSquadHealth },
             { (int)Packet.Type.ClientTilt, ServerHandle.ClientTilt },
             { (int)Packet.Type.ClientRequestPresent, ServerHandle.ClientRequestPresent },
+            { (int)Packet.Type.ClientRequestNewSquad, ServerHandle.ClientRequestNewSquad },
+            { (int)Packet.Type.ClientRequestLeaveSquad, ServerHandle.ClientRequestLeaveSquad },
+            { (int)Packet.Type.ClientInviteToSquad, ServerHandle.ClientInviteToSquad },
+            { (int)Packet.Type.ClientAcceptInviteToSquad, ServerHandle.ClientAcceptInviteToSquad },
+            { (int)Packet.Type.ClientRefuseJoinToSquad, ServerHandle.ClientRefuseJoinToSquad },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -202,12 +207,33 @@ namespace SkyCoopServer
                     ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
                     if (m_Rules.m_Time == 0)
                     {
-                        m_PendingGameModeOverTimer = 25;
+                        if(m_Rules.m_HUDMode == "Lobby")
+                        {
+                            m_PendingGameModeOverTimer = 3;
+                        }
+                        else
+                        {
+                            m_PendingGameModeOverTimer = 25;
+                        }
 
                         List<NetPeer> peers = new List<NetPeer>();
                         m_Instance.GetConnectedPeers(peers);
 
                         List<DataStr.LeaderData> Leaders = m_PlayersData.GetLeaders();
+                        string SquadName = "";
+
+                        if(m_Rules.m_HUDMode == "Shrink")
+                        {
+                            if(Leaders.Count > 0)
+                            {
+                                DataStr.PlayersSquad Squad = m_PlayersData.GetPlayerSquadIn(Leaders[0].m_ID);
+
+                                if (Squad != null)
+                                {
+                                    SquadName = Squad.m_Name;
+                                }
+                            }
+                        }
 
                         foreach (NetPeer Peer in peers.ToArray())
                         {
@@ -218,9 +244,10 @@ namespace SkyCoopServer
                             PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
                             DataStr.SceneData SceneData = m_ScenesData.GetSceneData(PlayerScene);
 
-                            if (SceneData != null)
+
+                            if (SceneData != null && SceneData.m_VictoryPoint != null)
                             {
-                                ServerSend.SendLeaders(Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, this);
+                                ServerSend.SendLeaders(Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
                             }
 
                             m_PlayersData.GetPlayer(Peer.Id).m_Scene = "";

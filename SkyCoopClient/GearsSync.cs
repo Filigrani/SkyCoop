@@ -250,7 +250,21 @@ namespace SkyCoopClient
                         Comps.NetworkPlayer Player = OBJ.GetComponent<Comps.NetworkPlayer>();
                         if (Player)
                         {
-                            //PlayersManager.TryReviveOtherPlayer(Player);
+                            
+                            if(Player.m_Action == Comps.NetworkPlayer.Actions.Knocked)
+                            {
+                                //PlayersManager.TryReviveOtherPlayer(Player);
+                            }
+                            else
+                            {
+                                if(ModMain.Client.m_Config.m_GameMode == "Lobby")
+                                {
+                                    if (PlayersManager.s_InSquad)
+                                    {
+                                        ClientSend.SendInviteToSquad(Player.m_PlayerID);
+                                    }
+                                }
+                            }
                         }
                     }
                 }

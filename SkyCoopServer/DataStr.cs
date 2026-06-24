@@ -19,11 +19,11 @@ namespace SkyCoopServer
             public int m_MaxPlayers = 4;
             public string m_StartingRegion = "MarshRegion";
             public int m_Seed = 777777;
-            public int m_VoicePort = 37850;
-            //public int m_VoicePort = 0;
+            //public int m_VoicePort = 37850;
+            public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
-            public string m_GameMode = "Shrink";
+            public string m_GameMode = "Lobby";
         }
 
         public class MapData
@@ -1410,6 +1410,7 @@ namespace SkyCoopServer
         {
             public string m_Name = "";
             public List<int> m_Players = new List<int>();
+            public List<int> m_Invites = new List<int>();
 
             public PlayersSquad(string SquadName)
             {
@@ -1421,19 +1422,73 @@ namespace SkyCoopServer
                 return m_Players.Contains(PlayerID);
             }
 
-            public bool AddPlayer(int PlayerID)
+            public bool PlayerIsInvited(int PlayerID)
+            {
+                return m_Invites.Contains(PlayerID);
+            }
+
+            public bool AddPlayer(int PlayerID, Server ServerInstance)
             {
                 if (!m_Players.Contains(PlayerID))
                 {
                     m_Players.Add(PlayerID);
+
+                    RemoveInvite(PlayerID);
+
+                    ServerSend.SendAssignSquad(ServerInstance.GetClient(PlayerID), true);
+
+                    foreach (int TeammateID in m_Players.ToList())
+                    {
+                        NetPeer TeamatePeer = ServerInstance.GetClient(TeammateID);
+
+                        if (TeamatePeer != null)
+                        {
+                            ServerSend.SendSquadHealthRequest(TeamatePeer);
+                        }
+                    }
+                    if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
+                    {
+                        List<NetPeer> peers = new List<NetPeer>();
+                        ServerInstance.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                        }
+                    }
                     return true;
                 }
                 return false;
             }
 
-            public void RemovePlayer(int PlayerID)
+            public void RemovePlayer(int PlayerID, Server ServerInstance)
             {
                 m_Players.Remove(PlayerID);
+
+                foreach (int TeammateID in m_Players)
+                {
+                    NetPeer TematePeer = ServerInstance.GetClient(TeammateID);
+
+                    if(TematePeer != null)
+                    {
+                        ServerSend.SendSquadMemberLeft(TematePeer, PlayerID);
+                    }
+                }
+            }
+
+            public void AddInvite(int PlayerID)
+            {
+                if (!m_Invites.Contains(PlayerID))
+                {
+                    m_Invites.Add(PlayerID);
+                }
+            }
+
+            public void RemoveInvite(int PlayerID)
+            {
+                if (m_Invites.Contains(PlayerID))
+                {
+                    m_Invites.Remove(PlayerID);
+                }
             }
         }
 

@@ -485,7 +485,7 @@ namespace SkyCoopServer
                 Peer.Send(writer, DeliveryMethod.ReliableOrdered);
             }
         }
-        public static void SendLeaders(List<DataStr.LeaderData> Leaders, Vector3 Position, Quaternion Rotation ,Server ServerInstance)
+        public static void SendLeaders(List<DataStr.LeaderData> Leaders, Vector3 Position, Quaternion Rotation, string SquadName, Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerLeaders);
@@ -499,6 +499,7 @@ namespace SkyCoopServer
 
             writer.Put(Position);
             writer.Put(Rotation);
+            writer.Put(SquadName);
 
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
@@ -833,6 +834,50 @@ namespace SkyCoopServer
             {
                 writer.Put(Points[i]);
             }
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendSquadMemberLeft(NetPeer Client, int TeamateID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerSquadMemberLeft);
+
+            writer.Put(TeamateID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendSquadResponce(NetPeer Client, int Reason)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerSquadResponce);
+
+            writer.Put(Reason);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendSquadCreated(Server ServerInstance, string SquadName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ServerSquadCreated);
+            writer.Put(SquadName);
+
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+            }
+        }
+        public static void SendSquadInvite(NetPeer Client, string SquadName)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientInviteToSquad);
+
+            writer.Put(SquadName);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

@@ -164,7 +164,9 @@ namespace SkyCoopServer
             Logger.Log($"[ServerHandle] ClientRequestRespawn PlayerID {Client.Id} m_GamePlayState: {State.ToString()}");
             if (State == DataStr.PlayerData.GamePlayState.Dead)
             {
-                DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene);
+                DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, Client.Id);
+                ServerInstance.m_PlayersData.PlayerMoved(Client.Id, Point.m_Position);
+                ServerInstance.m_PlayersData.PlayerRotated(Client.Id, Point.m_Rotation);
                 ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation);
             }else if(State == PlayerData.GamePlayState.Spectator)
             {
@@ -360,7 +362,9 @@ namespace SkyCoopServer
             {
                 ServerSend.ClientGameModeTimer(ServerInstance.m_Rules.m_Time, ServerInstance);
             }
-            DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(SceneName);
+            DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(SceneName, Client.Id);
+            ServerInstance.m_PlayersData.PlayerMoved(Client.Id, Point.m_Position);
+            ServerInstance.m_PlayersData.PlayerRotated(Client.Id, Point.m_Rotation);
             ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
         }
 
@@ -707,6 +711,20 @@ namespace SkyCoopServer
                 case "zonerestart":
                     ServerInstance.ZoneRestart();
                     break;
+                case "lobby":
+                    ServerInstance.ForceToOver();
+                    ServerInstance.m_Config.m_GameMode = "Lobby";
+                    break;
+                case "newpoint":
+                    NetPeer Client = ServerInstance.GetClient(Player.m_PlayerID);
+                    if (Client != null)
+                    {
+                        DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(Player.m_Scene, Player.m_PlayerID);
+                        ServerInstance.m_PlayersData.PlayerMoved(Client.Id, Point.m_Position);
+                        ServerInstance.m_PlayersData.PlayerRotated(Client.Id, Point.m_Rotation);
+                        ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation);
+                    }
+                    break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
                     break;
@@ -737,7 +755,12 @@ namespace SkyCoopServer
                     {
                         if(TeammateID != Player.m_PlayerID || ServerInstance.m_PlayersData.m_RecursiveDebug)
                         {
-                            ServerSend.SendSquadMemberUpdate(ServerInstance.GetClient(TeammateID), Player.m_PlayerID, Health, Debuffs, KnockedDown);
+                            NetPeer OtherClient = ServerInstance.GetClient(TeammateID);
+
+                            if (OtherClient != null)
+                            {
+                                ServerSend.SendSquadMemberUpdate(OtherClient, Player.m_PlayerID, Health, Debuffs, KnockedDown);
+                            }
                         }
                     }
                 }
@@ -764,6 +787,130 @@ namespace SkyCoopServer
             else
             {
                 ServerSend.SendPickUpGearFailed(Client);
+            }
+        }
+
+        public static void ClientRequestNewSquad(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string SquadName = Reader.GetString();
+
+            Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} requrest creating new squad {SquadName}");
+
+            PlayersSquad Squad = ServerInstance.m_PlayersData.CreateSquad(ServerInstance, SquadName);
+
+            if(Squad == null)
+            {
+                ServerSend.SendSquadResponce(Client, 0);
+            }
+            else
+            {
+                ServerSend.SendSquadResponce(Client, 1);
+                ServerInstance.m_PlayersData.AddPlayerToSquad(SquadName, Client.Id);
+            }
+        }
+
+        public static void ClientRequestLeaveSquad(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            bool Bool = Reader.GetBool();
+
+            Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} requrest leaving squad");
+
+            PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(Client.Id);
+
+            if (Squad == null)
+            {
+                ServerSend.SendSquadResponce(Client, 2);
+            }
+            else
+            {
+                ServerSend.SendSquadResponce(Client, 3);
+
+                string SquadNameToDismember = Squad.m_Name;
+                ServerInstance.m_PlayersData.RemovePlayerFromSquad(Squad.m_Name, Client.Id);
+
+                if (Squad.m_Players.Count == 0)
+                {
+                    ServerSend.SendSquadEliminated(ServerInstance, SquadNameToDismember);
+                    Logger.Log(ConsoleColor.Cyan, $"[Squads] Squad {SquadNameToDismember} was dismembered, no players left.");
+                    ServerInstance.m_PlayersData.m_Squads.Remove(SquadNameToDismember);
+                }
+            }
+        }
+
+        public static void ClientInviteToSquad(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            int OtherClient_ID = Reader.GetInt();
+
+
+            PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(Client.Id);
+
+            if (Squad == null)
+            {
+                ServerSend.SendSquadResponce(Client, 2);
+            }
+            else
+            {
+                Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} trying to invite {OtherClient_ID} to squad {Squad.m_Name}");
+
+                PlayersSquad OtherSquad = ServerInstance.m_PlayersData.GetPlayerSquadIn(OtherClient_ID);
+
+                if(OtherSquad != null)
+                {
+                    ServerSend.SendSquadResponce(Client, 4);
+                }
+                else
+                {
+                    ServerSend.SendSquadResponce(Client, 6);
+                    ServerInstance.m_PlayersData.InvitePlayerToSquad(Squad.m_Name, OtherClient_ID);
+                }
+            }
+        }
+
+        public static void ClientAcceptInviteToSquad(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string SquadName = Reader.GetString();
+
+            Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} trying accept invite to squad {SquadName}");
+
+            PlayersSquad Squad = ServerInstance.m_PlayersData.GetSquad(SquadName);
+
+            if (Squad == null)
+            {
+                Logger.Log(ConsoleColor.Magenta, $"Squad {SquadName} not exist");
+                ServerSend.SendSquadResponce(Client, 7);
+            }
+            else
+            {
+                if (!Squad.PlayerIsInvited(Client.Id))
+                {
+                    ServerSend.SendSquadResponce(Client, 5);
+                }
+                else
+                {
+                    ServerInstance.m_PlayersData.AddPlayerToSquad(SquadName, Client.Id);
+                }
+            }
+        }
+
+        public static void ClientRefuseJoinToSquad(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string SquadName = Reader.GetString();
+
+            Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} refuse invite to squad {SquadName}");
+
+            PlayersSquad Squad = ServerInstance.m_PlayersData.GetSquad(SquadName);
+
+            if (Squad == null)
+            {
+                Logger.Log(ConsoleColor.Magenta, $"Squad {SquadName} not exist");
+                ServerSend.SendSquadResponce(Client, 7);
+            }
+            else
+            {
+                if (Squad.PlayerIsInvited(Client.Id))
+                {
+                    Squad.RemoveInvite(Client.Id);
+                }
             }
         }
     }

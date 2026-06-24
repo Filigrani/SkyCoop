@@ -3,6 +3,7 @@ using Il2CppRewired;
 using Il2CppTLD.Interactions;
 using Il2CppTLD.PDID;
 using Il2CppTLD.Stats;
+using LiteNetLib;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
@@ -132,7 +133,8 @@ namespace SkyCoop
             s_ForceUpdateClothing = false;
             s_Spectator = false;
             s_InSquad = false;
-            
+            SquadHUD.s_SquadMembers.Clear();
+
             // Trying to re-use such complex objects as much as possible.
             // So in for some reason we have less or more characters already exist
             // (for example join server with less/more Max Players), we just add/remove 
@@ -536,6 +538,11 @@ namespace SkyCoop
                 }
             }
 
+            if (DmgInfo.m_IgnoreArmor)
+            {
+                Protection = 0;
+            }
+
 
             if (Protection > 0)
             {
@@ -545,7 +552,19 @@ namespace SkyCoop
 
                 float Blocked = damage-NewDamage;
 
-                PlayerDamageEvent.SpawnAfflictionEvent($"Damage blocked {Math.Round(Blocked).ToString()}", "GAMEPLAY_ClothingProtection", "ico_clothingStats_toughness", Color.cyan);
+                if (Blocked > 0)
+                {
+                    string Number = "";
+                    if (Blocked > 1)
+                    {
+                        Number = Math.Round(Blocked).ToString();
+                    }
+                    else
+                    {
+                        Number = Blocked.ToString("F1");
+                    }
+                    PlayerDamageEvent.SpawnAfflictionEvent($"Damage blocked {Number}", "GAMEPLAY_ClothingProtection", "ico_clothingStats_toughness", Color.cyan);
+                }
 
                 damage = NewDamage;
             }
