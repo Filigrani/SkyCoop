@@ -155,7 +155,14 @@ namespace SkyCoopClient
 
                 Lable.text = Localization.Get(s_TimerPrefix);
 
-                s_HUD.m_StartCountdownLabel.text = string.Format("{0:0}:{1:00}", Minutes, Seconds);
+                if(Minutes == 0 && Seconds == 0)
+                {
+                    s_HUD.m_StartCountdownLabel.text = "";
+                }
+                else
+                {
+                    s_HUD.m_StartCountdownLabel.text = string.Format("{0:0}:{1:00}", Minutes, Seconds);
+                } 
             }
         }
 

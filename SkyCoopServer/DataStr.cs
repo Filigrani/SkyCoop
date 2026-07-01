@@ -52,6 +52,7 @@ namespace SkyCoopServer
         public class GameRules
         {
             public List<string> m_Maps = new List<string>();
+            public int m_MinimalPlayersToPlay = 0;
             public bool m_PlayerCanBeKnocked = false;
             public bool m_PVP = true;
             public List<StartingGearData> m_StartingItems = new List<StartingGearData>();
@@ -65,6 +66,7 @@ namespace SkyCoopServer
             public bool m_CanDropItems = true;
             public bool m_CanUseContainers = true;
             public bool m_CanUseMap = false;
+            public AirDropJson m_AirDrop = null;
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -86,9 +88,18 @@ namespace SkyCoopServer
             }
         }
 
+        public class AirDropJson
+        {
+            public string Prefab { get; set; }
+            public string Path { get; set; }
+            public float Altitude { get; set; }
+            public float FallTime { get; set; }
+        }
+
         public class GameRulesJson
         {
             public List<string> Maps { get; set; }
+            public int MinimalPlayers;
             public bool Knockdowns { get; set; }
             public bool PVP { get; set; }
             public List<StartingGearData> StartingGear { get; set; }
@@ -102,6 +113,7 @@ namespace SkyCoopServer
             public bool CanDropItems { get; set; }
             public bool CanUseContainers { get; set; }
             public bool CanUseMap { get; set; }
+            public AirDropJson AirDrop { get; set; }
 
             public GameRules Load()
             {
@@ -117,6 +129,14 @@ namespace SkyCoopServer
                     }
                 }
 
+                if(MinimalPlayers == null || MinimalPlayers == 0)
+                {
+                    Inst.m_MinimalPlayersToPlay = 0;
+                }
+                else
+                {
+                    Inst.m_MinimalPlayersToPlay = MinimalPlayers;
+                }
                 Inst.m_PlayerCanBeKnocked = Knockdowns;
 
                 if (StartingGear != null)
@@ -146,6 +166,11 @@ namespace SkyCoopServer
                     Inst.m_HUDMode = HUDMode;
                 }
 
+                if (AirDrop != null)
+                {
+                    Inst.m_AirDrop = AirDrop;
+                }
+
                 Inst.m_DeathPacks = DeathPacks;
                 Inst.m_Respawns = Respawns;
                 Inst.m_Clothing = Clothing;
@@ -156,6 +181,12 @@ namespace SkyCoopServer
 
                 return Inst;
             }
+        }
+
+        public class MinimalPlayersAndGameMode
+        {
+            public string GameModeName = "";
+            public int MinimalPlayers = 0;
         }
 
         public class StartingGearData
@@ -215,6 +246,7 @@ namespace SkyCoopServer
             public int m_Assists = 0;
             public int m_Tier = 0;
             public int m_TierProgress = 0;
+            public int m_BloodLosses = 0;
 
             public string m_CarSeat = "";
             public string m_InteractionGUID = "";
@@ -641,6 +673,7 @@ namespace SkyCoopServer
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
+            public List<FallingProp> m_FallingProps = new List<FallingProp>();
 
             public DangerCircleConfig m_ZoneConfig = null;
             public DangerCircleData m_ActiveZone = null;
@@ -716,6 +749,7 @@ namespace SkyCoopServer
                         foreach (PropData Prop in MapData.Props)
                         {
                             m_Props.Add(Prop.guid, Prop);
+
                             List<NetPeer> peers = new List<NetPeer>();
                             ServerInstance.m_Instance.GetConnectedPeers(peers);
                             foreach (NetPeer Peer in peers.ToArray())
@@ -946,6 +980,20 @@ namespace SkyCoopServer
             }
         }
 
+        public static float Lerp(float a, float b, float t)
+        {
+            return a + (b - a) * t;
+        }
+
+        public static Vector3 Lerp(Vector3 a, Vector3 b, float t)
+        {
+            return new Vector3(
+                Lerp(a.X, b.X, t),
+                Lerp(a.Y, b.Y, t),
+                Lerp(a.Z, b.Z, t)
+            );
+        }
+
         public class DangerCircleData
         {
             public DangerCircleConfig m_Config = new DangerCircleConfig();
@@ -1019,6 +1067,10 @@ namespace SkyCoopServer
             public DangerCircleData(DangerCircleConfig Config, string SceneName, Server Server)
             {
                 m_Config = Config;
+                if(m_Config.MapScale == null || m_Config.MapScale.x == 0)
+                {
+                    m_Config.MapScale = new Vector2JSON(0.018f, 0.018f);
+                }
                 s_SceneName = SceneName;
                 s_ServerInstance = Server;
                 s_NextDamageCheck = DateTime.Now.AddSeconds(1);
@@ -1081,21 +1133,7 @@ namespace SkyCoopServer
                     m_NextCenter = GetNewRandomCenter(m_CurrentCenter, m_CurrentRadius, m_Config.Stages[m_CurrentStageIndex + 1].Radius);
                     s_StateTimerActive = true;
                 }
-                ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), s_ServerInstance);
-            }
-
-            public static float Lerp(float a, float b, float t)
-            {
-                return a + (b - a) * t;
-            }
-
-            public static Vector3 Lerp(Vector3 a, Vector3 b, float t)
-            {
-                return new Vector3(
-                    Lerp(a.X, b.X, t),
-                    Lerp(a.Y, b.Y, t),
-                    Lerp(a.Z, b.Z, t)
-                );
+                ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
             }
 
             public float GetNextRadius()
@@ -1224,7 +1262,7 @@ namespace SkyCoopServer
                         NextState();
                         ServerSend.UpdateTimerPrefix(GetTimerPrefix(), s_ServerInstance);
                         ServerSend.ClientGameModeTimer(GetTimerSeconds(), s_ServerInstance);
-                        ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), s_ServerInstance);
+                        ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
                     }
                 }
 
@@ -1248,7 +1286,7 @@ namespace SkyCoopServer
                 if (OldRadius != m_CurrentRadius)
                 {
                     //Logger.Log($"Zone New Radius {m_CurrentRadius} m_CurrentStage.Radius {m_CurrentStage.Radius}");
-                    ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), s_ServerInstance);
+                    ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
                 }
             }
 
@@ -1298,6 +1336,8 @@ namespace SkyCoopServer
         public class DangerCircleConfig
         {
             public Vector3JSON ActualCenter { get; set; }
+            public Vector2JSON MapScale { get; set; }
+
             public List<ShrinkStage> Stages { get; set; }
 
             public DangerCircleConfig()
@@ -1658,6 +1698,15 @@ namespace SkyCoopServer
             public string guid { get; set; }
         }
 
+        public class FallingProp
+        {
+            public string m_GUID = "";
+            public Vector3 m_SpawnPosition = Vector3.Zero;
+            public Vector3 m_LandPosition = Vector3.Zero;
+            public DateTime m_LandTime;
+            public DateTime m_StartFallTime;
+        }
+
         public class Vector3JSON {
             public float x { get; set; }
             public float y { get; set; }
@@ -1680,6 +1729,29 @@ namespace SkyCoopServer
                 x = X; 
                 y = Y; 
                 z = Z;
+            }
+        }
+
+        public class Vector2JSON
+        {
+            public float x { get; set; }
+            public float y { get; set; }
+
+            public Vector2 ToVector()
+            {
+                return new Vector2(x, y);
+            }
+
+            public Vector2JSON()
+            {
+                x = 0;
+                y = 0;
+            }
+
+            public Vector2JSON(float X, float Y)
+            {
+                x = X;
+                y = Y;
             }
         }
 

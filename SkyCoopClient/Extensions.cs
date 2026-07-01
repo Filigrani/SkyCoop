@@ -23,10 +23,22 @@ namespace SkyCoop
             Writer.Put(v3.z);
         }
 
+        public static void Put(this NetDataWriter Writer, UnityEngine.Vector2 v2)
+        {
+            Writer.Put(v2.x);
+            Writer.Put(v2.y);
+        }
+
         public static UnityEngine.Vector3 GetVector3Unity(this NetDataReader Reader)
         {
             UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return v3;
+        }
+
+        public static UnityEngine.Vector2 GetVector2Unity(this NetDataReader Reader)
+        {
+            UnityEngine.Vector2 v2 = new UnityEngine.Vector2(Reader.GetFloat(), Reader.GetFloat());
+            return v2;
         }
 
         public static UnityEngine.Quaternion GetQuaternionUnity(this NetDataReader Reader)

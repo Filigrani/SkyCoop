@@ -801,3 +801,87 @@ MonoBehaviour:
       Italian: 
       Polish: 
       Ukrainian: 
+  - localizationKey: GAMEPLAY_SideNextMap
+    languages:
+      English: 'Next Map:'
+      German: 
+      Russian: "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0430\u044F \u041A\u0430\u0440\u0442\u0430:"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_SideNextGameMode
+    languages:
+      English: 'Next Game Mode:'
+      German: 
+      Russian: "\u0421\u043B\u0435\u0434\u0443\u044E\u0449\u0438\u0439 \u0420\u0435\u0436\u0438\u043C:"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_NeedMorePlayers
+    languages:
+      English: Waiting for more players
+      German: 
+      Russian: "\u041E\u0436\u0438\u0434\u0430\u043D\u0438\u0435 \u0438\u0433\u0440\u043E\u043A\u043E\u0432"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_GameStartsIn
+    languages:
+      English: Game Start
+      German: 
+      Russian: "\u041D\u0430\u0447\u0430\u043B\u043E \u0418\u0433\u0440\u044B"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 

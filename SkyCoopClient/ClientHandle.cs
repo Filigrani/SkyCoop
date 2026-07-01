@@ -330,8 +330,9 @@ namespace SkyCoop
                 float Radius = Reader.GetFloat();
                 Vector3 NextCenter = Reader.GetVector3Unity();
                 float NextRadius = Reader.GetFloat();
+                Vector2 MapRefScale = Reader.GetVector2Unity();
 
-                DangerCircleManager.HandleDangerCircleSync(Center, Radius, NextCenter, NextRadius);
+                DangerCircleManager.HandleDangerCircleSync(Center, Radius, NextCenter, NextRadius, MapRefScale);
             }
             else
             {
@@ -395,6 +396,8 @@ namespace SkyCoop
             InterfaceManager.TrySetPanelEnabled<Panel_Container>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_Inventory_Examine>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_Container>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_Map>(false);
             PlayersManager.FullyCure();
             PlayersManager.ExitVehicleForced();
         }
@@ -414,8 +417,14 @@ namespace SkyCoop
             Quaternion Rotation = Reader.GetQuaternionUnity();
 
             string SquadName = Reader.GetString();
+            int RandomSeed = Reader.GetInt();
 
             string PrefabName = ModMain.Client.m_Config.m_GameMode != "Shrink" ? "Victory" : "Victory_Squad";
+
+            if(LeadersList.Count == 1)
+            {
+                PrefabName = "Victory_Star";
+            }
 
             GameObject Reference = AssetManager.GetAssetFromBundle<GameObject>(PrefabName);
             if (Reference)
@@ -423,36 +432,62 @@ namespace SkyCoop
                 GameObject Obj = UnityEngine.Object.Instantiate(Reference, Position, Rotation);
                 if (Obj)
                 {
-                    for (int i = 0; i < Count;i++)
+                    if(PrefabName == "Victory_Star")
                     {
-                        DataStr.LeaderData Data = LeadersList[i];
-                        GameObject VictoryDoll = Obj.transform.GetChild(i).gameObject;
+                        GameObject VictoryDoll = Obj.transform.GetChild(0).gameObject;
                         if (VictoryDoll)
                         {
                             VictoryDoll.gameObject.SetActive(true);
-                            VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", i + 1);
+
+                            UnityEngine.Random.InitState(RandomSeed);
+
+                            int AnimStyle = UnityEngine.Random.Range(4, 6);
+
+
+                            VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", AnimStyle);
                             Comps.NetworkPlayer PlayerComp = PlayersManager.ApplyPlayer(VictoryDoll, -1);
+
                             if (PlayerComp)
                             {
-                                PlayerComp.SetClothing(Data.m_ClothingData);
+                                PlayerComp.SetClothing(LeadersList[0].m_ClothingData);
                             }
                         }
-                        Obj.transform.GetChild(i+3).gameObject.SetActive(true);
-                        Obj.transform.GetChild(i+3).GetComponent<TextMeshPro>().SetText(CanvasUI.GetPlayerName(Data.m_ID));
+                        Obj.transform.GetChild(1).gameObject.SetActive(true);
+                        Obj.transform.GetChild(1).GetComponent<TextMeshPro>().SetText(CanvasUI.GetPlayerName(LeadersList[0].m_ID));
+                    }
+                    else
+                    {
+                        for (int i = 0; i < Count; i++)
+                        {
+                            DataStr.LeaderData Data = LeadersList[i];
+                            GameObject VictoryDoll = Obj.transform.GetChild(i).gameObject;
+                            if (VictoryDoll)
+                            {
+                                VictoryDoll.gameObject.SetActive(true);
+                                VictoryDoll.GetComponent<Animator>().SetInteger("VictoryPlace", i + 1);
+                                Comps.NetworkPlayer PlayerComp = PlayersManager.ApplyPlayer(VictoryDoll, -1);
+                                if (PlayerComp)
+                                {
+                                    PlayerComp.SetClothing(Data.m_ClothingData);
+                                }
+                            }
+                            Obj.transform.GetChild(i + 3).gameObject.SetActive(true);
+                            Obj.transform.GetChild(i + 3).GetComponent<TextMeshPro>().SetText(CanvasUI.GetPlayerName(Data.m_ID));
+                        }
+                        if (PrefabName == "Victory_Squad")
+                        {
+                            if (!string.IsNullOrEmpty(SquadName))
+                            {
+                                Obj.transform.GetChild(6).gameObject.SetActive(true);
+                                Obj.transform.GetChild(6).GetComponent<TextMeshPro>().SetText(SquadName);
+                            }
+                            else
+                            {
+                                Obj.transform.GetChild(6).gameObject.SetActive(false);
+                            }
+                        }
                     }
 
-                    if(PrefabName == "Victory_Squad")
-                    {
-                        if (!string.IsNullOrEmpty(SquadName))
-                        {
-                            Obj.transform.GetChild(6).gameObject.SetActive(true);
-                            Obj.transform.GetChild(6).GetComponent<TextMeshPro>().SetText(SquadName);
-                        }
-                        else
-                        {
-                            Obj.transform.GetChild(6).gameObject.SetActive(false);
-                        }
-                    }
                     Transform Cam = Obj.transform.FindChild("Camera");
                     Cam.GetComponent<Camera>().enabled = false;
                     Cam.GetComponent<Animator>().enabled = true;
@@ -538,6 +573,13 @@ namespace SkyCoop
         {
             DataStr.PropData PropData = Reader.GetPropData();
             PropsManager.HandlePropSpawn(PropData);
+        }
+
+        public static void ClientMoveProp(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+            Vector3 Position = Reader.GetVector3Unity();
+            PropsManager.HandlePropMoved(GUID, Position);
         }
 
         public static void ClientRemoveProp(NetDataReader Reader)
@@ -753,6 +795,29 @@ namespace SkyCoop
         {
             string SquadName = Reader.GetString();
             MenuHook.DoInviteSquadMessage(SquadName);
+        }
+
+        public static void ClientBloodLosses(NetDataReader Reader)
+        {
+            int PlayerID = Reader.GetInt();
+            int BloodLosses = Reader.GetInt();
+
+            Comps.NetworkPlayer Player = s_Players[PlayerID];
+
+            if (Player)
+            {
+                Player.m_BloodLosses = BloodLosses;
+            }
+        }
+
+        public static void ClientReviveRequest(NetDataReader Reader)
+        {
+            int ReviverID = Reader.GetInt();
+
+            if (GameManager.GetBrokenBody().HasAffliction)
+            {
+                PlayersManager.RevivedViaEmergencyStim(ReviverID);
+            }
         }
     }
 }

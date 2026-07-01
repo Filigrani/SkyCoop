@@ -1,6 +1,7 @@
 ﻿using LiteNetLib;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
 using System.Text;
@@ -127,7 +128,7 @@ namespace SkyCoopServer
                         List<Vector3> TeammatePoints = new List<Vector3>();
                         foreach (PlayerData PlayerData in PlayersDataManager.GetPlayersOnScene(SceneName, m_ServerInstance, false))
                         {
-                            if (PlayerData != null && (PlayerData.m_PlayerID != PlayerID || m_ServerInstance.m_PlayersData.m_RecursiveDebug) && Squad.HasPlayer(PlayerData.m_PlayerID))
+                            if (PlayerData != null && (PlayerData.m_PlayerID != PlayerID || m_ServerInstance.m_PlayersData.m_RecursiveDebug) && Squad.HasPlayer(PlayerData.m_PlayerID) && PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
                             {
                                 //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Player {PlayerData.m_PlayerName} is potential teamate");
                                 TeammatePoints.Add(PlayerData.m_Position);
@@ -203,11 +204,11 @@ namespace SkyCoopServer
 
                     if (FilteredSpawnPoints.Count > 0)
                     {
-                        return FilteredSpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, SpawnPoints.Count)];
+                        return FilteredSpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, FilteredSpawnPoints.Count)];
                     }
                     else
                     {
-                        return SceneData.m_SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, SpawnPoints.Count)];
+                        return SceneData.m_SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, FilteredSpawnPoints.Count)];
                     }
                 }
             }
@@ -297,7 +298,7 @@ namespace SkyCoopServer
 
             if (SceneData.m_ActiveZone != null)
             {
-                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, SceneData.m_ActiveZone.GetNextCenter(), SceneData.m_ActiveZone.GetNextRadius(), m_ServerInstance);
+                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, SceneData.m_ActiveZone.GetNextCenter(), SceneData.m_ActiveZone.GetNextRadius(), SceneData.m_ActiveZone.m_Config.MapScale.ToVector(), m_ServerInstance);
                 ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
             }
         }
@@ -331,6 +332,22 @@ namespace SkyCoopServer
             {
                 SceneData.m_Containers.Remove(GUID);
             }
+        }
+
+        public void AddProp(DataStr.PropData Data, string SceneName)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[AddProp] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_Props.ContainsKey(Data.guid))
+            {
+                SceneData.m_Props.Remove(Data.guid);
+            }
+            SceneData.m_Props.Add(Data.guid, Data);
         }
 
         public void AddDeathPack(DataStr.DeathPack Pack, string SceneName)
@@ -405,6 +422,10 @@ namespace SkyCoopServer
             if (SceneData.m_ContainerStats.ContainsKey(GUID))
             {
                 SceneData.m_ContainerStats[GUID] = State;
+            }
+            else
+            {
+                SceneData.m_ContainerStats.Add(GUID, State);
             }
         }
 
@@ -554,7 +575,7 @@ namespace SkyCoopServer
             }
         }
 
-        public void UpdateZone(float dt)
+        public void Update(float dt)
         {
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
@@ -562,6 +583,47 @@ namespace SkyCoopServer
                 {
                     //Logger.Log($"[UpdateZone] Scene {Data.m_SceneName} has active zone updating it...");
                     Data.m_ActiveZone.Update(dt);
+                }
+                for (int i = Data.m_FallingProps.Count-1; i >= 0; i--)
+                {
+                    FallingProp FallingProp = Data.m_FallingProps[i];
+
+                    if(FallingProp != null)
+                    {
+                        PropData PropData = null;
+                        
+                        if (Data.m_Props.TryGetValue(FallingProp.m_GUID, out PropData))
+                        {
+                            float totalDuration = (float)(FallingProp.m_LandTime - FallingProp.m_StartFallTime).TotalSeconds;
+                            float elapsed = (float)(DateTime.Now - FallingProp.m_StartFallTime).TotalSeconds;
+                            float progress = elapsed / totalDuration;
+                            Vector3 NewPosition = DataStr.Lerp(FallingProp.m_SpawnPosition, FallingProp.m_LandPosition, progress);
+
+                            if(DateTime.Now > FallingProp.m_LandTime)
+                            {
+                                NewPosition = FallingProp.m_LandPosition;
+                                Data.m_FallingProps.RemoveAt(i);
+                            }
+
+                            //Logger.Log($"[AirDrop Update] {FallingProp.m_GUID} falling progress {progress * 100}% altitude {NewPosition.Y} / {FallingProp.m_LandPosition.Y}");
+
+                            PropData.position = new Vector3JSON(NewPosition.X, NewPosition.Y, NewPosition.Z);
+
+                            List<NetPeer> peers = new List<NetPeer>();
+                            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+                            foreach (NetPeer Peer in peers.ToArray())
+                            {
+                                if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Data.m_SceneName)
+                                {
+                                    ServerSend.SendPropMoved(Peer, PropData.guid, NewPosition);
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Data.m_FallingProps.RemoveAt(i);
+                        }
+                    }
                 }
             }
         }
@@ -596,6 +658,50 @@ namespace SkyCoopServer
                 {
                     Data.m_ActiveZone.Restart();
                 }
+            }
+        }
+
+        public void SummonAirDrop(string SceneName, string PropPrefab, string JSON, Vector3 SpawnPosition, Vector3 LandPosition, float FallingTime)
+        {
+            string NewGUID = System.Guid.NewGuid().ToString();
+
+            DataStr.PropData PropData = new PropData();
+            PropData.guid = NewGUID;
+            PropData.position = new Vector3JSON(SpawnPosition.X, SpawnPosition.Y, SpawnPosition.Z);
+            PropData.rotation = new QuaternionJSON(0, 0, 0, 0);
+            PropData.frombundle = false;
+            PropData.prefabname = PropPrefab;
+
+            SceneData SceneData = GetSceneData(SceneName);
+            AddProp(PropData, SceneName);
+
+            AddContainer(NewGUID, DataStr.CompressString(JSON), SceneName);
+            SetContainerState(NewGUID, 1, SceneName);
+
+            List<NetPeer> peers = new List<NetPeer>();
+            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    ServerSend.SendPropCreated(Peer, PropData);
+                    ServerSend.SendContainerState(Peer, NewGUID, 1, m_ServerInstance);
+                }
+            }
+
+            if (SceneData != null)
+            {
+                DataStr.FallingProp FallingProp = new FallingProp();
+                FallingProp.m_GUID = NewGUID;   
+                FallingProp.m_LandTime = DateTime.Now.AddSeconds(FallingTime);
+                FallingProp.m_StartFallTime = DateTime.Now;
+                FallingProp.m_SpawnPosition = SpawnPosition;
+                FallingProp.m_LandPosition = LandPosition;
+
+
+                SceneData.m_FallingProps.Add(FallingProp);
+
+                Logger.Log($"[SummonAirDrop] AirDrop summoned {NewGUID} on {SceneName}!");
             }
         }
     }

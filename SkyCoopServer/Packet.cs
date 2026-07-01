@@ -81,6 +81,9 @@ namespace SkyCoopServer
             ClientInviteToSquad,
             ClientAcceptInviteToSquad,
             ClientRefuseJoinToSquad,
+            ClientMoveProp,
+            ClientBloodLosses,
+            ClientReviveRequest,
         }
 
         public static void Put(this NetDataWriter Writer, Vector3 v3)
@@ -94,6 +97,18 @@ namespace SkyCoopServer
         {
             Vector3 v3 = new Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
             return v3;
+        }
+
+        public static void Put(this NetDataWriter Writer, Vector2 v2)
+        {
+            Writer.Put(v2.X);
+            Writer.Put(v2.Y);
+        }
+
+        public static Vector2 GetVector2(this NetDataReader Reader)
+        {
+            Vector2 v2 = new Vector2(Reader.GetFloat(), Reader.GetFloat());
+            return v2;
         }
 
         public static void Put(this NetDataWriter Writer, Quaternion quat)
@@ -388,10 +403,13 @@ namespace SkyCoopServer
         {
             DataStr.PropData Data = new DataStr.PropData();
 
+            Data.position = new DataStr.Vector3JSON();
+
             Data.position.x = Reader.GetFloat();
             Data.position.y = Reader.GetFloat();
             Data.position.z = Reader.GetFloat();
 
+            Data.rotation = new DataStr.QuaternionJSON();
             Data.rotation.x = Reader.GetFloat();
             Data.rotation.y = Reader.GetFloat();
             Data.rotation.z = Reader.GetFloat();

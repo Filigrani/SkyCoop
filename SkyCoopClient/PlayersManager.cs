@@ -1,5 +1,7 @@
 ﻿using Il2Cpp;
+using Il2CppInterop.Runtime;
 using Il2CppRewired;
+using Il2CppSystem.Linq;
 using Il2CppTLD.Interactions;
 using Il2CppTLD.PDID;
 using Il2CppTLD.Stats;
@@ -9,6 +11,7 @@ using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.UIElements;
+using static Il2Cpp.BaseAi;
 using static Il2Cpp.PlayerManager;
 using static SkyCoop.Comps.PlayerDamageColider;
 using static SkyCoopServer.DataStr;
@@ -47,6 +50,8 @@ namespace SkyCoop
             public bool m_LastSentInVehicle = false;
             public Comps.NetworkPlayer.Actions m_LastSentAction = Comps.NetworkPlayer.Actions.None;
             public DataStr.ClothingData m_ClothingData = new DataStr.ClothingData();
+
+            public int m_BloodLosses = 0;
         }
 
         public static Comps.NetworkPlayer ApplyPlayer(GameObject PlayerObj, int PlayerID)
@@ -327,6 +332,12 @@ namespace SkyCoop
                                 {
                                     ClientSend.SendSquadHealth(CurrentHealth, HasDebuffs, KnockedDown);
                                 }
+                            }
+
+                            if(m_LocalPlayerData.m_BloodLosses != GameManager.GetBloodLossComponent().m_CausesLocIDs.Count)
+                            {
+                                m_LocalPlayerData.m_BloodLosses = GameManager.GetBloodLossComponent().m_CausesLocIDs.Count;
+                                ClientSend.SendBloodLosses(m_LocalPlayerData.m_BloodLosses);
                             }
                         }
                     }
@@ -846,16 +857,22 @@ namespace SkyCoop
             InterfaceManager.TrySetPanelEnabled<Panel_LifeAfterDeath>(false);
         }
 
-        public static void RevivedViaEmergencyStim()
+        public static void RevivedViaEmergencyStim(int ReviverID = -1)
         {
             PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
             PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
             GameManager.GetBrokenBody().Cure();
             GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
             GameManager.GetDiminishedState().Cure();
-            if (ModMain.Client != null && ModMain.Client.m_MyEndPoint != null)
+            if (ReviverID == -1)
             {
                 ClientSend.SendRevived(ModMain.Client.GetMyId());
+                HUDMessage.AddMessage("You revived yourself!", true, true);
+            }
+            else
+            {
+                ClientSend.SendRevived(ReviverID);
+                HUDMessage.AddMessage($"{CanvasUI.GetPlayerName(ReviverID)} revived you!", true, true);
             }
         }
 
@@ -1374,20 +1391,49 @@ namespace SkyCoop
 
         public static void RevivedOtherPlayer()
         {
-            if(s_ReviveTarget != null)
+            if (s_ReviveTarget != null)
             {
-                // To do Send Revive
+                ClientSend.SendReviveSomeone(s_ReviveTarget.m_PlayerID);
             }
+            s_ReviveTarget = null;
         }
 
         public static void TryReviveOtherPlayer(Comps.NetworkPlayer Player)
         {
-            Panel_HUD Panel;
-            if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
-            {
+            Panel_GenericProgressBar Panel;
+            if (InterfaceManager.TryGetPanel<Panel_GenericProgressBar>(out Panel))
+            {                
                 GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
                 s_ReviveTarget = Player;
-                Panel.StartItemProgressBar(10, "Reviving...", null, new System.Action(RevivedOtherPlayer));
+                Panel.Launch("Reviving...", 10f, 0.0f, 0.0f, "", null, true, true, null);
+            }
+        }
+
+        public static void TryLeaveFootprint(Vector3 footPos, Transform Transform, bool leftfoot = false, bool playsound = false)
+        {
+            float FootPrintSideOffset = 0;
+
+            if (GameManager.GetWeatherComponent().IsIndoorEnvironment())
+            {
+                ++footPos.y;
+                Vector3 vector3 = Transform.right * (!leftfoot ? FootPrintSideOffset : -FootPrintSideOffset);
+                Vector3 offset = Transform.forward * 0;
+                Vector3 heelPos = footPos - offset + vector3;
+                Vector3 point;
+                Vector3 normal;
+                if (GameManager.GetFootstepTrailManager().IsFootprintPositionValid(heelPos, offset, 0, out point, out normal))
+                {
+                    if (SnowPatchManager.m_Active)
+                    {
+                        GameManager.GetFootstepTrailManager().AddPlayerFootstep(Transform.position, point, normal, Transform.rotation.eulerAngles.y, leftfoot, 0);
+                    }
+                }
+            }
+
+            if (playsound)
+            {
+                string ground_Tag = Utils.GetMaterialTagForObjectAtPosition(Transform.gameObject, Transform.position);
+                GameAudioManager.Play3DSound(Il2CppAK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, Transform.gameObject);
             }
         }
 
@@ -1423,6 +1469,24 @@ namespace SkyCoop
                 }
                 SkyCoop.Logger.Log($"VehicleDoor ExitVehicle {DoorGUID}");
                 ClientSend.SendVehicleSeat("");
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_GenericProgressBar), "ProgressBarEnded")]
+        internal static class Panel_GenericProgressBar_ProgressBarEnded
+        {
+            private static void Postfix(Panel_GenericProgressBar __instance, bool success, bool playerCancel)
+            {
+                if (PresentsGear.s_PresentOpenGear && success)
+                {
+                    PresentsGear.OpenPresentFinished();
+                }
+                if(s_ReviveTarget && success)
+                {
+                    RevivedOtherPlayer();
+                }
+
+                PresentsGear.s_PresentOpenGear = null;
+                s_ReviveTarget = null;
             }
         }
     }

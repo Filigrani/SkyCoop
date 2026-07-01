@@ -1,5 +1,6 @@
 ﻿using Il2Cpp;
 using Il2CppRewired;
+using Il2CppSystem;
 using Il2CppSystem.Linq;
 using Il2CppTLD.PDID;
 using SkyCoop;
@@ -10,6 +11,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopClient
 {
@@ -17,6 +19,17 @@ namespace SkyCoopClient
     {
         public static void HandlePropSpawn(DataStr.PropData PropData)
         {
+
+            GameObject ExistingProp = PdidTable.GetGameObject(PropData.guid);
+
+            if (ExistingProp)
+            {
+                ExistingProp.transform.position = PropData.position.GetVector3Unity();
+                ExistingProp.transform.rotation = PropData.rotation.GetQuaternionUnity();
+                return;
+            }
+
+
             GameObject Reference;
 
             if (PropData.frombundle)
@@ -53,7 +66,29 @@ namespace SkyCoopClient
                     {
                         MaterialsContainer.ApplyInGameMaterials(PropObj);
                     }
+
+                    Container[] Containers = PropObj.GetComponentsInChildren<Container>();
+
+                    foreach (Container Container in Containers)
+                    {
+                        Container.m_NotPopulated = false;
+                        Container.m_Inspected = true;
+                        Container.m_StartInspected = true;
+                        Container.DestroyAllGear();
+                        Container.m_GearToInstantiate.Clear();
+                    }
                 }
+            }
+        }
+
+        public static void HandlePropMoved(string GUID, Vector3 NewPosition)
+        {
+            GameObject ExistingProp = PdidTable.GetGameObject(GUID);
+
+            if (ExistingProp)
+            {
+                ExistingProp.transform.position = NewPosition;
+                return;
             }
         }
 

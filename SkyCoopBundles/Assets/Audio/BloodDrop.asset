@@ -1,0 +1,71 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1233149941 &-9187999395034054073
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BloodDrip3_{-9187999395034054073}
+  m_AudioClip: {fileID: 8300000, guid: 77b2785bf473906478f442241b8e68d7, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &-9036287272760676361
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BloodDrip2_{-9036287272760676361}
+  m_AudioClip: {fileID: 8300000, guid: dfb20022e72482b468c20d10f3791c67, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &-18773230036189154
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BloodDrip1_{-18773230036189154}
+  m_AudioClip: {fileID: 8300000, guid: 5796ef57f01f914449d1016c2a6d2cf8, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1233149941 &822412944842547901
+AudioContainerElement:
+  m_ObjectHideFlags: 1
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BloodDrip0_{822412944842547901}
+  m_AudioClip: {fileID: 8300000, guid: 124cc6571c77b3f428e7fccea9a246f3, type: 3}
+  m_Volume: 0
+  m_Enabled: 1
+--- !u!1307931743 &6418180475301049370
+AudioRandomContainer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: BloodDrop
+  m_Volume: 0
+  m_Pitch: 0
+  m_AutomaticTriggerTime: 0
+  m_LoopCount: 1
+  m_VolumeRandomizationRange: {x: 0, y: 0}
+  m_PitchRandomizationRange: {x: -324.9406, y: 513.0641}
+  m_AutomaticTriggerTimeRandomizationRange: {x: 0, y: 0}
+  m_LoopCountRandomizationRange: {x: 0, y: 0}
+  m_Elements:
+  - {fileID: 822412944842547901}
+  - {fileID: -18773230036189154}
+  - {fileID: -9036287272760676361}
+  - {fileID: -9187999395034054073}
+  m_AvoidRepeatingLast: 0
+  m_PlaybackMode: 2
+  m_TriggerMode: 1
+  m_AutomaticTriggerMode: 1
+  m_LoopMode: 1
+  m_VolumeRandomizationEnabled: 0
+  m_PitchRandomizationEnabled: 1
+  m_AutomaticTriggerTimeRandomizationEnabled: 0
+  m_LoopCountRandomizationEnabled: 0

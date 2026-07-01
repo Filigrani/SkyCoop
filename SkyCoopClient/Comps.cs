@@ -2,12 +2,15 @@
 using Harmony;
 using Il2Cpp;
 using Il2CppInterop.Runtime.Injection;
+using Il2CppMS.Internal.Xml.XPath;
+using Il2CppRewired;
 using Il2CppTLD.Interactions;
 using Il2CppTMPro;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using static Il2Cpp.UIAtlas;
+using static Il2CppMono.Security.X509.X520;
 using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
@@ -357,6 +360,7 @@ namespace SkyCoop
             public AudioSource m_AudioSource2D;
             public AudioSource m_AudioSourceRadio;
             public AudioSource m_AudioSourceRadioBG;
+            public AudioSource m_AudioSourceBloodDrop;
             public List<Collider> m_PlayerColiders = new List<Collider>();
             public GameObject m_Helmet = null;
             public GameObject m_Satchel = null;
@@ -382,6 +386,16 @@ namespace SkyCoop
 
             public CameraAttention m_CameraAttention;
             public Transform m_TiltTarget = null;
+
+            public float m_BaseFootstepsInterval = 0.5f;
+            public float m_BaseMovementSpeed = 6;
+
+            public int m_BloodLosses = 0;
+            public float m_NextBloodDrop = 0;
+
+            private bool m_LeftFoot = true;
+            private float s_NextFoostep = 0;
+
             public enum GearHandPose
             {
                 None = 0,
@@ -865,6 +879,7 @@ namespace SkyCoop
                 m_AudioSource2D = gameObject.transform.FindChild("Voice2D").GetComponent<AudioSource>();
                 m_AudioSourceRadio = gameObject.transform.FindChild("VoiceRadio").GetComponent<AudioSource>();
                 m_AudioSourceRadioBG = gameObject.transform.FindChild("VoiceRadioBG").GetComponent<AudioSource>();
+                m_AudioSourceBloodDrop = gameObject.transform.FindChild("3DBloodDrop").GetComponent<AudioSource>();
                 m_BottomLip = m_Animator.GetBoneTransform(HumanBodyBones.Head).FindChild("Lip_Bottom");
             }
 
@@ -1121,6 +1136,20 @@ namespace SkyCoop
                 m_SampleVoiceSeek = 0;
             }
 
+            public void DoFootStep()
+            {
+                Transform Foot = null;
+                if (m_LeftFoot)
+                {
+                    Foot = m_Animator.GetBoneTransform(HumanBodyBones.LeftFoot);
+                }
+                else
+                {
+                    Foot = m_Animator.GetBoneTransform(HumanBodyBones.RightFoot);
+                }
+                PlayersManager.TryLeaveFootprint(Foot.position, transform, m_LeftFoot, true);
+            }
+
             public void UpdateAnimations()
             {
                 Vector3 Speed = (gameObject.transform.position - m_LastPosition) / Time.deltaTime;
@@ -1150,6 +1179,54 @@ namespace SkyCoop
                     m_Animator.SetBool("Vehicle", m_VisualData.m_InVehicle);
                     m_Animator.SetFloat("DirectionX", Mathf.Lerp(PreviousDirectionX, Mathf.Clamp(Direction.x, -1, 1), m_Smoother));
                     m_Animator.SetFloat("DirectionY", Mathf.Lerp(PreviousDirectionY, Mathf.Clamp(Direction.z, -1, 1), m_Smoother));
+                }
+
+                if(Direction.magnitude > m_MinimalSpeed && m_Action != Actions.Death && m_Action != Actions.Knocked)
+                {
+                    if (s_NextFoostep <= Time.time)
+                    {
+                        DoFootStep();
+                        float NextStepPeriod = m_BaseFootstepsInterval * (m_BaseMovementSpeed / Mathf.Max(Speed.magnitude, 0.1f));
+                        s_NextFoostep = Time.time + NextStepPeriod;
+                    }
+                }
+
+                if(m_BloodLosses > 0)
+                {
+                    if(m_NextBloodDrop <= Time.time)
+                    {
+                        float BloodDropRate = 1.6f - 0.3f * m_BloodLosses;
+
+                        if (BloodDropRate < 0.5f)
+                        {
+                            BloodDropRate = 0.5f;
+                        }
+                        m_NextBloodDrop = Time.time + BloodDropRate;
+
+                        if (m_AudioSourceBloodDrop)
+                        {
+                            m_AudioSourceBloodDrop.Play();
+                            Vector3 pos = transform.position;
+                            ++pos.y;
+                            Vector2 insideUnitCircle = UnityEngine.Random.insideUnitCircle;
+                            insideUnitCircle.Normalize();
+                            Vector2 vector2 = insideUnitCircle * UnityEngine.Random.Range(0.0f, 0.75f);
+                            pos.x += vector2.x;
+                            pos.z += vector2.y;
+                            pos -= transform.forward * 0.5f;
+                            RaycastHit hitInfo;
+                            if (Physics.Raycast(pos, Vector3.down, out hitInfo, float.PositiveInfinity, Utils.m_PhysicalCollisionLayerMask) || (UnityEngine.Object)hitInfo.collider == (UnityEngine.Object)null)
+                            {
+                                Vector3 scale = new Vector3(0.05f, 2f, 0.05f) * UnityEngine.Random.Range(0.5f, 2f);
+                                int uvRectangleIndex = 7;
+                                if (Utils.RollChance(50f))
+                                {
+                                    uvRectangleIndex = 6;
+                                }
+                                GameManager.GetDynamicDecalsManager().CreateDecal(hitInfo.point, transform.rotation.eulerAngles.y, hitInfo.normal, uvRectangleIndex, scale, DecalProjectorType.PlayerBlood, GameManager.GetWeatherComponent().IsIndoorEnvironment());
+                            }
+                        }
+                    }
                 }
 
                 //SkyCoop.Logger.Log("Player "+m_PlayerID+" Animator Params:");
@@ -2027,8 +2104,13 @@ namespace SkyCoop
 
             public Panel_Map m_Panel;
             public UISprite m_Sprite;
-            public Vector2 m_WorldRadius = new Vector2(1, 1);
             public bool m_IsNextZone = false;
+            public Vector2 m_RefScale = new Vector2(0.018f, 0.018f);
+
+            // MarshRegion 0.018f x 0.018f
+            // WhalingStationRegion 0.0227 x 0.018f
+            // CoastalRegion 0.014 x 0.014
+            // RuralRegion 0.012 x 0.012
 
             void Update()
             {
@@ -2039,6 +2121,7 @@ namespace SkyCoop
 
                     if (!m_Panel.IsWorldMapActive() && m_Panel.m_RegionSelectedIndex == m_Panel.GetIndexOfCurrentScene() && DangerCircleManager.s_DangerCircle)
                     {
+                        m_RefScale = DangerCircleManager.s_MapRefScale;
                         if (!m_IsNextZone)
                         {
                             realRadiusInMeters = DangerCircleManager.s_DangerCircle.m_TargetRadius;
@@ -2075,37 +2158,16 @@ namespace SkyCoop
 
                     string regionName = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
 
-                    Vector3 WorldScale = Vector3.one;
-
-                    for (int i = 0; i < m_Panel.m_MapObjects.Count; i++)
-                    {
-                        if (regionName == m_Panel.m_MapObjects[i].m_RegionName)
-                        {
-                            m_WorldRadius = m_Panel.m_MapObjects[i].m_RadiusOfScene;
-
-                            Vector3 Vect = m_Panel.m_MapObjects[i].m_RadiusOfScene;
-                            m_WorldRadius.x = Vect.x;
-                            m_WorldRadius.y = Vect.z;
-                        }
-                    }
-
                     // x 0.018 y 0.018 карты = реальному соотвествует 1 метру когда m_WorldRadius x 1153.3 y 1159.6
 
                     Vector2 baseMetersPerUnit = new Vector2(
-                        1f / 0.018f, 
-                        1f / 0.018f
+                        1f / m_RefScale.x, 
+                        1f / m_RefScale.y
                     );
-
-                    Vector2 currentMetersPerUnit = new Vector2(
-                        baseMetersPerUnit.x * (1153.3f / m_WorldRadius.x),
-                        baseMetersPerUnit.y * (1159.6f / m_WorldRadius.y)
-                    );
-
-
 
                     Vector2 realWorldToMapScale = new Vector2(
-                        realRadiusInMeters / currentMetersPerUnit.x,
-                        realRadiusInMeters / currentMetersPerUnit.y
+                        realRadiusInMeters / baseMetersPerUnit.x,
+                        realRadiusInMeters / baseMetersPerUnit.y
                     );
 
                     transform.localScale = new Vector3(realWorldToMapScale.x, realWorldToMapScale.y, 1);

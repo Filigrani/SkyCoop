@@ -73,14 +73,14 @@ namespace SkyCoopServer
             DataStr.PlayerData Player = GetPlayer(Index);
             if(Player != null )
             {
-                Player.m_Position = Position;
-
                 if(Player.m_GamePlayState != PlayerData.GamePlayState.Alive)
                 {
                     return;
                 }
 
-                if(Broadcast)
+                Player.m_Position = Position;
+
+                if (Broadcast)
                 {
                     if (s_Server != null)
                     {
@@ -463,6 +463,7 @@ namespace SkyCoopServer
             RemoveAllInviteOfPlayer(PlayerID);
             DoSquadsCheck();
             ServerSend.SendClientStatus(PlayerID, 0, s_Server);
+            s_Server.OnPlayersCountChanged();
         }
 
         public DataStr.DMScore GetScore(int PlayerID)

@@ -253,7 +253,14 @@ namespace SkyCoopClient
                             
                             if(Player.m_Action == Comps.NetworkPlayer.Actions.Knocked)
                             {
-                                //PlayersManager.TryReviveOtherPlayer(Player);
+                                if (!GameManager.GetBrokenBody().HasAffliction)
+                                {
+                                    PlayersManager.TryReviveOtherPlayer(Player);
+                                }
+                                else
+                                {
+                                    HUDMessage.AddMessage("Revive yourself first, dummy!", true, true);
+                                }
                             }
                             else
                             {

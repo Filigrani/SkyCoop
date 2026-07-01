@@ -14,12 +14,18 @@ namespace SkyCoopClient
         {
             uConsole.RegisterCommand("RecursiveDebug", new Action(RecursiveDebug));
             uConsole.RegisterCommand("sv_cmd", new Action(SV_CMD));
+            uConsole.RegisterCommand("spawn", new Action(Spawn));
         }
 
         // Keeping old command, just in case if it still being used by force of habit.
         public static void RecursiveDebug()
         {
             ClientSend.SendSV_CMD("mimic");
+        }
+
+        public static void Spawn()
+        {
+
         }
 
         public static void SV_CMD()

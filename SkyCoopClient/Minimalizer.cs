@@ -120,22 +120,30 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool)})]
         private static class Panel_Map_Enable
         {
-            private static bool Prefix(Panel_Map __instance)
+            private static bool Prefix(Panel_Map __instance, bool enable)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                bool CanUseMap = ModMain.s_MapEditor || ModMain.Client.m_Rules.m_CanUseMap;
-
-                if (CanUseMap)
+                if (enable)
                 {
-                    __instance.UnlockMapCurrentScene();
-                    __instance.RevealFogForScene(__instance.GetMapNameOfCurrentScene());
+                    bool CanUseMap = ModMain.s_MapEditor || ModMain.Client.m_Rules.m_CanUseMap;
 
-
+                    if (CanUseMap)
+                    {
+                        __instance.UnlockMapCurrentScene();
+                        __instance.RevealFogForScene(__instance.GetMapNameOfCurrentScene());
+                        Panel_Map.s_ForceShowPlayerIcon = CanUseMap;
+                    }
+                    else
+                    {
+                        Panel_Map.s_ForceShowPlayerIcon = false;
+                    }
+                    return CanUseMap;
                 }
-                Panel_Map.s_ForceShowPlayerIcon = CanUseMap;
-
-                return CanUseMap;
+                else
+                {
+                    return true;
+                }
             }
 
             private static void Postfix(Panel_Map __instance)
@@ -733,9 +741,29 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                GameManager.GetDiminishedState().Apply(1, AfflictionOptions.None);
-                GameManager.GetSprainPainComponent().ApplyAffliction(AfflictionBodyArea.LegLeft, "Emergency Stimulator");
-                GameManager.GetSprainPainComponent().ApplyAffliction(AfflictionBodyArea.LegRight, "Emergency Stimulator");
+                //GameManager.GetDiminishedState().Apply(1, AfflictionOptions.None);
+                GameManager.GetSprainPainComponent().ApplyAffliction(AfflictionBodyArea.LegLeft, "GAMEPLAY_EmergencyStim");
+                GameManager.GetSprainPainComponent().ApplyAffliction(AfflictionBodyArea.LegRight, "GAMEPLAY_EmergencyStim");
+
+                HeadacheData Stock = GameManager.GetHeadacheComponent().m_LegacyHeadacheData;
+                HeadacheData headacheData = new HeadacheData();
+                headacheData.m_Cause = HeadacheCause.None;
+                LocalizedString Case = new LocalizedString();
+                Case.m_LocalizationID = "GAMEPLAY_EmergencyStim";
+                headacheData.m_CausedByLocalizedId = Case;
+                headacheData.m_TreatmentRequiredDescription = Stock.m_TreatmentRequiredDescription;
+                headacheData.m_HoursRequiredOutdoorToGetAffliction = Stock.m_HoursRequiredOutdoorToGetAffliction;
+                headacheData.m_HoursRequiredIndoorToExitAffliction = Stock.m_HoursRequiredIndoorToExitAffliction;
+                headacheData.m_HealedAfflictionLocalizedId = Stock.m_HealedAfflictionLocalizedId;
+                headacheData.m_HeadacheStartAudio = Stock.m_HeadacheStartAudio;
+                headacheData.m_HeadachePulseFrequencyStart = Stock.m_HeadachePulseFrequencyStart;
+                headacheData.m_HeadachePulseFrequencyEnd = Stock.m_HeadachePulseFrequencyEnd;
+                headacheData.m_HeadachePulseEvent = Stock.m_HeadachePulseEvent;
+                headacheData.m_HeadacheDurationHours = Stock.m_HeadacheDurationHours;
+                headacheData.m_HeadacheDescription = Stock.m_HeadacheDescription;
+                headacheData.m_HeadacheAfflictionIcoName = Stock.m_HeadacheAfflictionIcoName;
+                headacheData.m_HeadacheLocalizedId = Stock.m_HeadacheLocalizedId;
+                GameManager.GetHeadacheComponent().ApplyHeadache(headacheData);
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Condition), "PlayerDeath")]

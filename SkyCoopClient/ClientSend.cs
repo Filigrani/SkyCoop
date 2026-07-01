@@ -482,5 +482,22 @@ namespace SkyCoop
             writer.Put(SquadName);
             SendToHost(writer);
         }
+
+        public static void SendBloodLosses(int Count)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientBloodLosses);
+            writer.Put(Count);
+            SendToHost(writer);
+        }
+
+        public static void SendReviveSomeone(int ReviveTarget)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientReviveRequest);
+            writer.Put(ReviveTarget);
+            SendToHost(writer);
+        }
     }
 }

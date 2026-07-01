@@ -625,20 +625,6 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GunItem), "Fired")]
-        internal class GunItem_Fired
-        {
-            public static void Postfix(GunItem __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                if (__instance.m_GunType == GunType.FlareGun)
-                {
-                    Transform T = GameManager.GetVpFPSCamera().CurrentShooter.m_Camera.transform;
-                    ClientSend.SendProjectile(T.position, T.rotation, "GEAR_FlareGunAmmoSingle");
-                }
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ReleaseThrownObject")] // Once
         public class PlayerManager_Throw
         {

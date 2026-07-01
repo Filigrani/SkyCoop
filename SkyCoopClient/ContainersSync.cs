@@ -42,15 +42,19 @@ namespace SkyCoopClient
                             if (DataStr.IsBase64String(CompressedJSON))
                             {
                                 string JSON = DataStr.DecompressString(CompressedJSON);
+                                Vector3 PreDeserializeV3 = Container.transform.position;
+                                Quaternion PreDeserializeRot = Container.transform.rotation;
                                 Container.Deserialize(JSON, new Il2CppSystem.Collections.Generic.List<GearItem>());
+                                Container.transform.position = PreDeserializeV3;
+                                Container.transform.rotation = PreDeserializeRot;
                             }
                             else
                             {
                                 SkyCoop.Logger.Log(ConsoleColor.Red, "HandleContainerOpen got Non base64 string!");
                             }
                         }
-                        Panel.Enable(true);
                         Panel.SetContainer(Container, Container.m_LocalizedDisplayName.Text());
+                        Panel.Enable(true);
                         Container.m_Inspected = true;
                         Container.m_StartInspected = true;
                         Container.m_GearToInstantiate.Clear();
@@ -136,12 +140,15 @@ namespace SkyCoopClient
                 {
                     Hook.m_HookState = (Comps.ContainerDescriptorHook.ContainerState)State;
                     Container Container = Box.GetComponent<Container>();
+                    SkyCoop.Logger.Log($"HandleStateUpdated {GUID} Hook.m_HookState {Hook.m_HookState}");
                     switch (Hook.m_HookState)
                     {
                         case Comps.ContainerDescriptorHook.ContainerState.Inspected:
                         case Comps.ContainerDescriptorHook.ContainerState.Empty:
                             Container.MarkAsInspected();
                             Container.DestroyAllGear();
+                            Container.m_StartInspected = true;
+                            Container.m_NotPopulated = false;
                             Container.m_GearToInstantiate.Clear();
                             if(Container.m_Lock != null)
                             {
@@ -153,7 +160,7 @@ namespace SkyCoopClient
             }
             else
             {
-                //SkyCoop.Logger.Log(ConsoleColor.Red, $"HandleStateUpdated {GUID} not found!");
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"HandleStateUpdated {GUID} not found!");
             }
         }
 

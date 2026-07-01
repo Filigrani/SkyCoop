@@ -59,16 +59,5 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_GenericProgressBar), "ProgressBarEnded")]
-        internal static class Panel_GenericProgressBar_ProgressBarEnded
-        {
-            private static void Postfix(Panel_GenericProgressBar __instance, bool success, bool playerCancel)
-            {
-                if (s_PresentOpenGear && success)
-                {
-                    OpenPresentFinished();
-                }
-            }
-        }
     }
 }

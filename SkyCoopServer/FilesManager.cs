@@ -1,9 +1,11 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using System.IO;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using static SkyCoopServer.DataStr;
-using System.IO;
+using static System.Collections.Specialized.BitVector32;
 
 namespace SkyCoopServer
 {
@@ -35,6 +37,28 @@ namespace SkyCoopServer
             {
                 Directory.CreateDirectory($"{s_DataDirectory}/{s_LootTablesDirectory}");
             }
+        }
+
+        public static List<DataStr.MinimalPlayersAndGameMode> GetGameModesList()
+        {
+            List <DataStr.MinimalPlayersAndGameMode> GameModes = new List<MinimalPlayersAndGameMode>();
+            string _Path = $"{s_DataDirectory}/{s_GameModesDirectory}";
+
+            if (Directory.Exists(_Path))
+            {
+                foreach (string FilePath in Directory.GetFiles(_Path))
+                {
+                    string FileName = Path.GetFileName(FilePath);
+                    DataStr.GameRules Rule = GetRules(FileName);
+                    DataStr.MinimalPlayersAndGameMode GameMode = new MinimalPlayersAndGameMode();
+
+                    GameMode.GameModeName = Rule.m_HUDMode;
+                    GameMode.MinimalPlayers = Rule.m_MinimalPlayersToPlay;
+
+                    GameModes.Add(GameMode);
+                }
+            }
+            return GameModes;
         }
 
         public static GameRules GetRules(string GameMode)
@@ -207,6 +231,38 @@ namespace SkyCoopServer
                 return null;
             }
             return JsonSerializer.Deserialize<PrefabTableJSON>(JSON);
+        }
+
+        public static string GetAirDrop(string DropPath)
+        {
+            string Path = $"{s_DataDirectory}/{DropPath}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    return File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return null;
         }
     }
 }

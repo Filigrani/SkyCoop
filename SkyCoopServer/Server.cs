@@ -18,6 +18,9 @@ namespace SkyCoopServer
         public bool m_IsReady = false;
         public ServerVoice m_VoiceServer = null;
         public int m_PendingGameModeOverTimer = 0;
+        public string m_NextMapName = "";
+        public string m_NextGameModeName = "";
+        public List<DataStr.MinimalPlayersAndGameMode> m_AvailableGameModes = new List<DataStr.MinimalPlayersAndGameMode>();
 
         // Data Sync Instances
         public PlayersDataManager m_PlayersData;
@@ -84,6 +87,8 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientInviteToSquad, ServerHandle.ClientInviteToSquad },
             { (int)Packet.Type.ClientAcceptInviteToSquad, ServerHandle.ClientAcceptInviteToSquad },
             { (int)Packet.Type.ClientRefuseJoinToSquad, ServerHandle.ClientRefuseJoinToSquad },
+            { (int)Packet.Type.ClientBloodLosses, ServerHandle.ClientBloodLosses },
+            { (int)Packet.Type.ClientReviveRequest, ServerHandle.ClientReviveRequest },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -109,6 +114,25 @@ namespace SkyCoopServer
 
             s_NextSecondCall = DateTime.Now.AddSeconds(1);
             LootTableManager.Load();
+            m_AvailableGameModes = FilesManager.GetGameModesList();
+        }
+
+        public string GetGameModeForPlayersCount(string CurrentGameModeName, int PlayersCount)
+        {
+            DataStr.MinimalPlayersAndGameMode CurrentGameMode = null;
+            foreach (DataStr.MinimalPlayersAndGameMode GameMode in m_AvailableGameModes)
+            {
+                if(GameMode.GameModeName == CurrentGameModeName)
+                {
+                    CurrentGameMode = GameMode;
+                    break;
+                }
+            }
+            if(CurrentGameMode == null)
+            {
+                // Я устал. Нужна сортировка DataStr.MinimalPlayersAndGameMode по MinimalPlayersCount
+            }
+            return null;
         }
 
         public List<int> GetClientsIndexs()
@@ -166,9 +190,19 @@ namespace SkyCoopServer
                 EverySecond();
             }
 
-            m_ScenesData.UpdateZone(s_DeltaTime);
+            m_ScenesData.Update(s_DeltaTime);
 
             s_PreviousTickTime = DateTime.Now;
+        }
+
+        public string GetNextMapName()
+        {
+            return m_NextMapName;
+        }
+
+        public string GetNextGameModeName()
+        {
+            return m_NextGameModeName;
         }
 
         public bool CanRespawn()
@@ -194,6 +228,63 @@ namespace SkyCoopServer
         public void ZoneRestart()
         {
             m_ScenesData.ZoneRestart();
+        }
+
+        public void OnPlayersCountChanged()
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            m_Instance.GetConnectedPeers(peers);
+
+            if(peers.Count < 2)
+            {
+                if(m_Rules.m_HUDMode == "Lobby")
+                {
+                    ServerSend.SendTimerPrefix("GAMEPLAY_NeedMorePlayers", this);
+                    ServerSend.ClientGameModeTimer(0, this);
+                    m_NextMapName = "";
+                    m_NextGameModeName = "";
+                    foreach(NetPeer Client in peers)
+                    {
+                        ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", GetNextGameModeName(), this);
+                        ServerSend.SendHUDSideBar(Client, 1, "", "GAMEPLAY_SideNextMap", GetNextMapName(), this);
+                    }
+                }
+            }
+            else
+            {
+                if (m_Rules.m_HUDMode == "Lobby")
+                {
+                    bool NeedUpdate = false;
+                    //if(m_NextGameModeName == "")
+                    //{
+                    //    if(peers.Count < 5)
+                    //    {
+                    //        m_Rules.m_Time = 30;
+                    //        m_NextGameModeName = "GunGame";
+                    //        m_NextMapName = GetRandomMap(m_NextGameModeName);
+                    //        NeedUpdate = true;
+                    //    }
+                    //    else
+                    //    {
+                    //        m_Rules.m_Time = 30;
+                    //        m_NextGameModeName = "Shrink";
+                    //        m_NextMapName = GetRandomMap(m_NextGameModeName);
+                    //        NeedUpdate = true;
+                    //    }
+                    //}else if(m_NextGameModeName == "Shrink" && peers.Count <)
+
+                    if (NeedUpdate)
+                    {
+                        ServerSend.SendTimerPrefix("GAMEPLAY_GameStartsIn", this);
+                        ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
+                        foreach (NetPeer Client in peers)
+                        {
+                            ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", GetNextGameModeName(), this);
+                            ServerSend.SendHUDSideBar(Client, 1, "", "GAMEPLAY_SideNextMap", GetNextMapName(), this);
+                        }
+                    }
+                }
+            }
         }
 
         public void EverySecond()
@@ -247,7 +338,7 @@ namespace SkyCoopServer
 
                             if (SceneData != null && SceneData.m_VictoryPoint != null)
                             {
-                                ServerSend.SendLeaders(Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
+                                ServerSend.SendLeaders(Peer, Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
                             }
 
                             m_PlayersData.GetPlayer(Peer.Id).m_Scene = "";
@@ -261,12 +352,44 @@ namespace SkyCoopServer
                 m_PendingGameModeOverTimer--;
                 if(m_PendingGameModeOverTimer == 0)
                 {
-                    ChangeGameMode(m_Config.m_GameMode);
+                    ChangeGameMode(m_NextGameModeName, m_NextMapName);
                 }
             }
         }
 
-        public void ChangeGameMode(string GameMode)
+        public string GetRandomMap(string GameMode, string CurrentMap = "")
+        {
+            DataStr.GameRules GameModeRules = FilesManager.GetRules(GameMode);
+
+            if(GameModeRules == null)
+            {
+                return "";
+            }
+
+            return GameModeRules.GetRandomMap(CurrentMap);
+        }
+
+        public string GetRandomMap(DataStr.GameRules Rules, string CurrentMap = "")
+        {
+            if (Rules == null)
+            {
+                return "";
+            }
+
+            return Rules.GetRandomMap(CurrentMap);
+        }
+
+        public void SetNextMap(string MapName)
+        {
+            m_NextMapName = MapName;
+        }
+
+        public void SetNextGameMode(string GameModeName)
+        {
+            m_NextGameModeName = GameModeName;
+        }
+
+        public void ChangeGameMode(string GameMode, string NewMap = "")
         {
             SkyCoopServer.Logger.Log($"ChangeGameMode {GameMode}");
             m_Config.m_GameMode = GameMode;
@@ -274,7 +397,13 @@ namespace SkyCoopServer
             // Грузим по новой даже если режим тот же, файл режима мог быть отредактирован.
             m_Rules = FilesManager.GetRules(GameMode);
 
-            string MapName = m_Rules.GetRandomMap(m_Config.m_SceneToSpawn);
+            string MapName = NewMap;
+
+            if (string.IsNullOrEmpty(MapName))
+            {
+                MapName = GetRandomMap(m_Rules);
+            }
+
             DataStr.MapData MapData = FilesManager.GetMapData(MapName);
 
             if (MapData != null)
@@ -320,6 +449,7 @@ namespace SkyCoopServer
             {
                 Logger.Log(ConsoleColor.Green, $"[Server] We got connection: {peer} assigned them as {peer.Id}");
                 ServerSend.Welcome(peer, peer.Id);
+                OnPlayersCountChanged();
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
