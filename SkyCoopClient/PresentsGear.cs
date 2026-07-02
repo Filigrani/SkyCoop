@@ -35,7 +35,18 @@ namespace SkyCoopClient
             if (s_PresentOpenGear)
             {
                 GameManager.GetPlayerManagerComponent().ConsumeUnitFromInventory(s_PresentOpenGear.gameObject);
-                RequestPresentLoot();
+
+                if(s_PresentOpenGear.name == "GEAR_FlareGunCase_hangar")
+                {
+                    Panel_Inventory Panel = InterfaceManager.GetPanel<Panel_Inventory>();
+                    Panel.Enable(false);
+                    GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement("GEAR_FlareGun", "", true, false));
+                    GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement("GEAR_FlareGunAmmoSingle", "", true, false));
+                }
+                else
+                {
+                    RequestPresentLoot();
+                }  
             }
         }
 
@@ -54,6 +65,14 @@ namespace SkyCoopClient
                         {
                             s_PresentOpenGear = gi;
                             PanelBar.Launch(Localization.Get("GAMEPLAY_OpeningProgress"), 3f, 0.0f, 0.0f, "Play_HarvestingCardboard", null, true, true, null);
+                        }
+                    }else if(gi.name == "GEAR_FlareGunCase_hangar")
+                    {
+                        Panel_GenericProgressBar PanelBar = InterfaceManager.GetPanel<Panel_GenericProgressBar>();
+                        if (PanelBar)
+                        {
+                            s_PresentOpenGear = gi;
+                            PanelBar.Launch(Localization.Get("GAMEPLAY_OpeningProgress"), 0.7f, 0.0f, 0.0f, "Play_CargoCrateOpen", null, true, true, null);
                         }
                     }
                 }

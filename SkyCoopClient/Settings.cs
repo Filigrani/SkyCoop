@@ -46,7 +46,7 @@ namespace SkyCoopClient
         [Description("If enabled, your voice will be sent only when defined button is held.")]
         public bool m_PushToTalk = false;
 
-        [Name("Push To Talk Button")]
+        [Name("Push To Talk Key")]
         [Description("Configure key, that will be used to send your voice when it's held.\n(only used if Push to talk is enabled!)")]
         public KeyCode m_VoiceButton = KeyCode.V;
 
@@ -67,6 +67,12 @@ namespace SkyCoopClient
         [Name("Speaking Indicator")]
         [Description("Show icon when you sending voice.")]
         public bool m_DisplayMicrophoneIcon = true;
+
+        [Section("General Settings")]
+
+        [Name("Melee Weapon Key")]
+        [Description("Cycle melee weapons.")]
+        public KeyCode m_MeleeButton = KeyCode.X;
 
         //[Name("Max players")]
         //[Description("How many players can connect to the server.")]

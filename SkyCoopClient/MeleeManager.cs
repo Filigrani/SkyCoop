@@ -19,6 +19,8 @@ namespace SkyCoopClient
         public static Animator s_FishKnifeAnimator = null;
         public static AudioSource s_FishAudioSource = null;
 
+        public static bool s_MeleeWeaponKeyHeldPreviousFrame = false;
+
 
         public static List<string> s_MeleeWeapons = new List<string>()
         {
@@ -188,6 +190,73 @@ namespace SkyCoopClient
             }
         }
 
+        public static void TryTakeWeapon()
+        {
+            if (GameManager.m_PlayerManager.m_ItemInHands)
+            {
+                string CurrentWeapon = GameManager.m_PlayerManager.m_ItemInHands.name;
+
+                if (IsMeleeWeapon(CurrentWeapon))
+                {
+                    int StartIndex = s_MeleeWeapons.IndexOf(CurrentWeapon);
+
+                    int i = StartIndex+1;
+
+                    if(i >= s_MeleeWeapons.Count)
+                    {
+                        i = 0;
+                    }
+
+                    while (i != StartIndex)
+                    {
+                        if (GameManager.m_Inventory.HasNonRuinedItem(s_MeleeWeapons[i]))
+                        {
+                            GameManager.m_PlayerManager.UnequipItemInHands();
+                            GameManager.m_PlayerManager.UseInventoryItem(GameManager.m_Inventory.GetBestGearItemWithName(s_MeleeWeapons[i]));
+                            return;
+                        }
+                        i++;
+
+                        if(i >= s_MeleeWeapons.Count)
+                        {
+                            i = 0;
+                        }
+                    }
+                    HUDMessage.AddMessage(Localization.Get("GAMEPLAY_NoMelee"), true, false);
+                    GameAudioManager.PlayGUIError();
+                    return;
+                }
+            }
+            if (GameManager.m_Inventory)
+            {
+                foreach (string MeleeWeapon in s_MeleeWeapons)
+                {
+                    if (GameManager.m_Inventory.HasNonRuinedItem(MeleeWeapon))
+                    {
+                        GameManager.m_PlayerManager.UnequipItemInHands();
+                        GameManager.m_PlayerManager.UseInventoryItem(GameManager.m_Inventory.GetBestGearItemWithName(MeleeWeapon));
+                        return;
+                    }
+                }
+                HUDMessage.AddMessage(Localization.Get("GAMEPLAY_NoMelee"), true, false);
+                GameAudioManager.PlayGUIError();
+            }
+        }
+
+        public static void Update()
+        {
+            bool PressedThisFrame = Input.GetKey(Settings.m_Options.m_MeleeButton);
+            if (s_MeleeWeaponKeyHeldPreviousFrame != PressedThisFrame)
+            {
+                if (PressedThisFrame)
+                {
+                    TryTakeWeapon();
+                }
+            }
+
+            s_MeleeWeaponKeyHeldPreviousFrame = PressedThisFrame;
+        }
+
         public static void FindDummy()
         {
             if(s_DummyFPSItem == null)
@@ -255,13 +324,62 @@ namespace SkyCoopClient
                             }
                         }
                     }
+                    if (gi.name.StartsWith("GEAR_FlareGunCase_hangar"))
+                    {
+                        __result = "GAMEPLAY_Open";
+                    }
                 }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "UseFPSMeshItem")]
+        private static class PlayerManager_UseFPSMeshItem
+        {
+            private static bool Prefix(PlayerManager __instance, GearItem gi, ref bool __result)
+            {
+                if(gi == null || gi.m_FirstPersonItem == null)
+                {
+                    __result = false;
+                    return false;
+                }
+                int fpsMeshId = gi.m_FirstPersonItem.GetMeshID();
+                if (fpsMeshId == -1)
+                {
+                    __result = false;
+                    return false;
+                }
+                else
+                {
+                    if(GameManager.GetVpFPSCamera().CurrentWeapon && GameManager.GetVpFPSCamera().CurrentWeapon.m_GearItem && GameManager.GetVpFPSCamera().CurrentWeapon.m_GearItem.m_FirstPersonItem)
+                    {
+                        if(GameManager.GetVpFPSCamera().CurrentWeapon.m_GearItem.m_FirstPersonItem.GetMeshID() == fpsMeshId)
+                        {
+                            if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
+                            {
+                                if (GameManager.GetPlayerManagerComponent().m_ItemInHands.name == gi.name)
+                                {
+                                    __result = false;
+                                    return false;
+                                }
+                                else
+                                {
+                                    __instance.EquipItem(gi, false);
+                                    GameManager.GetPlayerAnimationComponent().SetItemEquippedByPlayer(true);
+                                    __result = true;
+                                    return true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                return true;
             }
         }
 
 
         [HarmonyLib.HarmonyPatch(typeof(vp_FPSCamera), "SetWeapon")]
-        private static class ItemDescriptionPage_SetWeapon
+        private static class vp_FPSCamera_SetWeapon
         {
             private static void Postfix(vp_FPSCamera __instance)
             {

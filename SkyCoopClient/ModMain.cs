@@ -66,7 +66,6 @@ namespace SkyCoop
         {
             Comps.RegisterComponents();
             AssetManager.PreloadMainBundle();
-            AssetManager.RegisterIlegalGearsCommand();
             WeaponsManager.InitDescriptors();
         }
 
@@ -132,7 +131,7 @@ namespace SkyCoop
                 Server.Update();
             }
 
-            if (InputManager.GetFirePressed(InputManager.m_CurrentContext))
+            if (!InputManager.m_InteractedWithItemThisFrame && InputManager.GetFirePressed(InputManager.m_CurrentContext))
             {
                 if (GameManager.m_NewPlayerAnimation)
                 {
@@ -191,6 +190,8 @@ namespace SkyCoop
                     }
                 }
             }
+
+            MeleeManager.Update();
 
             if (CanvasUI.s_SpeakingIndicator)
             {

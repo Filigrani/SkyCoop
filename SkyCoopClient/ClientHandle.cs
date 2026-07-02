@@ -287,7 +287,7 @@ namespace SkyCoop
                 string GearName = Reader.GetString();
                 string JSON = Reader.GetString();
                 bool DropAround = Reader.GetBool();
-                GearsSync.HandleGearPickUp(GearName, JSON, DropAround);
+                GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement(GearName, JSON, DropAround, false));
             }
             else
             {

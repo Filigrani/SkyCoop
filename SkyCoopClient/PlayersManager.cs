@@ -545,7 +545,7 @@ namespace SkyCoop
             {
                 if (HasArmor)
                 {
-                    Protection = Protection+50;
+                    Protection = Protection+0.5f;
                 }
             }
 
@@ -1403,7 +1403,6 @@ namespace SkyCoop
             Panel_GenericProgressBar Panel;
             if (InterfaceManager.TryGetPanel<Panel_GenericProgressBar>(out Panel))
             {                
-                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
                 s_ReviveTarget = Player;
                 Panel.Launch("Reviving...", 10f, 0.0f, 0.0f, "", null, true, true, null);
             }

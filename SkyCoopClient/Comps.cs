@@ -46,6 +46,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<TeammateBar>();
             ClassInjector.RegisterTypeInIl2Cpp<TeammateMapIcon>();
             ClassInjector.RegisterTypeInIl2Cpp<ZoneMapIcon>();
+            ClassInjector.RegisterTypeInIl2Cpp<SendGearIfNotDestoryed>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -2268,6 +2269,26 @@ namespace SkyCoop
                             AddTeamBar();
                         }
                     }
+                }
+            }
+        }
+        public class SendGearIfNotDestoryed : MonoBehaviour
+        {
+            public SendGearIfNotDestoryed(IntPtr ptr) : base(ptr) { }
+            public GearItem m_Gear = null;
+            public bool m_SkipThisFrame = true;
+            void Update()
+            {
+                if (m_SkipThisFrame)
+                {
+                    m_SkipThisFrame = false;
+                    return;
+                }
+                
+                if (m_Gear)
+                {
+                    SkyCoop.Logger.Log($"Gear {m_Gear.name} refused");
+                    GearsSync.SendDropItem(m_Gear, 0, 0, true);
                 }
             }
         }

@@ -23,55 +23,42 @@ namespace SkyCoopClient
         public static bool s_PlaceModeAfterPickup = false;
         public static bool s_NoSyncFlag = false;
         public static Vector3 s_LastPickedGearPosition = Vector3.zero;
-        public static Quaternion s_LastPickedGearQuaternion = Quaternion.identity;
-        public static GearItem s_PendingRefuseGear = null;
-        public static int s_PendingRefuseGearTimerFrames = 0;
+        public static Quaternion s_LastPickedGearRotation = Quaternion.identity;
         public static List<Vector3> s_SpawnersMarkers = new List<Vector3>();
         public static List<GameObject> s_SpawnersMarkersObjects = new List<GameObject>();
 
-        public static void Update()
+        public static List<GearPickedElement> s_GearQueue = new List<GearPickedElement>();
+
+        public class GearPickedElement
         {
-            if (s_PendingRefuseGearTimerFrames > 0)
+            public string m_GearName = "";
+            public string m_JSON = "";
+            public bool m_DropAround = false;
+            public bool m_SpawnLoaded = false;
+
+            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false)
             {
-                s_PendingRefuseGearTimerFrames--;
-
-                if (s_PendingRefuseGearTimerFrames == 0)
-                {
-                    if (s_PendingRefuseGear)
-                    {
-                        foreach (GearItem item in GameManager.GetInventoryComponent().m_Items)
-                        {
-                            if (item && item.gameObject.GetComponent<GearItem>() == s_PendingRefuseGear)
-                            {
-                                s_PendingRefuseGear = null; // Предмет был взят.
-                                return;
-                            }
-                        }
-
-                        if (!s_PendingRefuseGear.IsInsideContainer())
-                        {
-                            SkyCoop.Logger.Log($"Gear {s_PendingRefuseGear.name} refused");
-                            SendDropItem(s_PendingRefuseGear, 0, 0, true);
-                        }
-                        else
-                        {
-                            SkyCoop.Logger.Log($"Gear {s_PendingRefuseGear.name} dropped next to container");
-
-                            SendDropItem(s_PendingRefuseGear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
-                        }
-
-                        s_PendingRefuseGear = null;
-                    }
-                }
+                m_GearName = gearName;
+                m_JSON = json;
+                m_DropAround = dropAround;
+                m_SpawnLoaded = spawnLoaded;
             }
         }
 
-        public static void SetPendingRefuseGear(GearItem Gear)
+        public static void Update()
         {
-            s_PendingRefuseGear = Gear;
-            if(s_PendingRefuseGear != null)
+            if(s_GearQueue.Count > 0)
             {
-                s_PendingRefuseGearTimerFrames = 2;
+                if(GameManager.m_PlayerManager != null)
+                {
+                    if (!GameManager.m_PlayerManager.IsInspectModeActive())
+                    {
+                        GearPickedElement Element = s_GearQueue[0];
+
+                        ProcessGearPickUpQueue(Element);
+                        s_GearQueue.RemoveAt(0);
+                    }
+                }
             }
         }
 
@@ -459,11 +446,36 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")]
         private static class PlayerManager_ExitInspectGearMode
         {
+            public static GearItem Gear = null;
+            
+            internal static void Prefix(PlayerManager __instance)
+            {
+                Gear = __instance.m_Gear;
+            }
+
             internal static void Postfix(PlayerManager __instance)
             {
                 if (__instance.m_Gear)
                 {
-                    SetPendingRefuseGear(__instance.m_Gear);
+                    if (!__instance.m_Gear.m_InPlayerInventory)
+                    {
+                        __instance.m_Gear.transform.position = __instance.m_RestorePos;
+                        __instance.m_Gear.transform.rotation = __instance.m_RestoreRot;
+
+                        // Проблема в том что если этот предмет состакан - то __instance.m_Gear будет помечен для уничтожения.
+                        // по факту он не попал в инвентарь, потому что вместо него самого, просто прибавилось цифра в стаке.
+                        // Так как Unity удаляет помеченные предметы только в следующем Update цикле (да блин даже если мы создали компонент
+                        // в текущем цикле его Update всё ещё вызовиться в этом цикле), лепив на него компонент, если он сможет вызвать Update
+                        // значит он так и остался валяться.
+
+
+                        Comps.SendGearIfNotDestoryed Hook = Gear.gameObject.GetComponent<Comps.SendGearIfNotDestoryed>();
+                        if(Hook == null)
+                        {
+                            Hook = Gear.gameObject.AddComponent<Comps.SendGearIfNotDestoryed>();
+                            Hook.m_Gear = Gear;
+                        }
+                    }
                 }
             }
         }
@@ -613,6 +625,28 @@ namespace SkyCoopClient
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "TransferGearFromInspectToContainer")]
+        private static class PlayerManager_TransferGearFromInspectToContainer
+        {
+            private static bool Prefix(PlayerManager __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (__instance.m_Gear)
+                {
+                    SkyCoop.Logger.Log($"Gear {__instance.m_Gear.name} refused and dropped near container");
+
+                    if (__instance.m_Container)
+                    {
+                        __instance.m_Container.RemoveGear(__instance.m_Gear);
+                    }
+                    SendDropItem(__instance.m_Gear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
+                    return false;    
+                }
+                return true;
+            }
+        }
+
         public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0, GameObject Around = null)
         {
             if (gear != null && gear.gameObject != null)
@@ -715,41 +749,41 @@ namespace SkyCoopClient
             }
         }
 
-        public static void HandleGearPickUp(string GearName, string JSON, bool DropAround)
+        public static void ProcessGearPickUpQueue(GearPickedElement Data)
         {
             CanclePickingUp();
             //SkyCoop.Logger.Log(ConsoleColor.Green, $"HandleGearPickUp {GearName}");
 
             bool Explosive = false;
 
-            if (GearName.EndsWith("_Boom"))
+            if (Data.m_GearName.EndsWith("_Boom"))
             {
-                GearName = GearName.Replace("_Boom", "");
+                Data.m_GearName = Data.m_GearName.Replace("_Boom", "");
                 Explosive = true;
             }
 
 
-            GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
+            GameObject reference = AssetManager.GetAssetFromGame<GameObject>(Data.m_GearName);
             if (reference)
             {
-                GameObject GearObject = UnityEngine.Object.Instantiate(reference, s_LastPickedGearPosition, s_LastPickedGearQuaternion);
+                GameObject GearObject = UnityEngine.Object.Instantiate(reference, s_LastPickedGearPosition, s_LastPickedGearRotation);
 
-                GearObject.name = GearName;
+                GearObject.name = Data.m_GearName;
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Going to deserialize...");
 
-                GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(JSON);
+                GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(Data.m_JSON);
                 GearItem Gi = GearObject.GetComponent<GearItem>();
 
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
                 Gi.Deserialize(DataProxy, true);
-                if (DropAround)
+                if (Data.m_DropAround)
                 {
                     Gi.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
                 }
                 else
                 {
                     Gi.transform.position = s_LastPickedGearPosition;
-                    Gi.transform.rotation = s_LastPickedGearQuaternion;
+                    Gi.transform.rotation = s_LastPickedGearRotation;
                 }
 
                 if (Explosive)
@@ -758,6 +792,13 @@ namespace SkyCoopClient
                     {
                         Gi.m_NoiseMakerItem.Ignite();
                         Gi.SetNormalizedHP(0.3f);
+                    }
+                }
+                if (Data.m_SpawnLoaded)
+                {
+                    if (Gi.m_GunItem)
+                    {
+                        Gi.m_GunItem.FillClipAtCondition(100);
                     }
                 }
 
@@ -773,6 +814,11 @@ namespace SkyCoopClient
                     GameManager.GetPlayerManagerComponent().EnterInspectGearMode(Gi);
                 }
             }
+        }
+
+        public static void HandleGearPickUp(GearPickedElement Data)
+        {
+            s_GearQueue.Add(Data);
         }
 
         public static void CanclePickingUp()
@@ -809,7 +855,7 @@ namespace SkyCoopClient
             }
             s_PlaceModeAfterPickup = PlaceMode;
             s_LastPickedGearPosition = Position;
-            s_LastPickedGearQuaternion = Rotation;
+            s_LastPickedGearRotation = Rotation;
             ClientSend.SendGearPickUp(GUID);
         }
     }

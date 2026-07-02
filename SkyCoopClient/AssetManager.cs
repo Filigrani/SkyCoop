@@ -262,26 +262,5 @@ namespace SkyCoop
             }
             return null;
         }
-
-
-        public static void RegisterIlegalGearsCommand()
-        {
-            uConsole.RegisterCommand("give", new Action(GiveIlegalGear));
-        }
-
-        public static void GiveIlegalGear()
-        {
-            GameObject reference = GetAssetFromGame<GameObject>(uConsole.GetString());
-            if (reference)
-            {
-                GameObject GearObject = UnityEngine.Object.Instantiate(reference);
-                GearItem item = GearObject.GetComponent<GearItem>();
-                if(item != null)
-                {
-                    item.CompleteSpawnFromCONSOLE();
-                    GameManager.GetInventoryComponent().AddGear(item);
-                }
-            }
-        }
     }
 }
