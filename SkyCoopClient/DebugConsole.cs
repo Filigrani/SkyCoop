@@ -91,10 +91,7 @@ namespace SkyCoopClient
             {
                 if (ModMain.Client.m_IsReady && !ModMain.Client.m_Config.m_CheatsAllowed)
                 {
-
-                    SkyCoop.Logger.Log(ConsoleColor.Yellow, "Cheats are disabled on this server, debug console was disabled!");
-
-                    UnityEngine.Object.Destroy(__instance.gameObject);
+                    uConsole.m_On = false;
                 }
             }
         }

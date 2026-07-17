@@ -19,8 +19,8 @@ namespace SkyCoopServer
             public int m_MaxPlayers = 4;
             public string m_StartingRegion = "MarshRegion";
             public int m_Seed = 777777;
-            //public int m_VoicePort = 37850;
-            public int m_VoicePort = 0;
+            public int m_VoicePort = 37850;
+            //public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
             public string m_GameMode = "Lobby";
@@ -230,6 +230,7 @@ namespace SkyCoopServer
         {
             public string m_PlayerName = "Player";
             public int m_PlayerID = 0;
+            public int m_VoiceChatID = -1;
             public PlayerVisualData m_VisualData = new PlayerVisualData();
 
             public Vector3 m_Position = new Vector3(0, 0, 0);

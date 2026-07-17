@@ -253,7 +253,11 @@ namespace SkyCoopServer
                 Reason = "Unknown reason";
             }
 
-            return Encoding.Unicode.GetBytes(Reason);
+            List<byte> Buffer = new List<byte>();
+            Buffer.AddRange(BitConverter.GetBytes((ushort)Reason.Length));
+            Buffer.AddRange(Encoding.UTF8.GetBytes(Reason));
+
+            return Buffer.ToArray();
         }
 
         public string GetNextMapName()
@@ -305,10 +309,6 @@ namespace SkyCoopServer
                         m_Rules.m_Time = 180;
                         ServerSend.SendTimerPrefix("GAMEPLAY_GameStartsIn", this);
                         ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
-                        foreach (NetPeer Client in peers)
-                        {
-                            ServerSend.SendHUDSideBarUpdate(Client, 2, m_PlayersData.GetPlayersString(), this);
-                        }
                     }
                 }
                 else
@@ -317,7 +317,12 @@ namespace SkyCoopServer
                     ServerSend.SendTimerPrefix("GAMEPLAY_NeedMorePlayers", this);
                     ServerSend.ClientGameModeTimer(0, this);
                 }
-            }else if(m_Rules.m_HUDMode == "Shrink")
+                foreach (NetPeer Client in peers)
+                {
+                    ServerSend.SendHUDSideBarUpdate(Client, 2, m_PlayersData.GetPlayersString(), this);
+                }
+            }
+            else if(m_Rules.m_HUDMode == "Shrink")
             {
                 foreach (NetPeer Client in peers)
                 {
@@ -353,7 +358,7 @@ namespace SkyCoopServer
 
                                 PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
 
-                                PlayerData.m_Scene = "";
+                                m_PlayersData.PlayerChangeScene(Peer.Id, "");
                             }
                         }
                         else
@@ -389,7 +394,7 @@ namespace SkyCoopServer
                                     ServerSend.SendLeaders(Peer, Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
                                 }
 
-                                PlayerData.m_Scene = "";
+                                m_PlayersData.PlayerChangeScene(Peer.Id, "");
                             }
                         }
                         m_ScenesData.UnloadSceneNobodyOn(this);

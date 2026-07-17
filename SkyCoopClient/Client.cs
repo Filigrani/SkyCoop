@@ -148,7 +148,14 @@ namespace SkyCoop
 
                 if (message.Reason == DisconnectReason.RemoteConnectionClose)
                 {
-                    Message = "Server closed";
+                    if(message.AdditionalData.RawData.Length > 0)
+                    {
+                        Message = message.AdditionalData.GetString();
+                    }
+                    else
+                    {
+                        Message = "Server closed";
+                    }
                 }
                 else
                 {
@@ -195,7 +202,7 @@ namespace SkyCoop
                 m_IsReady = false;
                 PlayersManager.DestoryPlayers();
                 m_Instance.Stop();
-                if (ModMain.ClientVoice.m_IsReady)
+                if (ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady)
                 {
                     ModMain.ClientVoice.m_Instance.DisconnectAll();
                     ModMain.ClientVoice.m_Instance.Stop();

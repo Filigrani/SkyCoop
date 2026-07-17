@@ -105,7 +105,7 @@ namespace SkyCoopServer
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put(1); //Welcome
-            writer.Put($"Welcome to VoiceServer Client№{Peer.Id}");
+            writer.Put($"Welcome to VoiceServer Client {Peer.Id}");
             Peer.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 

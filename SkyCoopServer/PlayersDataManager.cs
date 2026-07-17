@@ -158,30 +158,6 @@ namespace SkyCoopServer
             }
         }
 
-        public void SceneAlign()
-        {
-            Logger.Log("[PlayersDataManager] SceneAlign");
-            List<int> PlayerIndexes = s_Server.GetClientsIndexs();
-
-            foreach (int PlayerID in PlayerIndexes)
-            {
-                DataStr.PlayerData Player = GetPlayer(PlayerID);
-                foreach (int OtherPlayerID in PlayerIndexes)
-                {
-                    if (OtherPlayerID != PlayerID || m_RecursiveDebug)
-                    {
-                        DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
-
-                        NetPeer OtherPlayerClient = s_Server.GetClient(OtherPlayerID);
-                        NetPeer PlayerClient = s_Server.GetClient(PlayerID);
-
-                        ServerSend.SendPlayerSceneNotification(OtherPlayerClient, OtherPlayer.m_Scene == Player.m_Scene, PlayerID);
-                        ServerSend.SendPlayerSceneNotification(PlayerClient, OtherPlayer.m_Scene == Player.m_Scene, OtherPlayerID);
-                    }
-                }
-            }
-        }
-
         public void PlayerChangeGear(int Index, string GearName, int GearVariant, bool Broadcast = true)
         {
             DataStr.PlayerData Player = GetPlayer(Index);

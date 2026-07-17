@@ -135,10 +135,10 @@ namespace SkyCoop
                 
                 if (Present)
                 {
-                    Player.KeepVisible();
+                    Player.SetVisibile(true);
                 } else
                 {
-                    Player.gameObject.SetActive(false);
+                    Player.SetVisibile(false);
                 }
 
                 if(Present != PreviousState)

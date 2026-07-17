@@ -433,32 +433,26 @@ namespace SkyCoop
             {
                 m_Position = position;
                 m_Rotation = rotation;
-                KeepVisible();
             }
 
             public void SetPosition(Vector3 position)
             {
                 m_Position = position;
-                KeepVisible();
             }
 
             public void SetRotation(Quaternion rotation)
             {
                 m_Rotation = rotation;
-                KeepVisible();
             }
 
             public void SetTilt(float tilt)
             {
                 m_Tilt = tilt;
-
-                KeepVisible();
             }
 
-            public void KeepVisible()
+            public void SetVisibile(bool Visible)
             {
-                m_SecondsBeforeHide = s_InActiveCooldown;
-                gameObject.SetActive(true);
+                gameObject.SetActive(Visible);
             }
 
             public void SetAcation(int Action)

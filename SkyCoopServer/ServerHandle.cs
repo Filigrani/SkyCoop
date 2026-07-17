@@ -404,13 +404,15 @@ namespace SkyCoopServer
                 if (Peer.Id != Client.Id)
                 {
                     DataStr.PlayerData PeerData = ServerInstance.GetPlayerDataByNetPeer(Peer);
-                    if (PeerData.m_Scene == SceneName && PeerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
+
+                    ServerSend.SendPlayerSceneNotification(Client, PeerData.m_Scene == SceneName, Peer.Id);
+                    if (PeerData.m_Scene == SceneName)
                     {
+                        ServerSend.SendPlayerAction(Client, PeerData.m_VisualData.m_LastAction, Peer.Id);
                         ServerSend.SendPlayerCrouch(Client, PeerData.m_VisualData.m_Crouch, Peer.Id);
                         ServerSend.SendClothing(Client, PeerData.m_VisualData.m_ClothingData, Peer.Id);
                         ServerSend.SendPosition(Client, PeerData.m_Position, Peer.Id);
                         ServerSend.SendRotation(Client, PeerData.m_Rotation, Peer.Id);
-                        ServerSend.SendPlayerAction(Client, PeerData.m_VisualData.m_LastAction, Peer.Id);
                         ServerSend.SendPlayerChangeGear(Client, PeerData.m_VisualData.m_GearInHands, PeerData.m_VisualData.m_GearVariant, Peer.Id);
                     }
                 }
