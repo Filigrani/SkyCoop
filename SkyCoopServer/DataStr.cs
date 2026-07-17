@@ -24,6 +24,7 @@ namespace SkyCoopServer
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
             public string m_GameMode = "Lobby";
+            public bool m_CheatsAllowed = false;
         }
 
         public class MapData
@@ -270,7 +271,7 @@ namespace SkyCoopServer
             public void SetGameplayState(GamePlayState State, Server ServerInstance)
             {
                 m_GamePlayState = State;
-                Logger.Log($"[DataStr.PlayerData] Client {m_GamePlayState} new gamepaly state {State}");
+                Logger.Log($"[DataStr.PlayerData] Client {m_PlayerName} new gamepaly state {m_GamePlayState}");
 
                 foreach (PlayerData OtherPlayerData in ServerInstance.m_PlayersData.GetPlayersOnScene(m_Scene))
                 {
@@ -388,7 +389,10 @@ namespace SkyCoopServer
 
                     if (Squad != null)
                     {
-                        ServerSend.SendSquadEliminated(ServerInstance, Squad.m_Name);
+                        if (Squad.IsAlive(ServerInstance))
+                        {
+                            ServerSend.SendSquadEliminated(ServerInstance, Squad.m_Name);
+                        }
                     }
                     ServerInstance.m_PlayersData.DoSquadsCheck();
                 }
@@ -1290,6 +1294,13 @@ namespace SkyCoopServer
                 }
             }
 
+            public bool IsInsideZone(Vector3 Point)
+            {
+                float Distance = Vector2.Distance(new Vector2(Point.X, Point.Z), new Vector2(m_CurrentCenter.X, m_CurrentCenter.Z));
+                return Distance < m_CurrentRadius / 2;
+            }
+
+
             public void DamageCheck()
             {
                 if (m_DebugNoDamage)
@@ -1304,9 +1315,7 @@ namespace SkyCoopServer
                     PlayerData PlayerData = s_ServerInstance.GetPlayerDataByNetPeer(Peer);
                     if(PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
                     {
-                        float Distance = Vector2.Distance(new Vector2(PlayerData.m_Position.X, PlayerData.m_Position.Z), new Vector2(m_CurrentCenter.X, m_CurrentCenter.Z));
-                        //SkyCoopServer.Logger.Log($"DangerCircleData PlayerID {Peer.Id} Distance {Distance}/{m_CurrentRadius/2}");
-                        if (Distance  > m_CurrentRadius/2)
+                        if (!IsInsideZone(PlayerData.m_Position))
                         {
                             ServerSend.SendDamageToPlayer(Peer, m_CurrentStage.DamagePerSecond, Peer.Id, 1, "ZONE");
                         }
@@ -1457,6 +1466,25 @@ namespace SkyCoopServer
                 m_Name = SquadName;
             }
 
+            public bool IsAlive(Server ServerInstance)
+            {
+                if (ServerInstance != null)
+                {
+                    foreach (int PlayerID in m_Players)
+                    {
+                        PlayerData Player = ServerInstance.m_PlayersData.GetPlayer(PlayerID);
+                        if(Player != null)
+                        {
+                            if(Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                            {
+                                return true;
+                            }
+                        }
+                    }
+                }
+                return false;
+            }
+
             public bool HasPlayer(int PlayerID)
             {
                 return m_Players.Contains(PlayerID);
@@ -1493,6 +1521,15 @@ namespace SkyCoopServer
                         foreach (NetPeer Peer in peers.ToArray())
                         {
                             ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                        }
+                    }
+                    if (ServerInstance.m_Rules.m_HUDMode == "Lobby")
+                    {
+                        List<NetPeer> peers = new List<NetPeer>();
+                        ServerInstance.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 2, ServerInstance.m_PlayersData.GetPlayersString(), ServerInstance);
                         }
                     }
                     return true;

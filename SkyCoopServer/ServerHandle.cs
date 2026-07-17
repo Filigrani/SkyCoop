@@ -21,6 +21,9 @@ namespace SkyCoopServer
             ServerSend.ServerConfig(Client, ServerInstance.m_Config, ServerInstance.m_Rules);
             ServerSend.SendClientName(Client, Client.Id, NewPlayerName);
 
+
+            ServerInstance.OnPlayersCountChanged();
+
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
             foreach (NetPeer OtherPeer in peers.ToArray())
@@ -38,6 +41,10 @@ namespace SkyCoopServer
                     if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "Shrink")
                     {
                         ServerSend.SendHUDSideBarUpdate(Client, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
+                    }
+                    if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "Lobby")
+                    {
+                        ServerSend.SendHUDSideBarUpdate(Client, 2, ServerInstance.m_PlayersData.GetPlayersString(), ServerInstance);
                     }
                 }
             }
@@ -313,7 +320,7 @@ namespace SkyCoopServer
         {
             string SceneName = Reader.GetString();
 
-            Logger.Log($"[ServerHandle] (ClientScene) Client {Client.Id} sent Scene {SceneName}");
+            Logger.Log($"[ServerHandle] (ClientScene) Client {Client.Id} sent Scene {SceneName} current game mode {ServerInstance.m_Rules.m_HUDMode}");
             ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, SceneName);
 
             if(SceneName == "" || SceneName == "Empty" || SceneName.StartsWith("Menu"))
@@ -345,7 +352,7 @@ namespace SkyCoopServer
 
             ServerSend.SendTier(Client, Data.m_Tier);
 
-            if (ServerInstance.m_Rules != null && (ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink" || ServerInstance.m_Rules.m_HUDMode == "GunGame"))
+            if (ServerInstance.m_Rules != null)
             {
                 if (ServerInstance.m_Rules.m_HUDMode == "DMStats")
                 {
@@ -378,7 +385,7 @@ namespace SkyCoopServer
                 {
                     ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", ServerInstance.GetNextGameModeName(), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 1, "", "GAMEPLAY_SideNextMap", ServerInstance.GetNextMapName(), ServerInstance);
-                    ServerSend.SendHUDSideBarClear(Client, 2, ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 2, "", "GAMEPLAY_SideBarPlayersAlive", ServerInstance.m_PlayersData.GetPlayersString(), ServerInstance);
                     ServerSend.SendHUDSideBarClear(Client, 3, ServerInstance);
                 }
                 else
@@ -742,15 +749,24 @@ namespace SkyCoopServer
                     Logger.Log(ConsoleColor.Green, $"New m_Rules.m_PVP flag is {ServerInstance.m_Rules.m_PVP}");
                     break;
                 case "gungame":
-                    ServerInstance.ForceToOver();
+                    if(ServerInstance.m_Rules.m_HUDMode != "Lobby")
+                    {
+                        ServerInstance.ForceToOver();
+                    }
                     ServerInstance.SetNextGameMode("GunGame");
                     break;
                 case "dm":
-                    ServerInstance.ForceToOver();
+                    if (ServerInstance.m_Rules.m_HUDMode != "Lobby")
+                    {
+                        ServerInstance.ForceToOver();
+                    }
                     ServerInstance.SetNextGameMode("DM");
                     break;
                 case "shrink":
-                    ServerInstance.ForceToOver();
+                    if (ServerInstance.m_Rules.m_HUDMode != "Lobby")
+                    {
+                        ServerInstance.ForceToOver();
+                    }
                     ServerInstance.SetNextGameMode("Shrink");
                     break;
                 case "nextzone":
@@ -775,6 +791,19 @@ namespace SkyCoopServer
                         ServerInstance.m_PlayersData.PlayerRotated(Client.Id, Point.m_Rotation);
                         ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation);
                     }
+                    break;
+                case "start":
+                    if(ServerInstance.m_Rules.m_HUDMode == "Lobby")
+                    {
+                        ServerInstance.ForceToOver();
+                    }
+                    break;
+                case "cheats":
+                case "cheat":
+                case "console":
+                    ServerInstance.m_Config.m_CheatsAllowed = !ServerInstance.m_Config.m_CheatsAllowed;
+                    ServerSend.SendConfigUpdated(ServerInstance);
+                    Logger.Log(ConsoleColor.Green, $"New m_Config.m_CheatsAllowed flag is {ServerInstance.m_Config.m_CheatsAllowed}");
                     break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");

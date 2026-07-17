@@ -98,6 +98,19 @@ namespace SkyCoopServer
             }
         }
 
+        public List<V3Quat> FilterSpawnPointsByZone(List<V3Quat> SpawnPoints, DataStr.DangerCircleData Zone)
+        {
+            List<V3Quat> FilteredSpawnPoints = new List<V3Quat>();
+            foreach (V3Quat Point in SpawnPoints)
+            {
+                if (Zone.IsInsideZone(Point.m_Position))
+                {
+                    FilteredSpawnPoints.Add(Point);
+                }
+            }
+            return FilteredSpawnPoints;
+        }
+
         public V3Quat GetSpawnPoint(string SceneName, int PlayerID)
         {
             SceneData SceneData = GetSceneData(SceneName);
@@ -108,6 +121,12 @@ namespace SkyCoopServer
             }
 
             List<V3Quat> SpawnPoints = SceneData.m_SpawnPoints;
+
+            if(SceneData.m_ActiveZone != null)
+            {
+                SpawnPoints = FilterSpawnPointsByZone(SpawnPoints, SceneData.m_ActiveZone);
+            }
+
             if (SpawnPoints.Count > 0)
             {
                 if (SpawnPoints.Count == 1)

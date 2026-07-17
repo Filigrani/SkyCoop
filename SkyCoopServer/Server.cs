@@ -2,6 +2,7 @@
 using LiteNetLib.Utils;
 using System;
 using System.Collections.Generic;
+using System.Text;
 using static SkyCoopServer.DataStr.PlayerData;
 
 namespace SkyCoopServer
@@ -195,6 +196,66 @@ namespace SkyCoopServer
             s_PreviousTickTime = DateTime.Now;
         }
 
+        public void DisconnectPlayer(string PlayerName, string Reason = "")
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            m_Instance.GetConnectedPeers(peers);
+
+            foreach (NetPeer Peer in peers)
+            {
+                DataStr.PlayerData Player = m_PlayersData.GetPlayer(Peer.Id);
+                if (Player != null && Player.m_PlayerName == PlayerName)
+                {
+                    DisconnectPlayer(Peer.Id, Reason);
+                    return;
+                }
+            }
+            Logger.Log(ConsoleColor.Red, $"There no player with name {PlayerName}");
+        }
+
+        public void DisconnectPlayer(int PlayerID, string Reason = "")
+        {
+            NetPeer Peer = GetClient(PlayerID);
+
+            if(Peer != null)
+            {
+                DisconnectPlayer(Peer, Reason);
+                return;
+            }
+            Logger.Log(ConsoleColor.Red, $"There no player with ID {PlayerID}");
+        }
+
+        public void DisconnectPlayer(NetPeer Client, string Reason = "")
+        {
+            if (Client != null)
+            {
+                m_Instance.DisconnectPeer(Client, GetDisconnectMessage(Reason));
+            }
+        }
+
+        public void DisconnectAllPlayers(string Reason = "", bool StopServer = false)
+        {
+            byte[] ReasonBytes = GetDisconnectMessage(Reason);
+            m_Instance.DisconnectAll(ReasonBytes, 0, ReasonBytes.Length);
+
+            if (StopServer)
+            {
+                m_Instance.Stop();
+                m_IsReady = false;
+                Dispose();
+            }
+        }
+
+        public byte[] GetDisconnectMessage(string Reason)
+        {
+            if (string.IsNullOrEmpty(Reason))
+            {
+                Reason = "Unknown reason";
+            }
+
+            return Encoding.Unicode.GetBytes(Reason);
+        }
+
         public string GetNextMapName()
         {
             return m_NextMapName;
@@ -235,54 +296,32 @@ namespace SkyCoopServer
             List<NetPeer> peers = new List<NetPeer>();
             m_Instance.GetConnectedPeers(peers);
 
-            if(peers.Count < 2)
+            if (m_Rules.m_HUDMode == "Lobby")
             {
-                if(m_Rules.m_HUDMode == "Lobby")
+                if (peers.Count > 1)
                 {
-                    ServerSend.SendTimerPrefix("GAMEPLAY_NeedMorePlayers", this);
-                    ServerSend.ClientGameModeTimer(0, this);
-                    m_NextMapName = "";
-                    m_NextGameModeName = "";
-                    foreach(NetPeer Client in peers)
+                    if (m_Rules.m_Time == 0)
                     {
-                        ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", GetNextGameModeName(), this);
-                        ServerSend.SendHUDSideBar(Client, 1, "", "GAMEPLAY_SideNextMap", GetNextMapName(), this);
-                    }
-                }
-            }
-            else
-            {
-                if (m_Rules.m_HUDMode == "Lobby")
-                {
-                    bool NeedUpdate = false;
-                    //if(m_NextGameModeName == "")
-                    //{
-                    //    if(peers.Count < 5)
-                    //    {
-                    //        m_Rules.m_Time = 30;
-                    //        m_NextGameModeName = "GunGame";
-                    //        m_NextMapName = GetRandomMap(m_NextGameModeName);
-                    //        NeedUpdate = true;
-                    //    }
-                    //    else
-                    //    {
-                    //        m_Rules.m_Time = 30;
-                    //        m_NextGameModeName = "Shrink";
-                    //        m_NextMapName = GetRandomMap(m_NextGameModeName);
-                    //        NeedUpdate = true;
-                    //    }
-                    //}else if(m_NextGameModeName == "Shrink" && peers.Count <)
-
-                    if (NeedUpdate)
-                    {
+                        m_Rules.m_Time = 180;
                         ServerSend.SendTimerPrefix("GAMEPLAY_GameStartsIn", this);
                         ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
                         foreach (NetPeer Client in peers)
                         {
-                            ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", GetNextGameModeName(), this);
-                            ServerSend.SendHUDSideBar(Client, 1, "", "GAMEPLAY_SideNextMap", GetNextMapName(), this);
+                            ServerSend.SendHUDSideBarUpdate(Client, 2, m_PlayersData.GetPlayersString(), this);
                         }
                     }
+                }
+                else
+                {
+                    m_Rules.m_Time = 0;
+                    ServerSend.SendTimerPrefix("GAMEPLAY_NeedMorePlayers", this);
+                    ServerSend.ClientGameModeTimer(0, this);
+                }
+            }else if(m_Rules.m_HUDMode == "Shrink")
+            {
+                foreach (NetPeer Client in peers)
+                {
+                    ServerSend.SendHUDSideBarUpdate(Client, 1, m_PlayersData.GetShrinkModeString(), this);
                 }
             }
         }
@@ -298,50 +337,60 @@ namespace SkyCoopServer
                     ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
                     if (m_Rules.m_Time == 0)
                     {
-                        if(m_Rules.m_HUDMode == "Lobby")
-                        {
-                            m_PendingGameModeOverTimer = 3;
-                        }
-                        else
-                        {
-                            m_PendingGameModeOverTimer = 25;
-                        }
 
                         List<NetPeer> peers = new List<NetPeer>();
                         m_Instance.GetConnectedPeers(peers);
 
-                        List<DataStr.LeaderData> Leaders = m_PlayersData.GetLeaders();
-                        string SquadName = "";
-
-                        if(m_Rules.m_HUDMode == "Shrink")
+                        if (m_Rules.m_HUDMode == "Lobby")
                         {
-                            if(Leaders.Count > 0)
+                            m_PendingGameModeOverTimer = 3;
+                            foreach (NetPeer Peer in peers.ToArray())
                             {
-                                DataStr.PlayersSquad Squad = m_PlayersData.GetPlayerSquadIn(Leaders[0].m_ID);
+                                ServerSend.SendFreeze(Peer);
 
-                                if (Squad != null)
-                                {
-                                    SquadName = Squad.m_Name;
-                                }
+                                DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
+                                string PlayerScene = PlayerData.m_Scene;
+
+                                PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
+
+                                PlayerData.m_Scene = "";
                             }
                         }
-
-                        foreach (NetPeer Peer in peers.ToArray())
+                        else
                         {
-                            ServerSend.SendFreeze(Peer);
-                            DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
-                            string PlayerScene = PlayerData.m_Scene;
+                            m_PendingGameModeOverTimer = 25;
+                            List<DataStr.LeaderData> Leaders = m_PlayersData.GetLeaders();
+                            string SquadName = "";
 
-                            PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
-                            DataStr.SceneData SceneData = m_ScenesData.GetSceneData(PlayerScene);
-
-
-                            if (SceneData != null && SceneData.m_VictoryPoint != null)
+                            if (m_Rules.m_HUDMode == "Shrink")
                             {
-                                ServerSend.SendLeaders(Peer, Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
+                                if (Leaders.Count > 0)
+                                {
+                                    DataStr.PlayersSquad Squad = m_PlayersData.GetPlayerSquadIn(Leaders[0].m_ID);
+
+                                    if (Squad != null)
+                                    {
+                                        SquadName = Squad.m_Name;
+                                    }
+                                }
                             }
 
-                            m_PlayersData.GetPlayer(Peer.Id).m_Scene = "";
+                            foreach (NetPeer Peer in peers.ToArray())
+                            {
+                                ServerSend.SendFreeze(Peer);
+                                DataStr.PlayerData PlayerData = m_PlayersData.GetPlayer(Peer.Id);
+                                string PlayerScene = PlayerData.m_Scene;
+
+                                PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
+                                DataStr.SceneData SceneData = m_ScenesData.GetSceneData(PlayerScene);
+
+                                if (SceneData != null && SceneData.m_VictoryPoint != null)
+                                {
+                                    ServerSend.SendLeaders(Peer, Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
+                                }
+
+                                PlayerData.m_Scene = "";
+                            }
                         }
                         m_ScenesData.UnloadSceneNobodyOn(this);
                     }
@@ -352,7 +401,14 @@ namespace SkyCoopServer
                 m_PendingGameModeOverTimer--;
                 if(m_PendingGameModeOverTimer == 0)
                 {
-                    ChangeGameMode(m_NextGameModeName, m_NextMapName);
+                    if(m_Rules.m_HUDMode == "Lobby")
+                    {
+                        ChangeGameMode(m_NextGameModeName, m_NextMapName);
+                    }
+                    else
+                    {
+                        ChangeGameMode("Lobby");
+                    }
                 }
             }
         }
@@ -382,11 +438,34 @@ namespace SkyCoopServer
         public void SetNextMap(string MapName)
         {
             m_NextMapName = MapName;
+            SkyCoopServer.Logger.Log($"SetNextMap {MapName}");
+
+            if (m_Rules.m_HUDMode == "Lobby")
+            {
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Client in peers)
+                {
+                    ServerSend.SendHUDSideBar(Client, 1, "", "GAMEPLAY_SideNextMap", GetNextMapName(), this);
+                }
+            }
         }
 
         public void SetNextGameMode(string GameModeName)
         {
             m_NextGameModeName = GameModeName;
+            SkyCoopServer.Logger.Log($"SetNextGameMode {GameModeName}");
+
+            if (m_Rules.m_HUDMode == "Lobby")
+            {
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Client in peers)
+                {
+                    ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", GetNextGameModeName(), this);
+                }
+                SetNextMap(GetRandomMap(m_NextGameModeName));
+            }
         }
 
         public void ChangeGameMode(string GameMode, string NewMap = "")
@@ -420,6 +499,22 @@ namespace SkyCoopServer
             {
                 Logger.Log(ConsoleColor.Red, "Server can't load map for the server!!!!!!!!!!!!!");
             }
+
+            if (GameMode == "Lobby")
+            {
+                List<NetPeer> peers = new List<NetPeer>();
+                m_Instance.GetConnectedPeers(peers);
+
+                if (peers.Count > 1)
+                {
+                    m_Rules.m_Time = 180;
+                }
+                else
+                {
+                    m_Rules.m_Time = 0;
+                }
+                SetNextGameMode("Shrink");
+            }
         }
 
         public void StartServer()
@@ -449,7 +544,6 @@ namespace SkyCoopServer
             {
                 Logger.Log(ConsoleColor.Green, $"[Server] We got connection: {peer} assigned them as {peer.Id}");
                 ServerSend.Welcome(peer, peer.Id);
-                OnPlayersCountChanged();
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>

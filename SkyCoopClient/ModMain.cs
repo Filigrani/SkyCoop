@@ -31,6 +31,7 @@ namespace SkyCoop
             DebugConsole.RegisterCommands();
             Settings.Init();
             FilesManager.InitFolders();
+            AudioHook.Init();
 
             Server.OnLogEvent += Logger.HandleServerLog;
         }
@@ -74,10 +75,7 @@ namespace SkyCoop
         {
             if(Server != null && Server.m_IsReady)
             {
-                byte[] ShutdownMessage = Encoding.Unicode.GetBytes("Server shutdown");
-                Server.m_Instance.DisconnectAll(ShutdownMessage, 0, ShutdownMessage.Length);
-                Server.m_Instance.Stop();
-                Server.Dispose();
+                Server.DisconnectAllPlayers("Server shutdown", true);
             }
             base.OnApplicationQuit();
         }
@@ -92,7 +90,7 @@ namespace SkyCoop
 
         public static void OnGameBoot()
         {
-            ReimplementConsole();
+            DebugConsole.ReimplementConsole();
             //AssetManager.DumpAddressablesContent();
             if (!MaterialsContainer.s_Intilized)
             {
@@ -210,29 +208,6 @@ namespace SkyCoop
             if (IsGameplayScene() && !GameManager.s_IsGameplaySuspended)
             {
                 PlayersManager.SpectatorControls();
-            }
-        }
-
-        public static void ReimplementConsole()
-        {
-            if (uConsole.m_Instance == null)
-            {
-                Logger.Log("No uConsole present, creating one.");
-                GameObject ConsoleReference = Addressables.LoadAssetAsync<GameObject>("uConsole").WaitForCompletion();
-                if (ConsoleReference != null)
-                {
-                    GameObject ConsoleObj = UnityEngine.Object.Instantiate(ConsoleReference);
-                    if (ConsoleObj)
-                    {
-                        uConsole.m_Instance = ConsoleObj.GetComponent<uConsole>();
-                    } else
-                    {
-                        Logger.Log(System.ConsoleColor.Red, "Can't assign uConsole!");
-                    }
-                } else
-                {
-                    Logger.Log(System.ConsoleColor.Red, "Can't load uConsole!");
-                }
             }
         }
 

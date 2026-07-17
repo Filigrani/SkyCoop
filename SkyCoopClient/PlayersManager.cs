@@ -665,9 +665,13 @@ namespace SkyCoop
             {
                 CanvasUI.DoZoneDamageOverlay();
                 SprainedAnkle Spr = GameManager.GetSprainedAnkleComponent();
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleAudioEvent, Il2CppVoice.Priority.Critical);
-                GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFXEvent, Spr.gameObject);
-                GameManager.GetPlayerAnimationComponent().Trigger_WolfPassBite();
+
+                if (Spr)
+                {
+                    GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleAudioEvent, Il2CppVoice.Priority.Critical);
+                    GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFXEvent, Spr.gameObject);
+                    GameManager.GetPlayerAnimationComponent().Trigger_WolfPassBite();
+                }
             }
 
             GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Il2CppVoice.Priority.Critical, PlayerVoice.Options.None);
@@ -851,6 +855,7 @@ namespace SkyCoop
             }
             DoWeaponSwitch(!RespawnAnim);
 
+            ClientSend.SendPosition(Position);
             ClientSend.SendRevived(-2);
 
             MenuHook.RemovePleaseWait();

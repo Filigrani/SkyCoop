@@ -31,6 +31,15 @@ namespace SkyCoop
             Logger.Log(ConsoleColor.Cyan, "VoicePort: " + CFG.m_VoicePort);
             Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + CFG.m_SceneToSpawn);
             Logger.Log(ConsoleColor.Cyan, "GameMode: " + CFG.m_GameMode);
+            Logger.Log(ConsoleColor.Cyan, "CheatsAllowed: " + CFG.m_CheatsAllowed);
+
+            if (CFG.m_CheatsAllowed)
+            {
+                if(uConsole.m_Instance == null)
+                {
+                    DebugConsole.ReimplementConsole();
+                }
+            }
         }
 
         public static void ApplyRules(DataStr.GameRules Rules)
@@ -357,6 +366,8 @@ namespace SkyCoop
             GameModeHUD.SetSideIcon(SideBarIndex, Icon);
             GameModeHUD.SetSideLablePrefix(SideBarIndex, Prefix);
             GameModeHUD.SetSideLable(SideBarIndex, $" {Afix}");
+
+            Logger.Log($"ClientHUDSideBar() SideBarIndex {SideBarIndex} Icon {Icon} Prefix {Prefix} Afix {Afix}");
         }
 
         public static void ClientHUDSideBarUpdate(NetDataReader Reader)
@@ -364,6 +375,8 @@ namespace SkyCoop
             int SideBarIndex = Reader.GetInt();
             string Afix = Reader.GetString();
             GameModeHUD.SetSideLable(SideBarIndex, $" {Afix}");
+
+            Logger.Log($"ClientHUDSideBarUpdate() SideBarIndex {SideBarIndex} Afix {Afix}");
         }
 
         public static void ClientFreeze(NetDataReader Reader)

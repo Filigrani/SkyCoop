@@ -185,6 +185,7 @@ namespace SkyCoopServer
             Writer.Put(CFG.m_ExperienceMode);
             Writer.Put(CFG.m_SceneToSpawn);
             Writer.Put(CFG.m_GameMode);
+            Writer.Put(CFG.m_CheatsAllowed);
         }
 
         public static DataStr.ServerConfig GetConfig(this NetDataReader Reader)
@@ -198,6 +199,7 @@ namespace SkyCoopServer
             CFG.m_ExperienceMode = Reader.GetString();
             CFG.m_SceneToSpawn = Reader.GetString();
             CFG.m_GameMode = Reader.GetString();
+            CFG.m_CheatsAllowed = Reader.GetBool();
 
             return CFG;
         }

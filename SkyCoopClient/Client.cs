@@ -195,7 +195,7 @@ namespace SkyCoop
                 m_IsReady = false;
                 PlayersManager.DestoryPlayers();
                 m_Instance.Stop();
-                if (ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady)
+                if (ModMain.ClientVoice.m_IsReady)
                 {
                     ModMain.ClientVoice.m_Instance.DisconnectAll();
                     ModMain.ClientVoice.m_Instance.Stop();
@@ -206,6 +206,10 @@ namespace SkyCoop
                 ModMain.Client = new Client();
                 MenuHook.RemovePleaseWait();
                 MenuHook.OnDisconnected(Message);
+                if (uConsole.m_Instance == null)
+                {
+                    DebugConsole.ReimplementConsole();
+                }
             };
 
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>

@@ -1,6 +1,7 @@
 ﻿using Il2Cpp;
 using SkyCoop;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
 
 namespace SkyCoopClient
 {
@@ -9,6 +10,31 @@ namespace SkyCoopClient
         public static void ConsoleLog(string message)
         {
             //uConsoleLog.Add($"[SkyCoop] {message}");
+        }
+
+        public static void ReimplementConsole()
+        {
+            if (uConsole.m_Instance == null)
+            {
+                SkyCoop.Logger.Log("uConsole has been reimplemented!");
+                GameObject ConsoleReference = Addressables.LoadAssetAsync<GameObject>("uConsole").WaitForCompletion();
+                if (ConsoleReference != null)
+                {
+                    GameObject ConsoleObj = UnityEngine.Object.Instantiate(ConsoleReference);
+                    if (ConsoleObj)
+                    {
+                        uConsole.m_Instance = ConsoleObj.GetComponent<uConsole>();
+                    }
+                    else
+                    {
+                        SkyCoop.Logger.Log(System.ConsoleColor.Red, "Can't assign uConsole!");
+                    }
+                }
+                else
+                {
+                    SkyCoop.Logger.Log(System.ConsoleColor.Red, "Can't load uConsole!");
+                }
+            }
         }
 
         public static void RegisterCommands()
@@ -55,6 +81,22 @@ namespace SkyCoopClient
         public static void SV_CMD()
         {
             ClientSend.SendSV_CMD(uConsole.GetString());
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(uConsole), "Update")]
+        private static class uConsole_Update
+        {
+            private static void Prefix(uConsole __instance)
+            {
+                if (ModMain.Client.m_IsReady && !ModMain.Client.m_Config.m_CheatsAllowed)
+                {
+
+                    SkyCoop.Logger.Log(ConsoleColor.Yellow, "Cheats are disabled on this server, debug console was disabled!");
+
+                    UnityEngine.Object.Destroy(__instance.gameObject);
+                }
+            }
         }
     }
 }

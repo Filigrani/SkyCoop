@@ -141,11 +141,7 @@ namespace SkyCoop
         {
             RemovePleaseWait();
 
-            byte[] ShutdownMessage = Encoding.Unicode.GetBytes("Server shutdown");
-            ModMain.Server.m_Instance.DisconnectAll(ShutdownMessage, 0, ShutdownMessage.Length);
-            ModMain.Server.m_Instance.Stop();
-            ModMain.Server.m_IsReady = false;
-            ModMain.Server.Dispose();
+            ModMain.Server.DisconnectAllPlayers("Server shutdown", true);
             ModMain.Server = new SkyCoopServer.Server();
 
             DoOKMessage("", "GAMEPLAY_ShutdownServerDone");

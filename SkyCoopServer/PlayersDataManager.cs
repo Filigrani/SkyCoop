@@ -517,7 +517,7 @@ namespace SkyCoopServer
                 bool FoundSquad = false;
                 foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
                 {
-                    if (SquadIsAlive(Squad))
+                    if (Squad.IsAlive(s_Server))
                     {
                         foreach (int PlayerID in Squad.m_Players)
                         {
@@ -564,12 +564,33 @@ namespace SkyCoopServer
             return Leaders;
         }
 
+        public int GetSquads()
+        {
+            int Squads = 0;
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                Squads++;
+            }
+
+            List<NetPeer> peers = new List<NetPeer>();
+            s_Server.m_Instance.GetConnectedPeers(peers);
+
+            foreach (NetPeer Peer in peers)
+            {
+                if (GetPlayerNameSquadIn(Peer.Id) == "")
+                {
+                    Squads++;
+                }
+            }
+            return Squads;
+        }
+
         public int GetSquadsAlive()
         {
             int Squads = 0;
             foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
             {
-                if (SquadIsAlive(Squad))
+                if (Squad.IsAlive(s_Server))
                 {
                     Squads++;
                 }
@@ -610,6 +631,13 @@ namespace SkyCoopServer
             return Alive;
         }
 
+        public int GetPlayers()
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            s_Server.m_Instance.GetConnectedPeers(peers);
+            return peers.Count;
+        }
+
         public void DoSquadsCheck()
         {
             if (s_Server.m_Rules.m_HUDMode == "Shrink")
@@ -619,6 +647,16 @@ namespace SkyCoopServer
                     s_Server.ForceToOver();
                 }
             }
+        }
+
+        public string GetPlayersString()
+        {
+            int Squads = GetSquads();
+            int Players = GetPlayers();
+
+            string s = (Squads > 1 || Squads == 0) ? "s" : "";
+
+            return $"{Players} ({Squads} Squad{s})";
         }
 
         public string GetShrinkModeString()
@@ -690,6 +728,15 @@ namespace SkyCoopServer
                     foreach (NetPeer Peer in peers.ToArray())
                     {
                         ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
+                    }
+                }
+                if (s_Server.m_Rules.m_HUDMode == "Lobby")
+                {
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
+                    {
+                        ServerSend.SendHUDSideBarUpdate(Peer, 2, s_Server.m_PlayersData.GetPlayersString(), s_Server);
                     }
                 }
             }
@@ -766,26 +813,6 @@ namespace SkyCoopServer
                 }
             }
             return "";
-        }
-
-        public bool SquadIsAlive(PlayersSquad Squad)
-        {
-            if (Squad != null)
-            {
-                foreach (int Index in Squad.m_Players)
-                {
-                    PlayerData Data = GetPlayer(Index);
-                    if(Data != null)
-                    {
-                        if(Data.m_GamePlayState == PlayerData.GamePlayState.Alive)
-                        {
-                            return true;
-                        }
-                    }
-                }
-            }
-
-            return false;
         }
 
         public PlayersSquad GetPlayerSquadIn(int PlayerID)
