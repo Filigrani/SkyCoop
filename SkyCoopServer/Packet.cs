@@ -86,6 +86,13 @@ namespace SkyCoopServer
             ClientReviveRequest,
         }
 
+        public enum TypeVoice
+        {
+            Verification,
+            Welcome,
+            Voice,
+        }
+
         public static void Put(this NetDataWriter Writer, Vector3 v3)
         {
             Writer.Put(v3.X);

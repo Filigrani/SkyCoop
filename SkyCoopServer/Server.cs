@@ -160,6 +160,21 @@ namespace SkyCoopServer
             return null;
         }
 
+        public DataStr.PlayerData GetPlayerDataByVoiceID(int VoiceID)
+        {
+            foreach (DataStr.PlayerData Player in m_PlayersData.m_Players)
+            {
+                if (Player != null)
+                {
+                    if (Player.m_VoiceChatID == VoiceID)
+                    {
+                        return Player;
+                    }
+                }
+            }
+            return null;
+        }
+
         public NetPeer GetClient(int Index)
         {
             if (m_Instance != null)
@@ -586,6 +601,36 @@ namespace SkyCoopServer
             m_VoiceServer = new ServerVoice(this);
             m_VoiceServer.m_Port = m_Config.m_VoicePort;
             m_VoiceServer.StartServer();
+        }
+
+        public bool SetVoiceIDForPlayer(int ClientID, int VoiceID)
+        {
+            NetPeer Client = GetClient(ClientID);
+
+            if (Client != null)
+            {
+                DataStr.PlayerData Player = GetPlayerDataByNetPeer(Client);
+                if(Player != null)
+                {
+                    Player.m_VoiceChatID = VoiceID;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        public void ClearVoiceID(int ClientID)
+        {
+            foreach (DataStr.PlayerData Player in m_PlayersData.m_Players)
+            {
+                if(Player != null)
+                {
+                    if(Player.m_VoiceChatID == ClientID)
+                    {
+                        Player.m_VoiceChatID = -1;
+                    }
+                }
+            }
         }
 
         public void Dispose()

@@ -667,6 +667,28 @@ namespace SkyCoopClient
                         GearManager.DestroyGearObject(item);
                     }
                 }
+
+                foreach (Camera Cam in Camera.allCameras)
+                {
+                    if(Cam.name != "FPSCamera")
+                    {
+                        AudioListener AudioListner = Cam.gameObject.GetComponent<AudioListener>();
+                        if (AudioListner)
+                        {
+                            string Log = AudioListner.gameObject.name;
+
+                            Transform Parent = AudioListner.gameObject.transform.parent;
+                            while (Parent != null)
+                            {
+                                Log = $"{Parent.name}/{Log}";
+                                Parent = Parent.parent;
+                            }
+                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Found random ass AudioListener imposter: Scene Name {ModMain.GetCurrentSceneName()} location {Log}");
+
+                            UnityEngine.Object.Destroy(AudioListner);
+                        }
+                    }
+                }
                 ClientSend.SendNewScene(ModMain.GetCurrentSceneName());
             }
         }

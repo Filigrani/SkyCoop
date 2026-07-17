@@ -152,16 +152,19 @@ namespace SkyCoopClient
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
                 m_HostEndPoint = fromPeer;
-                switch(dataReader.GetInt())
+                switch((Packet.TypeVoice)dataReader.GetInt())
                 {
-                    case 0:
-                        ExecuteVoice(fromPeer, dataReader);
+                    case Packet.TypeVoice.Verification:
+                        Verification();
                         break;
-                    case 1:
+                    case Packet.TypeVoice.Welcome:
                         Welcome(dataReader);
                         break;
-                    case 2:
-                        ExecuteVoice(fromPeer, dataReader);
+                    case Packet.TypeVoice.Voice:
+                        if (m_IsReady)
+                        {
+                            ExecuteVoice(fromPeer, dataReader);
+                        }
                         break;
                 }
                 
@@ -192,7 +195,7 @@ namespace SkyCoopClient
                 return;
             }
             
-            int clientId = Reader.GetInt(); //id
+            int SpeakerID = Reader.GetInt(); //ID игрока на сервере
             DataStr.PlayerHearing Hearing = (DataStr.PlayerHearing)Reader.GetInt();
             byte[] Data = new byte[Reader.GetInt()];
             Reader.GetBytes(Data, Data.Length);
@@ -208,45 +211,45 @@ namespace SkyCoopClient
             switch (Hearing)
             {
                 case DataStr.PlayerHearing.Proximity:
-                    if (VoiceBuffer3D.ContainsKey(clientId))
+                    if (VoiceBuffer3D.ContainsKey(SpeakerID))
                     {
-                        CircularAudioBuffer<float> buffer = VoiceBuffer3D[clientId];
+                        CircularAudioBuffer<float> buffer = VoiceBuffer3D[SpeakerID];
                         buffer.PushChunk(samples);
-                        VoiceBuffer3D[clientId] = buffer;
+                        VoiceBuffer3D[SpeakerID] = buffer;
                     }
                     else
                     {
                         CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
                         buffer.PushChunk(samples);
-                        VoiceBuffer3D.Add(clientId, buffer);
+                        VoiceBuffer3D.Add(SpeakerID, buffer);
                     }
                     break;
                 case DataStr.PlayerHearing.Global:
-                    if (VoiceBuffer2D.ContainsKey(clientId))
+                    if (VoiceBuffer2D.ContainsKey(SpeakerID))
                     {
-                        CircularAudioBuffer<float> buffer = VoiceBuffer2D[clientId];
+                        CircularAudioBuffer<float> buffer = VoiceBuffer2D[SpeakerID];
                         buffer.PushChunk(samples);
-                        VoiceBuffer2D[clientId] = buffer;
+                        VoiceBuffer2D[SpeakerID] = buffer;
                     }
                     else
                     {
                         CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
                         buffer.PushChunk(samples);
-                        VoiceBuffer2D.Add(clientId, buffer);
+                        VoiceBuffer2D.Add(SpeakerID, buffer);
                     }
                     break;
                 case DataStr.PlayerHearing.Radio:
-                    if (VoiceBufferRadio.ContainsKey(clientId))
+                    if (VoiceBufferRadio.ContainsKey(SpeakerID))
                     {
-                        CircularAudioBuffer<float> buffer = VoiceBufferRadio[clientId];
+                        CircularAudioBuffer<float> buffer = VoiceBufferRadio[SpeakerID];
                         buffer.PushChunk(samples);
-                        VoiceBufferRadio[clientId] = buffer;
+                        VoiceBufferRadio[SpeakerID] = buffer;
                     }
                     else
                     {
                         CircularAudioBuffer<float> buffer = new CircularAudioBuffer<float>(BufferSamples, RecommendedChunkAmount.Unity);
                         buffer.PushChunk(samples);
-                        VoiceBufferRadio.Add(clientId, buffer);
+                        VoiceBufferRadio.Add(SpeakerID, buffer);
                     }
                     break;
             }
@@ -277,6 +280,19 @@ namespace SkyCoopClient
         {
             SkyCoop.Logger.Log(ConsoleColor.Cyan, dataReader.GetString());
             m_IsReady = true;
+        }
+
+        public void Verification()
+        {
+            SkyCoop.Logger.Log(ConsoleColor.Cyan, "Verification to voice chat...");
+
+            if (ModMain.Client != null && ModMain.Client.m_IsReady)
+            {
+                NetDataWriter writer = new NetDataWriter();
+                writer.Put((int)Packet.TypeVoice.Verification);
+                writer.Put(ModMain.Client.m_MyEndPoint.RemoteId);
+                SendToHost(writer);
+            }
         }
 
         public void SendToHost(NetDataWriter writer)
@@ -377,8 +393,7 @@ namespace SkyCoopClient
                 (byte[] encodedData, int encodedLength) = VoiceInterface.SubmitAudioData(adjustedPcmData, length);
 
                 NetDataWriter writer = new NetDataWriter();
-                writer.Put(0);
-                writer.Put(ModMain.Client.m_MyEndPoint.RemoteId);
+                writer.Put((int)Packet.TypeVoice.Voice);
                 writer.Put(encodedLength);
                 writer.Put(encodedData);
                 SendToHost(writer);

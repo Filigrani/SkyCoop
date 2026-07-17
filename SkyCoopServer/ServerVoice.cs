@@ -69,42 +69,60 @@ namespace SkyCoopServer
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
         {
-            if(Reader.GetInt() == 0)
+            if(m_GameServer != null && m_GameServer.m_IsReady)
             {
-                int clientId = Reader.GetInt();
-                byte[] Data = new byte[Reader.GetInt()];
-                Reader.GetBytes(Data, Data.Length);
+                DataStr.PlayerData Player = m_GameServer.GetPlayerDataByVoiceID(Peer.Id);
 
-                SendVoiceToAll(Peer, Data, clientId);
+                if(Player != null)
+                {
+                    byte[] Data = new byte[Reader.GetInt()];
+                    Reader.GetBytes(Data, Data.Length);
+                    SendVoiceToWhoCanHearIt(Data, Player.m_PlayerID);
+                }
             }
         }
 
-        public void SendVoiceToAll(NetPeer Peer, byte[] Data, int ClientId)
+        public void SendVoiceToWhoCanHearIt(byte[] Data, int SpeakerID)
         {
             List<NetPeer> peers = new List<NetPeer>();
             m_Instance.GetConnectedPeers(peers);
-            foreach (NetPeer _Peer in peers.ToArray())
+            foreach (NetPeer VoiceClient in peers.ToArray())
             {
-                DataStr.PlayerHearing HearingMode = m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(ClientId, _Peer.Id);
-
-                //SkyCoopServer.Logger.Log($"Voice from {ClientId} to {_Peer.Id} Hearing mode {HearingMode.ToString()}");
-                if (HearingMode != DataStr.PlayerHearing.None)
+                if(m_GameServer != null && m_GameServer.m_IsReady)
                 {
-                    NetDataWriter writer = new NetDataWriter();
-                    writer.Put(0);
-                    writer.Put(ClientId);
-                    writer.Put((int)HearingMode);
-                    writer.Put(Data.Length);
-                    writer.Put(Data);
-                    _Peer.Send(writer, DeliveryMethod.Unreliable);
+                    DataStr.PlayerData Player = m_GameServer.GetPlayerDataByVoiceID(VoiceClient.Id);
+
+                    if(Player != null)
+                    {
+                        DataStr.PlayerHearing HearingMode = m_GameServer.m_PlayersData.PlayerCanHearOtherPlayer(SpeakerID, Player.m_PlayerID);
+
+                        if (HearingMode != DataStr.PlayerHearing.None)
+                        {
+                            NetDataWriter writer = new NetDataWriter();
+                            writer.Put((int)Packet.TypeVoice.Voice);
+                            writer.Put(SpeakerID);
+                            writer.Put((int)HearingMode);
+                            writer.Put(Data.Length);
+                            writer.Put(Data);
+                            VoiceClient.Send(writer, DeliveryMethod.Unreliable);
+                        }
+                    }
                 }
             }
+        }
+
+        public void SendVerificationRequestToClient(NetPeer Peer)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.TypeVoice.Verification);
+            Logger.Log($"[ServerVoice] Sent voice verification to client {Peer.Id}");
+            Peer.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
         public void SendWelcomeToClient(NetPeer Peer)
         {
             NetDataWriter writer = new NetDataWriter();
-            writer.Put(1); //Welcome
+            writer.Put((int)Packet.TypeVoice.Welcome); //Welcome
             writer.Put($"Welcome to VoiceServer Client {Peer.Id}");
             Peer.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -126,12 +144,17 @@ namespace SkyCoopServer
             {
                 Logger.Log($"[ServerVoice] We got connection: {peer} assigned them as {peer.Id}");
 
-                SendWelcomeToClient(peer);
+                SendVerificationRequestToClient(peer);
             };
 
             m_Listener.PeerDisconnectedEvent += (peer, message) =>
             {
                 Logger.Log($"[ServerVoice] Voice Client {peer.Id} disconnected {message.Reason.ToString()}");
+
+                if(m_GameServer != null && m_GameServer.m_IsReady)
+                {
+                    m_GameServer.ClearVoiceID(peer.Id);
+                }
             };
 
             m_Listener.NetworkLatencyUpdateEvent += (peer, ping) =>
@@ -140,7 +163,28 @@ namespace SkyCoopServer
             };
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
-                ExecuteVoice(fromPeer, dataReader);
+                int PacketID = dataReader.GetInt();
+
+                switch ((Packet.TypeVoice)PacketID)
+                {
+                    case Packet.TypeVoice.Verification:
+
+                        if (m_GameServer != null && m_GameServer.m_IsReady)
+                        {
+                            m_GameServer.SetVoiceIDForPlayer(dataReader.GetInt(), fromPeer.Id);
+                            SendWelcomeToClient(fromPeer);
+                        }
+                        else
+                        {
+                            Logger.Log(ConsoleColor.Red, $"[ServerVoice] Client trying to verify themself, but game server is down, while voice chat server is up!");
+                        }
+                        break;
+                    case Packet.TypeVoice.Voice:
+                        ExecuteVoice(fromPeer, dataReader);
+                        break;
+                    default:
+                        break;
+                }
 
                 dataReader.Recycle();
             };
