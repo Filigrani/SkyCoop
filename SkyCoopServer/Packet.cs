@@ -86,6 +86,8 @@ namespace SkyCoopServer
             ClientReviveRequest,
         }
 
+        public const string c_Key = "key2";
+
         public enum TypeVoice
         {
             Verification,
@@ -445,6 +447,46 @@ namespace SkyCoopServer
             Data.m_ID = Reader.GetInt();
             Data.m_Score = Reader.GetInt();
             Data.m_ClothingData = Reader.GetClothingData();
+
+            return Data;
+        }
+
+        public static void Put(this NetDataWriter Writer, DateTime Data)
+        {
+            Writer.Put(Data.Ticks);
+        }
+
+        public static DateTime GetTime(this NetDataReader Reader)
+        {
+            long Ticks = Reader.GetLong();
+
+            return new DateTime(Ticks);
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.DangerCircleShrinkStateData Data)
+        {
+            Writer.Put(Data.m_StartShrinkingTime);
+            Writer.Put(Data.m_EndShrinkingTime);
+
+            Writer.Put(Data.m_PreviousRadius);
+            Writer.Put(Data.m_NewRadius);
+
+            Writer.Put(Data.m_PreviousCenter);
+            Writer.Put(Data.m_NewCenter);
+        }
+
+        public static DataStr.DangerCircleShrinkStateData GetZoneStage(this NetDataReader Reader)
+        {
+            DataStr.DangerCircleShrinkStateData Data = new DataStr.DangerCircleShrinkStateData();
+
+            Data.m_StartShrinkingTime = Reader.GetTime();
+            Data.m_EndShrinkingTime = Reader.GetTime();
+
+            Data.m_PreviousRadius = Reader.GetFloat();
+            Data.m_NewRadius = Reader.GetFloat();
+
+            Data.m_PreviousCenter = Reader.GetVector3();
+            Data.m_NewCenter = Reader.GetVector3();
 
             return Data;
         }

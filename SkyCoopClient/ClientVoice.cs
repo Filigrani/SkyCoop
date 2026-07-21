@@ -185,7 +185,7 @@ namespace SkyCoopClient
         {
             SkyCoop.Logger.Log(ConsoleColor.Cyan, "Going to connect to voice chat: " + Ip.ToString()+":"+ Port);
             m_Instance.Start();
-            m_Instance.Connect(Ip.ToString(), Port, "voice");
+            m_Instance.Connect(Ip.ToString(), Port, Packet.c_Key);
         }
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)

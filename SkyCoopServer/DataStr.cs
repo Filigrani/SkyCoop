@@ -1,6 +1,7 @@
 ﻿using LiteNetLib;
 using System;
 using System.ComponentModel.DataAnnotations;
+using System.Diagnostics;
 using System.Drawing;
 using System.IO;
 using System.IO.Compression;
@@ -16,15 +17,15 @@ namespace SkyCoopServer
     {
         public class ServerConfig
         {
-            public int m_MaxPlayers = 4;
+            public int m_MaxPlayers = 80;
             public string m_StartingRegion = "MarshRegion";
             public int m_Seed = 777777;
-            public int m_VoicePort = 37850;
-            //public int m_VoicePort = 0;
+            //public int m_VoicePort = 37850;
+            public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
             public string m_GameMode = "Lobby";
-            public bool m_CheatsAllowed = false;
+            public bool m_CheatsAllowed = true;
         }
 
         public class MapData
@@ -678,7 +679,7 @@ namespace SkyCoopServer
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
-            public List<FallingProp> m_FallingProps = new List<FallingProp>();
+            public Dictionary<string, FallingProp> m_FallingProps = new Dictionary<string, FallingProp>();
 
             public DangerCircleConfig m_ZoneConfig = null;
             public DangerCircleData m_ActiveZone = null;
@@ -999,22 +1000,60 @@ namespace SkyCoopServer
             );
         }
 
+        public class DangerCircleShrinkStateData
+        {
+            public DateTime m_StartShrinkingTime;
+            public DateTime m_EndShrinkingTime;
+
+            public float m_PreviousRadius = 0;
+            public float m_NewRadius = 0;
+
+            public Vector3 m_PreviousCenter = Vector3.Zero;
+            public Vector3 m_NewCenter = Vector3.Zero;
+
+            public float GetProgress()
+            {
+                float totalDuration = (float)(m_EndShrinkingTime - m_StartShrinkingTime).TotalSeconds;
+                float elapsed = (float)(DateTime.Now - m_StartShrinkingTime).TotalSeconds;
+
+
+                float progress = elapsed / totalDuration;
+
+                if(progress < 0)
+                {
+                    return 0;
+                }else if(progress > 1)
+                {
+                    return 1;
+                }
+                return progress;
+            }
+
+            public float GetCurrentRadius()
+            {
+                return Lerp(m_PreviousRadius, m_NewRadius, GetProgress());
+            }
+
+            public Vector3 GetCenter()
+            {
+                return Lerp(m_PreviousCenter, m_NewCenter, GetProgress());
+            }
+        }
+
+
         public class DangerCircleData
         {
             public DangerCircleConfig m_Config = new DangerCircleConfig();
             public int m_CurrentStageIndex = 0;
             public ShrinkStage m_CurrentStage = null;
-
-            public float m_CurrentRadius = 0;
-            public Vector3 m_CurrentCenter = Vector3.Zero;
-            public Vector3 m_NextCenter = Vector3.Zero;
-            public Vector3 m_NewCenterToReach = Vector3.Zero;
+            public float m_RadiusAfterWait = 0;
+            public Vector3 m_CenterAfterWait = Vector3.Zero;
 
             public State m_State = State.Waiting;
 
             public bool m_DebugNoDamage = false;
 
-            private DateTime s_NextDamageCheck;
+            public DangerCircleShrinkStateData m_Data = new DangerCircleShrinkStateData();
 
             public enum State
             {
@@ -1023,13 +1062,10 @@ namespace SkyCoopServer
                 Finished,
             }
 
-            private DateTime s_ShrinkStarted;
             private DateTime s_StateTimer;
             private bool s_StateTimerActive = false;
             private string s_SceneName = "";
             private Server s_ServerInstance;
-            private float s_PreviousStateRadius = 0;
-            private Vector3 s_PreviousStateCenter = Vector3.Zero;
 
             public string GetTimerPrefix()
             {
@@ -1078,8 +1114,6 @@ namespace SkyCoopServer
                 }
                 s_SceneName = SceneName;
                 s_ServerInstance = Server;
-                s_NextDamageCheck = DateTime.Now.AddSeconds(1);
-                m_CurrentCenter = Config.ActualCenter.ToVector();
             }
 
             public void NextState()
@@ -1087,18 +1121,21 @@ namespace SkyCoopServer
                 switch (m_State)
                 {
                     case State.Waiting:
-                        s_PreviousStateRadius = m_CurrentRadius;
-                        s_PreviousStateCenter = m_CurrentCenter;
-                        m_NewCenterToReach = m_NextCenter;
-                        s_ShrinkStarted = DateTime.Now;
-                        SetNextStage();
                         m_State = State.Shrinking;
+                        m_Data.m_PreviousCenter = m_Data.m_NewCenter;
+                        m_Data.m_PreviousRadius = m_Data.m_NewRadius;
+
+                        m_Data.m_NewCenter = m_CenterAfterWait;
+                        m_Data.m_NewRadius = m_RadiusAfterWait;
+
+                        m_Data.m_StartShrinkingTime = DateTime.Now;
+                        SetNextStage();
+                        m_Data.m_EndShrinkingTime = DateTime.Now.AddSeconds(m_CurrentStage.ShrinkTime);
+
                         s_StateTimer = DateTime.Now.AddSeconds(m_CurrentStage.ShrinkTime);
                         s_StateTimerActive = true;
                         break;
                     case State.Shrinking:
-                        m_CurrentCenter = GetNextCenter();
-                        m_CurrentRadius = GetNextRadius();
                         if(m_CurrentStage.StageTime <= 0)
                         {
                             m_State = State.Finished;
@@ -1107,8 +1144,10 @@ namespace SkyCoopServer
                         else
                         {
                             m_State = State.Waiting;
+                            m_RadiusAfterWait = m_Config.Stages[m_CurrentStageIndex + 1].Radius;
+                            m_CenterAfterWait = GetNewRandomCenter(m_Data.m_NewCenter, m_Data.m_NewRadius, m_RadiusAfterWait);
+
                             s_StateTimer = DateTime.Now.AddSeconds(m_CurrentStage.StageTime);
-                            m_NextCenter = GetNewRandomCenter(m_CurrentCenter, m_CurrentRadius, m_Config.Stages[m_CurrentStageIndex + 1].Radius);
                             s_StateTimerActive = true;
                         }
                         break;
@@ -1119,12 +1158,16 @@ namespace SkyCoopServer
             {
                 SetStage(0);
 
-                m_CurrentRadius = m_CurrentStage.Radius;
-                s_PreviousStateRadius = m_CurrentStage.Radius;
+                m_Data.m_PreviousCenter = m_Config.ActualCenter.ToVector();
+                m_Data.m_NewCenter = m_Config.ActualCenter.ToVector();
 
-                m_CurrentCenter = m_Config.ActualCenter.ToVector();
-                m_NewCenterToReach = m_CurrentCenter;
-                s_PreviousStateCenter = m_CurrentCenter;
+                m_Data.m_PreviousRadius = m_CurrentStage.Radius;
+                m_Data.m_NewRadius = m_CurrentStage.Radius;
+
+
+                m_Data.m_StartShrinkingTime = DateTime.Now;
+                m_Data.m_EndShrinkingTime = DateTime.Now;
+
                 s_StateTimerActive = false;
 
                 if (m_Config.Stages.Count == 1)
@@ -1135,55 +1178,55 @@ namespace SkyCoopServer
                 {
                     m_State = State.Waiting;
                     s_StateTimer = DateTime.Now.AddSeconds(m_CurrentStage.StageTime);
-                    m_NextCenter = GetNewRandomCenter(m_CurrentCenter, m_CurrentRadius, m_Config.Stages[m_CurrentStageIndex + 1].Radius);
+                    m_RadiusAfterWait = m_Config.Stages[m_CurrentStageIndex + 1].Radius;
+                    m_CenterAfterWait = GetNewRandomCenter(m_Data.m_NewCenter, m_Data.m_NewRadius, m_RadiusAfterWait);
+
                     s_StateTimerActive = true;
                 }
-                ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
+                ServerSend.SendZoneUpdate(s_SceneName, m_Data, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
             }
 
             public float GetNextRadius()
             {
-                if (m_State == State.Shrinking)
+                switch (m_State)
                 {
-                    return m_CurrentStage.Radius;
-                } else if(m_State == State.Waiting)
-                {
-                    if(m_CurrentStageIndex == m_Config.Stages.Count-1)
-                    {
+                    case State.Waiting:
+                        return m_RadiusAfterWait;
+                    case State.Shrinking:
+                        return m_Data.m_NewRadius;
+                    case State.Finished:
                         return 0;
-                    }
-                    else
-                    {
-                        return m_Config.Stages[m_CurrentStageIndex+1].Radius;
-                    }
                 }
-                else
-                {
-                    return 0;
-                }
+                return 0;
             }
 
             public Vector3 GetNextCenter()
             {
-                if(m_State == State.Waiting)
+                switch (m_State)
                 {
-                    return m_NextCenter;
+                    case State.Waiting:
+                        return m_CenterAfterWait;
+                    case State.Shrinking:
+                        return m_Data.m_NewCenter;
+                    case State.Finished:
+                        return Vector3.Zero;
                 }
-                else if(m_State == State.Shrinking)
-                {
-                    return m_NewCenterToReach;
-                }
-                else
-                {
-                    return Vector3.Zero;
-                }
+                return Vector3.Zero;
             }
 
-            public void ForceNextZone()
+            public void ForceNextZone(bool withtime)
             {
                 if (s_StateTimerActive)
                 {
-                    s_StateTimer = DateTime.Now;
+                    if (!withtime)
+                    {
+                        s_StateTimer = DateTime.Now;
+                    }
+                    else
+                    {
+                        s_StateTimer = DateTime.Now.AddSeconds(3);
+                        m_Data.m_EndShrinkingTime = s_StateTimer;
+                    }
                 }
             }
 
@@ -1245,19 +1288,12 @@ namespace SkyCoopServer
                 return NewCenter;
             }
 
-            public void Update(float dt)
+            public void EverySecond()
             {
-                //Logger.Log($"Zone Update: SceneName {s_SceneName}");
-
-                if (s_NextDamageCheck < DateTime.Now)
+                DamageCheck();
+                if (s_ServerInstance.m_Rules.m_Time == 0)
                 {
-                    
-                    s_NextDamageCheck = DateTime.Now.AddSeconds(1);
-                    DamageCheck();
-                    if (s_ServerInstance.m_Rules.m_Time == 0)
-                    {
-                        ServerSend.ClientGameModeTimer(GetTimerSeconds(), s_ServerInstance);
-                    }
+                    ServerSend.ClientGameModeTimer(GetTimerSeconds(), s_ServerInstance);
                 }
 
                 if (s_StateTimerActive)
@@ -1267,38 +1303,18 @@ namespace SkyCoopServer
                         NextState();
                         ServerSend.UpdateTimerPrefix(GetTimerPrefix(), s_ServerInstance);
                         ServerSend.ClientGameModeTimer(GetTimerSeconds(), s_ServerInstance);
-                        ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
+                        ServerSend.SendZoneUpdate(s_SceneName, m_Data, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
                     }
-                }
-
-                float OldRadius = m_CurrentRadius;
-
-                if (m_State == State.Shrinking)
-                {
-                    float totalDuration = (float)(s_StateTimer - s_ShrinkStarted).TotalSeconds;
-                    float elapsed = (float)(DateTime.Now - s_ShrinkStarted).TotalSeconds;
-                    float progress = elapsed / totalDuration;
-
-                    m_CurrentRadius = Lerp(s_PreviousStateRadius, m_CurrentStage.Radius, progress);
-                    m_CurrentCenter = Lerp(s_PreviousStateCenter, m_NewCenterToReach, progress);
-                }
-                else
-                {
-                    m_CurrentRadius = m_CurrentStage.Radius;
-                    m_CurrentCenter = m_NewCenterToReach;
-                }
-
-                if (OldRadius != m_CurrentRadius)
-                {
-                    //Logger.Log($"Zone New Radius {m_CurrentRadius} m_CurrentStage.Radius {m_CurrentStage.Radius}");
-                    ServerSend.SendZoneUpdate(s_SceneName, m_CurrentCenter, m_CurrentRadius, GetNextCenter(), GetNextRadius(), m_Config.MapScale.ToVector(), s_ServerInstance);
                 }
             }
 
             public bool IsInsideZone(Vector3 Point)
             {
-                float Distance = Vector2.Distance(new Vector2(Point.X, Point.Z), new Vector2(m_CurrentCenter.X, m_CurrentCenter.Z));
-                return Distance < m_CurrentRadius / 2;
+                Vector3 CurrentCenter = m_Data.GetCenter();
+                float CurrentRadius = m_Data.GetCurrentRadius();
+
+                float Distance = Vector2.Distance(new Vector2(Point.X, Point.Z), new Vector2(CurrentCenter.X, CurrentCenter.Z));
+                return Distance < CurrentRadius / 2;
             }
 
 
@@ -1743,6 +1759,19 @@ namespace SkyCoopServer
             public Vector3 m_LandPosition = Vector3.Zero;
             public DateTime m_LandTime;
             public DateTime m_StartFallTime;
+
+            public Vector3 GetVelocityPerSecond()
+            {
+                TimeSpan fallDuration = m_LandTime - m_StartFallTime;
+                float totalSeconds = (float)fallDuration.TotalSeconds;
+
+                if (totalSeconds <= 0)
+                    return Vector3.Zero;
+
+                Vector3 displacement = m_LandPosition - m_SpawnPosition;
+
+                return displacement / totalSeconds;
+            }
         }
 
         public class Vector3JSON {

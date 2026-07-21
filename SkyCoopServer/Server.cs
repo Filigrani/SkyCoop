@@ -22,6 +22,7 @@ namespace SkyCoopServer
         public string m_NextMapName = "";
         public string m_NextGameModeName = "";
         public List<DataStr.MinimalPlayersAndGameMode> m_AvailableGameModes = new List<DataStr.MinimalPlayersAndGameMode>();
+        public bool m_TimePaused = false;
 
         // Data Sync Instances
         public PlayersDataManager m_PlayersData;
@@ -204,9 +205,8 @@ namespace SkyCoopServer
             {
                 s_NextSecondCall = DateTime.Now.AddSeconds(1);
                 EverySecond();
+                m_ScenesData.UpdateEverySecond();
             }
-
-            m_ScenesData.Update(s_DeltaTime);
 
             s_PreviousTickTime = DateTime.Now;
         }
@@ -295,9 +295,9 @@ namespace SkyCoopServer
             m_Rules.m_Time = 1;
         }
 
-        public void ForceNextZone()
+        public void ForceNextZone(bool withtime = false)
         {
-            m_ScenesData.ForceNextZone();
+            m_ScenesData.ForceNextZone(withtime);
         }
 
         public void ForceZoneNoDamage()
@@ -353,7 +353,11 @@ namespace SkyCoopServer
             {
                 if(m_Rules.m_Time > 0)
                 {
-                    m_Rules.m_Time = m_Rules.m_Time - 1;
+                    if(!m_TimePaused)
+                    {
+                        m_Rules.m_Time = m_Rules.m_Time - 1;
+                    }
+                    
                     ServerSend.ClientGameModeTimer(m_Rules.m_Time, this);
                     if (m_Rules.m_Time == 0)
                     {
@@ -484,7 +488,15 @@ namespace SkyCoopServer
                 {
                     ServerSend.SendHUDSideBar(Client, 0, "", "GAMEPLAY_SideNextGameMode", GetNextGameModeName(), this);
                 }
-                SetNextMap(GetRandomMap(m_NextGameModeName));
+
+                if(m_NextGameModeName == "")
+                {
+                    SetNextMap("");
+                }
+                else
+                {
+                    SetNextMap(GetRandomMap(m_NextGameModeName));
+                }
             }
         }
 
@@ -546,7 +558,7 @@ namespace SkyCoopServer
             m_NetworkHelper = new NetworkHelper(m_Port, "SkyCoopServer");
         }
 
-        public void StartServer(int port, int maxPlayers, string key = "key")
+        public void StartServer(int port, int maxPlayers, string key = Packet.c_Key)
         {
             m_PlayersData.InitilizePlayers(maxPlayers);
             Logger.Log(ConsoleColor.Green, "[Server] Starting server");

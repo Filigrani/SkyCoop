@@ -377,14 +377,13 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendZoneUpdate(NetPeer Client, Vector3 Center, float Radius, Vector3 NextCenter, float NextRadius, Vector2 MapRefScale, Server ServerInstance)
+        public static void SendZoneUpdate(NetPeer Client, DataStr.DangerCircleShrinkStateData Stage, Vector3 NextCenter, float NextRadius, Vector2 MapRefScale, Server ServerInstance)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientZoneUpdated);
 
             writer.Put(true);
-            writer.Put(Center);
-            writer.Put(Radius);
+            writer.Put(Stage);
             writer.Put(NextCenter);
             writer.Put(NextRadius);
             writer.Put(MapRefScale);
@@ -402,7 +401,7 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendZoneUpdate(string SceneName, Vector3 Center, float Radius, Vector3 NextCenter, float NextRadius, Vector2 MapRefScale, Server ServerInstance)
+        public static void SendZoneUpdate(string SceneName, DataStr.DangerCircleShrinkStateData Stage, Vector3 NextCenter, float NextRadius, Vector2 MapRefScale, Server ServerInstance)
         {
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
@@ -410,7 +409,7 @@ namespace SkyCoopServer
             {
                 if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
-                    SendZoneUpdate(Peer, Center, Radius, NextCenter, NextRadius, MapRefScale, ServerInstance);
+                    SendZoneUpdate(Peer, Stage, NextCenter, NextRadius, MapRefScale, ServerInstance);
                 }
             }
         }
@@ -725,6 +724,21 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientMoveProp);
             writer.Put(GUID);
             writer.Put(Position);
+            writer.Put(false);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendPropMoved(NetPeer Client, string GUID, Vector3 Position, Vector3 FinalPosition, Vector3 VelocityPersecond)
+        {
+            NetDataWriter writer = new NetDataWriter();
+
+            writer.Put((int)Packet.Type.ClientMoveProp);
+            writer.Put(GUID);
+            writer.Put(Position);
+            writer.Put(true);
+            writer.Put(FinalPosition);
+            writer.Put(VelocityPersecond);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

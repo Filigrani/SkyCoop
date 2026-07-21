@@ -92,6 +92,29 @@ namespace SkyCoopClient
             }
         }
 
+        public static void HandlePropMoved(string GUID, Vector3 NewPosition, Vector3 FinalPosition, Vector3 VelocityPerSecond)
+        {
+            GameObject ExistingProp = PdidTable.GetGameObject(GUID);
+
+            if (ExistingProp)
+            {
+                ExistingProp.transform.position = NewPosition;
+
+
+                Comps.PropMovemenetPredict Predict = ExistingProp.GetComponent<Comps.PropMovemenetPredict>();
+
+                if (Predict == null)
+                {
+                    Predict = ExistingProp.AddComponent<Comps.PropMovemenetPredict>();
+                }
+                Predict.m_Destination = FinalPosition;
+                Predict.VelocityPerSecond = VelocityPerSecond;
+                Predict.enabled = true;
+
+                return;
+            }
+        }
+
         public static void HandlePropRemove(string GUID)
         {
             GameObject GearObject = PdidTable.GetGameObject(GUID);

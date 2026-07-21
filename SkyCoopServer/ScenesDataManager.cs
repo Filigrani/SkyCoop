@@ -317,7 +317,7 @@ namespace SkyCoopServer
 
             if (SceneData.m_ActiveZone != null)
             {
-                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_CurrentCenter, SceneData.m_ActiveZone.m_CurrentRadius, SceneData.m_ActiveZone.GetNextCenter(), SceneData.m_ActiveZone.GetNextRadius(), SceneData.m_ActiveZone.m_Config.MapScale.ToVector(), m_ServerInstance);
+                ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_Data, SceneData.m_ActiveZone.GetNextCenter(), SceneData.m_ActiveZone.GetNextRadius(), SceneData.m_ActiveZone.m_Config.MapScale.ToVector(), m_ServerInstance);
                 ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
             }
         }
@@ -591,21 +591,32 @@ namespace SkyCoopServer
             foreach (string GUID in SceneData.m_Props.Keys.ToList())
             {
                 ServerSend.SendPropCreated(Client, SceneData.m_Props[GUID]);
+
+                FallingProp FallingProp = null;
+
+                // На случай если игрок зайдёт на сцену, когда аэр дроп уже был создан, но всё ещё падает
+                if (SceneData.m_FallingProps.TryGetValue(GUID, out FallingProp))
+                {
+                    ServerSend.SendPropMoved(Client, FallingProp.m_GUID, SceneData.m_Props[GUID].position.ToVector(), FallingProp.m_LandPosition, FallingProp.GetVelocityPerSecond());
+                }
             }
         }
 
-        public void Update(float dt)
+        public void UpdateEverySecond()
         {
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
                 if (Data.m_ActiveZone != null)
                 {
                     //Logger.Log($"[UpdateZone] Scene {Data.m_SceneName} has active zone updating it...");
-                    Data.m_ActiveZone.Update(dt);
+                    Data.m_ActiveZone.EverySecond();
                 }
-                for (int i = Data.m_FallingProps.Count-1; i >= 0; i--)
+
+                FallingProp[] FallingProps = Data.m_FallingProps.Values.ToArray();
+
+                for (int i = FallingProps.Length-1; i >= 0; i--)
                 {
-                    FallingProp FallingProp = Data.m_FallingProps[i];
+                    FallingProp FallingProp = FallingProps[i];
 
                     if(FallingProp != null)
                     {
@@ -618,42 +629,40 @@ namespace SkyCoopServer
                             float progress = elapsed / totalDuration;
                             Vector3 NewPosition = DataStr.Lerp(FallingProp.m_SpawnPosition, FallingProp.m_LandPosition, progress);
 
-                            if(DateTime.Now > FallingProp.m_LandTime)
-                            {
-                                NewPosition = FallingProp.m_LandPosition;
-                                Data.m_FallingProps.RemoveAt(i);
-                            }
-
-                            //Logger.Log($"[AirDrop Update] {FallingProp.m_GUID} falling progress {progress * 100}% altitude {NewPosition.Y} / {FallingProp.m_LandPosition.Y}");
-
                             PropData.position = new Vector3JSON(NewPosition.X, NewPosition.Y, NewPosition.Z);
 
                             List<NetPeer> peers = new List<NetPeer>();
                             m_ServerInstance.m_Instance.GetConnectedPeers(peers);
-                            foreach (NetPeer Peer in peers.ToArray())
+
+                            if (DateTime.Now > FallingProp.m_LandTime)
                             {
-                                if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Data.m_SceneName)
+                                NewPosition = FallingProp.m_LandPosition;
+                                foreach (NetPeer Peer in peers.ToArray())
                                 {
-                                    ServerSend.SendPropMoved(Peer, PropData.guid, NewPosition);
+                                    if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Data.m_SceneName)
+                                    {
+                                        ServerSend.SendPropMoved(Peer, PropData.guid, NewPosition);
+                                    }
                                 }
+                                Data.m_FallingProps.Remove(FallingProp.m_GUID);
                             }
                         }
                         else
                         {
-                            Data.m_FallingProps.RemoveAt(i);
+                            Data.m_FallingProps.Remove(FallingProp.m_GUID);
                         }
                     }
                 }
             }
         }
 
-        public void ForceNextZone()
+        public void ForceNextZone(bool withtime = false)
         {
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
                 if (Data.m_ActiveZone != null)
                 {
-                    Data.m_ActiveZone.ForceNextZone();
+                    Data.m_ActiveZone.ForceNextZone(withtime);
                 }
             }
         }
@@ -683,33 +692,24 @@ namespace SkyCoopServer
         public void SummonAirDrop(string SceneName, string PropPrefab, string JSON, Vector3 SpawnPosition, Vector3 LandPosition, float FallingTime)
         {
             string NewGUID = System.Guid.NewGuid().ToString();
-
-            DataStr.PropData PropData = new PropData();
-            PropData.guid = NewGUID;
-            PropData.position = new Vector3JSON(SpawnPosition.X, SpawnPosition.Y, SpawnPosition.Z);
-            PropData.rotation = new QuaternionJSON(0, 0, 0, 0);
-            PropData.frombundle = false;
-            PropData.prefabname = PropPrefab;
-
             SceneData SceneData = GetSceneData(SceneName);
-            AddProp(PropData, SceneName);
-
-            AddContainer(NewGUID, DataStr.CompressString(JSON), SceneName);
-            SetContainerState(NewGUID, 1, SceneName);
-
-            List<NetPeer> peers = new List<NetPeer>();
-            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
-            foreach (NetPeer Peer in peers.ToArray())
-            {
-                if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
-                {
-                    ServerSend.SendPropCreated(Peer, PropData);
-                    ServerSend.SendContainerState(Peer, NewGUID, 1, m_ServerInstance);
-                }
-            }
 
             if (SceneData != null)
             {
+
+                DataStr.PropData PropData = new PropData();
+                PropData.guid = NewGUID;
+                PropData.position = new Vector3JSON(SpawnPosition.X, SpawnPosition.Y, SpawnPosition.Z);
+                PropData.rotation = new QuaternionJSON(0, 0, 0, 0);
+                PropData.frombundle = false;
+                PropData.prefabname = PropPrefab;
+
+                AddProp(PropData, SceneName);
+
+                AddContainer(NewGUID, DataStr.CompressString(JSON), SceneName);
+                SetContainerState(NewGUID, 1, SceneName);
+
+
                 DataStr.FallingProp FallingProp = new FallingProp();
                 FallingProp.m_GUID = NewGUID;   
                 FallingProp.m_LandTime = DateTime.Now.AddSeconds(FallingTime);
@@ -717,8 +717,20 @@ namespace SkyCoopServer
                 FallingProp.m_SpawnPosition = SpawnPosition;
                 FallingProp.m_LandPosition = LandPosition;
 
+                List<NetPeer> peers = new List<NetPeer>();
+                m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
+                {
+                    if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                    {
+                        ServerSend.SendPropCreated(Peer, PropData);
+                        ServerSend.SendContainerState(Peer, NewGUID, 1, m_ServerInstance);
+                        ServerSend.SendPropMoved(Peer, PropData.guid, SpawnPosition, LandPosition, FallingProp.GetVelocityPerSecond());
+                    }
+                }
 
-                SceneData.m_FallingProps.Add(FallingProp);
+
+                SceneData.m_FallingProps.Add(NewGUID, FallingProp);
 
                 Logger.Log($"[SummonAirDrop] AirDrop summoned {NewGUID} on {SceneName}!");
             }

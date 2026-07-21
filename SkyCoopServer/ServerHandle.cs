@@ -119,7 +119,6 @@ namespace SkyCoopServer
             }
         }
 
-
         public static void ClientProjectile(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             if (ServerInstance.GetPlayerDataByNetPeer(Client).m_GamePlayState != PlayerData.GamePlayState.Alive && !ServerInstance.CanRespawn())
@@ -774,6 +773,9 @@ namespace SkyCoopServer
                 case "nextzone":
                     ServerInstance.ForceNextZone();
                     break;
+                case "skipzone":
+                    ServerInstance.ForceNextZone(true);
+                    break;
                 case "zonenodamage":
                     ServerInstance.ForceZoneNoDamage();
                     break;
@@ -806,6 +808,12 @@ namespace SkyCoopServer
                     ServerInstance.m_Config.m_CheatsAllowed = !ServerInstance.m_Config.m_CheatsAllowed;
                     ServerSend.SendConfigUpdated(ServerInstance);
                     Logger.Log(ConsoleColor.Green, $"New m_Config.m_CheatsAllowed flag is {ServerInstance.m_Config.m_CheatsAllowed}");
+                    break;
+                case "timepause":
+                case "stoptimer":
+                case "timer":
+                    ServerInstance.m_TimePaused = !ServerInstance.m_TimePaused;
+                    Logger.Log(ConsoleColor.Green, $"New ServerInstance.m_TimePaused flag is {ServerInstance.m_TimePaused}");
                     break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");

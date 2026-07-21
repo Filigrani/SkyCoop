@@ -127,7 +127,7 @@ namespace SkyCoopServer
             Peer.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public void StartServer(int port, int maxPlayers, string key = "voice")
+        public void StartServer(int port, int maxPlayers, string key = Packet.c_Key)
         {
             Logger.Log("[ServerVoice] Starting voice server");
             m_Instance.Start(port);

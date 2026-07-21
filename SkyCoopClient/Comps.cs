@@ -47,6 +47,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<TeammateMapIcon>();
             ClassInjector.RegisterTypeInIl2Cpp<ZoneMapIcon>();
             ClassInjector.RegisterTypeInIl2Cpp<SendGearIfNotDestoryed>();
+            ClassInjector.RegisterTypeInIl2Cpp<PropMovemenetPredict>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -1433,19 +1434,20 @@ namespace SkyCoop
         {
             public DangerCircleZone(IntPtr ptr) : base(ptr) { }
             public float m_Smoother = 8;
-            public Vector3 m_Center = Vector3.zero;
-            public float m_TargetRadius = 0;
+            public DataStr.DangerCircleShrinkStateData m_Data;
 
 
             public Vector3 GetScale()
             {
-                return new Vector3(m_TargetRadius, 4300, m_TargetRadius);
+                float Radius = m_Data.GetCurrentRadius();
+
+                return new Vector3(Radius, 4300, Radius);
             }
 
             void Update()
             {
                 transform.localScale = Vector3.Lerp(transform.localScale, GetScale(), m_Smoother * Time.deltaTime);
-                transform.position = Vector3.Lerp(transform.position, m_Center, m_Smoother * Time.deltaTime);
+                transform.position = Vector3.Lerp(transform.position, m_Data.GetCenter().ConvertToUnity(), m_Smoother * Time.deltaTime);
             }
         }
         public class ForcedFire : MonoBehaviour
@@ -2119,8 +2121,8 @@ namespace SkyCoop
                         m_RefScale = DangerCircleManager.s_MapRefScale;
                         if (!m_IsNextZone)
                         {
-                            realRadiusInMeters = DangerCircleManager.s_DangerCircle.m_TargetRadius;
-                            Position = DangerCircleManager.s_DangerCircle.m_Center;
+                            realRadiusInMeters = DangerCircleManager.s_DangerCircle.m_Data.GetCurrentRadius();
+                            Position = DangerCircleManager.s_DangerCircle.m_Data.GetCenter().ConvertToUnity();
                             if (DangerCircleManager.s_DangerCircle)
                             {
                                 m_Sprite.enabled = true;
@@ -2283,6 +2285,29 @@ namespace SkyCoop
                 {
                     SkyCoop.Logger.Log($"Gear {m_Gear.name} refused");
                     GearsSync.SendDropItem(m_Gear, 0, 0, true);
+                }
+            }
+        }
+        public class PropMovemenetPredict : MonoBehaviour
+        {
+            public PropMovemenetPredict(IntPtr ptr) : base(ptr) { }
+            public Vector3 m_Destination = Vector3.zero;
+            public Vector3 VelocityPerSecond = Vector3.zero;
+
+            void Update()
+            {
+                float distanceToDestination = Vector3.Distance(transform.position, m_Destination);
+                float maxMoveDistance = VelocityPerSecond.magnitude * Time.deltaTime;
+
+                if (distanceToDestination <= maxMoveDistance)
+                {
+                    transform.position = m_Destination;
+                    enabled = false;
+                }
+                else
+                {
+                    Vector3 direction = (m_Destination - transform.position).normalized;
+                    transform.position += direction * maxMoveDistance;
                 }
             }
         }

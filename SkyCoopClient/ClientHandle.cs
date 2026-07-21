@@ -335,13 +335,13 @@ namespace SkyCoop
 
             if (Active)
             {
-                Vector3 Center = Reader.GetVector3Unity();
-                float Radius = Reader.GetFloat();
-                Vector3 NextCenter = Reader.GetVector3Unity();
+                DataStr.DangerCircleShrinkStateData Stage = Reader.GetZoneStage();
+
+                Vector3 NextCetner = Reader.GetVector3Unity();
                 float NextRadius = Reader.GetFloat();
                 Vector2 MapRefScale = Reader.GetVector2Unity();
 
-                DangerCircleManager.HandleDangerCircleSync(Center, Radius, NextCenter, NextRadius, MapRefScale);
+                DangerCircleManager.HandleDangerCircleSync(Stage, NextCetner, NextRadius, MapRefScale);
             }
             else
             {
@@ -592,7 +592,15 @@ namespace SkyCoop
         {
             string GUID = Reader.GetString();
             Vector3 Position = Reader.GetVector3Unity();
-            PropsManager.HandlePropMoved(GUID, Position);
+
+            if (!Reader.GetBool())
+            {
+                PropsManager.HandlePropMoved(GUID, Position);
+            }
+            else // If predictable
+            {
+                PropsManager.HandlePropMoved(GUID, Position, Reader.GetVector3Unity(), Reader.GetVector3Unity());
+            }
         }
 
         public static void ClientRemoveProp(NetDataReader Reader)

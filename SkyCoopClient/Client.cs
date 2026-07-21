@@ -308,7 +308,7 @@ namespace SkyCoop
             ConnectToServer(IP, Port);
         }
 
-        public void ConnectToServer(string ip, int port, string key = "key")
+        public void ConnectToServer(string ip, int port, string key = Packet.c_Key)
         {
             MenuHook.DoPleaseWait("Connecting...", "Trying to connect to "+ip+":"+port);
             Logger.Log($"Trying to connect to {ip}:{port} with key: {key}");
