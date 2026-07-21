@@ -606,10 +606,10 @@ MonoBehaviour:
       Ukrainian: 
   - localizationKey: GAMEPLAY_TimeRemainingZone
     languages:
-      English: Next zone movement
+      English: Time remaining until the zone movement
       German: 
-      Russian: "\u0412\u0440\u0435\u043C\u044F \u0434\u043E \u0441\u0443\u0436\u0435\u043D\u0438\u044F
-        \u0437\u043E\u043D\u044B"
+      Russian: "\u0412\u0440\u0435\u043C\u044F \u0434\u043E \u0441\u043B\u0435\u0434\u0443\u044E\u0449\u0435\u0433\u043E
+        \u0441\u0443\u0436\u0435\u043D\u0438\u044F"
       French: 
       Japanese: 
       Korean: 
@@ -891,6 +891,27 @@ MonoBehaviour:
       German: 
       Russian: "\u041D\u0435\u0442 \u043E\u0440\u0443\u0436\u0438\u044F \u0431\u043B\u0438\u0436\u043D\u0435\u0433\u043E
         \u0431\u043E\u044F \u0432 \u0438\u043D\u0432\u0435\u043D\u0442\u0430\u0440\u0435"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 
+  - localizationKey: GAMEPLAY_ZoneShrinking
+    languages:
+      English: Zone movement
+      German: 
+      Russian: "\u0421\u0443\u0436\u0435\u043D\u0438\u0435"
       French: 
       Japanese: 
       Korean: 

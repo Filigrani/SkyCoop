@@ -161,7 +161,10 @@ namespace SkyCoop
                     {
                         if(m_SendThrown && GetComponent<OtherPlayerBullet>() == null)
                         {
-                            GearsSync.SendDropItem(GetComponent<GearItem>(), 0, 0, true);
+                            if(ModMain.Client != null && ModMain.Client.m_Rules.m_CanDropItems)
+                            {
+                                GearsSync.SendDropItem(GetComponent<GearItem>(), 0, 0, true);
+                            }
                         }
                         UnityEngine.Object.Destroy(gameObject);
                     }
@@ -2077,7 +2080,7 @@ namespace SkyCoop
                     {
                         if (Player)
                         {
-                            m_Sprite.enabled = Player.m_Action != NetworkPlayer.Actions.Death && Player.gameObject.activeSelf && SquadHUD.IsTeammate(m_IndexHandler);
+                            m_Sprite.enabled = Player.m_Action != NetworkPlayer.Actions.Death && Player.gameObject.activeSelf && (SquadHUD.IsTeammate(m_IndexHandler) || PlayersManager.s_Spectator);
                         }
                         else
                         {
@@ -2087,6 +2090,22 @@ namespace SkyCoop
                     else
                     {
                         m_Sprite.enabled = false;
+                    }
+
+                    if (m_Sprite.enabled)
+                    {
+                        if (m_IndexHandler == PlayersManager.s_SpectateID && PlayersManager.s_Spectator)
+                        {
+                            m_Sprite.color = Color.cyan;
+                        }
+                        else if(SquadHUD.IsTeammate(m_IndexHandler))
+                        {
+                            m_Sprite.color = Color.green;
+                        }
+                        else
+                        {
+                            m_Sprite.color = Color.white;
+                        }
                     }
                     
                     transform.localPosition = m_Panel.WorldPositionToMapPosition(m_Panel.m_UnlockedRegionNames[m_Panel.m_RegionSelectedIndex], Player.m_Position);
@@ -2177,10 +2196,9 @@ namespace SkyCoop
             public GenericStatusBarSpawnerHook(IntPtr ptr) : base(ptr) { }
 
             GenericStatusBarSpawner s_Bar;
-            List<TeammateBar> s_TeamBars = new List<TeammateBar>();
 
 
-            void AddTeamBar()
+            void AddTeamBars()
             {
                 Panel_HUD HUD = InterfaceManager.GetPanel<Panel_HUD>();
 
@@ -2200,7 +2218,7 @@ namespace SkyCoop
 
                 if (s_Bar.m_StatusBarType == StatusBar.StatusBarType.Condition && s_Bar.GetComponent<TeammateBar>() == null)
                 {
-                    for (int i = 1; i <= 3; i++)
+                    for (int i = 1; i <= PlayersDataManager.c_SquadLimit; i++)
                     {
                         GameObject Clone = UnityEngine.Object.Instantiate<GameObject>(s_Bar.gameObject, s_Bar.gameObject.transform.parent);
                         if (Clone)
@@ -2260,10 +2278,7 @@ namespace SkyCoop
                     }
                     else
                     {
-                        if(s_TeamBars.Count == 0)
-                        {
-                            AddTeamBar();
-                        }
+                        AddTeamBars();
                     }
                 }
             }

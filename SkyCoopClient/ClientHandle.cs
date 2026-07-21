@@ -763,47 +763,52 @@ namespace SkyCoop
 
         public static void ServerSquadResponce(NetDataReader Reader)
         {
-            int Reason = Reader.GetInt();
+            Packet.SquadResponce Reason = (Packet.SquadResponce)Reader.GetInt();
 
-            if(Reason == 0)
+            switch (Reason)
             {
-                HUDMessage.AddMessage("Wasn't able to create squad!", true, true);
-                GameAudioManager.PlayGUIError();
-            }
-            else if(Reason == 1)
-            {
-                HUDMessage.AddMessage("Squad created!", true, true);
-                GameAudioManager.PlayGUIButtonClick();
-            }
-            else if(Reason == 2)
-            {
-                HUDMessage.AddMessage("You not in squad!", true, true);
-                GameAudioManager.PlayGUIError();
-            }
-            else if (Reason == 3)
-            {
-                HUDMessage.AddMessage("You left squad!", true, true);
-                GameAudioManager.PlayGUIButtonClick();
-            }
-            else if (Reason == 4)
-            {
-                HUDMessage.AddMessage("You already in squad!", true, true);
-                GameAudioManager.PlayGUIError();
-            }
-            else if (Reason == 5)
-            {
-                HUDMessage.AddMessage("You are not invited!", true, true);
-                GameAudioManager.PlayGUIError();
-            }
-            else if (Reason == 6)
-            {
-                HUDMessage.AddMessage("Invite sent", true, true);
-                GameAudioManager.PlayGUIButtonClick();
-            }
-            else if (Reason == 7)
-            {
-                HUDMessage.AddMessage("Squad not exist!", true, true);
-                GameAudioManager.PlayGUIButtonClick();
+                case Packet.SquadResponce.CantCreateSquad:
+                    HUDMessage.AddMessage("Wasn't able to create squad!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.SquadCreated:
+                    HUDMessage.AddMessage("Squad created!", true, true);
+                    GameAudioManager.PlayGUIButtonClick();
+                    break;
+                case Packet.SquadResponce.YouNotInSquad:
+                    HUDMessage.AddMessage("You not in squad!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.YouLeftSquad:
+                    HUDMessage.AddMessage("You left squad!", true, true);
+                    GameAudioManager.PlayGUIButtonClick();
+                    break;
+                case Packet.SquadResponce.YouAlreadyInSquad:
+                    HUDMessage.AddMessage("You already in squad!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.YouAreNotInvited:
+                    HUDMessage.AddMessage("You are not invited!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.InviteSent:
+                    HUDMessage.AddMessage("Invite sent", true, true);
+                    GameAudioManager.PlayGUIButtonClick();
+                    break;
+                case Packet.SquadResponce.SquadNotExist:
+                    HUDMessage.AddMessage("Squad not exist!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.SquadIsFull:
+                    HUDMessage.AddMessage("Squad is full!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.TheyAlreadyInSquad:
+                    HUDMessage.AddMessage("Player already in squad!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                default:
+                    break;
             }
         }
         public static void ServerSquadCreated(NetDataReader Reader)

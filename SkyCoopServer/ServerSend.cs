@@ -154,20 +154,9 @@ namespace SkyCoopServer
                     }
                 }
 
-                if (ServerInstance.m_Rules.m_HUDMode == "DM")
+                if (ServerInstance.m_Rules.m_HUDMode == "DM" || ServerInstance.m_Rules.m_HUDMode == "GunGame")
                 {
-                    if (Message.m_Killer != -1)
-                    {
-                        SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Killer), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Killer), ServerInstance);
-                    }
-                    if (Message.m_Assist != -1)
-                    {
-                        SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Assist), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Assist), ServerInstance);
-                    }
-                    if (Message.m_Victim != -1)
-                    {
-                        SendHUDSideBarUpdate(ServerInstance.GetClient(Message.m_Victim), 3, ServerInstance.m_PlayersData.GetPlayerScoreString(Message.m_Victim), ServerInstance);
-                    }
+                    ServerInstance.m_PlayersData.UpdateScorePlace();
                 }
             }
 
@@ -935,12 +924,12 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendSquadResponce(NetPeer Client, int Reason)
+        public static void SendSquadResponce(NetPeer Client, Packet.SquadResponce Reason)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerSquadResponce);
 
-            writer.Put(Reason);
+            writer.Put((int)Reason);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

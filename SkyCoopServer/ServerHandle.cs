@@ -14,7 +14,10 @@ namespace SkyCoopServer
         public static void Welcome(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string PlayerName = Reader.GetString();
-            ServerInstance.m_PlayersData.SetPlayerName(Client.Id, PlayerName);
+            if(!ServerInstance.m_PlayersData.SetPlayerName(Client.Id, PlayerName))
+            {
+                return;
+            }
 
             string NewPlayerName = ServerInstance.m_PlayersData.GetPlayer(Client.Id).m_PlayerName;
             Logger.Log(ConsoleColor.Green, $"[ServerHandle] Сlient {Client.Id} connected under name: {NewPlayerName}");
@@ -34,18 +37,6 @@ namespace SkyCoopServer
                     ServerSend.SendClientName(OtherPeer, Client.Id, NewPlayerName);
                     // Новоему клиенту от старых клиентов
                     ServerSend.SendClientName(Client, OtherPeer.Id, ServerInstance.m_PlayersData.GetPlayer(OtherPeer.Id).m_PlayerName);
-                    if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
-                    {
-                        ServerSend.SendHUDSideBar(Client, 3, "", $"Score:", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
-                    }
-                    if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "Shrink")
-                    {
-                        ServerSend.SendHUDSideBarUpdate(Client, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
-                    }
-                    if(ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "Lobby")
-                    {
-                        ServerSend.SendHUDSideBarUpdate(Client, 2, ServerInstance.m_PlayersData.GetPlayersString(), ServerInstance);
-                    }
                 }
             }
             ServerSend.SendClientStatus(Client.Id, 1, ServerInstance);
@@ -353,7 +344,7 @@ namespace SkyCoopServer
 
             if (ServerInstance.m_Rules != null)
             {
-                if (ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                if (ServerInstance.m_Rules.m_HUDMode == "DM")
                 {
                     ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", "GAMEPLAY_SideBarKills", Data.m_Kills.ToString(), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 1, "icoMap_grave", "GAMEPLAY_SideBarDeaths", Data.m_Deaths.ToString(), ServerInstance);
@@ -368,14 +359,12 @@ namespace SkyCoopServer
                     ServerSend.SendHUDSideBar(Client, 1, "ico_knowledge_people", "GAMEPLAY_SideBarPlayersAlive", ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                     ServerSend.SendHUDSideBarClear(Client, 2, ServerInstance);
                     ServerSend.SendHUDSideBarClear(Client, 3, ServerInstance);
-
-                    ServerSend.SendTimerPrefix(Client, "GAMEPLAY_TimeRemaining");
                 }
                 else if (ServerInstance.m_Rules.m_HUDMode == "GunGame")
                 {
                     ServerSend.SendHUDSideBar(Client, 0, "ico_Reload", "GAMEPLAY_SideBarWeaponTier", Data.GetTierString(ServerInstance), ServerInstance);
                     ServerSend.SendHUDSideBar(Client, 1, "ico_xpModeInterloper", "GAMEPLAY_SideBarKillsRequired", Data.GetTierProgressString(ServerInstance), ServerInstance);
-                    ServerSend.SendHUDSideBarClear(Client, 2, ServerInstance);
+                    ServerSend.SendHUDSideBar(Client, 2, "", "GAMEPLAY_SideBarScore", ServerInstance.m_PlayersData.GetPlayerScoreString(Client.Id), ServerInstance);
                     ServerSend.SendHUDSideBarClear(Client, 3, ServerInstance);
 
                     ServerSend.SendTimerPrefix(Client, "GAMEPLAY_TimeRemaining");
@@ -491,6 +480,7 @@ namespace SkyCoopServer
                     if(Data.m_CarSeat == GUID || Data.m_InteractionGUID == GUID)
                     {
                         ServerSend.SendInteractResult(Client, false);
+                        ServerInstance.m_PlayersData.SetPlayerInteractionGUID(Player, "");
                         return;
                     }
                 }
@@ -498,7 +488,7 @@ namespace SkyCoopServer
 
             if (BindItNow)
             {
-                Player.m_InteractionGUID = GUID;
+                ServerInstance.m_PlayersData.SetPlayerInteractionGUID(Player, GUID);
             }
 
             //ServerInstance.m_ScenesData.UseProp(Player.m_Scene, GUID, true);
@@ -507,7 +497,7 @@ namespace SkyCoopServer
         public static void ClientVehicleSeat(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             string GUID = Reader.GetString();
-            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
 
             if (!string.IsNullOrEmpty(GUID))
             {
@@ -530,7 +520,8 @@ namespace SkyCoopServer
                     }
                 }
             }
-            Data.m_CarSeat = GUID;
+            ServerInstance.m_PlayersData.SetPlayerCarSeatGUID(Player, GUID);
+            ServerInstance.m_PlayersData.SetPlayerInteractionGUID(Player, "");
         }
         public static void ClientInVehicle(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
@@ -815,6 +806,30 @@ namespace SkyCoopServer
                     ServerInstance.m_TimePaused = !ServerInstance.m_TimePaused;
                     Logger.Log(ConsoleColor.Green, $"New ServerInstance.m_TimePaused flag is {ServerInstance.m_TimePaused}");
                     break;
+                case "spectate":
+                case "spectator":
+                case "spectators":
+                    NetPeer SpecPlayer = ServerInstance.GetClient(Player.m_PlayerID);
+                    if (SpecPlayer != null)
+                    {
+                        if (Player != null)
+                        {
+                            if(Player.m_GamePlayState != PlayerData.GamePlayState.Spectator)
+                            {
+                                ServerInstance.m_PlayersData.SetGameplayState(Player.m_PlayerID, PlayerData.GamePlayState.Spectator);
+                                ServerSend.SendPlayerBecomeSpectator(SpecPlayer);
+                            }
+                            else
+                            {
+                                ServerInstance.m_PlayersData.SetGameplayState(Player.m_PlayerID, PlayerData.GamePlayState.Alive);
+                                DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(Player.m_Scene, Player.m_PlayerID);
+                                ServerInstance.m_PlayersData.PlayerMoved(SpecPlayer.Id, Point.m_Position);
+                                ServerInstance.m_PlayersData.PlayerRotated(SpecPlayer.Id, Point.m_Rotation);
+                                ServerSend.SendPlayerRespawn(SpecPlayer, Point.m_Position, Point.m_Rotation);
+                            }
+                        }
+                    }
+                    break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
                     break;
@@ -838,7 +853,7 @@ namespace SkyCoopServer
             bool KnockedDown = Reader.GetBool();
             if (Player != null)
             {
-                PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(Player.m_PlayerID);
+                PlayersSquad Squad = ServerInstance.m_PlayersData.GetSquadPlayerIn(Player.m_PlayerID);
                 if (Squad != null)
                 {
                     foreach (int TeammateID in Squad.m_Players)
@@ -890,11 +905,11 @@ namespace SkyCoopServer
 
             if(Squad == null)
             {
-                ServerSend.SendSquadResponce(Client, 0);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.CantCreateSquad);
             }
             else
             {
-                ServerSend.SendSquadResponce(Client, 1);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadCreated);
                 ServerInstance.m_PlayersData.AddPlayerToSquad(SquadName, Client.Id);
             }
         }
@@ -905,15 +920,15 @@ namespace SkyCoopServer
 
             Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} requrest leaving squad");
 
-            PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(Client.Id);
+            PlayersSquad Squad = ServerInstance.m_PlayersData.GetSquadPlayerIn(Client.Id);
 
             if (Squad == null)
             {
-                ServerSend.SendSquadResponce(Client, 2);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.YouNotInSquad);
             }
             else
             {
-                ServerSend.SendSquadResponce(Client, 3);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.YouLeftSquad);
 
                 string SquadNameToDismember = Squad.m_Name;
                 ServerInstance.m_PlayersData.RemovePlayerFromSquad(Squad.m_Name, Client.Id);
@@ -932,26 +947,32 @@ namespace SkyCoopServer
             int OtherClient_ID = Reader.GetInt();
 
 
-            PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(Client.Id);
+            PlayersSquad Squad = ServerInstance.m_PlayersData.GetSquadPlayerIn(Client.Id);
 
             if (Squad == null)
             {
-                ServerSend.SendSquadResponce(Client, 2);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.YouNotInSquad);
             }
             else
             {
                 Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} trying to invite {OtherClient_ID} to squad {Squad.m_Name}");
 
-                PlayersSquad OtherSquad = ServerInstance.m_PlayersData.GetPlayerSquadIn(OtherClient_ID);
+                PlayersSquad OtherSquad = ServerInstance.m_PlayersData.GetSquadPlayerIn(OtherClient_ID);
 
                 if(OtherSquad != null)
                 {
-                    ServerSend.SendSquadResponce(Client, 4);
+                    ServerSend.SendSquadResponce(Client, Packet.SquadResponce.TheyAlreadyInSquad);
                 }
                 else
                 {
-                    ServerSend.SendSquadResponce(Client, 6);
-                    ServerInstance.m_PlayersData.InvitePlayerToSquad(Squad.m_Name, OtherClient_ID);
+                    if(Squad.m_Players.Count < PlayersDataManager.c_SquadLimit)
+                    {
+                        ServerInstance.m_PlayersData.InvitePlayerToSquad(Squad.m_Name, OtherClient_ID);
+                    }
+                    else
+                    {
+                        ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadIsFull);
+                    }
                 }
             }
         }
@@ -967,17 +988,17 @@ namespace SkyCoopServer
             if (Squad == null)
             {
                 Logger.Log(ConsoleColor.Magenta, $"Squad {SquadName} not exist");
-                ServerSend.SendSquadResponce(Client, 7);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadNotExist);
             }
             else
             {
                 if (!Squad.PlayerIsInvited(Client.Id))
                 {
-                    ServerSend.SendSquadResponce(Client, 5);
+                    ServerSend.SendSquadResponce(Client, Packet.SquadResponce.YouAreNotInvited);
                 }
                 else
                 {
-                    ServerInstance.m_PlayersData.AddPlayerToSquad(SquadName, Client.Id);
+                    ServerInstance.m_PlayersData.AcceptInviteToSquad(SquadName, Client.Id);
                 }
             }
         }
@@ -993,7 +1014,7 @@ namespace SkyCoopServer
             if (Squad == null)
             {
                 Logger.Log(ConsoleColor.Magenta, $"Squad {SquadName} not exist");
-                ServerSend.SendSquadResponce(Client, 7);
+                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadNotExist);
             }
             else
             {

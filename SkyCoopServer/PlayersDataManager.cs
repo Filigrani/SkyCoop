@@ -12,6 +12,8 @@ namespace SkyCoopServer
         public List<DataStr.PlayerData> m_Players = new List<DataStr.PlayerData>();
         public Dictionary<string, PlayersSquad> m_Squads = new Dictionary<string, PlayersSquad>();
 
+        public const int c_SquadLimit = 3;
+
         public bool m_RecursiveDebug = false;
 
         private Server s_Server;
@@ -35,13 +37,51 @@ namespace SkyCoopServer
             return m_Players[Index];
         }
 
-        public void SetPlayerName(int Index, string Name)
+        public bool NameIsFree(string PlayerName)
+        {
+            foreach (PlayerData Player in m_Players)
+            {
+                if(Player != null)
+                {
+                    if(Player.m_PlayerName == PlayerName)
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        public bool SetPlayerName(int Index, string Name)
         {
             DataStr.PlayerData Player = m_Players[Index];
             if (Player != null)
             {
-                Player.m_PlayerName = Name;
+                if (NameIsFree(Name))
+                {
+                    Player.m_PlayerName = Name;
+                }
+                else
+                {
+                    SkyCoopServer.Logger.Log(ConsoleColor.Red,$"Client {Index} trying to log in as {Name}, but name is already busy");
+
+                    int Num = 2;
+                    while (!NameIsFree($"{Name} ({Num})"))
+                    {
+                        Num++;
+
+                        if(Num > 100)
+                        {
+                            Name = "Ilegal name";
+                            s_Server.DisconnectPlayer(Index, "Bad nickname!");
+                            return false;
+                        }
+                    }
+                    Player.m_PlayerName = $"{Name} ({Num})";
+                    SkyCoopServer.Logger.Log(ConsoleColor.Yellow, $"Client {Index} renamed to {Name}");
+                }
             }
+            return true;
         }
 
         public List<DataStr.PlayerData> GetPlayersOnScene(string Scene)
@@ -410,6 +450,7 @@ namespace SkyCoopServer
 
         public void OnPlayerDisconnect(int PlayerID)
         {
+            PlayersSquad LeftSquad = GetSquadPlayerIn(PlayerID);
             m_Players[PlayerID] = new PlayerData(PlayerID);
 
             List<NetPeer> peers = new List<NetPeer>();
@@ -421,20 +462,16 @@ namespace SkyCoopServer
                     ServerSend.SendPlayerSceneNotification(Peer, false, PlayerID);
                 }
             }
-            List<string> SquadsToDismember = new List<string>();
-            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+
+            if(LeftSquad != null)
             {
-                RemovePlayerFromSquad(Squad.m_Name, PlayerID);
-                if(Squad.m_Players.Count == 0)
+                RemovePlayerFromSquad(LeftSquad.m_Name, PlayerID);
+                if (LeftSquad.m_Players.Count == 0)
                 {
-                    SquadsToDismember.Add(Squad.m_Name);
+                    ServerSend.SendSquadEliminated(s_Server, LeftSquad.m_Name);
+                    Logger.Log(ConsoleColor.Cyan, $"[Squads] Squad {LeftSquad.m_Name} was dismembered, no players left.");
+                    m_Squads.Remove(LeftSquad.m_Name);
                 }
-            }
-            foreach (string SquadNameToDismember in SquadsToDismember)
-            {
-                ServerSend.SendSquadEliminated(s_Server, SquadNameToDismember);
-                Logger.Log(ConsoleColor.Cyan, $"[Squads] Squad {SquadNameToDismember} was dismembered, no players left.");
-                m_Squads.Remove(SquadNameToDismember);
             }
             RemoveAllInviteOfPlayer(PlayerID);
             DoSquadsCheck();
@@ -442,10 +479,16 @@ namespace SkyCoopServer
             s_Server.OnPlayersCountChanged();
         }
 
-        public DataStr.DMScore GetScore(int PlayerID)
+        public DataStr.Score GetScore(int PlayerID)
         {
             DataStr.PlayerData Player = GetPlayer(PlayerID);
-            return new DataStr.DMScore(Player.m_PlayerID, Player.m_Kills, Player.m_Assists, Player.m_Deaths);
+
+            if(s_Server.m_Rules.m_HUDMode == "GunGame")
+            {
+                return new DataStr.Score(Player.m_PlayerID, Player.m_Kills, 0, 0);
+            }
+
+            return new DataStr.Score(Player.m_PlayerID, Player.m_Kills, Player.m_Assists, Player.m_Deaths);
         }
 
         public string GetPlayerScoreString(int PlayerID)
@@ -477,7 +520,7 @@ namespace SkyCoopServer
         public List<int> GetLeadersIDs(bool Unlimited = false)
         {
             List<int> Leaders = new List<int>();
-            List<DataStr.DMScore> Scores = new List<DMScore>();
+            List<DataStr.Score> Scores = new List<Score>();
 
             if(s_Server.m_Config.m_GameMode != "Shrink")
             {
@@ -662,7 +705,32 @@ namespace SkyCoopServer
             DataStr.PlayerData Player = GetPlayer(PlayerID);
             if (Player != null)
             {
+                SetPlayerInteractionGUID(Player, GUID);
+            }
+        }
+
+        public void SetPlayerInteractionGUID(DataStr.PlayerData Player, string GUID)
+        {
+            if (Player != null)
+            {
                 Player.m_InteractionGUID = GUID;
+            }
+        }
+
+        public void SetPlayerCarSeatGUID(int PlayerID, string GUID)
+        {
+            DataStr.PlayerData Player = GetPlayer(PlayerID);
+            if (Player != null)
+            {
+                SetPlayerCarSeatGUID(Player, GUID);
+            }
+        }
+
+        public void SetPlayerCarSeatGUID(DataStr.PlayerData Player, string GUID)
+        {
+            if (Player != null)
+            {
+                Player.m_CarSeat = GUID;
             }
         }
 
@@ -682,37 +750,41 @@ namespace SkyCoopServer
             }
         }
 
-
         public void RemovePlayerFromSquad(string SquadName, int PlayerID)
         {
-            if (m_Squads.ContainsKey(SquadName))
+            PlayersSquad Squad = GetSquad(SquadName);
+
+            if(Squad != null)
             {
-                m_Squads[SquadName].RemovePlayer(PlayerID, s_Server);
-                Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} removed from squad {SquadName}");
-
-                NetPeer LeftPlayer = s_Server.GetClient(PlayerID);
-
-                if (LeftPlayer != null)
+                if (Squad.HasPlayer(PlayerID))
                 {
-                    ServerSend.SendAssignSquad(LeftPlayer, false);
-                }
-                
-                if (s_Server.m_Rules.m_HUDMode == "Shrink")
-                {
-                    List<NetPeer> peers = new List<NetPeer>();
-                    s_Server.m_Instance.GetConnectedPeers(peers);
-                    foreach (NetPeer Peer in peers.ToArray())
+                    Squad.RemovePlayer(PlayerID, s_Server);
+                    Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} removed from squad {SquadName}");
+
+                    NetPeer LeftPlayer = s_Server.GetClient(PlayerID);
+
+                    if (LeftPlayer != null)
                     {
-                        ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
+                        ServerSend.SendAssignSquad(LeftPlayer, false);
                     }
-                }
-                if (s_Server.m_Rules.m_HUDMode == "Lobby")
-                {
-                    List<NetPeer> peers = new List<NetPeer>();
-                    s_Server.m_Instance.GetConnectedPeers(peers);
-                    foreach (NetPeer Peer in peers.ToArray())
+
+                    if (s_Server.m_Rules.m_HUDMode == "Shrink")
                     {
-                        ServerSend.SendHUDSideBarUpdate(Peer, 2, s_Server.m_PlayersData.GetPlayersString(), s_Server);
+                        List<NetPeer> peers = new List<NetPeer>();
+                        s_Server.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 1, s_Server.m_PlayersData.GetShrinkModeString(), s_Server);
+                        }
+                    }
+                    if (s_Server.m_Rules.m_HUDMode == "Lobby")
+                    {
+                        List<NetPeer> peers = new List<NetPeer>();
+                        s_Server.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers.ToArray())
+                        {
+                            ServerSend.SendHUDSideBarUpdate(Peer, 2, s_Server.m_PlayersData.GetPlayersString(), s_Server);
+                        }
                     }
                 }
             }
@@ -723,11 +795,12 @@ namespace SkyCoopServer
             if (m_Squads.ContainsKey(SquadName))
             {
                 PlayersSquad Squad = m_Squads[SquadName];
+
                 Squad.AddInvite(PlayerID);
 
                 NetPeer InvitedPlayer = s_Server.GetClient(PlayerID);
 
-                if(InvitedPlayer != null)
+                if (InvitedPlayer != null)
                 {
                     ServerSend.SendSquadInvite(InvitedPlayer, SquadName);
                 }
@@ -745,7 +818,7 @@ namespace SkyCoopServer
 
         public void AcceptInviteToSquad(string SquadName, int PlayerID)
         {
-            PlayersSquad PlayerInSquad = GetPlayerSquadIn(PlayerID);
+            PlayersSquad PlayerInSquad = GetSquadPlayerIn(PlayerID);
 
             if(PlayerInSquad == null)
             {
@@ -755,7 +828,19 @@ namespace SkyCoopServer
 
                     if (Squad.PlayerIsInvited(PlayerID))
                     {
-                        AddPlayerToSquad(SquadName, PlayerID);
+                        if (Squad.m_Players.Count >= c_SquadLimit)
+                        {
+                            NetPeer Client = s_Server.GetClient(PlayerID);
+
+                            if (Client != null)
+                            {
+                                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadIsFull);
+                            }
+                        }
+                        else
+                        {
+                            AddPlayerToSquad(SquadName, PlayerID);
+                        }
                     }
 
                     Squad.RemoveInvite(PlayerID);
@@ -763,7 +848,7 @@ namespace SkyCoopServer
             }
             else
             {
-                ServerSend.SendSquadResponce(s_Server.GetClient(PlayerID), 4);
+                ServerSend.SendSquadResponce(s_Server.GetClient(PlayerID), Packet.SquadResponce.YouAlreadyInSquad);
             }
         }
 
@@ -791,7 +876,7 @@ namespace SkyCoopServer
             return "";
         }
 
-        public PlayersSquad GetPlayerSquadIn(int PlayerID)
+        public PlayersSquad GetSquadPlayerIn(int PlayerID)
         {
             foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
             {
@@ -806,7 +891,7 @@ namespace SkyCoopServer
         public void CreateRandomSquadForPlayer(int PlayerID)
         {
             Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} requested to create random squad");
-            PlayersSquad OldSquad = GetPlayerSquadIn(PlayerID);
+            PlayersSquad OldSquad = GetSquadPlayerIn(PlayerID);
             if (OldSquad == null)
             {
                 PlayersSquad Squad = CreateSquad(s_Server);
@@ -825,12 +910,12 @@ namespace SkyCoopServer
         public void JoinRandomSquad(int PlayerID)
         {
             Logger.Log(ConsoleColor.Cyan, $"[Squads] Player {PlayerID} requested to join random squad");
-            PlayersSquad OldSquad = GetPlayerSquadIn(PlayerID);
+            PlayersSquad OldSquad = GetSquadPlayerIn(PlayerID);
             if (OldSquad == null)
             {
                 PlayersSquad Squad = GetRandomJoinableSquad(PlayerID);
 
-                if (Squad != null)
+                if (Squad != null && Squad.m_Players.Count < c_SquadLimit)
                 {
                     AddPlayerToSquad(Squad.m_Name, PlayerID);
                 }
@@ -984,6 +1069,32 @@ namespace SkyCoopServer
                 }
             }
             return PlayerDatas;
+        }
+
+        public void UpdateScorePlace()
+        {
+            if (s_Server != null)
+            {
+                int SideBarIndex = -1;
+                if(s_Server.m_Rules.m_HUDMode == "DM")
+                {
+                    SideBarIndex = 3;
+                }
+                else if(s_Server.m_Rules.m_HUDMode == "GunGame")
+                {
+                    SideBarIndex = 2;
+                }
+
+                if(SideBarIndex != -1)
+                {
+                    List<NetPeer> peers = new List<NetPeer>();
+                    s_Server.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
+                    {
+                        ServerSend.SendHUDSideBarUpdate(Peer, SideBarIndex, GetPlayerScoreString(Peer.Id), s_Server);
+                    }
+                }
+            }
         }
     }
 }

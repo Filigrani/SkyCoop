@@ -378,6 +378,8 @@ namespace SkyCoopServer
                                 PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
 
                                 m_PlayersData.PlayerChangeScene(Peer.Id, "");
+                                m_PlayersData.SetPlayerCarSeatGUID(Peer.Id, "");
+                                m_PlayersData.SetPlayerInteractionGUID(Peer.Id, "");
                             }
                         }
                         else
@@ -390,7 +392,7 @@ namespace SkyCoopServer
                             {
                                 if (Leaders.Count > 0)
                                 {
-                                    DataStr.PlayersSquad Squad = m_PlayersData.GetPlayerSquadIn(Leaders[0].m_ID);
+                                    DataStr.PlayersSquad Squad = m_PlayersData.GetSquadPlayerIn(Leaders[0].m_ID);
 
                                     if (Squad != null)
                                     {
@@ -414,6 +416,8 @@ namespace SkyCoopServer
                                 }
 
                                 m_PlayersData.PlayerChangeScene(Peer.Id, "");
+                                m_PlayersData.SetPlayerCarSeatGUID(Peer.Id, "");
+                                m_PlayersData.SetPlayerInteractionGUID(Peer.Id, "");
                             }
                         }
                         m_ScenesData.UnloadSceneNobodyOn(this);
@@ -537,14 +541,7 @@ namespace SkyCoopServer
                 List<NetPeer> peers = new List<NetPeer>();
                 m_Instance.GetConnectedPeers(peers);
 
-                if (peers.Count > 1)
-                {
-                    m_Rules.m_Time = 180;
-                }
-                else
-                {
-                    m_Rules.m_Time = 0;
-                }
+                OnPlayersCountChanged();
                 SetNextGameMode("Shrink");
             }
         }

@@ -139,7 +139,7 @@ namespace SkyCoopServer
                     List<Vector3> PlayersPositions = new List<Vector3>();
                     float MinimalSafeDistance = 350f;
 
-                    PlayersSquad Squad = m_ServerInstance.m_PlayersData.GetPlayerSquadIn(PlayerID);
+                    PlayersSquad Squad = m_ServerInstance.m_PlayersData.GetSquadPlayerIn(PlayerID);
 
                     if (Squad != null)
                     {
@@ -319,6 +319,7 @@ namespace SkyCoopServer
             {
                 ServerSend.SendZoneUpdate(Client, SceneData.m_ActiveZone.m_Data, SceneData.m_ActiveZone.GetNextCenter(), SceneData.m_ActiveZone.GetNextRadius(), SceneData.m_ActiveZone.m_Config.MapScale.ToVector(), m_ServerInstance);
                 ServerSend.SendTimerPrefix(Client, SceneData.m_ActiveZone.GetTimerPrefix());
+                ServerSend.ClientGameModeTimer(Client, SceneData.m_ActiveZone.GetTimerSeconds());
             }
         }
 

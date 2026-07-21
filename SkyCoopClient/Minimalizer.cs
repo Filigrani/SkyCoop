@@ -132,7 +132,7 @@ namespace SkyCoopClient
                     {
                         __instance.UnlockMapCurrentScene();
                         __instance.RevealFogForScene(__instance.GetMapNameOfCurrentScene());
-                        Panel_Map.s_ForceShowPlayerIcon = CanUseMap;
+                        Panel_Map.s_ForceShowPlayerIcon = !PlayersManager.s_Spectator;
                     }
                     else
                     {
@@ -305,6 +305,21 @@ namespace SkyCoopClient
                 bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
 
                 __result = CanUseMap;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Il2Cpp.InputManager), "ExecuteOpenMapAction")]
+        private static class InputManager_ExecuteOpenMapAction
+        {
+            private static bool Prefix()
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (PlayersManager.s_Spectator)
+                {
+                    InterfaceManager.TrySetPanelEnabled<Panel_Map>(!InterfaceManager.IsPanelEnabled<Panel_Map>());
+                    return false;
+                }
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "Enable")]

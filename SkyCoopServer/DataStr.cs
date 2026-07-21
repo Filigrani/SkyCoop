@@ -293,6 +293,7 @@ namespace SkyCoopServer
                                     ServerSend.SendPlayerSceneNotification(OtherPlayer, true, m_PlayerID);
                                     ServerSend.SendPlayerAction(OtherPlayer, 0, m_PlayerID);
                                     ServerSend.SendPlayerCrouch(OtherPlayer, false, m_PlayerID);
+                                    ServerSend.SendRemoveAllInjectedItem(m_PlayerID, ServerInstance);
                                     break;
                                 case GamePlayState.Dead:
                                     ServerSend.SendPlayerAction(OtherPlayer, 5, m_PlayerID);
@@ -301,9 +302,9 @@ namespace SkyCoopServer
                                     break;
                                 case GamePlayState.Spectator:
                                     ServerSend.SendPlayerAction(OtherPlayer, 5, m_PlayerID);
-                                    ServerInstance.m_PlayersData.PlayerChangeGear(m_PlayerID, "", 0, true);
-                                    ServerSend.SendPlayerSceneNotification(OtherPlayer, false, m_PlayerID);
                                     ServerSend.SendRemoveAllInjectedItem(m_PlayerID, ServerInstance);
+                                    ServerInstance.m_PlayersData.PlayerChangeGear(m_PlayerID, "", 0, true);
+                                    //ServerSend.SendPlayerSceneNotification(OtherPlayer, false, m_PlayerID); // Пусть игрок валяеться чисто для фана
                                     break;
                                 default:
                                     break;
@@ -387,7 +388,7 @@ namespace SkyCoopServer
 
                 if (!Knocked)
                 {
-                    PlayersSquad Squad = ServerInstance.m_PlayersData.GetPlayerSquadIn(m_PlayerID);
+                    PlayersSquad Squad = ServerInstance.m_PlayersData.GetSquadPlayerIn(m_PlayerID);
 
                     if (Squad != null)
                     {
@@ -512,7 +513,7 @@ namespace SkyCoopServer
             public void AddKill(Server ServerInstance)
             {
                 m_Kills++;
-                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats" || ServerInstance.m_Rules.m_HUDMode == "Shrink")
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DM" || ServerInstance.m_Rules.m_HUDMode == "Shrink")
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, m_Kills.ToString(), ServerInstance);
                 }
@@ -535,7 +536,7 @@ namespace SkyCoopServer
             public void RemoveKill(Server ServerInstance)
             {
                 m_Kills--;
-                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DM")
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 0, m_Kills.ToString(), ServerInstance);
                 }
@@ -544,7 +545,7 @@ namespace SkyCoopServer
             public void AddDeath(Server ServerInstance)
             {
                 m_Deaths++;
-                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DM")
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 1, m_Deaths.ToString(), ServerInstance);
                 }
@@ -553,7 +554,7 @@ namespace SkyCoopServer
             public void AddAssist(Server ServerInstance)
             {
                 m_Assists++;
-                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DMStats")
+                if (ServerInstance.m_Rules != null && ServerInstance.m_Rules.m_HUDMode == "DM")
                 {
                     ServerSend.SendHUDSideBarUpdate(ServerInstance.GetClient(m_PlayerID), 2, m_Assists.ToString(), ServerInstance);
                 }
@@ -848,7 +849,7 @@ namespace SkyCoopServer
             }
         }
 
-        public struct DMScore : IComparable<DMScore>
+        public struct Score : IComparable<Score>
         {
             public int PlayerID;
             
@@ -857,21 +858,30 @@ namespace SkyCoopServer
             public int Deaths;
             public int Bonus;
 
-            public DMScore(int ID, int kills, int assists, int deaths, int bonus = 0)
+            public Score(int ID, int kills, int assists, int deaths, int bonus = 0)
             {
                 PlayerID = ID;
                 Kills = kills;
                 Assits = assists;
                 Deaths = deaths;
-                Bonus = 0;
+                Bonus = bonus;
+            }
+
+            public Score(int ID, int bonus = 0)
+            {
+                PlayerID = ID;
+                Kills = 0;
+                Assits = 0;
+                Deaths = 0;
+                Bonus = bonus;
             }
 
             public int GetFinalScore()
             {
-                return Kills + ((int)MathF.Floor(Assits * 0.5f)) - Deaths + Bonus;
+                return Kills + ((int)MathF.Floor(Assits * 0.5f)) + Bonus;
             }
 
-            public int CompareTo(DMScore other)
+            public int CompareTo(Score other)
             {
                 return other.GetFinalScore().CompareTo(GetFinalScore());
             }
@@ -1072,8 +1082,9 @@ namespace SkyCoopServer
                 switch (m_State)
                 {
                     case State.Waiting:
-                    case State.Shrinking:
                         return "GAMEPLAY_TimeRemainingZone";
+                    case State.Shrinking:
+                        return "GAMEPLAY_ZoneShrinking";
                     case State.Finished:
                         return "GAMEPLAY_TimeRemaining";
                     default:
@@ -1094,7 +1105,7 @@ namespace SkyCoopServer
                         }
                         else
                         {
-                            return (int)(s_StateTimer - DateTime.Now).TotalSeconds + m_Config.Stages[m_CurrentStageIndex+1].StageTime;
+                            return (int)(s_StateTimer - DateTime.Now).TotalSeconds;
                         }
                     case State.Finished:
                         return 0;
@@ -1514,6 +1525,11 @@ namespace SkyCoopServer
 
             public bool AddPlayer(int PlayerID, Server ServerInstance)
             {
+                if(m_Players.Count >= PlayersDataManager.c_SquadLimit)
+                {
+                    return false;
+                }
+                
                 if (!m_Players.Contains(PlayerID))
                 {
                     m_Players.Add(PlayerID);

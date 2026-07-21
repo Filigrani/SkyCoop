@@ -86,6 +86,20 @@ namespace SkyCoopServer
             ClientReviveRequest,
         }
 
+        public enum SquadResponce
+        {
+            CantCreateSquad,
+            SquadCreated,
+            YouNotInSquad,
+            YouLeftSquad,
+            YouAlreadyInSquad,
+            YouAreNotInvited,
+            InviteSent,
+            SquadNotExist,
+            SquadIsFull,
+            TheyAlreadyInSquad,
+        }
+
         public const string c_Key = "key2";
 
         public enum TypeVoice

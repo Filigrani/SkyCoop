@@ -27,6 +27,7 @@ namespace SkyCoop
         public static GameObject s_LastTryInteractionObject = null;
         public static bool s_ForceUpdateClothing = false;
         public static bool s_Spectator = false;
+        public static int s_SpectateID = -1;
         public static bool s_InSquad = false;
         public static Comps.NetworkPlayer s_ReviveTarget = null;
 
@@ -137,6 +138,7 @@ namespace SkyCoop
             s_LastTryInteractionObject = null;
             s_ForceUpdateClothing = false;
             s_Spectator = false;
+            s_SpectateID = -1;
             s_InSquad = false;
             SquadHUD.s_SquadMembers.Clear();
 
@@ -797,7 +799,7 @@ namespace SkyCoop
         public static void FullyCure()
         {
             GameManager.GetEmergencyStimComponent().ResetEmergencyStim();
-            GameManager.GetDiminishedState().Cure();
+            GameManager.GetDiminishedState().Cure(AfflictionOptions.None);
             GameManager.GetPlayerMovementComponent().AddSprintStamina(GameManager.GetPlayerMovementComponent().DefaultMaxStamina);
             PlayersManager.m_LastDamageType = DataStr.DamageType.Unknown;
             PlayersManager.m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
@@ -832,6 +834,7 @@ namespace SkyCoop
                 GameManager.GetPlayerInVehicle().m_VehicleDoorUsed = null;
                 GameManager.GetPlayerInVehicle().ExitVehicleAfterFadeOut();
                 ClientSend.SendVehicleSeat("");
+                ClientSend.SendFinishInteract();
             }
         }
 
@@ -972,6 +975,7 @@ namespace SkyCoop
                             HUDMessage.AddMessage($"YOU SPECTATING {Player.m_PlayerName}");
                             GameAudioManager.PlayGuiConfirm();
                             Player.m_CameraAttention.enabled = true;
+                            s_SpectateID = Player.m_PlayerID;
                             return true;
                         }
                     }
@@ -990,13 +994,12 @@ namespace SkyCoop
                             HUDMessage.AddMessage($"YOU SPECTATING {Player.m_PlayerName}");
                             GameAudioManager.PlayGuiConfirm();
                             Player.m_CameraAttention.enabled = true;
+                            s_SpectateID = Player.m_PlayerID;
                             return true;
                         }
                     }
                 }
             }
-            
-
             return false;
         }
 
@@ -1028,6 +1031,7 @@ namespace SkyCoop
                 {
                     HUDMessage.AddMessage($"NO PLAYERS TO SPECTATE", true, true);
                     GameAudioManager.PlayGUIError();
+                    s_SpectateID = -1;
                 }
             }
         }
@@ -1044,6 +1048,7 @@ namespace SkyCoop
                 {
                     HUDMessage.AddMessage($"NO PLAYERS TO SPECTATE", true, true);
                     GameAudioManager.PlayGUIError();
+                    s_SpectateID = -1;
                 }
             }
         }
