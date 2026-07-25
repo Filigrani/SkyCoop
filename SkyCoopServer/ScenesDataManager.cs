@@ -111,6 +111,47 @@ namespace SkyCoopServer
             return FilteredSpawnPoints;
         }
 
+        public float GetApproximatelyMapSize(List<V3Quat> SpawnPoints)
+        {
+            if(SpawnPoints.Count < 2)
+            {
+                return 0;
+            }
+
+            Vector3 firstPoint = SpawnPoints[0].m_Position;
+
+            Vector3 farthestFromFirst = SpawnPoints[0].m_Position;
+            float BestDistance = float.NegativeInfinity;
+
+            foreach (var spawn in SpawnPoints)
+            {
+                Vector3 currentPos = spawn.m_Position;
+
+                float Dist = Vector3.Distance(firstPoint, currentPos);
+                if (Dist > BestDistance)
+                {
+                    BestDistance = Dist;
+                    farthestFromFirst = currentPos;
+                }
+            }
+
+            Vector3 farthestFromSecond = farthestFromFirst;
+            float FinalDistance = 0f;
+
+            foreach (var spawn in SpawnPoints)
+            {
+                Vector3 currentPos = spawn.m_Position;
+                float Dist = Vector3.Distance(farthestFromFirst, currentPos);
+                if (Dist > FinalDistance)
+                {
+                    FinalDistance = Dist;
+                    farthestFromSecond = currentPos;
+                }
+            }
+
+            return FinalDistance;
+        }
+
         public V3Quat GetSpawnPoint(string SceneName, int PlayerID)
         {
             SceneData SceneData = GetSceneData(SceneName);
@@ -122,9 +163,12 @@ namespace SkyCoopServer
 
             List<V3Quat> SpawnPoints = SceneData.m_SpawnPoints;
 
-            if(SceneData.m_ActiveZone != null)
+            if (m_ServerInstance.m_Rules.m_AdvancedSpawnPoints)
             {
-                SpawnPoints = FilterSpawnPointsByZone(SpawnPoints, SceneData.m_ActiveZone);
+                if (SceneData.m_ActiveZone != null)
+                {
+                    SpawnPoints = FilterSpawnPointsByZone(SpawnPoints, SceneData.m_ActiveZone);
+                }
             }
 
             if (SpawnPoints.Count > 0)
@@ -137,87 +181,99 @@ namespace SkyCoopServer
                 {
                     List<V3Quat> FilteredSpawnPoints = new List<V3Quat>();
                     List<Vector3> PlayersPositions = new List<Vector3>();
-                    float MinimalSafeDistance = 350f;
 
-                    PlayersSquad Squad = m_ServerInstance.m_PlayersData.GetSquadPlayerIn(PlayerID);
+                    float AproximatedMapSize = GetApproximatelyMapSize(SpawnPoints);
+                    float MinimalSafeDistance = 15f;
 
-                    if (Squad != null)
+                    if (AproximatedMapSize > 0)
                     {
-                        //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Trying to find point close to teamate of squad {Squad.m_Name}");
-                        List<Vector3> TeammatePoints = new List<Vector3>();
-                        foreach (PlayerData PlayerData in PlayersDataManager.GetPlayersOnScene(SceneName, m_ServerInstance, false))
-                        {
-                            if (PlayerData != null && (PlayerData.m_PlayerID != PlayerID || m_ServerInstance.m_PlayersData.m_RecursiveDebug) && Squad.HasPlayer(PlayerData.m_PlayerID) && PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
-                            {
-                                //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Player {PlayerData.m_PlayerName} is potential teamate");
-                                TeammatePoints.Add(PlayerData.m_Position);
-                            }
-                        }
+                        float SafeSpace = AproximatedMapSize * 0.1f;
 
-                        if(TeammatePoints.Count > 0)
-                        {
-                            V3Quat BestPoint = null;
-                            float BestDistance = float.PositiveInfinity;
+                        MinimalSafeDistance = Math.Clamp(SafeSpace, 15, 350);
+                    }
 
-                            foreach (V3Quat Point in SceneData.m_SpawnPoints)
+                    if (m_ServerInstance.m_Rules.m_AdvancedSpawnPoints)
+                    {
+                        PlayersSquad Squad = m_ServerInstance.m_PlayersData.GetSquadPlayerIn(PlayerID);
+
+                        if (Squad != null)
+                        {
+                            //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Trying to find point close to teamate of squad {Squad.m_Name}");
+                            List<Vector3> TeammatePoints = new List<Vector3>();
+                            foreach (PlayerData PlayerData in PlayersDataManager.GetPlayersOnScene(SceneName, m_ServerInstance, false))
                             {
-                                float ClosestDistance = float.PositiveInfinity;
-                                foreach (Vector3 TeamatePoint in TeammatePoints)
+                                if (PlayerData != null && (PlayerData.m_PlayerID != PlayerID || m_ServerInstance.m_PlayersData.m_RecursiveDebug) && Squad.HasPlayer(PlayerData.m_PlayerID) && PlayerData.m_GamePlayState == PlayerData.GamePlayState.Alive)
                                 {
-                                    float Dist = Vector3.Distance(Point.m_Position, TeamatePoint);
-                                    if (Dist < ClosestDistance)
+                                    //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Player {PlayerData.m_PlayerName} is potential teamate");
+                                    TeammatePoints.Add(PlayerData.m_Position);
+                                }
+                            }
+
+                            if (TeammatePoints.Count > 0)
+                            {
+                                V3Quat BestPoint = null;
+                                float BestDistance = float.PositiveInfinity;
+
+                                foreach (V3Quat Point in SceneData.m_SpawnPoints)
+                                {
+                                    float ClosestDistance = float.PositiveInfinity;
+                                    foreach (Vector3 TeamatePoint in TeammatePoints)
                                     {
-                                        ClosestDistance = Dist;
+                                        float Dist = Vector3.Distance(Point.m_Position, TeamatePoint);
+                                        if (Dist < ClosestDistance)
+                                        {
+                                            ClosestDistance = Dist;
+                                        }
+                                    }
+
+                                    if (ClosestDistance < BestDistance)
+                                    {
+                                        BestDistance = ClosestDistance;
+                                        BestPoint = Point;
                                     }
                                 }
-
-                                if (ClosestDistance < BestDistance)
+                                if (BestPoint != null)
                                 {
-                                    BestDistance = ClosestDistance;
-                                    BestPoint = Point;
+                                    //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Found closest point to teammate");
+                                    return BestPoint;
                                 }
                             }
-                            if(BestPoint != null)
+                            else
                             {
-                                //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Found closest point to teammate");
-                                return BestPoint;
+                                //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] No alive squad teamates, going back to regular spawn search");
                             }
                         }
-                        else
+
+                        //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Searching point away from everyone else...");
+
+
+                        foreach (PlayerData PlayerData in PlayersDataManager.GetPlayersOnScene(SceneName, m_ServerInstance, false))
                         {
-                            //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] No alive squad teamates, going back to regular spawn search");
-                        }
-                    }
-
-                    //Logger.Log(ConsoleColor.Green, $"[GetSpawnPoint] Searching point away from everyone else...");
-
-
-                    foreach (PlayerData PlayerData in PlayersDataManager.GetPlayersOnScene(SceneName, m_ServerInstance, false))
-                    {
-                        if(PlayerData != null && (PlayerData.m_PlayerID != PlayerID || m_ServerInstance.m_PlayersData.m_RecursiveDebug))
-                        {
-                            if(Squad != null && Squad.HasPlayer(PlayerData.m_PlayerID)) // Друг, но всё ровно почему то не нашли его в преведущем шаге.
+                            if (PlayerData != null && (PlayerData.m_PlayerID != PlayerID || m_ServerInstance.m_PlayersData.m_RecursiveDebug))
                             {
-                                continue;
-                            }
-                            PlayersPositions.Add(PlayerData.m_Position);
-                        }
-                    }
-
-                    foreach (V3Quat Point in SceneData.m_SpawnPoints)
-                    {
-                        bool IsSafe = true;
-                        foreach (Vector3 OtherPlayerPosition in PlayersPositions)
-                        {
-                            if(Vector3.Distance(Point.m_Position, OtherPlayerPosition) < MinimalSafeDistance)
-                            {
-                                IsSafe = false;
-                                break;
+                                if (Squad != null && Squad.HasPlayer(PlayerData.m_PlayerID)) // Друг, но всё ровно почему то не нашли его в преведущем шаге.
+                                {
+                                    continue;
+                                }
+                                PlayersPositions.Add(PlayerData.m_Position);
                             }
                         }
-                        if (IsSafe)
+
+                        foreach (V3Quat Point in SceneData.m_SpawnPoints)
                         {
-                            FilteredSpawnPoints.Add(Point);
+                            bool IsSafe = true;
+                            foreach (Vector3 OtherPlayerPosition in PlayersPositions)
+                            {
+                                if (Vector3.Distance(Point.m_Position, OtherPlayerPosition) < MinimalSafeDistance)
+                                {
+                                    IsSafe = false;
+                                    break;
+                                }
+                            }
+                            if (IsSafe)
+                            {
+                                FilteredSpawnPoints.Add(Point);
+                            }
                         }
                     }
 
@@ -227,7 +283,7 @@ namespace SkyCoopServer
                     }
                     else
                     {
-                        return SceneData.m_SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, FilteredSpawnPoints.Count)];
+                        return SceneData.m_SpawnPoints[new Random(Guid.NewGuid().GetHashCode()).Next(0, SceneData.m_SpawnPoints.Count)];
                     }
                 }
             }

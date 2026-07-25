@@ -100,6 +100,11 @@ namespace SkyCoop
         }
         public static string GetPlayerName(int Index)
         {
+            if(Index < 0 || Index > s_Players.Count)
+            {
+                return "";
+            }
+            
             Comps.NetworkPlayer Player = s_Players[Index];
             if (Player)
             {

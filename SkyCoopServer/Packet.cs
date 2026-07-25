@@ -84,6 +84,7 @@ namespace SkyCoopServer
             ClientMoveProp,
             ClientBloodLosses,
             ClientReviveRequest,
+            ClientChatMessage,
         }
 
         public enum SquadResponce
@@ -98,6 +99,8 @@ namespace SkyCoopServer
             SquadNotExist,
             SquadIsFull,
             TheyAlreadyInSquad,
+            YouCantInviteThemATM,
+            YouInvitedTooMuch,
         }
 
         public const string c_Key = "key2";
@@ -240,6 +243,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_CanDropItems);
             Writer.Put(Rules.m_CanUseContainers);
             Writer.Put(Rules.m_CanUseMap);
+            Writer.Put(Rules.m_AdvancedSpawnPoints);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -257,6 +261,7 @@ namespace SkyCoopServer
             Rules.m_CanDropItems = Reader.GetBool();
             Rules.m_CanUseContainers = Reader.GetBool();
             Rules.m_CanUseMap = Reader.GetBool();
+            Rules.m_AdvancedSpawnPoints = Reader.GetBool();
 
             return Rules;
         }

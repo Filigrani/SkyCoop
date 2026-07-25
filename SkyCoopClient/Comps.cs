@@ -48,6 +48,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<ZoneMapIcon>();
             ClassInjector.RegisterTypeInIl2Cpp<SendGearIfNotDestoryed>();
             ClassInjector.RegisterTypeInIl2Cpp<PropMovemenetPredict>();
+            ClassInjector.RegisterTypeInIl2Cpp<ChatMessage>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -2323,6 +2324,46 @@ namespace SkyCoop
                 {
                     Vector3 direction = (m_Destination - transform.position).normalized;
                     transform.position += direction * maxMoveDistance;
+                }
+            }
+        }
+        public class ChatMessage : MonoBehaviour
+        {
+            public ChatMessage(IntPtr ptr) : base(ptr) { }
+            public CanvasGroup m_Group;
+            public float m_VisibleTimer = 0;
+
+            void Update()
+            {
+                if (m_Group)
+                {
+                    if (CanvasUI.m_ChatIsOpen)
+                    {
+                        m_Group.alpha = 1;
+                    }
+                    else
+                    {
+                        if (m_VisibleTimer == 0)
+                        {
+                            m_Group.alpha = Mathf.Lerp(m_Group.alpha, 0, Time.deltaTime * 8);
+                        }
+                        else
+                        {
+                            m_Group.alpha = 1;
+                        }
+                    }
+                }
+                if(m_VisibleTimer > 0)
+                {
+                    if (!CanvasUI.m_ChatIsOpen)
+                    {
+                        m_VisibleTimer -= Time.deltaTime;
+
+                        if (m_VisibleTimer <= 0)
+                        {
+                            m_VisibleTimer = 0;
+                        }
+                    }
                 }
             }
         }

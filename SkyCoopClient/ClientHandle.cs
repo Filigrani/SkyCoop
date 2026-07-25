@@ -69,18 +69,18 @@ namespace SkyCoop
                 Task.Run(() => { ModMain.Client.ConnectToServerVoice(CFG.m_VoicePort); });
             }
 
-            //GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
-            //if (SoundPlayerPrefab)
-            //{
-            //    GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
-            //    SoundPlayer.GetComponent<AudioSource>().Play();
-            //    SceneManager.DontDestroyOnLoad(SoundPlayer);
-            //    //UnityEngine.Object.Destroy(SoundPlayer, 15);
-            //}
-            //else
-            //{
-            //    Logger.Log(ConsoleColor.Red, "Can't load cringe audio. JoinServer prefab not exist!");
-            //}
+            GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
+            if (SoundPlayerPrefab)
+            {
+                GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
+                SoundPlayer.GetComponent<AudioSource>().Play();
+                SceneManager.DontDestroyOnLoad(SoundPlayer);
+                UnityEngine.Object.Destroy(SoundPlayer, 15);
+            }
+            else
+            {
+                Logger.Log(ConsoleColor.Red, "Can't load cringe audio. JoinServer prefab not exist!");
+            }
         }
 
         public static void ServerConfigUpdated(NetDataReader Reader)
@@ -807,6 +807,14 @@ namespace SkyCoop
                     HUDMessage.AddMessage("Player already in squad!", true, true);
                     GameAudioManager.PlayGUIError();
                     break;
+                case Packet.SquadResponce.YouCantInviteThemATM:
+                    HUDMessage.AddMessage("You can't invite this player right now!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
+                case Packet.SquadResponce.YouInvitedTooMuch:
+                    HUDMessage.AddMessage("You sent too much invites, please wait!", true, true);
+                    GameAudioManager.PlayGUIError();
+                    break;
                 default:
                     break;
             }
@@ -844,6 +852,14 @@ namespace SkyCoop
             {
                 PlayersManager.RevivedViaEmergencyStim(ReviverID);
             }
+        }
+
+        public static void ClientChatMessage(NetDataReader Reader)
+        {
+            int From = Reader.GetInt();
+            string Message = Reader.GetString();
+
+            CanvasUI.HandleChatMessage(Message, From);
         }
     }
 }

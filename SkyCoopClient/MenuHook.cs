@@ -433,6 +433,7 @@ namespace SkyCoop
 
         public static void DoInviteSquadMessage(string SquadName)
         {
+            RemovePleaseWait();
             s_PendingSquadInvite = SquadName;
             InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, $"Do you want to join squad {SquadName}?", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Join", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(AcceptSquadInvite), null);
         }
@@ -556,6 +557,42 @@ namespace SkyCoop
                 if (!string.IsNullOrEmpty(s_PendingSquadInvite))
                 {
                     RefuseSquadInvite();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Il2Cpp.InputManager), "ProcessInput")]
+        private static class InputManager_ProcessInput
+        {
+            private static bool Prefix()
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (CanvasUI.m_ChatIsOpen)
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Il2Cpp.InputManager), "GetPlayerMovement")]
+        private static class InputManager_GetPlayerMovement
+        {
+            private static void Postfix(ref Vector2 __result)
+            {
+                if (CanvasUI.m_ChatIsOpen)
+                {
+                    __result = Vector2.zero;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Il2Cpp.InputManager), "GetCameraMovementMouse")]
+        private static class InputManager_GetCameraMovementMouset
+        {
+            private static void Postfix(ref Vector2 __result)
+            {
+                if (CanvasUI.m_ChatIsOpen)
+                {
+                    __result = Vector2.zero;
                 }
             }
         }

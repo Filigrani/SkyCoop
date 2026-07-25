@@ -6,12 +6,14 @@ using SkyCoop;
 using SkyCoopServer;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
-using System.Diagnostics;
+using UnityEngine.UIElements;
 
 namespace SkyCoopClient
 {
@@ -19,10 +21,15 @@ namespace SkyCoopClient
     {
         public static GameObject m_UIPanel;
         public static Transform m_KillFeedTransform;
+        public static Transform m_ChatContentTransform;
+        public static Scrollbar m_ChatScrollBar;
+        public static ScrollRect m_ChatScrollView;
 
         public static GameObject s_KillfeedRegularClone;
         public static GameObject s_KillfeedKillOrAssistClone;
         public static GameObject s_KillfeedDeadClone;
+        public static GameObject s_ChatMessageClone;
+        public static TMP_InputField s_ChatInputField;
 
         public static Animator s_ZoneDamageOverlay;
         public static GameObject s_DarkwalkerHUDClone;
@@ -31,6 +38,10 @@ namespace SkyCoopClient
 
         private static Transform s_Parent;
 
+        public static bool m_ChatIsOpen = false;
+
+
+        public static bool s_TextChatKeyHeldPreviousFrame = false;
 
         [HarmonyLib.HarmonyPatch(typeof(uConsole), "Start")]
         private static class uConsole_Start
@@ -76,6 +87,17 @@ namespace SkyCoopClient
             {
                 SkyCoop.Logger.Log(ConsoleColor.Red, "Can't load KillFeedElementDead!");
             }
+            GameObject ChatMessage = AssetManager.GetAssetFromBundle<GameObject>("ChatMessagePrefab");
+            if (ChatMessage)
+            {
+                s_ChatMessageClone = GameObject.Instantiate(ChatMessage);
+                SceneManager.DontDestroyOnLoad(s_ChatMessageClone);
+                SkyCoop.Logger.Log(ConsoleColor.Cyan, "ChatMessagePrefab loaded!");
+            }
+            else
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, "Can't load ChatMessagePrefab!");
+            }
         }
 
         public static void DoZoneDamageOverlay()
@@ -88,10 +110,28 @@ namespace SkyCoopClient
 
         public static void Update()
         {
-            bool DisplayIcon = Settings.m_Options.m_DisplayMicrophoneIcon && ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady && ((Settings.m_Options.m_PushToTalk && ClientVoice.PushToTalkisHeldRaw()) || (!Settings.m_Options.m_PushToTalk && ClientVoice.IsSpeaking()));
-            if (s_SpeakingIndicator)
+            if (ModMain.IsGameplayScene())
             {
-                s_SpeakingIndicator.alpha = Mathf.Lerp(s_SpeakingIndicator.alpha, DisplayIcon ? 1 : 0, Time.deltaTime * 8);
+                bool DisplayIcon = Settings.m_Options.m_DisplayMicrophoneIcon && ModMain.ClientVoice != null && ModMain.ClientVoice.m_IsReady && ((Settings.m_Options.m_PushToTalk && ClientVoice.PushToTalkisHeldRaw()) || (!Settings.m_Options.m_PushToTalk && ClientVoice.IsSpeaking()));
+                if (s_SpeakingIndicator)
+                {
+                    s_SpeakingIndicator.alpha = Mathf.Lerp(s_SpeakingIndicator.alpha, DisplayIcon ? 1 : 0, Time.deltaTime * 8);
+                }
+
+                if(GameManager.s_IsGameplaySuspended)
+
+                if (uConsole.m_Instance && !uConsole.m_On)
+                {
+                    bool PressedThisFrame = Input.GetKey(KeyCode.Return);
+                    if (s_TextChatKeyHeldPreviousFrame != PressedThisFrame)
+                    {
+                        if (PressedThisFrame)
+                        {
+                            ToggleChat();
+                        }
+                    }
+                    s_TextChatKeyHeldPreviousFrame = PressedThisFrame;
+                }
             }
         }
 
@@ -111,6 +151,13 @@ namespace SkyCoopClient
 
                     s_SpeakingIndicator = m_UIPanel.transform.GetChild(2).GetComponent<CanvasGroup>();
                     s_SpeakingIndicator.alpha = 0;
+
+                    m_ChatContentTransform = m_UIPanel.transform.GetChild(3).GetChild(0).GetChild(0);
+                    s_ChatInputField = m_UIPanel.transform.GetChild(3).GetChild(2).GetComponent<TMP_InputField>();
+                    s_ChatInputField.gameObject.SetActive(false);
+
+                    m_ChatScrollView = m_UIPanel.transform.GetChild(3).GetComponent<ScrollRect>();
+                    m_ChatScrollBar = m_ChatScrollView.verticalScrollbar;
 
                     SkyCoop.Logger.Log(ConsoleColor.Cyan, "Canvas UI created!");
                 }
@@ -267,6 +314,107 @@ namespace SkyCoopClient
             else
             {
                 SkyCoop.Logger.Log(ConsoleColor.Red, "m_KillFeedTransform is null!");
+            }
+        }
+
+        public static void ToggleChat()
+        {
+            if (m_ChatIsOpen)
+            {
+                if (s_ChatInputField)
+                {
+                    if (!string.IsNullOrWhiteSpace(s_ChatInputField.text))
+                    {
+                        ClientSend.SendChatMessage(s_ChatInputField.text);
+                    }
+                    s_ChatInputField.text = "";
+                }
+            }
+            m_ChatIsOpen = !m_ChatIsOpen;
+
+            if (m_ChatScrollView)
+            {
+                if (m_ChatIsOpen)
+                {
+                    m_ChatScrollView.verticalScrollbar = m_ChatScrollBar;
+                }
+                else
+                {
+                    m_ChatScrollView.verticalScrollbar = null;
+                }
+
+                if (m_ChatScrollBar)
+                {
+                    m_ChatScrollBar.gameObject.SetActive(m_ChatIsOpen);
+                }
+            }
+
+            if (s_ChatInputField)
+            {
+                s_ChatInputField.gameObject.SetActive(m_ChatIsOpen);
+
+                if (m_ChatIsOpen)
+                {
+                    EventSystem.current.SetSelectedGameObject(s_ChatInputField.gameObject);
+                }
+                else
+                {
+                    EventSystem.current.SetSelectedGameObject(null);
+                }
+            }
+        }
+
+        public static void HandleChatMessage(string Text, int From)
+        {
+            string Prefix = "";
+
+            if(From != -1)
+            {
+                string Name = GetPlayerName(From);
+
+                if (!string.IsNullOrEmpty(Name))
+                {
+                    Prefix = $"{Name}: ";
+                }
+            }
+
+            AddChatMessage($"{Prefix}{Text}");
+        }
+
+        public static void AddChatMessage(string Text)
+        {
+            if (m_ChatContentTransform)
+            {
+                GameObject Element = GameObject.Instantiate(s_ChatMessageClone, m_ChatContentTransform);
+                if (Element)
+                {
+                    Element.GetComponent<TextMeshProUGUI>().SetText(Text);
+                    Element.GetComponent<ContentSizeFitter>().enabled = false;
+                    Element.GetComponent<ContentSizeFitter>().enabled = true;
+
+                    Comps.ChatMessage Comp = Element.AddComponent<Comps.ChatMessage>();
+                    if (Comp)
+                    {
+                        Comp.m_VisibleTimer = 10;
+                        Comp.m_Group = Comp.gameObject.GetComponent<CanvasGroup>();
+                    }
+
+                    Canvas.ForceUpdateCanvases();
+                }
+                else
+                {
+                    SkyCoop.Logger.Log(ConsoleColor.Red, "Instantiated chat message, prefab is null!");
+                }
+
+                if(m_ChatContentTransform.childCount > 32)
+                {
+                    UnityEngine.Object.Destroy(m_ChatContentTransform.GetChild(0).gameObject);
+                }
+
+                if (m_ChatScrollView)
+                {
+                    m_ChatScrollView.SetNormalizedPosition(0, 1);
+                }
             }
         }
     }

@@ -86,27 +86,33 @@ namespace SkyCoopServer
         public static void ClientDamageOtherClient(NetPeer Client, NetDataReader Reader, Server ServerInstance)
         {
             float Damage = Reader.GetFloat();
-            int Victim = Reader.GetInt();
+            int VictimID = Reader.GetInt();
             int BodyPart = Reader.GetInt();
             string WeaponName = Reader.GetString();
             DataStr.DamageType DamageType = (DataStr.DamageType)Reader.GetInt(); // Just for server, won't send it back to clients.
-            int Killer = Reader.GetInt();
-            if(Killer == -1)
+            int KillerID = Reader.GetInt();
+            if(KillerID == -1)
             {
-                Killer = Client.Id;
+                KillerID = Client.Id;
             }
 
-            if (!ServerInstance.m_Rules.m_PVP && Killer != Victim)
+            if (!ServerInstance.m_Rules.m_PVP && KillerID != VictimID)
             {
                 return;
             }
 
-            if (ServerInstance.m_PlayersData.m_Players[Victim].m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
-            {
-                ServerSend.SendDamageToPlayer(ServerInstance.GetClient(Victim), Damage, Killer, BodyPart, WeaponName);
-                ServerSend.SendGettingDamage(Victim, ServerInstance);
+            PlayerData Victim = ServerInstance.m_PlayersData.GetPlayer(VictimID);
+            PlayerData Killer = ServerInstance.m_PlayersData.GetPlayer(KillerID);
 
-                ServerInstance.m_PlayersData.m_Players[Victim].DealDamage(Killer, Damage, DamageType);
+            if(Victim != null && Victim.m_GamePlayState == PlayerData.GamePlayState.Alive)
+            {
+                if(Victim.m_LastRespawn.AddSeconds(3) > DateTime.Now && Killer.m_LastRespawn.AddSeconds(3) > DateTime.Now)
+                {
+                    ServerSend.SendDamageToPlayer(ServerInstance.GetClient(VictimID), Damage, KillerID, BodyPart, WeaponName);
+                    ServerSend.SendGettingDamage(VictimID, ServerInstance); // Анимация
+
+                    Victim.DealDamage(KillerID, Damage, DamageType);
+                }
             }
         }
 
@@ -410,10 +416,27 @@ namespace SkyCoopServer
             {
                 ServerSend.ClientGameModeTimer(ServerInstance.m_Rules.m_Time, ServerInstance);
             }
+
             DataStr.V3Quat Point = ServerInstance.m_ScenesData.GetSpawnPoint(SceneName, Client.Id);
             ServerInstance.m_PlayersData.PlayerMoved(Client.Id, Point.m_Position);
             ServerInstance.m_PlayersData.PlayerRotated(Client.Id, Point.m_Rotation);
-            ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
+
+            if (ServerInstance.m_Rules.m_HUDMode == "Shrink")
+            {
+                if(SceneData != null && SceneData.m_ActiveZone != null)
+                {
+                    if(SceneData.m_ActiveZone.m_CurrentStageIndex >= 1)
+                    {
+                        ServerInstance.m_PlayersData.SetGameplayState(Client.Id, PlayerData.GamePlayState.Spectator);
+                        ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
+                        ServerSend.SendPlayerBecomeSpectator(Client);
+                    }
+                }
+            }
+            else
+            {
+                ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
+            }
         }
 
         public static void ClientOpenableInteraction(NetPeer Client, NetDataReader Reader, Server ServerInstance)
@@ -965,13 +988,42 @@ namespace SkyCoopServer
                 }
                 else
                 {
-                    if(Squad.m_Players.Count < PlayersDataManager.c_SquadLimit)
+                    if (ServerInstance.m_PlayersData.PlayerIsInvitedBySomeone(OtherClient_ID))
                     {
-                        ServerInstance.m_PlayersData.InvitePlayerToSquad(Squad.m_Name, OtherClient_ID);
+                        ServerSend.SendSquadResponce(Client, Packet.SquadResponce.YouCantInviteThemATM);
                     }
                     else
                     {
-                        ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadIsFull);
+                        PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+                        if (Player != null)
+                        {
+                            if (Player.m_SquadInvitesSent > 0)
+                            {
+                                if(Player.m_LastInviteTime.AddSeconds(5) < DateTime.Now)
+                                {
+                                    Player.m_SquadInvitesSent = 0;
+                                }
+                            }
+                            Player.m_LastInviteTime = DateTime.Now;
+                            Player.m_SquadInvitesSent++;
+
+                            if(Player.m_SquadInvitesSent <= 3)
+                            {
+                                if (Squad.m_Players.Count < PlayersDataManager.c_SquadLimit)
+                                {
+                                    ServerInstance.m_PlayersData.InvitePlayerToSquad(Squad.m_Name, OtherClient_ID);
+                                }
+                                else
+                                {
+                                    ServerSend.SendSquadResponce(Client, Packet.SquadResponce.SquadIsFull);
+                                }
+                            }
+                            else
+                            {
+                                ServerSend.SendSquadResponce(Client, Packet.SquadResponce.YouInvitedTooMuch);
+                            }
+                        }
                     }
                 }
             }
@@ -1070,6 +1122,13 @@ namespace SkyCoopServer
                     }
                 }
             }
+        }
+
+        public static void ClientChatMessage(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            string ChatMessage = Reader.GetString();
+
+            ServerSend.SendChatMessage(ServerInstance, ChatMessage, Client.Id);
         }
     }
 }

@@ -790,6 +790,18 @@ namespace SkyCoopServer
             }
         }
 
+        public bool PlayerIsInvitedBySomeone(int PlayerID)
+        {
+            foreach (PlayersSquad Squad in m_Squads.Values.ToArray())
+            {
+                if (Squad.PlayerIsInvited(PlayerID))
+                {
+                    return true;
+                }
+            }
+            return false;
+        }
+
         public void InvitePlayerToSquad(string SquadName, int PlayerID)
         {
             if (m_Squads.ContainsKey(SquadName))

@@ -978,5 +978,26 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendChatMessage(NetPeer Client, string Message, int From = -1)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientChatMessage);
+
+            writer.Put(From);
+            writer.Put(Message);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendChatMessage(Server ServerInstance, string Message, int From = -1)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                SendChatMessage(Peer, Message, From);
+            }
+        }
     }
 }

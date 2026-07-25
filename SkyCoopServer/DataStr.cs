@@ -17,7 +17,7 @@ namespace SkyCoopServer
     {
         public class ServerConfig
         {
-            public int m_MaxPlayers = 80;
+            public int m_MaxPlayers = 32;
             public string m_StartingRegion = "MarshRegion";
             public int m_Seed = 777777;
             //public int m_VoicePort = 37850;
@@ -69,6 +69,7 @@ namespace SkyCoopServer
             public bool m_CanUseContainers = true;
             public bool m_CanUseMap = false;
             public AirDropJson m_AirDrop = null;
+            public bool m_AdvancedSpawnPoints = false;
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -116,6 +117,7 @@ namespace SkyCoopServer
             public bool CanUseContainers { get; set; }
             public bool CanUseMap { get; set; }
             public AirDropJson AirDrop { get; set; }
+            public bool AdvancedSpawnPoints { get; set; }
 
             public GameRules Load()
             {
@@ -179,6 +181,7 @@ namespace SkyCoopServer
                 Inst.m_CanDropItems = CanDropItems;
                 Inst.m_CanUseContainers = CanUseContainers;
                 Inst.m_CanUseMap = CanUseMap;
+                Inst.m_AdvancedSpawnPoints = AdvancedSpawnPoints;
 
 
                 return Inst;
@@ -254,6 +257,9 @@ namespace SkyCoopServer
             public string m_CarSeat = "";
             public string m_InteractionGUID = "";
 
+            public int m_SquadInvitesSent = 0;
+            public DateTime m_LastInviteTime;
+            public DateTime m_LastRespawn;
 
             public GamePlayState m_GamePlayState = GamePlayState.Unassigned;
 
@@ -505,6 +511,7 @@ namespace SkyCoopServer
                             ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                         }
                     }
+                    m_LastRespawn = DateTime.Now;
                 }
 
                 m_Damagers.Clear();

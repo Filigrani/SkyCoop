@@ -1,5 +1,4 @@
-﻿using Il2CppHoloville.HOTween.Core.Easing;
-using LiteNetLib.Utils;
+﻿using LiteNetLib.Utils;
 using SkyCoopServer;
 using UnityEngine;
 using static SkyCoopServer.Packet;
@@ -497,6 +496,14 @@ namespace SkyCoop
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientReviveRequest);
             writer.Put(ReviveTarget);
+            SendToHost(writer);
+        }
+
+        public static void SendChatMessage(string Message)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientChatMessage);
+            writer.Put(Message);
             SendToHost(writer);
         }
     }

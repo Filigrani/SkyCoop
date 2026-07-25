@@ -91,6 +91,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientRefuseJoinToSquad, ServerHandle.ClientRefuseJoinToSquad },
             { (int)Packet.Type.ClientBloodLosses, ServerHandle.ClientBloodLosses },
             { (int)Packet.Type.ClientReviveRequest, ServerHandle.ClientReviveRequest },
+            { (int)Packet.Type.ClientChatMessage, ServerHandle.ClientChatMessage },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
