@@ -69,18 +69,18 @@ namespace SkyCoop
                 Task.Run(() => { ModMain.Client.ConnectToServerVoice(CFG.m_VoicePort); });
             }
 
-            GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
-            if (SoundPlayerPrefab)
-            {
-                GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
-                SoundPlayer.GetComponent<AudioSource>().Play();
-                SceneManager.DontDestroyOnLoad(SoundPlayer);
-                UnityEngine.Object.Destroy(SoundPlayer, 15);
-            }
-            else
-            {
-                Logger.Log(ConsoleColor.Red, "Can't load cringe audio. JoinServer prefab not exist!");
-            }
+            //GameObject SoundPlayerPrefab = AssetManager.GetAssetFromBundle<GameObject>("JoinServer");
+            //if (SoundPlayerPrefab)
+            //{
+            //    GameObject SoundPlayer = GameObject.Instantiate(SoundPlayerPrefab);
+            //    SoundPlayer.GetComponent<AudioSource>().Play();
+            //    SceneManager.DontDestroyOnLoad(SoundPlayer);
+            //    UnityEngine.Object.Destroy(SoundPlayer, 15);
+            //}
+            //else
+            //{
+            //    Logger.Log(ConsoleColor.Red, "Can't load cringe audio. JoinServer prefab not exist!");
+            //}
         }
 
         public static void ServerConfigUpdated(NetDataReader Reader)
@@ -860,6 +860,20 @@ namespace SkyCoop
             string Message = Reader.GetString();
 
             CanvasUI.HandleChatMessage(Message, From);
+        }
+
+        public static void ServerUpdateInGameTime(NetDataReader Reader)
+        {
+            float ElapsedInGameHours = Reader.GetFloat();
+            float NormalizedTOD = Reader.GetFloat();
+
+            UniStormWeatherSystem Uni = GameManager.GetUniStorm();
+
+            if (Uni)
+            {
+                Uni.m_ElapsedHours = ElapsedInGameHours;
+                Uni.SetNormalizedTime(NormalizedTOD);
+            }
         }
     }
 }

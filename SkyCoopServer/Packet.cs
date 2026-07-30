@@ -85,6 +85,7 @@ namespace SkyCoopServer
             ClientBloodLosses,
             ClientReviveRequest,
             ClientChatMessage,
+            ServerUpdateInGameTime,
         }
 
         public enum SquadResponce
@@ -472,14 +473,21 @@ namespace SkyCoopServer
 
         public static void Put(this NetDataWriter Writer, DateTime Data)
         {
-            Writer.Put(Data.Ticks);
+            if (Data.Kind != DateTimeKind.Utc)
+            {
+                Writer.Put(Data.ToUniversalTime().Ticks);
+            }
+            else
+            {
+                Writer.Put(Data.Ticks);
+            }
         }
 
         public static DateTime GetTime(this NetDataReader Reader)
         {
             long Ticks = Reader.GetLong();
 
-            return new DateTime(Ticks);
+            return new DateTime(Ticks, DateTimeKind.Utc);
         }
 
         public static void Put(this NetDataWriter Writer, DataStr.DangerCircleShrinkStateData Data)

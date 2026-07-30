@@ -104,15 +104,22 @@ namespace SkyCoopServer
             PlayerData Victim = ServerInstance.m_PlayersData.GetPlayer(VictimID);
             PlayerData Killer = ServerInstance.m_PlayersData.GetPlayer(KillerID);
 
-            if(Victim != null && Victim.m_GamePlayState == PlayerData.GamePlayState.Alive)
+            if(Victim != null && Victim.m_GamePlayState == PlayerData.GamePlayState.Alive && Killer != null && Killer.m_GamePlayState == PlayerData.GamePlayState.Alive)
             {
-                if(Victim.m_LastRespawn.AddSeconds(3) > DateTime.Now && Killer.m_LastRespawn.AddSeconds(3) > DateTime.Now)
+                if(Victim.m_LastRespawn.AddSeconds(3) > DateTime.UtcNow)
                 {
-                    ServerSend.SendDamageToPlayer(ServerInstance.GetClient(VictimID), Damage, KillerID, BodyPart, WeaponName);
-                    ServerSend.SendGettingDamage(VictimID, ServerInstance); // Анимация
-
-                    Victim.DealDamage(KillerID, Damage, DamageType);
+                    return;
                 }
+                if(Killer.m_LastRespawn.AddSeconds(3) > DateTime.UtcNow)
+                {
+                    return;
+                }
+
+
+                ServerSend.SendDamageToPlayer(ServerInstance.GetClient(VictimID), Damage, KillerID, BodyPart, WeaponName);
+                ServerSend.SendGettingDamage(VictimID, ServerInstance); // Анимация
+
+                Victim.DealDamage(KillerID, Damage, DamageType);
             }
         }
 
@@ -430,6 +437,10 @@ namespace SkyCoopServer
                         ServerInstance.m_PlayersData.SetGameplayState(Client.Id, PlayerData.GamePlayState.Spectator);
                         ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
                         ServerSend.SendPlayerBecomeSpectator(Client);
+                    }
+                    else
+                    {
+                        ServerSend.SendPlayerRespawn(Client, Point.m_Position, Point.m_Rotation, false);
                     }
                 }
             }
@@ -853,6 +864,10 @@ namespace SkyCoopServer
                         }
                     }
                     break;
+                case "skip":
+                case "skiptime":
+                    ServerInstance.m_ScenesData.SkipHour();
+                    break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
                     break;
@@ -1000,12 +1015,12 @@ namespace SkyCoopServer
                         {
                             if (Player.m_SquadInvitesSent > 0)
                             {
-                                if(Player.m_LastInviteTime.AddSeconds(5) < DateTime.Now)
+                                if(Player.m_LastInviteTime.AddSeconds(5) < DateTime.UtcNow)
                                 {
                                     Player.m_SquadInvitesSent = 0;
                                 }
                             }
-                            Player.m_LastInviteTime = DateTime.Now;
+                            Player.m_LastInviteTime = DateTime.UtcNow;
                             Player.m_SquadInvitesSent++;
 
                             if(Player.m_SquadInvitesSent <= 3)

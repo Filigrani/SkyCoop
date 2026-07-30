@@ -89,6 +89,7 @@ namespace SkyCoop
             { (int)Packet.Type.ClientBloodLosses, ClientHandle.ClientBloodLosses },
             { (int)Packet.Type.ClientReviveRequest, ClientHandle.ClientReviveRequest },
             { (int)Packet.Type.ClientChatMessage, ClientHandle.ClientChatMessage },
+            { (int)Packet.Type.ServerUpdateInGameTime, ClientHandle.ServerUpdateInGameTime },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

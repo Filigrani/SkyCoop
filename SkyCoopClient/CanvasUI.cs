@@ -118,9 +118,7 @@ namespace SkyCoopClient
                     s_SpeakingIndicator.alpha = Mathf.Lerp(s_SpeakingIndicator.alpha, DisplayIcon ? 1 : 0, Time.deltaTime * 8);
                 }
 
-                if(GameManager.s_IsGameplaySuspended)
-
-                if (uConsole.m_Instance && !uConsole.m_On)
+                if (!uConsole.m_On)
                 {
                     bool PressedThisFrame = Input.GetKey(KeyCode.Return);
                     if (s_TextChatKeyHeldPreviousFrame != PressedThisFrame)

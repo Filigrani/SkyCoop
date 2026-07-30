@@ -115,7 +115,7 @@ namespace SkyCoopServer
             m_PlayersData = new PlayersDataManager(this);
             m_ScenesData = new ScenesDataManager(this);
 
-            s_NextSecondCall = DateTime.Now.AddSeconds(1);
+            s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
             LootTableManager.Load();
             m_AvailableGameModes = FilesManager.GetGameModesList();
         }
@@ -196,20 +196,20 @@ namespace SkyCoopServer
 
         public void Update()
         {
-            s_DeltaTime = (float)(DateTime.Now - s_PreviousTickTime).TotalSeconds;
+            s_DeltaTime = (float)(DateTime.UtcNow - s_PreviousTickTime).TotalSeconds;
 
             if (m_Instance != null && m_IsReady)
             {
                 m_Instance.PollEvents();
             }
-            if(DateTime.Now >= s_NextSecondCall)
+            if(DateTime.UtcNow >= s_NextSecondCall)
             {
-                s_NextSecondCall = DateTime.Now.AddSeconds(1);
+                s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
                 EverySecond();
                 m_ScenesData.UpdateEverySecond();
             }
 
-            s_PreviousTickTime = DateTime.Now;
+            s_PreviousTickTime = DateTime.UtcNow;
         }
 
         public void DisconnectPlayer(string PlayerName, string Reason = "")

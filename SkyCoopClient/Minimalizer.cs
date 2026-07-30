@@ -582,14 +582,13 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (GameManager.m_TimeOfDay)
-                {
-                    //GameManager.m_TimeOfDay.enabled = false;
-                    GameManager.m_TimeOfDay.m_StartTimeHour = 12;
-                    GameManager.m_TimeOfDay.m_StartTimeMinutes = 0;
-                    //GameManager.m_TimeOfDay.SetTODLocked(true);
-                    GameManager.m_TimeOfDay.SetNormalizedTime(0.5f);
-                }
+                // Вычеркнул, что бы тестить синхрон времени
+                //if (GameManager.m_TimeOfDay)
+                //{
+                //    GameManager.m_TimeOfDay.m_StartTimeHour = 12;
+                //    GameManager.m_TimeOfDay.m_StartTimeMinutes = 0;
+                //    GameManager.m_TimeOfDay.SetNormalizedTime(0.5f);
+                //}
                 if (GameManager.m_Weather)
                 {
                     GameManager.m_Weather.enabled = false;

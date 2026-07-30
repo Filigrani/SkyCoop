@@ -511,7 +511,7 @@ namespace SkyCoopServer
                             ServerSend.SendHUDSideBarUpdate(Peer, 1, ServerInstance.m_PlayersData.GetShrinkModeString(), ServerInstance);
                         }
                     }
-                    m_LastRespawn = DateTime.Now;
+                    m_LastRespawn = DateTime.UtcNow;
                 }
 
                 m_Damagers.Clear();
@@ -1031,7 +1031,7 @@ namespace SkyCoopServer
             public float GetProgress()
             {
                 float totalDuration = (float)(m_EndShrinkingTime - m_StartShrinkingTime).TotalSeconds;
-                float elapsed = (float)(DateTime.Now - m_StartShrinkingTime).TotalSeconds;
+                float elapsed = (float)(DateTime.UtcNow - m_StartShrinkingTime).TotalSeconds;
 
 
                 float progress = elapsed / totalDuration;
@@ -1104,7 +1104,7 @@ namespace SkyCoopServer
                 switch (m_State)
                 {
                     case State.Waiting:
-                        return (int)(s_StateTimer - DateTime.Now).TotalSeconds;
+                        return (int)(s_StateTimer - DateTime.UtcNow).TotalSeconds;
                     case State.Shrinking:
                         if(m_CurrentStageIndex == m_Config.Stages.Count - 1)
                         {
@@ -1112,7 +1112,7 @@ namespace SkyCoopServer
                         }
                         else
                         {
-                            return (int)(s_StateTimer - DateTime.Now).TotalSeconds;
+                            return (int)(s_StateTimer - DateTime.UtcNow).TotalSeconds;
                         }
                     case State.Finished:
                         return 0;
@@ -1146,11 +1146,11 @@ namespace SkyCoopServer
                         m_Data.m_NewCenter = m_CenterAfterWait;
                         m_Data.m_NewRadius = m_RadiusAfterWait;
 
-                        m_Data.m_StartShrinkingTime = DateTime.Now;
+                        m_Data.m_StartShrinkingTime = DateTime.UtcNow;
                         SetNextStage();
-                        m_Data.m_EndShrinkingTime = DateTime.Now.AddSeconds(m_CurrentStage.ShrinkTime);
+                        m_Data.m_EndShrinkingTime = DateTime.UtcNow.AddSeconds(m_CurrentStage.ShrinkTime);
 
-                        s_StateTimer = DateTime.Now.AddSeconds(m_CurrentStage.ShrinkTime);
+                        s_StateTimer = DateTime.UtcNow.AddSeconds(m_CurrentStage.ShrinkTime);
                         s_StateTimerActive = true;
                         break;
                     case State.Shrinking:
@@ -1165,7 +1165,7 @@ namespace SkyCoopServer
                             m_RadiusAfterWait = m_Config.Stages[m_CurrentStageIndex + 1].Radius;
                             m_CenterAfterWait = GetNewRandomCenter(m_Data.m_NewCenter, m_Data.m_NewRadius, m_RadiusAfterWait);
 
-                            s_StateTimer = DateTime.Now.AddSeconds(m_CurrentStage.StageTime);
+                            s_StateTimer = DateTime.UtcNow.AddSeconds(m_CurrentStage.StageTime);
                             s_StateTimerActive = true;
                         }
                         break;
@@ -1183,8 +1183,8 @@ namespace SkyCoopServer
                 m_Data.m_NewRadius = m_CurrentStage.Radius;
 
 
-                m_Data.m_StartShrinkingTime = DateTime.Now;
-                m_Data.m_EndShrinkingTime = DateTime.Now;
+                m_Data.m_StartShrinkingTime = DateTime.UtcNow;
+                m_Data.m_EndShrinkingTime = DateTime.UtcNow;
 
                 s_StateTimerActive = false;
 
@@ -1195,7 +1195,7 @@ namespace SkyCoopServer
                 else
                 {
                     m_State = State.Waiting;
-                    s_StateTimer = DateTime.Now.AddSeconds(m_CurrentStage.StageTime);
+                    s_StateTimer = DateTime.UtcNow.AddSeconds(m_CurrentStage.StageTime);
                     m_RadiusAfterWait = m_Config.Stages[m_CurrentStageIndex + 1].Radius;
                     m_CenterAfterWait = GetNewRandomCenter(m_Data.m_NewCenter, m_Data.m_NewRadius, m_RadiusAfterWait);
 
@@ -1238,11 +1238,11 @@ namespace SkyCoopServer
                 {
                     if (!withtime)
                     {
-                        s_StateTimer = DateTime.Now;
+                        s_StateTimer = DateTime.UtcNow;
                     }
                     else
                     {
-                        s_StateTimer = DateTime.Now.AddSeconds(3);
+                        s_StateTimer = DateTime.UtcNow.AddSeconds(3);
                         m_Data.m_EndShrinkingTime = s_StateTimer;
                     }
                 }
@@ -1316,7 +1316,7 @@ namespace SkyCoopServer
 
                 if (s_StateTimerActive)
                 {
-                    if (s_StateTimer < DateTime.Now)
+                    if (s_StateTimer < DateTime.UtcNow)
                     {
                         NextState();
                         ServerSend.UpdateTimerPrefix(GetTimerPrefix(), s_ServerInstance);

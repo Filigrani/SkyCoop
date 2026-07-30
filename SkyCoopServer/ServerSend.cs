@@ -31,7 +31,11 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ClientPosition);
             writer.Put(FromClient);
             writer.Put(Position);
-            Client.Send(writer, DeliveryMethod.Unreliable);
+
+            if (Client != null)
+            {
+                Client.Send(writer, DeliveryMethod.Unreliable);
+            }
         }
 
         public static void SendRotation(NetPeer Client, Quaternion Rotation, int FromClient)
@@ -997,6 +1001,27 @@ namespace SkyCoopServer
             foreach (NetPeer Peer in peers.ToArray())
             {
                 SendChatMessage(Peer, Message, From);
+            }
+        }
+
+        public static void SendTime(NetPeer Client, float TODNormalized, float ElapsedInGameHours)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerUpdateInGameTime);
+
+            writer.Put(ElapsedInGameHours);
+            writer.Put(TODNormalized);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendTime(Server ServerInstance, float TODNormalized, float ElapsedInGameHours)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                SendTime(Peer, TODNormalized, ElapsedInGameHours);
             }
         }
     }

@@ -14,6 +14,21 @@ namespace SkyCoopServer
     {
         public Server m_ServerInstance;
         public Dictionary<string, SceneData> m_LoadedScenes = new Dictionary<string, SceneData>();
+        public ulong m_Time = 0; // Сколько сервер запущен в реальных секундах
+
+        public float m_ElapsedInGameHours = 0; // Сколько игровых часов сервер запущен
+
+        public float m_TODTimeNormalized = 0.5f; // 0 - 1, 0.5 = 12:00
+        public int m_TOD = 3600; // 12:00 
+
+        // Сколько реальных секунд длиться день в TLD
+        public const int с_SecondsInCycle = 7200; // (24 * 60) * 60) / 12 Время в TLD идёт в 12 раз быстрее чем в реале.
+
+        // Сколько реальных секунд длиться час в TLD
+        public const int c_SecondsInHour = 300; // (60 * 60) / 12
+
+        // Сколько реальных секунд длиться минута в TLD
+        public const int c_SecondsInMinute = 5; // 60 / 12
 
         public ScenesDataManager(Server Server)
         {
@@ -659,8 +674,50 @@ namespace SkyCoopServer
             }
         }
 
+        public void SkipHour()
+        {
+            int RealTimeSeconds = c_SecondsInHour;
+
+            m_Time += (ulong)RealTimeSeconds;
+            m_TOD += RealTimeSeconds;
+
+            if (m_TOD > с_SecondsInCycle)
+            {
+                m_TOD = 0;
+            }
+            m_TODTimeNormalized = (float)m_TOD / с_SecondsInCycle;
+
+            m_ElapsedInGameHours += c_SecondsInHour;
+        }
+
+        public void SkipHours(int Hours)
+        {
+            for (int i = 1; i <= Hours; i++)
+            {
+                SkipHour();
+            }
+        }
+
+        public void UpdateTime()
+        {
+            m_Time++;
+
+            m_TOD++;
+
+            if(m_TOD > с_SecondsInCycle)
+            {
+                m_TOD = 0;
+            }
+            m_TODTimeNormalized = (float) m_TOD / с_SecondsInCycle;
+
+            m_ElapsedInGameHours += (c_SecondsInHour / 60) / 60;
+
+            ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours);
+        }
+
         public void UpdateEverySecond()
         {
+            UpdateTime();
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
                 if (Data.m_ActiveZone != null)
@@ -682,7 +739,7 @@ namespace SkyCoopServer
                         if (Data.m_Props.TryGetValue(FallingProp.m_GUID, out PropData))
                         {
                             float totalDuration = (float)(FallingProp.m_LandTime - FallingProp.m_StartFallTime).TotalSeconds;
-                            float elapsed = (float)(DateTime.Now - FallingProp.m_StartFallTime).TotalSeconds;
+                            float elapsed = (float)(DateTime.UtcNow - FallingProp.m_StartFallTime).TotalSeconds;
                             float progress = elapsed / totalDuration;
                             Vector3 NewPosition = DataStr.Lerp(FallingProp.m_SpawnPosition, FallingProp.m_LandPosition, progress);
 
@@ -691,7 +748,7 @@ namespace SkyCoopServer
                             List<NetPeer> peers = new List<NetPeer>();
                             m_ServerInstance.m_Instance.GetConnectedPeers(peers);
 
-                            if (DateTime.Now > FallingProp.m_LandTime)
+                            if (DateTime.UtcNow > FallingProp.m_LandTime)
                             {
                                 NewPosition = FallingProp.m_LandPosition;
                                 foreach (NetPeer Peer in peers.ToArray())
@@ -769,8 +826,8 @@ namespace SkyCoopServer
 
                 DataStr.FallingProp FallingProp = new FallingProp();
                 FallingProp.m_GUID = NewGUID;   
-                FallingProp.m_LandTime = DateTime.Now.AddSeconds(FallingTime);
-                FallingProp.m_StartFallTime = DateTime.Now;
+                FallingProp.m_LandTime = DateTime.UtcNow.AddSeconds(FallingTime);
+                FallingProp.m_StartFallTime = DateTime.UtcNow;
                 FallingProp.m_SpawnPosition = SpawnPosition;
                 FallingProp.m_LandPosition = LandPosition;
 

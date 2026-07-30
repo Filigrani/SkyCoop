@@ -34,6 +34,15 @@ namespace SkyCoopServer
 
         public DataStr.PlayerData GetPlayer(int Index)
         {
+            if(Index < 0)
+            {
+                return null;
+            }
+            if(Index > m_Players.Count - 1)
+            {
+                return null;
+            }
+            
             return m_Players[Index];
         }
 
@@ -130,7 +139,12 @@ namespace SkyCoopServer
                         {
                             if(OnScenePlayer.m_PlayerID != Player.m_PlayerID || m_RecursiveDebug)
                             {
-                                ServerSend.SendPosition(s_Server.GetClient(OnScenePlayer.m_PlayerID), Position, Player.m_PlayerID);
+                                NetPeer Client = s_Server.GetClient(OnScenePlayer.m_PlayerID);
+
+                                if (Client != null)
+                                {
+                                    ServerSend.SendPosition(Client, Position, Player.m_PlayerID);
+                                }
                             }
                         }
                     }
@@ -160,7 +174,12 @@ namespace SkyCoopServer
                         {
                             if (OnScenePlayer.m_PlayerID != Player.m_PlayerID || m_RecursiveDebug)
                             {
-                                ServerSend.SendRotation(s_Server.GetClient(OnScenePlayer.m_PlayerID), Rotation, Player.m_PlayerID);
+                                NetPeer Client = s_Server.GetClient(OnScenePlayer.m_PlayerID);
+
+                                if(Client != null)
+                                {
+                                    ServerSend.SendRotation(Client, Rotation, Player.m_PlayerID);
+                                }
                             }
                         }
                     }
@@ -190,7 +209,12 @@ namespace SkyCoopServer
                         {
                             if (OnScenePlayer.m_PlayerID != Player.m_PlayerID || m_RecursiveDebug)
                             {
-                                ServerSend.SendTilt(s_Server.GetClient(OnScenePlayer.m_PlayerID), Tilt, Player.m_PlayerID);
+                                NetPeer Client = s_Server.GetClient(OnScenePlayer.m_PlayerID);
+
+                                if(Client != null)
+                                {
+                                    ServerSend.SendTilt(Client, Tilt, Player.m_PlayerID);
+                                }
                             }
                         }
                     }
@@ -223,7 +247,12 @@ namespace SkyCoopServer
 
                                 if(OtherPlayer.m_Scene == Player.m_Scene)
                                 {
-                                    ServerSend.SendPlayerChangeGear(s_Server.GetClient(OtherPlayerID), GearName, GearVariant, Index);
+                                    NetPeer Client = s_Server.GetClient(OtherPlayerID);
+
+                                    if(Client != null)
+                                    {
+                                        ServerSend.SendPlayerChangeGear(s_Server.GetClient(OtherPlayerID), GearName, GearVariant, Index);
+                                    }
                                 }
                             }
                         }
@@ -238,10 +267,10 @@ namespace SkyCoopServer
             {
                 foreach (int OtherPlayerID in s_Server.GetClientsIndexs())
                 {
-                    if (OtherPlayerID != Client.Id || m_RecursiveDebug)
+                    if (Client != null && OtherPlayerID != Client.Id || m_RecursiveDebug)
                     {
                         DataStr.PlayerData OtherPlayer = GetPlayer(OtherPlayerID);
-                        if (OtherPlayer.m_GamePlayState == PlayerData.GamePlayState.Alive)
+                        if (OtherPlayer != null && OtherPlayer.m_GamePlayState == PlayerData.GamePlayState.Alive)
                         {
                             ServerSend.SendPlayerSceneNotification(Client, OtherPlayer.m_Scene == SceneName, OtherPlayerID);
                         }
@@ -252,7 +281,7 @@ namespace SkyCoopServer
         public void SetGameplayState(int Index, DataStr.PlayerData.GamePlayState State)
         {
             DataStr.PlayerData Player = GetPlayer(Index);
-            if (Player == null)
+            if (Player != null)
             {
                 Player.SetGameplayState(State, s_Server);
             }
