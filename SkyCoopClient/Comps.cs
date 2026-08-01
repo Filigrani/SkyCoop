@@ -1254,7 +1254,7 @@ namespace SkyCoop
                     m_Tilt = m_TiltLimits.y;
                 }
 
-                if (m_Action == Actions.Knocked || m_Action == Actions.Death || m_Action == Actions.Harvesting)
+                if (m_Action == Actions.Knocked || m_Action == Actions.Death || m_Action == Actions.Harvesting || m_Action == Actions.Igniting)
                 {
                     Angle.x = 0;
                 }

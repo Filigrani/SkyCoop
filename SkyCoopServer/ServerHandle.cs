@@ -866,7 +866,7 @@ namespace SkyCoopServer
                     break;
                 case "skip":
                 case "skiptime":
-                    ServerInstance.m_ScenesData.SkipHour();
+                    ServerInstance.m_Timeline.SkipHours(1f);
                     break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
@@ -1144,6 +1144,85 @@ namespace SkyCoopServer
             string ChatMessage = Reader.GetString();
 
             ServerSend.SendChatMessage(ServerInstance, ChatMessage, Client.Id);
+        }
+
+        public static void ClientStartFire(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                float Fuel = Reader.GetFloat();
+                float Heat = Reader.GetFloat();
+                float InnerRadius = Reader.GetFloat();
+                float OutterRadius = Reader.GetFloat();
+                float HeatingSpeed = Reader.GetFloat();
+                bool IsDynamic = Reader.GetBool();
+
+                FireSyncData NewFire = FireSyncData.Create(GUID, Fuel, Heat, InnerRadius, OutterRadius, HeatingSpeed, IsDynamic, ServerInstance.m_Timeline.m_ElapsedInGameHours);
+
+                if (NewFire.m_IsDynamic)
+                {
+                    NewFire.m_Position = Reader.GetVector3();
+                    NewFire.m_Rotation = Reader.GetQuaternion();
+                }
+
+                ServerInstance.m_ScenesData.AddFire(NewFire, Player.m_Scene);
+            }
+        }
+
+        public static void ClientAddFuel(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                float Fuel = Reader.GetFloat();
+                float Heat = Reader.GetFloat();
+                float InnerRadius = Reader.GetFloat();
+                float OutterRadius = Reader.GetFloat();
+
+                ServerInstance.m_ScenesData.AddFuel(Player.m_Scene, GUID, Fuel, Heat, InnerRadius, OutterRadius);
+            }
+        }
+
+        public static void ClientTakeTorch(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                ServerSend.SendTakeTorch(Client, ServerInstance.m_ScenesData.TakeTorch(Player.m_Scene, GUID));
+            }
+        }
+
+        public static void ClientDismantleCampfire(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                int Charcoal = ServerInstance.m_ScenesData.RemoveFire(Player.m_Scene, GUID);
+
+                ServerSend.SendCharcoalCollected(Client, Charcoal);
+            }
+        }
+
+        public static void ClientCharcoalCollect(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                int Charcoal = ServerInstance.m_ScenesData.TakeCharcoal(Player.m_Scene, GUID);
+
+                ServerSend.SendCharcoalCollected(Client, Charcoal);
+            }
         }
     }
 }

@@ -1024,5 +1024,69 @@ namespace SkyCoopServer
                 SendTime(Peer, TODNormalized, ElapsedInGameHours);
             }
         }
+
+        public static void SendFire(NetPeer Client, DataStr.FireSyncData FireData)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientStartFire);
+
+            writer.Put(FireData.m_GUID);
+            writer.Put(FireData.m_MaxOnTODSeconds);
+            writer.Put(FireData.m_ElapsedOnTODSeconds);
+            writer.Put(FireData.m_FuelHeatIncrease);
+            writer.Put(FireData.m_Heat);
+            writer.Put(FireData.m_HeatInnerRadius);
+            writer.Put(FireData.m_HeatOuterRadius);
+            writer.Put(FireData.m_FireState);
+            writer.Put(FireData.m_IsDynamic);
+
+            if (FireData.m_IsDynamic)
+            {
+                writer.Put(FireData.m_Position);
+                writer.Put(FireData.m_Rotation);
+            }
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendAddFuel(NetPeer Client, string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAddFuel);
+
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendTakeTorch(NetPeer Client, bool Allow)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientTakeTorch);
+
+            writer.Put(Allow);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendRemoveCampfire(NetPeer Client, string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientDismantleCampfire);
+
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendCharcoalCollected(NetPeer Client, int Charcoal)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientCharcoalCollect);
+
+            writer.Put(Charcoal);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

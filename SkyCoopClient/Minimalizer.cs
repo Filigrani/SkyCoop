@@ -16,7 +16,201 @@ namespace SkyCoopClient
     {
         public static string s_SceneSpawnOverride = "";
         public static bool s_LoadingFlag = false;
-        
+
+        public static void OnStartedLoading()
+        {
+            s_LoadingFlag = true;
+            SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Start loading scenes...");
+            if (ModMain.Client.m_IsReady)
+            {
+                ClientSend.SendNewScene("Empty");
+            }
+        }
+
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Loading), "Update")]
+        private static class Panel_Loading_Update
+        {
+            private static void Postfix(Panel_Loading __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                bool IsLoading = !__instance.HasFinishedLoading();
+
+                if (IsLoading && !s_LoadingFlag)
+                {
+                    OnStartedLoading();
+                }
+                else if (s_LoadingFlag && __instance.HasFinishedLoading() && __instance.HasFinishedHolding())
+                {
+                    s_LoadingFlag = false;
+                    OnFinishedLoading();
+                }
+            }
+        }
+
+        public static void OnFinishedLoading()
+        {
+            SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Scenes loaded");
+
+            if (ModMain.Client.m_IsReady)
+            {
+
+                for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
+                {
+                    GearItem item = GearManager.m_Gear[i];
+                    if (!item.m_HasBeenOwnedByPlayer && !item.m_BeenInPlayerInventory)
+                    {
+                        GearManager.DestroyGearObject(item);
+                    }
+                }
+
+                foreach (Camera Cam in Camera.allCameras)
+                {
+                    if (Cam.name != "FPSCamera")
+                    {
+                        AudioListener AudioListner = Cam.gameObject.GetComponent<AudioListener>();
+                        if (AudioListner)
+                        {
+                            string Log = AudioListner.gameObject.name;
+
+                            Transform Parent = AudioListner.gameObject.transform.parent;
+                            while (Parent != null)
+                            {
+                                Log = $"{Parent.name}/{Log}";
+                                Parent = Parent.parent;
+                            }
+                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Found random ass AudioListener imposter: Scene Name {ModMain.GetCurrentSceneName()} location {Log}");
+
+                            UnityEngine.Object.Destroy(AudioListner);
+                        }
+                    }
+                }
+                ClientSend.SendNewScene(ModMain.GetCurrentSceneName());
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "Update")]
+        private static class GameManager_Update
+        {
+            private static void Postfix(GameManager __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                // Вычеркнул, что бы тестить синхрон времени
+                //if (GameManager.m_TimeOfDay)
+                //{
+                //    GameManager.m_TimeOfDay.m_StartTimeHour = 12;
+                //    GameManager.m_TimeOfDay.m_StartTimeMinutes = 0;
+                //    GameManager.m_TimeOfDay.SetNormalizedTime(0.5f);
+                //}
+                if (GameManager.m_Weather)
+                {
+                    GameManager.m_Weather.enabled = false;
+                }
+                if (GameManager.m_WeatherTransition)
+                {
+                    //GameManager.m_WeatherTransition.enabled = false;
+                    GameManager.m_WeatherTransition.m_DefaultStartWeather = WeatherStage.Clear;
+                    if (GameManager.m_WeatherTransition.m_CurrentWeatherSet)
+                    {
+                        GameManager.m_WeatherTransition.m_CurrentWeatherSet.SetDirty();
+                    }
+                    GameManager.m_WeatherTransition.ActivateDefaultWeatherSet();
+                    WeatherTransition.m_WeatherTransitionTimeScalar = 1;
+                }
+                if (GameManager.m_Wind)
+                {
+                    GameManager.m_Wind.enabled = false;
+                    GameManager.m_Wind.m_CurrentAngleDeg = 0;
+                    GameManager.m_Wind.m_CurrentAngleDeg_Base = 0;
+                    GameManager.m_Wind.m_CurrentMPH = 0;
+                    GameManager.m_Wind.m_CurrentMPH_Base = 0;
+                    GameManager.m_Wind.m_CurrentDirection = Vector3.zero;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawningSupppressedByExperienceMode")]
+        private static class SpawnRegion_SpawningSupppressedByExperienceMode
+        {
+            private static void Postfix(SpawnRegion __instance, bool __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                __result = true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "Spawn")]
+        private static class SpawnRegion_Spawn
+        {
+            private static bool Prefix(SpawnRegion __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObject")]
+        private static class PrefabSpawn_SpawnObject
+        {
+            private static bool Prefix(PrefabSpawn __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(RadialObjectSpawner), "SpawnAtPosition")]
+        private static class RadialObjectSpawner_SpawnAtPosition
+        {
+            private static bool Prefix(RadialObjectSpawner __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(RadialSpawnManager), "DeserializeAll")]
+        private static class RadialSpawnManager_DeserializeAll
+        {
+            private static void Prefix(RadialSpawnManager __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                RadialSpawnManager.m_RadialSpawnObjects.Clear();
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen", new System.Type[] { typeof(string) })]
+        private static class GameManager_LoadSceneWithLoadingScreen
+        {
+            private static bool Prefix(GameManager __instance, string sceneName)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                SkyCoop.Logger.Log("LoadSceneWithLoadingScreen");
+                if (string.IsNullOrEmpty(s_SceneSpawnOverride))
+                {
+                    return true;
+                }
+                SkyCoop.Logger.Log("s_SceneSpawnOverride " + s_SceneSpawnOverride);
+                InterfaceManager.CloseOverlaysDueToSceneLoad();
+                SaveGameSystem.ResetForSceneLoad();
+                if (GameManager.IsMainMenuActive() || GameManager.IsActiveScene("Empty"))
+                {
+                    GameManager.LoadSceneAsynchronously(s_SceneSpawnOverride);
+                    s_SceneSpawnOverride = "";
+                    GameManager.SetPhysicsAutoSimulationEnabled(false);
+                    return false;
+                }
+                EmptyScene.s_SceneLoadFromEmpty = s_SceneSpawnOverride;
+                s_SceneSpawnOverride = "";
+                GameManager.ResetLists();
+                SceneManager.LoadScene("Empty", 0);
+                return false;
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(MiniTopNav), "Update")]
         private static class MiniTopNav_Update
         {
@@ -117,7 +311,7 @@ namespace SkyCoopClient
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool)})]
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Map), "Enable", new System.Type[] { typeof(bool) })]
         private static class Panel_Map_Enable
         {
             private static bool Prefix(Panel_Map __instance, bool enable)
@@ -301,7 +495,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                
+
                 bool CanUseMap = ModMain.Client != null && ModMain.Client.m_Rules.m_CanUseMap;
 
                 __result = CanUseMap;
@@ -389,7 +583,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                return true;
+                return false;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "Enable", new System.Type[] { typeof(bool) })]
@@ -425,10 +619,10 @@ namespace SkyCoopClient
                 for (int i = __instance.m_PrimaryRadial.Count - 1; i >= 0; i--)
                 {
                     Panel_ActionsRadial.RadialInfo Info = __instance.m_PrimaryRadial[i];
-                    if (Info.m_RadialElement != Panel_ActionsRadial.RadialType.Weapons 
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.FirstAid 
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Status 
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Food 
+                    if (Info.m_RadialElement != Panel_ActionsRadial.RadialType.Weapons
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.FirstAid
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Status
+                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Food
                         && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Clothing
                         && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Tools
                         && Info.m_RadialElement != Panel_ActionsRadial.RadialType.LightSources
@@ -442,7 +636,7 @@ namespace SkyCoopClient
                             Info.m_SpriteName = "ico_Radial_tools";
                             Info.m_SpriteNameHover = "ico_Radial_tools";
                         }
-                        else if(Info.m_RadialElement == Panel_ActionsRadial.RadialType.Navigation)
+                        else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Navigation)
                         {
                             Info.m_RadialElement = Panel_ActionsRadial.RadialType.Clothing;
                             Info.m_GreyOutSpriteName = "ico_inv_clothing";
@@ -521,14 +715,6 @@ namespace SkyCoopClient
 
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(TimeWidget), "Start")]
-        private static class TimeWidget_Start
-        {
-            private static void Postfix(TimeWidget __instance)
-            {
-                //UnityEngine.Object.Destroy(__instance.gameObject);
-            }
-        }
 
         [HarmonyLib.HarmonyPatch(typeof(BreakDown), "Awake")]
         private static class BreakDown_Start
@@ -575,171 +761,6 @@ namespace SkyCoopClient
         }
 
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "Update")]
-        private static class GameManager_Update
-        {
-            private static void Postfix(GameManager __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                // Вычеркнул, что бы тестить синхрон времени
-                //if (GameManager.m_TimeOfDay)
-                //{
-                //    GameManager.m_TimeOfDay.m_StartTimeHour = 12;
-                //    GameManager.m_TimeOfDay.m_StartTimeMinutes = 0;
-                //    GameManager.m_TimeOfDay.SetNormalizedTime(0.5f);
-                //}
-                if (GameManager.m_Weather)
-                {
-                    GameManager.m_Weather.enabled = false;
-                }
-                if (GameManager.m_WeatherTransition)
-                {
-                    //GameManager.m_WeatherTransition.enabled = false;
-                    GameManager.m_WeatherTransition.m_DefaultStartWeather = WeatherStage.Clear;
-                    if (GameManager.m_WeatherTransition.m_CurrentWeatherSet)
-                    {
-                        GameManager.m_WeatherTransition.m_CurrentWeatherSet.SetDirty();
-                    }
-                    GameManager.m_WeatherTransition.ActivateDefaultWeatherSet();
-                    WeatherTransition.m_WeatherTransitionTimeScalar = 1;
-                }
-                if (GameManager.m_Wind)
-                {
-                    GameManager.m_Wind.enabled = false;
-                    GameManager.m_Wind.m_CurrentAngleDeg = 0;
-                    GameManager.m_Wind.m_CurrentAngleDeg_Base = 0;
-                    GameManager.m_Wind.m_CurrentMPH = 0;
-                    GameManager.m_Wind.m_CurrentMPH_Base = 0;
-                    GameManager.m_Wind.m_CurrentDirection = Vector3.zero;
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawningSupppressedByExperienceMode")]
-        private static class SpawnRegion_SpawningSupppressedByExperienceMode
-        {
-            private static void Postfix(SpawnRegion __instance, bool __result)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __result = true;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "Spawn")]
-        private static class SpawnRegion_Spawn
-        {
-            private static bool Prefix(SpawnRegion __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                return false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObject")]
-        private static class PrefabSpawn_SpawnObject
-        {
-            private static bool Prefix(PrefabSpawn __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                return false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(RadialObjectSpawner), "SpawnAtPosition")]
-        private static class RadialObjectSpawner_SpawnAtPosition
-        {
-            private static bool Prefix(RadialObjectSpawner __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                return false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(RadialSpawnManager), "DeserializeAll")]
-        private static class RadialSpawnManager_DeserializeAll
-        {
-            private static void Prefix(RadialSpawnManager __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                RadialSpawnManager.m_RadialSpawnObjects.Clear();
-            }
-        }
-
-        public static void OnFinishedLoading()
-        {
-            SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Scenes loaded");
-
-            if(ModMain.Client.m_IsReady)
-            {
-
-                for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
-                {
-                    GearItem item = GearManager.m_Gear[i];
-                    if (!item.m_HasBeenOwnedByPlayer && !item.m_BeenInPlayerInventory)
-                    {
-                        GearManager.DestroyGearObject(item);
-                    }
-                }
-
-                foreach (Camera Cam in Camera.allCameras)
-                {
-                    if(Cam.name != "FPSCamera")
-                    {
-                        AudioListener AudioListner = Cam.gameObject.GetComponent<AudioListener>();
-                        if (AudioListner)
-                        {
-                            string Log = AudioListner.gameObject.name;
-
-                            Transform Parent = AudioListner.gameObject.transform.parent;
-                            while (Parent != null)
-                            {
-                                Log = $"{Parent.name}/{Log}";
-                                Parent = Parent.parent;
-                            }
-                            SkyCoop.Logger.Log(ConsoleColor.Green, $"Found random ass AudioListener imposter: Scene Name {ModMain.GetCurrentSceneName()} location {Log}");
-
-                            UnityEngine.Object.Destroy(AudioListner);
-                        }
-                    }
-                }
-                ClientSend.SendNewScene(ModMain.GetCurrentSceneName());
-            }
-        }
-
-        public static void OnStartedLoading()
-        {
-            s_LoadingFlag = true;
-            SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Start loading scenes...");
-            if (ModMain.Client.m_IsReady)
-            {
-                ClientSend.SendNewScene("Empty");
-            }
-        }
-
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Loading), "Update")]
-        private static class Panel_Loading_Update
-        {
-            private static void Postfix(Panel_Loading __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                bool IsLoading = !__instance.HasFinishedLoading();
-
-                if (IsLoading && !s_LoadingFlag)
-                {
-                    OnStartedLoading();
-                }
-                else if (s_LoadingFlag && __instance.HasFinishedLoading() && __instance.HasFinishedHolding())
-                {
-                    s_LoadingFlag = false;
-                    OnFinishedLoading();
-                }
-            }
-        }
-
-
         [HarmonyLib.HarmonyPatch(typeof(Fatigue), "Update")]
         private static class Fatigue_Update
         {
@@ -757,7 +778,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories*0.9f;
+                __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories * 0.9f;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Thirst), "Update")]
@@ -817,7 +838,7 @@ namespace SkyCoopClient
                 SkyCoop.Logger.Log("PlayerDeath DamageType " + DamageType);
 
 
-                if(ModMain.Client != null && ModMain.Client.m_Rules.m_PlayerCanBeKnocked)
+                if (ModMain.Client != null && ModMain.Client.m_Rules.m_PlayerCanBeKnocked)
                 {
                     if (GameManager.GetBrokenBody().HasAffliction)
                     {
@@ -938,8 +959,8 @@ namespace SkyCoopClient
 
                 __instance.m_CampfireGrid.gameObject.SetActive(false);
                 UILocalize RespawnButton = __instance.m_CheatDeathButtonWidget.transform.GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
-                
-                if(ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns)
+
+                if (ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns)
                 {
                     RespawnButton.key = "Respawn";
                 }
@@ -947,7 +968,7 @@ namespace SkyCoopClient
                 {
                     RespawnButton.key = "Spectate";
                 }
-                
+
                 RespawnButton.OnLocalize();
 
                 UILocalize QuitButton = __instance.m_CheatDeathButtonWidget.transform.parent.GetChild(1).GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
@@ -1014,35 +1035,6 @@ namespace SkyCoopClient
                 __result = false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen", new System.Type[] { typeof(string) })]
-        private static class GameManager_LoadSceneWithLoadingScreen
-        {
-            private static bool Prefix(GameManager __instance, string sceneName)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                SkyCoop.Logger.Log("LoadSceneWithLoadingScreen");
-                if (string.IsNullOrEmpty(s_SceneSpawnOverride))
-                {
-                    return true;
-                }
-                SkyCoop.Logger.Log("s_SceneSpawnOverride "+ s_SceneSpawnOverride);
-                InterfaceManager.CloseOverlaysDueToSceneLoad();
-                SaveGameSystem.ResetForSceneLoad();
-                if (GameManager.IsMainMenuActive() || GameManager.IsActiveScene("Empty"))
-                {
-                    GameManager.LoadSceneAsynchronously(s_SceneSpawnOverride);
-                    s_SceneSpawnOverride = "";
-                    GameManager.SetPhysicsAutoSimulationEnabled(false);
-                    return false;
-                }
-                EmptyScene.s_SceneLoadFromEmpty = s_SceneSpawnOverride;
-                s_SceneSpawnOverride = "";
-                GameManager.ResetLists();
-                SceneManager.LoadScene("Empty", 0);
-                return false;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "EatingComplete_Internal")]
         private static class PlayerManager_EatingComplete_Internal
         {
@@ -1061,7 +1053,7 @@ namespace SkyCoopClient
                     PlayerDamageEvent.SpawnAfflictionEvent($"+{Math.Round(Health).ToString()} {Localization.Get("GAMEPLAY_PlayerHealthPercent")}", "GAMEPLAY_Food", "ico_status_hunger1", Color.cyan);
                     if (__instance.m_FoodItemEaten.m_StackableItem)
                     {
-                        if(__instance.m_FoodItemEaten.m_StackableItem.m_Units == 1)
+                        if (__instance.m_FoodItemEaten.m_StackableItem.m_Units == 1)
                         {
                             UnityEngine.Object.Destroy(__instance.m_FoodItemEaten.gameObject);
                         }
@@ -1091,27 +1083,6 @@ namespace SkyCoopClient
         private static class WaterSource_Awake
         {
             private static void Postfix(WaterSource __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.enabled = false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "Awake")]
-        private static class WoodStove_Awake
-        {
-            private static void Postfix(WoodStove __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.enabled = false;
-                __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(Campfire), "Awake")]
-        private static class Campfire_Awake
-        {
-            private static void Postfix(Campfire __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 

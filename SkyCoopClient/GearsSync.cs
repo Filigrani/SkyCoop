@@ -482,10 +482,10 @@ namespace SkyCoopClient
 
         public static void CookpotHelmetPatch(GearItem __instance)
         {
-            if (__instance.m_CookingPotItem)
-            {
-                __instance.m_CookingPotItem = null;
-            }
+            //if (__instance.m_CookingPotItem)
+            //{
+            //    __instance.m_CookingPotItem = null;
+            //}
             if (__instance.name == "GEAR_CookingPot" && __instance.m_ClothingItem == null)
             {
                 ClothingItem CLTH = __instance.gameObject.AddComponent<ClothingItem>();

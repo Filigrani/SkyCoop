@@ -86,6 +86,11 @@ namespace SkyCoopServer
             ClientReviveRequest,
             ClientChatMessage,
             ServerUpdateInGameTime,
+            ClientStartFire,
+            ClientAddFuel,
+            ClientTakeTorch,
+            ClientDismantleCampfire,
+            ClientCharcoalCollect,
         }
 
         public enum SquadResponce

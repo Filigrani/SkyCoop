@@ -4,7 +4,9 @@ using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
+using static Il2CppNodeCanvas.Tasks.Conditions.Condition_PlayerStats;
 using static SkyCoop.PlayersManager;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
 {
@@ -873,6 +875,71 @@ namespace SkyCoop
             {
                 Uni.m_ElapsedHours = ElapsedInGameHours;
                 Uni.SetNormalizedTime(NormalizedTOD);
+            }
+        }
+
+        public static void ClientStartFire(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+            float MaxBurnTime = Reader.GetFloat();
+            float ElapsedBurnTime = Reader.GetFloat();
+            float FuelHeatIncress = Reader.GetFloat();
+            float Heat = Reader.GetFloat();
+            float InnerRadius = Reader.GetFloat();
+            float OutterRadius = Reader.GetFloat();
+            int State = Reader.GetInt();
+            bool IsDynamic = Reader.GetBool();
+
+            if (IsDynamic)
+            {
+                Vector3 Position = Reader.GetVector3Unity();
+                Quaternion Rotation = Reader.GetQuaternionUnity();
+
+                FireHook.CreateCampfire(GUID, Position, Rotation);
+            }
+            FireHook.HandleFireSync(GUID, MaxBurnTime, ElapsedBurnTime, FuelHeatIncress, Heat, InnerRadius, OutterRadius, (FireState)State);
+        }
+        public static void ClientAddFuel(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+
+            FireHook.HandleAddFire(GUID);
+        }
+
+        public static void ClientTakeTorch(NetDataReader Reader)
+        {
+            bool Allowed = Reader.GetBool();
+
+            if (Allowed)
+            {
+                FireHook.TakeTorch();
+            }
+            else
+            {
+                FireHook.TakeTorchFailed();
+            }
+        }
+
+        public static void ClientDismantleCampfire(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+
+            FireHook.HandleRemoveFire(GUID);
+        }
+
+        public static void ClientCharcoalCollect(NetDataReader Reader)
+        {
+            int Charcoal = Reader.GetInt();
+            MenuHook.RemovePleaseWait();
+
+            if(Charcoal > 0)
+            {
+                FireHook.HandleCharcoal(Charcoal);
+            }
+            else
+            {
+                GameAudioManager.PlayGUIError();
+                HUDMessage.AddMessage("No charcoal to collect", true, true);
             }
         }
     }

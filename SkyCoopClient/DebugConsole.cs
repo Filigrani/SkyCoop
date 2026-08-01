@@ -44,6 +44,7 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("sv_cmd", new Action(SV_CMD));
             uConsole.RegisterCommand("spawn", new Action(Spawn));
             uConsole.RegisterCommand("give", new Action(GiveIlegalGear));
+            uConsole.RegisterCommand("campfire", new Action(GiveCampfireKit));
         }
 
         public static void GiveIlegalGear()
@@ -81,6 +82,17 @@ namespace SkyCoopClient
         public static void SV_CMD()
         {
             ClientSend.SendSV_CMD(uConsole.GetString());
+        }
+
+        public static void GiveCampfireKit()
+        {
+            uConsole.RunCommandSilent("add tinder");
+            uConsole.RunCommandSilent("add firestriker");
+            uConsole.RunCommandSilent("add tinder 3");
+            uConsole.RunCommandSilent("add softwood");
+            uConsole.RunCommandSilent("add softwood");
+            uConsole.RunCommandSilent("add softwood");
+            uConsole.RunCommandSilent("add accelerant");
         }
 
 

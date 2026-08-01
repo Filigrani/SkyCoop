@@ -90,6 +90,11 @@ namespace SkyCoop
             { (int)Packet.Type.ClientReviveRequest, ClientHandle.ClientReviveRequest },
             { (int)Packet.Type.ClientChatMessage, ClientHandle.ClientChatMessage },
             { (int)Packet.Type.ServerUpdateInGameTime, ClientHandle.ServerUpdateInGameTime },
+            { (int)Packet.Type.ClientStartFire, ClientHandle.ClientStartFire },
+            { (int)Packet.Type.ClientAddFuel, ClientHandle.ClientAddFuel },
+            { (int)Packet.Type.ClientTakeTorch, ClientHandle.ClientTakeTorch },
+            { (int)Packet.Type.ClientDismantleCampfire, ClientHandle.ClientDismantleCampfire },
+            { (int)Packet.Type.ClientCharcoalCollect, ClientHandle.ClientCharcoalCollect },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

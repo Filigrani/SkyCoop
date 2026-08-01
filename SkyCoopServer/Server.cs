@@ -27,6 +27,7 @@ namespace SkyCoopServer
         // Data Sync Instances
         public PlayersDataManager m_PlayersData;
         public ScenesDataManager m_ScenesData;
+        public Timeline m_Timeline;
 
         public delegate void LogEvent(Logger.LogData Data);
         public static event LogEvent? OnLogEvent;
@@ -92,6 +93,11 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientBloodLosses, ServerHandle.ClientBloodLosses },
             { (int)Packet.Type.ClientReviveRequest, ServerHandle.ClientReviveRequest },
             { (int)Packet.Type.ClientChatMessage, ServerHandle.ClientChatMessage },
+            { (int)Packet.Type.ClientStartFire, ServerHandle.ClientStartFire },
+            { (int)Packet.Type.ClientAddFuel, ServerHandle.ClientAddFuel },
+            { (int)Packet.Type.ClientTakeTorch, ServerHandle.ClientTakeTorch },
+            { (int)Packet.Type.ClientDismantleCampfire, ServerHandle.ClientDismantleCampfire },
+            { (int)Packet.Type.ClientCharcoalCollect, ServerHandle.ClientCharcoalCollect },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -114,6 +120,7 @@ namespace SkyCoopServer
             // Data Sync Instances
             m_PlayersData = new PlayersDataManager(this);
             m_ScenesData = new ScenesDataManager(this);
+            m_Timeline = new Timeline(this);
 
             s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
             LootTableManager.Load();
@@ -206,6 +213,7 @@ namespace SkyCoopServer
             {
                 s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
                 EverySecond();
+                m_Timeline.UpdateEverySecond();
                 m_ScenesData.UpdateEverySecond();
             }
 

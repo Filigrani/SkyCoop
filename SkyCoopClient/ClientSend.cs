@@ -506,5 +506,83 @@ namespace SkyCoop
             writer.Put(Message);
             SendToHost(writer);
         }
+
+        public static void SendStartFire(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius, float HeatingSpeed, Vector3 Position, Quaternion Rotation)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientStartFire);
+
+            writer.Put(GUID);
+            writer.Put(Fuel);
+            writer.Put(Heat);
+            writer.Put(InnerRadius);
+            writer.Put(OutterRadius);
+            writer.Put(HeatingSpeed);
+            writer.Put(true); // Is Dynamic
+
+            writer.Put(Position);
+            writer.Put(Rotation);
+
+            SendToHost(writer);
+        }
+        public static void SendStartFire(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius, float HeatingSpeed)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientStartFire);
+
+            writer.Put(GUID);
+            writer.Put(Fuel);
+            writer.Put(Heat);
+            writer.Put(InnerRadius);
+            writer.Put(OutterRadius);
+            writer.Put(HeatingSpeed);
+            writer.Put(false); // Is Dynamic
+
+            SendToHost(writer);
+        }
+
+        public static void SendAddFuel(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAddFuel);
+
+            writer.Put(GUID);
+            writer.Put(Fuel);
+            writer.Put(Heat);
+            writer.Put(InnerRadius);
+            writer.Put(OutterRadius);
+
+            SendToHost(writer);
+        }
+
+        public static void SendTakeTorch(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientTakeTorch);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+
+        public static void SendDismantleCampfire(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientDismantleCampfire);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
+
+        public static void SendCharcoalCollect(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientCharcoalCollect);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
     }
 }

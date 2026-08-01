@@ -9,7 +9,6 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
-using static SkyCoopServer.DataStr.DangerCircleData;
 
 namespace SkyCoopServer
 {
@@ -683,7 +682,9 @@ namespace SkyCoopServer
             public Dictionary<string, DeathPack> m_DeathPacks = new Dictionary<string, DeathPack>();
             public Dictionary<string, string> m_Containers = new Dictionary<string, string>();
             public Dictionary<string, int> m_ContainerStats = new Dictionary<string, int>();
-            
+
+            public Dictionary<string, FireSyncData> m_Fires = new Dictionary<string, FireSyncData>();
+
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
@@ -2134,6 +2135,110 @@ namespace SkyCoopServer
                 m_ID = PlayerData.m_PlayerID;
                 m_Score = Score;
                 m_ClothingData = PlayerData.m_VisualData.m_ClothingData.GetCopy();
+            }
+        }
+
+        public class FireSyncData
+        {
+            public string m_GUID = string.Empty;
+            public Vector3 m_Position = Vector3.Zero;
+            public Quaternion m_Rotation = Quaternion.Identity;
+            public int m_FireState = 0;
+
+            public bool m_IsForge = false;
+            public bool m_IsDynamic = false;
+
+            public float m_LastUpdateTime = 0;
+            public float m_MaxOnTODSeconds = 0;
+            public float m_ElapsedOnTODSeconds = 0;
+            public float m_FuelHeatIncrease = 0;
+            public float m_Heat = 0;
+
+            public bool m_EmbersActive = false;
+            public float m_EmberTimer = 0;
+            public bool m_FullBurnTriggered = false;
+            public int m_NumGeneratedCharcoalPieces = 0;
+            public float m_HeatInnerRadius = 0;
+            public float m_HeatOuterRadius = 0;
+            public float m_TimeToReachMaxTempInSeconds = 0;
+
+            public const float c_EmbersDuration = 300;
+
+            public void AddFuel(float BurnTime, float Heat, float InnerRadius, float OuterRadius)
+            {
+                if(m_ElapsedOnTODSeconds > m_MaxOnTODSeconds)
+                {
+                    m_ElapsedOnTODSeconds = m_MaxOnTODSeconds;
+                }
+
+                m_MaxOnTODSeconds += BurnTime;
+                m_FuelHeatIncrease += Heat;
+
+                m_HeatInnerRadius += InnerRadius;
+                m_HeatOuterRadius += OuterRadius;
+            }
+
+            public float RemaningTime()
+            {
+                float TimeLeft = m_MaxOnTODSeconds - m_ElapsedOnTODSeconds;
+
+                if(TimeLeft < 0) // Игра использует минусовое значение для просчёта тления
+                {
+                    TimeLeft = 0;
+                }
+                return TimeLeft;
+            }
+
+            public void Unlit()
+            {
+                m_NumGeneratedCharcoalPieces = (int)MathF.Floor((m_MaxOnTODSeconds / 60) / 60); // Игра даёт 1 уголь за каждый час горения огня.
+                m_FireState = 0;
+                m_MaxOnTODSeconds = 0;
+                m_ElapsedOnTODSeconds = 0;
+                m_EmbersActive = false;
+                m_EmberTimer = 0;
+
+            }
+
+            public bool TakeTorch()
+            {
+                float SecondsOfBurnTime = RemaningTime();
+
+                if(SecondsOfBurnTime > 600) // Факел требует (и потом отнимит) 10 минут. от горения
+                {
+                    m_ElapsedOnTODSeconds += 600; // Добавляет что прошло 10 минут горения. Да это так всрато в игре работает.
+                    m_FuelHeatIncrease--; // отнимает 1 грдус. Да, забирание факела влеяет и на это.
+                    return true;
+                }
+                return false;
+            }
+
+            public int TakeCharcoal()
+            {
+                int Charcoal = m_NumGeneratedCharcoalPieces;
+                m_NumGeneratedCharcoalPieces = 0;
+                return Charcoal;
+            }
+
+            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, bool IsDynamic, float CurrentTime)
+            {
+                FireSyncData Fire = new FireSyncData();
+
+                Fire.m_GUID = GUID;
+                Fire.m_IsDynamic = IsDynamic;
+
+                Fire.m_MaxOnTODSeconds = Fuel;
+                Fire.m_FuelHeatIncrease = Heat;
+                Fire.m_Heat = Fire.m_FuelHeatIncrease;
+                Fire.m_TimeToReachMaxTempInSeconds = HeatingSpeed;
+                Fire.m_LastUpdateTime = CurrentTime;
+
+                Fire.m_HeatInnerRadius = InnerRadius;
+                Fire.m_HeatOuterRadius = OuterRadius;
+
+                Fire.m_FireState = 6; // FullBurn
+
+                return Fire;
             }
         }
     }

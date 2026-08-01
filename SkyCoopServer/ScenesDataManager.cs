@@ -14,21 +14,6 @@ namespace SkyCoopServer
     {
         public Server m_ServerInstance;
         public Dictionary<string, SceneData> m_LoadedScenes = new Dictionary<string, SceneData>();
-        public ulong m_Time = 0; // Сколько сервер запущен в реальных секундах
-
-        public float m_ElapsedInGameHours = 0; // Сколько игровых часов сервер запущен
-
-        public float m_TODTimeNormalized = 0.5f; // 0 - 1, 0.5 = 12:00
-        public int m_TOD = 3600; // 12:00 
-
-        // Сколько реальных секунд длиться день в TLD
-        public const int с_SecondsInCycle = 7200; // (24 * 60) * 60) / 12 Время в TLD идёт в 12 раз быстрее чем в реале.
-
-        // Сколько реальных секунд длиться час в TLD
-        public const int c_SecondsInHour = 300; // (60 * 60) / 12
-
-        // Сколько реальных секунд длиться минута в TLD
-        public const int c_SecondsInMinute = 5; // 60 / 12
 
         public ScenesDataManager(Server Server)
         {
@@ -674,56 +659,82 @@ namespace SkyCoopServer
             }
         }
 
-        public void SkipHour()
-        {
-            int RealTimeSeconds = c_SecondsInHour;
-
-            m_Time += (ulong)RealTimeSeconds;
-            m_TOD += RealTimeSeconds;
-
-            if (m_TOD > с_SecondsInCycle)
-            {
-                m_TOD = 0;
-            }
-            m_TODTimeNormalized = (float)m_TOD / с_SecondsInCycle;
-
-            m_ElapsedInGameHours += c_SecondsInHour;
-        }
-
-        public void SkipHours(int Hours)
-        {
-            for (int i = 1; i <= Hours; i++)
-            {
-                SkipHour();
-            }
-        }
-
-        public void UpdateTime()
-        {
-            m_Time++;
-
-            m_TOD++;
-
-            if(m_TOD > с_SecondsInCycle)
-            {
-                m_TOD = 0;
-            }
-            m_TODTimeNormalized = (float) m_TOD / с_SecondsInCycle;
-
-            m_ElapsedInGameHours += (c_SecondsInHour / 60) / 60;
-
-            ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours);
-        }
-
         public void UpdateEverySecond()
         {
-            UpdateTime();
+            List<NetPeer> peers = new List<NetPeer>();
+            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
                 if (Data.m_ActiveZone != null)
                 {
                     //Logger.Log($"[UpdateZone] Scene {Data.m_SceneName} has active zone updating it...");
                     Data.m_ActiveZone.EverySecond();
+                }
+
+                foreach (FireSyncData FireData in Data.m_Fires.Values)
+                {
+                    if(FireData.m_FireState == 6)
+                    {
+                        float ElapsedHoursFromLastUpdate = m_ServerInstance.m_Timeline.m_ElapsedInGameHours - FireData.m_LastUpdateTime;
+                        float ElapsedSecondsFromLastUpdate = (ElapsedHoursFromLastUpdate * 60) * 60;
+                        FireData.m_ElapsedOnTODSeconds += ElapsedSecondsFromLastUpdate;
+                        FireData.m_LastUpdateTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+
+                        if(FireData.m_Heat < FireData.m_FuelHeatIncrease)
+                        {
+                            float heatToAdd = FireData.m_FuelHeatIncrease / FireData.m_TimeToReachMaxTempInSeconds * ElapsedSecondsFromLastUpdate;
+
+                            FireData.m_Heat += heatToAdd;
+
+                            if(FireData.m_Heat > FireData.m_FuelHeatIncrease)
+                            {
+                                FireData.m_Heat = FireData.m_FuelHeatIncrease;
+                            }
+                        }else if(FireData.m_Heat > FireData.m_FuelHeatIncrease)
+                        {
+                            FireData.m_Heat = FireData.m_FuelHeatIncrease;
+                        }
+
+                        if(FireData.RemaningTime() <= 0)
+                        {
+                            if (!FireData.m_EmbersActive)
+                            {
+                                float EmbersTimeRemaning = FireData.m_MaxOnTODSeconds + FireSyncData.c_EmbersDuration - FireData.m_ElapsedOnTODSeconds;
+
+                                // Если времени промотанно больше чем вся длительность золы, скипаем её просто.
+                                if (EmbersTimeRemaning <= 0)
+                                {
+                                    FireData.Unlit();
+                                }
+                                else
+                                {
+                                    FireData.m_EmbersActive = true;
+                                    FireData.m_EmberTimer = EmbersTimeRemaning;
+                                }
+                            }
+                            else
+                            {
+                                if(FireData.m_EmberTimer > 0)
+                                {
+                                    FireData.m_EmberTimer -= ElapsedSecondsFromLastUpdate;
+
+                                    if(FireData.m_EmberTimer <= 0)
+                                    {
+                                        FireData.Unlit();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    
+                    
+                    foreach (NetPeer Peer in peers.ToArray())
+                    {
+                        if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Data.m_SceneName)
+                        {
+                            ServerSend.SendFire(Peer, FireData);
+                        }
+                    }
                 }
 
                 FallingProp[] FallingProps = Data.m_FallingProps.Values.ToArray();
@@ -744,9 +755,6 @@ namespace SkyCoopServer
                             Vector3 NewPosition = DataStr.Lerp(FallingProp.m_SpawnPosition, FallingProp.m_LandPosition, progress);
 
                             PropData.position = new Vector3JSON(NewPosition.X, NewPosition.Y, NewPosition.Z);
-
-                            List<NetPeer> peers = new List<NetPeer>();
-                            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
 
                             if (DateTime.UtcNow > FallingProp.m_LandTime)
                             {
@@ -848,6 +856,137 @@ namespace SkyCoopServer
 
                 Logger.Log($"[SummonAirDrop] AirDrop summoned {NewGUID} on {SceneName}!");
             }
+        }
+
+
+        public void AddFire(DataStr.FireSyncData FireData, string SceneName)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[AddFire] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (SceneData.m_Fires.ContainsKey(FireData.m_GUID))
+            {
+                SceneData.m_Fires.Remove(FireData.m_GUID);
+            }
+            Logger.Log(ConsoleColor.Magenta, $"Created fire GUID {FireData.m_GUID} Dynamic {FireData.m_IsDynamic}");
+            SceneData.m_Fires.Add(FireData.m_GUID, FireData);
+
+            List<NetPeer> peers = new List<NetPeer>();
+            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    ServerSend.SendFire(Peer, FireData);
+                }
+            }
+        }
+
+        public int RemoveFire(string SceneName, string GUID)
+        {
+            int Charcoal = 0;
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[RemoveFire] called on scene {SceneName} that not exist!");
+                return Charcoal;
+            }
+
+            FireSyncData FireData = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out FireData))
+            {
+                Charcoal = FireData.TakeCharcoal();
+                SceneData.m_Fires.Remove(GUID);
+
+                List<NetPeer> peers = new List<NetPeer>();
+                m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers.ToArray())
+                {
+                    if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                    {
+                        ServerSend.SendRemoveCampfire(Peer, GUID);
+                    }
+                }
+            }
+            return Charcoal;
+        }
+
+        public void AddFuel(string SceneName, string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[AddFuel] called on scene {SceneName} that not exist!");
+                return;
+            }
+            DataStr.FireSyncData Fire = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out Fire))
+            {
+                if (Fire != null)
+                {
+                    Fire.AddFuel(Fuel, Heat, InnerRadius, OutterRadius);
+                }
+            }
+            else
+            {
+                return;
+            }
+
+            List<NetPeer> peers = new List<NetPeer>();
+            m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    ServerSend.SendAddFuel(Peer, GUID);
+                }
+            }
+        }
+
+        public bool TakeTorch(string SceneName, string GUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[TakeTorch] called on scene {SceneName} that not exist!");
+                return false;
+            }
+            DataStr.FireSyncData Fire = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out Fire))
+            {
+                if (Fire != null)
+                {
+                    return Fire.TakeTorch();
+                }
+            }
+            return false;
+        }
+
+        public int TakeCharcoal(string SceneName, string GUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[TakeTorch] called on scene {SceneName} that not exist!");
+                return 0;
+            }
+            DataStr.FireSyncData Fire = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out Fire))
+            {
+                if (Fire != null)
+                {
+                    return Fire.TakeCharcoal();
+                }
+            }
+            return 0;
         }
     }
 }
