@@ -91,6 +91,8 @@ namespace SkyCoopServer
             ClientTakeTorch,
             ClientDismantleCampfire,
             ClientCharcoalCollect,
+            ClientRequestFreeCookingSlot,
+            ClientGearCookingInteration,
         }
 
         public enum SquadResponce
@@ -194,6 +196,8 @@ namespace SkyCoopServer
             Writer.Put(Visual.m_Position);
             Writer.Put(Visual.m_Rotation);
             Writer.Put(Visual.m_GUID);
+            Writer.Put(Visual.m_FireGUID);
+            Writer.Put(Visual.m_CookingSlot);
         }
 
         public static DataStr.GearDataVisual GetGearVisual(this NetDataReader Reader)
@@ -204,6 +208,8 @@ namespace SkyCoopServer
             Visual.m_Position = Reader.GetVector3();
             Visual.m_Rotation = Reader.GetQuaternion();
             Visual.m_GUID = Reader.GetString();
+            Visual.m_FireGUID = Reader.GetString();
+            Visual.m_CookingSlot = Reader.GetInt();
 
             return Visual;
         }

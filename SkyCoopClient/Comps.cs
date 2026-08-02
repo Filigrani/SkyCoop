@@ -49,6 +49,9 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<SendGearIfNotDestoryed>();
             ClassInjector.RegisterTypeInIl2Cpp<PropMovemenetPredict>();
             ClassInjector.RegisterTypeInIl2Cpp<ChatMessage>();
+            ClassInjector.RegisterTypeInIl2Cpp<GearCookingTarget>();
+            ClassInjector.RegisterTypeInIl2Cpp<GearCookingDummy>();
+            ClassInjector.RegisterTypeInIl2Cpp<CookingSlotVisual>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -123,8 +126,14 @@ namespace SkyCoop
         public class DroppedGearVisual : MonoBehaviour
         {
             public DroppedGearVisual(IntPtr ptr) : base(ptr) { }
+            public string m_PrefabName = "";
             public string m_GUID = "";
             public string m_LocalizedName = "GearItem";
+            public string m_FireGUID = "";
+            public int m_CookingSlotIndex = -1;
+            public bool m_IsCookable = false;
+            public bool m_IsCookpotItem = false;
+            public CookingSlot m_CookingSlot = null;
 
             void Start()
             {
@@ -134,6 +143,41 @@ namespace SkyCoop
                 SI.m_DefaultHoverText = Str;
                 SI.HoverText = m_LocalizedName;
                 SI.m_CanInteract = true;
+            }
+
+            public void RelinkCookingSlot()
+            {
+                if(m_CookingSlotIndex == -1 || string.IsNullOrEmpty(m_FireGUID))
+                {
+                    if (m_CookingSlot)
+                    {
+                        CookingSlotVisual VisualHook = m_CookingSlot.gameObject.GetComponent<CookingSlotVisual>();
+
+                        if (VisualHook)
+                        {
+                            if(VisualHook.m_Gear == this)
+                            {
+                                VisualHook.m_Gear = null;
+                            } 
+                        }
+                    }
+                    
+                    m_CookingSlot = null;
+                }
+                else
+                {
+                    m_CookingSlot = FireHook.GetCookingSlotByIndex(m_FireGUID, m_CookingSlotIndex);
+
+                    if (m_CookingSlot)
+                    {
+                        CookingSlotVisual VisualHook = m_CookingSlot.gameObject.GetComponent<CookingSlotVisual>();
+
+                        if (VisualHook)
+                        {
+                            VisualHook.m_Gear = this;
+                        }
+                    }
+                }
             }
         }
 
@@ -2366,6 +2410,25 @@ namespace SkyCoop
                     }
                 }
             }
+        }
+        public class GearCookingTarget : MonoBehaviour
+        {
+            public GearCookingTarget(IntPtr ptr) : base(ptr) { }
+            public string m_FireGUID = string.Empty;
+            public int m_CookingIndex = 0;
+            public GearPlacePoint m_PlacePoint;
+        }
+
+        public class GearCookingDummy : MonoBehaviour
+        {
+            public GearCookingDummy(IntPtr ptr) : base(ptr) { }
+        }
+
+        public class CookingSlotVisual : MonoBehaviour
+        {
+            public CookingSlotVisual(IntPtr ptr) : base(ptr) { }
+
+            public DroppedGearVisual m_Gear;
         }
     }
 }

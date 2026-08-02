@@ -576,16 +576,6 @@ namespace SkyCoopClient
                 //}
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_RecipeBook), "Enable")]
-        private static class Panel_RecipeBook_Enable
-        {
-            private static bool Prefix(Panel_RecipeBook __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                return false;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "Enable", new System.Type[] { typeof(bool) })]
         private static class Panel_Crafting_Enable
         {
@@ -1083,16 +1073,6 @@ namespace SkyCoopClient
         private static class WaterSource_Awake
         {
             private static void Postfix(WaterSource __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.enabled = false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "Awake")]
-        private static class CookingSlot_Awake
-        {
-            private static void Postfix(CookingSlot __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 

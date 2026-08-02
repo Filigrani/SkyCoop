@@ -9,6 +9,7 @@ using System.Linq;
 using System.Numerics;
 using System.Text;
 using System.Text.RegularExpressions;
+using static System.Net.WebRequestMethods;
 
 namespace SkyCoopServer
 {
@@ -661,6 +662,8 @@ namespace SkyCoopServer
             public Vector3 m_Position = new Vector3(0, 0, 0);
             public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
             public string m_GUID = "";
+            public string m_FireGUID = "";
+            public int m_CookingSlot = -1;
         }
         public class GearData
         {
@@ -2138,6 +2141,19 @@ namespace SkyCoopServer
             }
         }
 
+        public class CookingSlotData
+        {
+            public string m_GearGUID = string.Empty;
+            public float m_MaxOnTODSeconds = 0;
+            public float m_ElapsedOnTODSeconds = 0;
+            public float m_BurnOutTimer = 0;
+
+            public bool IsEmpty()
+            {
+                return string.IsNullOrEmpty(m_GearGUID);
+            }
+        }
+
         public class FireSyncData
         {
             public string m_GUID = string.Empty;
@@ -2163,6 +2179,8 @@ namespace SkyCoopServer
             public float m_TimeToReachMaxTempInSeconds = 0;
 
             public const float c_EmbersDuration = 300;
+
+            public List<CookingSlotData> m_CookingSlots = new List<CookingSlotData>();
 
             public void AddFuel(float BurnTime, float Heat, float InnerRadius, float OuterRadius)
             {
@@ -2191,13 +2209,14 @@ namespace SkyCoopServer
 
             public void Unlit()
             {
-                m_NumGeneratedCharcoalPieces = (int)MathF.Floor((m_MaxOnTODSeconds / 60) / 60); // Игра даёт 1 уголь за каждый час горения огня.
+                m_NumGeneratedCharcoalPieces += (int)MathF.Floor((m_MaxOnTODSeconds / 60) / 60); // Игра даёт 1 уголь за каждый час горения огня.
                 m_FireState = 0;
                 m_MaxOnTODSeconds = 0;
                 m_ElapsedOnTODSeconds = 0;
                 m_EmbersActive = false;
                 m_EmberTimer = 0;
-
+                m_Heat = 0;
+                m_FuelHeatIncrease = 0;
             }
 
             public bool TakeTorch()
@@ -2220,23 +2239,108 @@ namespace SkyCoopServer
                 return Charcoal;
             }
 
-            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, bool IsDynamic, float CurrentTime)
+            public int GetFreeCookingSlot()
+            {
+                if(m_CookingSlots.Count == 0)
+                {
+                    return -1;
+                }
+                for (int i = 0; i < m_CookingSlots.Count; i++)
+                {
+                    if (CheckSlotIsFree(i))
+                    {
+                        return i;
+                    }
+                }
+                return -1;
+            }
+
+            public bool CheckSlotIsFree(int SlotIndex)
+            {
+                if(SlotIndex < 0)
+                {
+                    return false;
+                }
+
+                if(SlotIndex > m_CookingSlots.Count-1)
+                {
+                    return false;
+                }
+
+                CookingSlotData Slot = m_CookingSlots[SlotIndex];
+
+                if (Slot == null)
+                {
+                    return false;
+                }
+                else
+                {
+                    return Slot.IsEmpty();
+                }
+            }
+
+            public bool SetGearForCooking(string GearGUID, int SlotIndex)
+            {
+                if(SlotIndex < 0)
+                {
+                    return false;
+                }
+                if(SlotIndex > m_CookingSlots.Count - 1)
+                {
+                    return false;
+                }
+                
+                if (string.IsNullOrEmpty(GearGUID) || CheckSlotIsFree(SlotIndex))
+                {
+                    CookingSlotData Slot = m_CookingSlots[SlotIndex];
+
+                    if (Slot != null)
+                    {
+                        Slot.m_GearGUID = GearGUID;
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            public void Ignite(float Fuel, float Heat, float InnerRadius, float OuterRadius, float CurrentTime)
+            {
+                if(m_FireState == 0)
+                {
+                    m_FireState = 6; // FullBurn
+                    m_ElapsedOnTODSeconds = 0;
+                    m_MaxOnTODSeconds = Fuel;
+                    m_FuelHeatIncrease = Heat;
+                    m_EmbersActive = false;
+                    m_EmberTimer = 0;
+                }
+                else
+                {
+                    m_MaxOnTODSeconds += Fuel;
+                    m_FuelHeatIncrease += Heat;
+                }
+                m_HeatInnerRadius = InnerRadius;
+                m_HeatOuterRadius = OuterRadius;
+                m_LastUpdateTime = CurrentTime;
+            }
+
+            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, int CookingSlots, bool IsDynamic, float CurrentTime)
             {
                 FireSyncData Fire = new FireSyncData();
 
                 Fire.m_GUID = GUID;
                 Fire.m_IsDynamic = IsDynamic;
 
-                Fire.m_MaxOnTODSeconds = Fuel;
-                Fire.m_FuelHeatIncrease = Heat;
-                Fire.m_Heat = Fire.m_FuelHeatIncrease;
                 Fire.m_TimeToReachMaxTempInSeconds = HeatingSpeed;
-                Fire.m_LastUpdateTime = CurrentTime;
 
-                Fire.m_HeatInnerRadius = InnerRadius;
-                Fire.m_HeatOuterRadius = OuterRadius;
+                Fire.Ignite(Fuel, Heat, InnerRadius, OuterRadius, CurrentTime);
 
-                Fire.m_FireState = 6; // FullBurn
+                Fire.m_CookingSlots = new List<CookingSlotData>();
+
+                for (int i = 0; i < CookingSlots; i++)
+                {
+                    Fire.m_CookingSlots.Add(new CookingSlotData());
+                }
 
                 return Fire;
             }

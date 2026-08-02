@@ -292,6 +292,8 @@ namespace SkyCoop
         public static void ClientPickUpGear(NetDataReader Reader)
         {
             bool GotGear = Reader.GetBool();
+            MenuHook.RemovePleaseWait(); // Мы возможно в ожидании действия, и получили рефанд гира.
+            FireHook.FinishCookingAction();
 
             if (GotGear)
             {
@@ -903,7 +905,7 @@ namespace SkyCoop
         {
             string GUID = Reader.GetString();
 
-            FireHook.HandleAddFire(GUID);
+            FireHook.HandleAddFuel(GUID);
         }
 
         public static void ClientTakeTorch(NetDataReader Reader)
@@ -941,6 +943,39 @@ namespace SkyCoop
                 GameAudioManager.PlayGUIError();
                 HUDMessage.AddMessage("No charcoal to collect", true, true);
             }
+        }
+        public static void ClientRequestFreeCookingSlot(NetDataReader Reader)
+        {
+            int SlotIndex = Reader.GetInt();
+            MenuHook.RemovePleaseWait();
+
+            if (SlotIndex != -1)
+            {
+                FireHook.HandleFreeCookingSlot(SlotIndex);
+            }
+            else
+            {
+                GameAudioManager.PlayGUIError();
+
+                if (FireHook.s_AnySlotsMode)
+                {
+                    HUDMessage.AddMessage("There no free cooking slots left!", true, true);
+                }
+                else
+                {
+                    HUDMessage.AddMessage("This cooking slot is already in use!", true, true);
+                }
+                FireHook.FinishCookingAction();
+            }
+        }
+
+        public static void ClientGearCookingInteration(NetDataReader Reader)
+        {
+            string GearGUID = Reader.GetString();
+            string FireGUID = Reader.GetString();
+
+            MenuHook.RemovePleaseWait();
+            FireHook.HandleCookingInteraction(GearGUID, FireGUID);
         }
     }
 }

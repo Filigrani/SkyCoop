@@ -95,6 +95,8 @@ namespace SkyCoop
             { (int)Packet.Type.ClientTakeTorch, ClientHandle.ClientTakeTorch },
             { (int)Packet.Type.ClientDismantleCampfire, ClientHandle.ClientDismantleCampfire },
             { (int)Packet.Type.ClientCharcoalCollect, ClientHandle.ClientCharcoalCollect },
+            { (int)Packet.Type.ClientRequestFreeCookingSlot, ClientHandle.ClientRequestFreeCookingSlot },
+            { (int)Packet.Type.ClientGearCookingInteration, ClientHandle.ClientGearCookingInteration },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

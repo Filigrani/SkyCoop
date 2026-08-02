@@ -90,7 +90,7 @@ namespace SkyCoop
             }
         }
 
-        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, Transform parent = null)
+        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, out bool HasCookPotItem, out bool HasCookable, Transform parent = null)
         {
             string LN = "Invalid";
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
@@ -106,6 +106,8 @@ namespace SkyCoop
                     {
                         LN = gi.DisplayName;
                     }
+                    HasCookPotItem = gi.GetComponent<CookingPotItem>();
+                    HasCookable = gi.GetComponent<Cookable>();
                     foreach (Component Com in GearObject.GetComponents<Component>())
                     {
                         string ComName = Com.GetIl2CppType().Name;
@@ -133,6 +135,8 @@ namespace SkyCoop
                     Logger.Log(ConsoleColor.Red, "Can't instantiate " + Prefab.name);
                 }
             }
+            HasCookPotItem = false;
+            HasCookable = false;
             LocalizedName = LN;
             return null;
         }

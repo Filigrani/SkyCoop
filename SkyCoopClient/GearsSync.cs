@@ -1,5 +1,6 @@
 ﻿using HarmonyLib;
 using Il2Cpp;
+using Il2CppRewired;
 using Il2CppRewired.HID;
 using Il2CppTLD.Gear;
 using Il2CppTLD.Interactions;
@@ -14,6 +15,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+
 namespace SkyCoopClient
 {
     public class GearsSync
@@ -212,7 +214,7 @@ namespace SkyCoopClient
                         Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
                         if (Visual)
                         {
-                            TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, false);
+                            TryPickUp(Visual, false);
                         }
                         Comps.CardGameProp CardGameProp = OBJ.GetComponent<Comps.CardGameProp>();
                         if(CardGameProp)
@@ -283,7 +285,7 @@ namespace SkyCoopClient
                         Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
                         if (Visual)
                         {
-                            TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, true);
+                            TryPickUp(Visual, true);
                         }
                     }
                 }
@@ -450,11 +452,16 @@ namespace SkyCoopClient
             
             internal static void Prefix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+
                 Gear = __instance.m_Gear;
             }
 
             internal static void Postfix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return; }
+
                 if (__instance.m_Gear)
                 {
                     if (!__instance.m_Gear.m_InPlayerInventory)
@@ -649,12 +656,34 @@ namespace SkyCoopClient
 
         public static void SendDropItem(GearItem gear, int nums = 0, int total = 0, bool samepose = false, int variant = 0, GameObject Around = null)
         {
+            if (!ModMain.IsMultiplayer()) { return; }
             if (gear != null && gear.gameObject != null)
             {
                 GameObject obj = gear.gameObject;
 
+                string FireGUID = "";
+                int CookingSlotIndex = -1;
+
                 Vector3 v3 = gear.gameObject.transform.position;
                 Quaternion rot = gear.gameObject.transform.rotation;
+
+                Comps.GearCookingTarget CookingTarget = obj.GetComponent<Comps.GearCookingTarget>();
+
+                if (CookingTarget)
+                {
+                    FireGUID = CookingTarget.m_FireGUID;
+                    CookingSlotIndex = CookingTarget.m_CookingIndex;
+
+                    if (CookingTarget.m_PlacePoint)
+                    {
+                        obj.transform.position = CookingTarget.m_PlacePoint.transform.position;
+                        obj.transform.rotation = CookingTarget.m_PlacePoint.transform.rotation;
+                    }
+
+                    v3 = gear.gameObject.transform.position;
+                    rot = gear.gameObject.transform.rotation;
+                    samepose = true;
+                }
 
                 if (samepose == false)
                 {
@@ -687,7 +716,7 @@ namespace SkyCoopClient
 
                 if (ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanDropItems)
                 {
-                    ClientSend.SendGear(gear.name, v3, rot, JSON);
+                    ClientSend.SendGear(gear.name, v3, rot, JSON, FireGUID, CookingSlotIndex);
                 }
 
                 if (total < 2)
@@ -711,27 +740,52 @@ namespace SkyCoopClient
 
         public static void HandleGearDropped(DataStr.GearDataVisual Visual)
         {
-            //SkyCoop.Logger.Log(ConsoleColor.Green, $"HandleGearSync {Visual.m_GearName}");
-            string LocalizedGearName = "InvalidGearName";
-            GameObject GearObject = AssetManager.CreateLocalizedBogusGear(Visual.m_GearName, out LocalizedGearName);
-            if (GearObject != null)
-            {
-                //SkyCoop.Logger.Log(ConsoleColor.Green, $"Bogus created!");
-                GearObject.transform.position = Visual.m_Position.ConvertToUnity();
-                GearObject.transform.rotation = Visual.m_Rotation.ConvertToUnity();
-                GearObject.name = Visual.m_GearName;
-                Utils.SetObjectAndChildrenLayer(GearObject, vp_Layer.Gear, vp_Layer.Gear);
-                ObjectGuid GUIDObj = GearObject.GetComponent<ObjectGuid>();
-                if (GUIDObj == null)
-                {
-                    GUIDObj = GearObject.AddComponent<ObjectGuid>();
-                }
-                Comps.DroppedGearVisual VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
-                VisualComp.m_GUID = Visual.m_GUID;
-                VisualComp.m_LocalizedName = LocalizedGearName;
-                GearsSync.ApplyTextureDoner(GearObject);
+            GameObject GearObject = PdidTable.GetGameObject(Visual.m_GUID);
 
-                PdidTable.RuntimeRegister(GUIDObj, Visual.m_GUID);
+            if(GearObject == null)
+            {
+                string LocalizedGearName = "InvalidGearName";
+                bool IsCookpotItem = false;
+                bool IsCookable = false;
+                GearObject = AssetManager.CreateLocalizedBogusGear(Visual.m_GearName, out LocalizedGearName, out IsCookpotItem, out IsCookable);
+                if (GearObject != null)
+                {
+                    //SkyCoop.Logger.Log(ConsoleColor.Green, $"Bogus created!");
+                    GearObject.transform.position = Visual.m_Position.ConvertToUnity();
+                    GearObject.transform.rotation = Visual.m_Rotation.ConvertToUnity();
+                    GearObject.name = Visual.m_GearName;
+                    Utils.SetObjectAndChildrenLayer(GearObject, vp_Layer.Gear, vp_Layer.Gear);
+                    ObjectGuid GUIDObj = GearObject.GetComponent<ObjectGuid>();
+                    if (GUIDObj == null)
+                    {
+                        GUIDObj = GearObject.AddComponent<ObjectGuid>();
+                    }
+                    Comps.DroppedGearVisual VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
+                    VisualComp.m_PrefabName = Visual.m_GearName;
+                    VisualComp.m_GUID = Visual.m_GUID;
+                    VisualComp.m_LocalizedName = LocalizedGearName;
+                    VisualComp.m_FireGUID = Visual.m_FireGUID;
+                    VisualComp.m_CookingSlotIndex = Visual.m_CookingSlot;
+                    VisualComp.RelinkCookingSlot();
+
+
+                    VisualComp.m_IsCookable = IsCookable;
+                    VisualComp.m_IsCookpotItem = IsCookpotItem;
+                    GearsSync.ApplyTextureDoner(GearObject);
+
+                    PdidTable.RuntimeRegister(GUIDObj, Visual.m_GUID);
+                }
+            }
+            else
+            {
+                Comps.DroppedGearVisual VisualComp = GearObject.GetComponent<Comps.DroppedGearVisual>();
+                if(VisualComp == null)
+                {
+                    VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
+                }
+                VisualComp.m_FireGUID = Visual.m_FireGUID;
+                VisualComp.m_CookingSlotIndex = Visual.m_CookingSlot;
+                VisualComp.RelinkCookingSlot();
             }
         }
 
@@ -842,6 +896,36 @@ namespace SkyCoopClient
         {
             GameAudioManager.PlayGUIError();
             CanclePickingUp();
+        }
+
+        public static void TryPickUp(Comps.DroppedGearVisual Visual, bool PlaceMode = false)
+        {
+            if (Visual)
+            {
+                if (Visual.m_IsCookpotItem && !string.IsNullOrEmpty(Visual.m_FireGUID) && FireHook.FireIsBurning(Visual.m_FireGUID))
+                {
+                    Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
+                    if (Panel)
+                    {
+                        Panel.Enable(true);
+                        Panel.m_ActionPickerItemDataList.Clear();
+                        Action PickupDelegate = new Action(() => TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, false));
+                        Action CookDelegate = new Action(() => FireHook.HandleCookFromPicker(Visual));
+                        Action BoilDeleagte = new Action(() => FireHook.HandleBoilFromPicker(Visual));
+
+                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "GAMEPLAY_PickUp", PickupDelegate));
+                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_cooking_pot", "GAMEPLAY_Cook", CookDelegate));
+                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_water_prep", "GAMEPLAY_Water", BoilDeleagte));
+
+                        Panel.m_ObjectInteractedWith = null;
+                        Panel.EnableWithCurrentList();
+                    }
+                }
+                else
+                {
+                    TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, PlaceMode);
+                }
+            }
         }
 
         public static void TryPickUp(string GUID, Vector3 Position, Quaternion Rotation, bool PlaceMode = false)

@@ -1,6 +1,7 @@
 ﻿using Il2Cpp;
 using Il2CppSystem;
 using Il2CppTLD.PDID;
+using NAudio.CoreAudioApi;
 using SkyCoop;
 using System;
 using System.Collections.Generic;
@@ -8,16 +9,56 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
+using UnityEngine.Playables;
+using static SkyCoop.Comps;
 
 namespace SkyCoopClient
 {
     public static class FireHook
     {
         public static PlayerControlMode s_ControlModeBeforeTakingTorch = PlayerControlMode.Normal;
+        public static string s_PendingCookingAction = string.Empty;
+        public static GameObject s_PendingCookingFireObject = null;
+        public static GearItem s_PendingCookingItem = null;
+        public static string s_PendingCookingInteractionGearGUID = string.Empty;
+        public static CookingCloneData s_PedningCookingCloneData = new CookingCloneData("", "");
+        public static GearItem s_ActiveCookignClone = null;
+        public static bool s_AnySlotsMode = true;
+
+        public struct CookingCloneData
+        {
+            public string GearName;
+            public string JSON;
+
+            public CookingCloneData(string gearname, string json)
+            {
+                GearName = gearname;
+                JSON = json;
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(Fire), "ExitFireStarting")]
         private static class Fire_ExitFireStarting
         {
+            public static float m_FireStarterFuel = 0;
+            public static float m_FireStarterHeat = 0;
+            
+            private static void Prefix(Fire __instance, bool success, bool playerCancel, float progress)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (__instance.m_FuelUsedToStart)
+                {
+                    m_FireStarterFuel = (__instance.m_FuelUsedToStart.m_BurnDurationHours * 60) * 60;
+                    m_FireStarterHeat = __instance.m_FuelUsedToStart.m_HeatIncrease;
+
+                    if (success)
+                    {
+                        SkyCoop.Logger.Log($"Fire going to be started with {__instance.m_FuelUsedToStart.gameObject.name}");
+                    }
+                }
+            }
+
             private static void Postfix(Fire __instance, bool success, bool playerCancel, float progress)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
@@ -26,41 +67,65 @@ namespace SkyCoopClient
 
                 if (success)
                 {
-                    float Fuel = __instance.m_MaxOnTODSeconds;
-                    float Heat = __instance.m_FuelHeatIncrease;
-                    float InnerRadius = 0;
-                    float OuterRadius = 0;
-                    float HeatingSped = 0;
-                    string GUID = "";
-                    ObjectGuid GUIDOJB = __instance.gameObject.GetComponent<ObjectGuid>();
-                    if (GUIDOJB == null)
+                    string GUID = GetGUID(__instance.gameObject);
+
+                    if (!string.IsNullOrEmpty(GUID))
                     {
-                        GUIDOJB = __instance.gameObject.AddComponent<ObjectGuid>();
-                        GUID = System.Guid.NewGuid().ToString();
-                        PdidTable.RuntimeRegister(GUIDOJB, GUID);
+                        float InnerRadius = 0;
+                        float OuterRadius = 0;
+                        float HeatingSped = 0;
+                        int CookingSlots = 0;
+
+                        if (__instance.m_ApplyToHeatSource && __instance.m_HeatSource)
+                        {
+                            InnerRadius = __instance.m_HeatSource.m_MaxTempIncreaseInnerRadius;
+                            OuterRadius = __instance.m_HeatSource.m_MaxTempIncreaseOuterRadius;
+                            HeatingSped = __instance.m_HeatSource.m_TimeToReachMaxTempMinutes * 60;
+                        }
+
+                        if (__instance.m_Campfire)
+                        {
+                            CookingSlots = __instance.m_Campfire.m_CookingSlots.Count;
+                        }
+                        else
+                        {
+                            FireplaceInteraction Fireplace = __instance.gameObject.GetComponent<FireplaceInteraction>();
+
+                            if (Fireplace == null)
+                            {
+                                if (__instance.gameObject.transform.parent != null)
+                                {
+                                    Fireplace = __instance.gameObject.transform.parent.gameObject.GetComponent<FireplaceInteraction>();
+                                }
+                            }
+
+                            if (Fireplace != null)
+                            {
+                                CookingSlots = Fireplace.m_CookingSlots.Count;
+                            }
+                        }
+
+                        SkyCoop.Logger.Log($"Send starting fire {GUID} Fuel {m_FireStarterFuel} Heat {m_FireStarterHeat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
+
+                        if (CookingSlots == 0)
+                        {
+                            SkyCoop.Logger.Log($"Somehow this fire has no cooking slots!!!!!!!!!!!!");
+                        }
+
+                        if (__instance.m_Campfire == null)
+                        {
+                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSped, CookingSlots);
+                        }
+                        else
+                        {
+                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSped, CookingSlots, __instance.gameObject.transform.position, __instance.gameObject.transform.rotation);
+                        }
                     }
                     else
                     {
-                        GUID = GUIDOJB.Get();
+                        SkyCoop.Logger.Log($"Can't start fire on object with no GUID");
                     }
 
-                    if (__instance.m_ApplyToHeatSource && __instance.m_HeatSource)
-                    {
-                        InnerRadius = __instance.m_HeatSource.m_MaxTempIncreaseInnerRadius;
-                        OuterRadius = __instance.m_HeatSource.m_MaxTempIncreaseOuterRadius;
-                        HeatingSped = __instance.m_HeatSource.m_TimeToReachMaxTempMinutes * 60;
-                    }
-
-                    SkyCoop.Logger.Log($"Send starting fire {GUID} Fuel {Fuel} Heat {Heat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
-
-                    if (__instance.m_Campfire == null)
-                    {
-                        ClientSend.SendStartFire(GUID, Fuel, Heat, InnerRadius, OuterRadius, HeatingSped);
-                    }
-                    else
-                    {
-                        ClientSend.SendStartFire(GUID, Fuel, Heat, InnerRadius, OuterRadius, HeatingSped, __instance.gameObject.transform.position, __instance.gameObject.transform.rotation);
-                    }
 
                     if (__instance.m_Campfire)
                     {
@@ -82,33 +147,18 @@ namespace SkyCoopClient
                     float Heat = fuel.m_FuelSourceItem.m_HeatIncrease;
                     float InnerRadius = fuel.m_FuelSourceItem.m_HeatInnerRadius;
                     float OuterRadius = fuel.m_FuelSourceItem.m_HeatOuterRadius;
-                    ObjectGuid GUIDOJB = __instance.gameObject.GetComponent<ObjectGuid>();
-                    if (GUIDOJB != null)
+
+                    string GUID = GetGUID(__instance.gameObject);
+
+                    if (!string.IsNullOrEmpty(GUID))
                     {
-                        string GUID = GUIDOJB.Get();
-
-                        if (!string.IsNullOrEmpty(GUID))
-                        {
-                            SkyCoop.Logger.Log($"Send add fuel to {GUID} Fuel {Fuel} Heat {Heat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
-                            ClientSend.SendAddFuel(GUID, (Fuel * 60) * 60, Heat, InnerRadius, OuterRadius);
-                        }
+                        SkyCoop.Logger.Log($"Send add fuel to {GUID} Fuel {Fuel} Heat {Heat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
+                        ClientSend.SendAddFuel(GUID, (Fuel * 60) * 60, Heat, InnerRadius, OuterRadius);
                     }
-                }
-            }
-        }
-
-
-        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "Awake")]
-        private static class WoodStove_Awake
-        {
-            private static void Postfix(WoodStove __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                if (ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
-                {
-                    __instance.enabled = false;
-                    __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
+                    else
+                    {
+                        SkyCoop.Logger.Log($"Can't add fuel to fire with no GUID!");
+                    }
                 }
             }
         }
@@ -130,33 +180,29 @@ namespace SkyCoopClient
                 {
                     if (__instance.m_FireplaceInteraction && __instance.m_FireplaceInteraction.gameObject)
                     {
-                        ObjectGuid GUIDOJB = __instance.m_FireplaceInteraction.gameObject.GetComponent<ObjectGuid>();
-                        if (GUIDOJB != null)
-                        {
-                            string GUID = GUIDOJB.Get();
+                        string GUID = GetGUID(__instance.m_FireplaceInteraction.gameObject);
 
-                            if (!string.IsNullOrEmpty(GUID))
+                        if (!string.IsNullOrEmpty(GUID))
+                        {
+                            Panel_HUD Panel;
+                            if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
                             {
-                                Panel_HUD Panel;
-                                if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
-                                {
-                                    s_ControlModeBeforeTakingTorch = GameManager.GetPlayerManagerComponent().m_ControlMode;
-                                    GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-                                    Panel.StartItemProgressBar(10, "Taking torch...", null, new System.Action(TakeTorchFailedSilent));
-                                }
-                                SkyCoop.Logger.Log($"Send take torch request {GUID}");
-                                ClientSend.SendTakeTorch(GUID);
-                                __instance.ExitFeedFireInterface();
+                                s_ControlModeBeforeTakingTorch = GameManager.GetPlayerManagerComponent().m_ControlMode;
+                                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+                                Panel.StartItemProgressBar(10, "Taking torch...", null, new System.Action(TakeTorchFailedSilent));
                             }
+                            SkyCoop.Logger.Log($"Send take torch request {GUID}");
+                            ClientSend.SendTakeTorch(GUID);
+                            __instance.ExitFeedFireInterface();
                         }
                         else
                         {
-                            SkyCoop.Logger.Log($"Can' take torch from fire that has no GUID!");
+                            SkyCoop.Logger.Log($"Can't take torch from fire that has no GUID!");
                         }
                     }
                     else
                     {
-                        SkyCoop.Logger.Log($"Can' take torch from fire that not exist!");
+                        SkyCoop.Logger.Log($"Can't take torch from fire that not exist!");
                     }
                 }
                 return false;
@@ -166,26 +212,21 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Panel_ActionPicker), "DismantleFireCallback")]
         private static class Panel_ActionPicker_DismantleFireCallback
         {
-
             private static bool Prefix(Panel_ActionPicker __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
                 if (__instance.m_ObjectInteractedWith)
                 {
-                    ObjectGuid GUIDOJB = __instance.m_ObjectInteractedWith.GetComponent<ObjectGuid>();
-                    if (GUIDOJB != null)
-                    {
-                        string GUID = GUIDOJB.Get();
+                    string GUID = GetGUID(__instance.m_ObjectInteractedWith.gameObject);
 
-                        if (!string.IsNullOrEmpty(GUID))
-                        {
-                            __instance.Enable(false);
-                            MenuHook.RemovePleaseWait();
-                            MenuHook.DoPleaseWait("Please wait...", "Dismantle campfire");
-                            SkyCoop.Logger.Log($"Send dismantle campfire {GUID}");
-                            ClientSend.SendDismantleCampfire(GUID);
-                        }
+                    if (!string.IsNullOrEmpty(GUID))
+                    {
+                        __instance.Enable(false);
+                        MenuHook.RemovePleaseWait();
+                        MenuHook.DoPleaseWait("Please wait...", "Dismantle campfire");
+                        SkyCoop.Logger.Log($"Send dismantle campfire {GUID}");
+                        ClientSend.SendDismantleCampfire(GUID);
                     }
                     else
                     {
@@ -207,19 +248,15 @@ namespace SkyCoopClient
 
                 if (__instance.m_ObjectInteractedWith)
                 {
-                    ObjectGuid GUIDOJB = __instance.m_ObjectInteractedWith.GetComponent<ObjectGuid>();
-                    if (GUIDOJB != null)
-                    {
-                        string GUID = GUIDOJB.Get();
+                    string GUID = GetGUID(__instance.m_ObjectInteractedWith.gameObject);
 
-                        if (!string.IsNullOrEmpty(GUID))
-                        {
-                            __instance.Enable(false);
-                            MenuHook.RemovePleaseWait();
-                            MenuHook.DoPleaseWait("Please wait...", "Taking charcoal...");
-                            SkyCoop.Logger.Log($"Send taking charcoal request {GUID}");
-                            ClientSend.SendCharcoalCollect(GUID);
-                        }
+                    if (!string.IsNullOrEmpty(GUID))
+                    {
+                        __instance.Enable(false);
+                        MenuHook.RemovePleaseWait();
+                        MenuHook.DoPleaseWait("Please wait...", "Taking charcoal...");
+                        SkyCoop.Logger.Log($"Send taking charcoal request {GUID}");
+                        ClientSend.SendCharcoalCollect(GUID);
                     }
                     else
                     {
@@ -228,6 +265,34 @@ namespace SkyCoopClient
                 }
 
                 return false;
+            }
+        }
+
+
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_GearSelect), "SelectGear")]
+        private static class Panel_GearSelect_SelectGear
+        {
+            private static bool Prefix(Panel_GearSelect __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if(__instance.m_OnSelectAction != null)
+                {
+                    string MethodName = __instance.m_OnSelectAction.Method.Name;
+
+                    switch (MethodName)
+                    {
+                        case "DoFirePickerAction":
+                        case "DoBoilPickerAction":
+
+                            DoCookingAction(MethodName, __instance.GetScrolllistCurrentItem(), __instance.m_CookingGameObject);
+                            return false;
+                        default:
+                            return true;
+                    }
+                }
+                return true;
             }
         }
 
@@ -241,18 +306,19 @@ namespace SkyCoopClient
 
                 if (__instance.m_FireplaceInteraction && __instance.m_FireplaceInteraction.gameObject)
                 {
-                    ObjectGuid GUIDOJB = __instance.m_FireplaceInteraction.gameObject.GetComponent<ObjectGuid>();
-                    if (GUIDOJB != null)
-                    {
-                        string GUID = GUIDOJB.Get();
+                    string GUID = GetGUID(__instance.m_FireplaceInteraction.gameObject);
 
-                        if (!string.IsNullOrEmpty(GUID))
+                    if (!string.IsNullOrEmpty(GUID))
+                    {
+                        __instance.Enable(false);
+                        MenuHook.RemovePleaseWait();
+                        MenuHook.DoPleaseWait("Please wait...", "Taking charcoal...");
+                        SkyCoop.Logger.Log($"Send taking charcoal request {GUID}");
+                        ClientSend.SendCharcoalCollect(GUID);
+                        WoodStove Stove = __instance.m_FireplaceInteraction.gameObject.GetComponent<WoodStove>();
+                        if(Stove && Stove.m_Open)
                         {
-                            __instance.Enable(false);
-                            MenuHook.RemovePleaseWait();
-                            MenuHook.DoPleaseWait("Please wait...", "Taking charcoal...");
-                            SkyCoop.Logger.Log($"Send taking charcoal request {GUID}");
-                            ClientSend.SendCharcoalCollect(GUID);
+                            Stove.Close();
                         }
                     }
                     else
@@ -283,6 +349,532 @@ namespace SkyCoopClient
                     __result = 1;
                 }
             }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "Awake")]
+        private static class CookingSlot_Awake
+        {
+            private static void Postfix(CookingSlot __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                Comps.CookingSlotVisual VisualHook = __instance.gameObject.GetComponent<Comps.CookingSlotVisual>();
+
+                if(VisualHook == null)
+                {
+                    VisualHook = __instance.gameObject.AddComponent<Comps.CookingSlotVisual>();
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(CookingSlot), "CanCookingSlotBeUsed")]
+        private static class CookingSlot_CanCookingSlotBeUsed
+        {
+            private static void Postfix(CookingSlot __instance, ref bool __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                Comps.CookingSlotVisual VisualHook = __instance.gameObject.GetComponent<Comps.CookingSlotVisual>();
+
+                if (VisualHook)
+                {
+                    if (VisualHook.m_Gear)
+                    {
+                        __result = false;
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(WoodStove), "Awake")]
+        private static class WoodStove_Awake
+        {
+            private static void Postfix(WoodStove __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                //if (ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
+                //{
+                //    __instance.enabled = false;
+                //    __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
+                //}
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_RecipeBook), "Enable")]
+        private static class Panel_RecipeBook_Enable
+        {
+            private static bool Prefix(Panel_RecipeBook __instance, bool enable)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if(!enable)
+                {
+                    if (s_ActiveCookignClone)
+                    {
+                        UnityEngine.Object.Destroy(s_ActiveCookignClone);
+                    }
+                }
+
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_CookWater), "Enable")]
+        private static class Panel_CookWater_Enable
+        {
+            private static void Prefix(Panel_CookWater __instance, bool enable)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (!enable)
+                {
+                    if (s_ActiveCookignClone)
+                    {
+                        UnityEngine.Object.Destroy(s_ActiveCookignClone);
+                    }
+                }
+            }
+        }
+
+        public static void DropAndPlaceItem(GearPlacePoint PlacePoint, GearItem Gear, int CookingIndex, string FireGUID)
+        {
+            if(PlacePoint == null)
+            {
+                SkyCoop.Logger.Log($"GearPlacePoint doesn't exist");
+                FinishCookingAction();
+                return;
+            }
+            if(Gear == null)
+            {
+                SkyCoop.Logger.Log($"Gear for cooking doesn't exist");
+                FinishCookingAction();
+                return;
+            }
+
+
+            SkyCoop.Logger.Log($"DropAndPlaceItem {Gear.name} Slot {CookingIndex} FireGUID {FireGUID}");
+            GearItemSaveDataProxy DataProxy = Gear.Serialize();
+
+            s_PedningCookingCloneData = new CookingCloneData(Gear.name, Utils.SerializeObject(DataProxy));
+
+            MenuHook.RemovePleaseWait();
+            MenuHook.DoPleaseWait("Please wait...", "Placing gear to cooking slot...");
+            GearCookingTarget CookingTarget = Gear.gameObject.AddComponent<GearCookingTarget>();
+            CookingTarget.m_CookingIndex = CookingIndex;
+            CookingTarget.m_FireGUID = FireGUID;
+            CookingTarget.m_PlacePoint = PlacePoint;
+            Gear.Drop(1, false, true);
+        }
+
+        public static void DoCookingAction(string Action, GearItem SelectedItem, GameObject FireObj)
+        {
+            bool IsCookingSlot = false;
+            int SlotIndex = -1;
+
+            if(FireObj != null)
+            {
+                SkyCoop.Logger.Log($"DoCookingAction True FireObj name {FireObj.name}");
+                CookingSlot Slot = FireObj.GetComponent<CookingSlot>();
+
+                if (Slot)
+                {
+                    IsCookingSlot = true;
+                    SlotIndex = GetCookingSlotIndex(Slot);
+
+                    FireplaceInteraction FirePlace = Slot.GetFireplaceHost();
+
+                    if (FirePlace)
+                    {
+                        s_PendingCookingFireObject = FirePlace.gameObject;
+                    }
+                    else
+                    {
+                        SkyCoop.Logger.Log($"DoCookingAction cooking slot's fireplaceInteraction has no GUID");
+                        s_PendingCookingFireObject = null;
+                    }
+                }
+                else
+                {
+                    s_PendingCookingFireObject = FireObj;
+                }
+            }
+            else
+            {
+                s_PendingCookingFireObject = null;
+            }
+            s_PendingCookingAction = Action;
+            s_PendingCookingItem = SelectedItem;
+
+            //if(SelectedItem == null)
+            //{
+            //    SkyCoop.Logger.Log($"DoCookingAction {Action} SelectedItem null");
+            //}
+            //else
+            //{
+            //    SkyCoop.Logger.Log($"DoCookingAction {Action} SelectedItem {SelectedItem.name}");
+
+            //}
+
+            if (s_PendingCookingFireObject != null)
+            {
+                SkyCoop.Logger.Log($"DoCookingAction Fixed FireObj name {s_PendingCookingFireObject.name}");
+                string GUID = GetGUID(s_PendingCookingFireObject);
+
+                if (IsCookingSlot)
+                {
+                    if (!string.IsNullOrEmpty(GUID))
+                    {
+                        RequestCookingSlotIsEmpty(GUID, SlotIndex);
+                    }
+                    else
+                    {
+                        SkyCoop.Logger.Log($"DoCookingAction cooking slot's fireplaceInteraction has no GUID");
+                        FinishCookingAction();
+                    }
+                }
+                else
+                {
+                    if (!string.IsNullOrEmpty(GUID))
+                    {
+                        RequestFreeCookingSlot(GUID);
+                    }
+                    else
+                    {
+                        SkyCoop.Logger.Log($"DoCookingAction FireObj has no GUID");
+                        FinishCookingAction();
+                    }
+                }
+            }
+            else
+            {
+                SkyCoop.Logger.Log($"DoCookingAction FireObj is null");
+                FinishCookingAction();
+            }
+
+            Panel_GearSelect Panel = InterfaceManager.GetPanel<Panel_GearSelect>();
+
+            if (Panel)
+            {
+                Panel.Enable(false, Panel_GearSelect.ListItemFilter.None, false);
+                Panel.m_FeedFireGameObject = null;
+                Panel.m_OnSelectAction = null;
+                Panel.m_FeedFireGameObject = null;
+            }
+        }
+
+        public static void ContinueCookingAction(int CookingSlotIndex)
+        {
+            if (s_PendingCookingFireObject)
+            {
+                FireplaceInteraction FirePlace = s_PendingCookingFireObject.GetComponent<FireplaceInteraction>();
+
+                if(FirePlace == null)
+                {
+                    Fire Fire = s_PendingCookingFireObject.GetComponent<Fire>();
+                    CookingSlot CookingSlot = s_PendingCookingFireObject.GetComponent<CookingSlot>();
+
+                    if (Fire == null)
+                    {
+                        SkyCoop.Logger.Log($"Pending fire object does not contains fire or fireplaceinteraction or cookingslot component!");
+                        FinishCookingAction();
+                        return;
+                    }
+                    else if(CookingSlot != null)
+                    {
+                        FirePlace = CookingSlot.GetFireplaceHost();
+                    }
+                    else
+                    {
+                        FirePlace = GetFireplaceFromFire(Fire);
+
+                        if (FirePlace == null)
+                        {
+                            SkyCoop.Logger.Log($"Pending fire object does not contains fireplaceinteraction, failed to find fireplace by fire!");
+                            FinishCookingAction();
+                            return;
+                        }
+                    }
+                }
+
+                CookingSlot Slot = GetCookingSlotByIndex(FirePlace, CookingSlotIndex);
+
+                if (Slot == null)
+                {
+                    SkyCoop.Logger.Log($"Slot index provoided by server {CookingSlotIndex} is not exist on the client!");
+                }
+                else
+                {
+                    PlaceGearForCookingAction(Slot, CookingSlotIndex, GetGUID(s_PendingCookingFireObject));
+                }
+            }
+            else
+            {
+                SkyCoop.Logger.Log($"Fire for ContinueCookingAction does not exist!");
+            }
+        }
+
+        public static void PlaceGearForCookingAction(CookingSlot Slot, int SlotIndex, string FireGUID)
+        {
+            
+            if (Slot == null)
+            {
+                SkyCoop.Logger.Log($"Can't place gear on cooking slot, cooking slot not exist!");
+                FinishCookingAction();
+                return;
+            }
+            if(SlotIndex == -1)
+            {
+                SkyCoop.Logger.Log($"Can't place gear on cooking slot, invalid slot index {SlotIndex}!");
+                FinishCookingAction();
+                return;
+            }
+            if (string.IsNullOrEmpty(FireGUID))
+            {
+                SkyCoop.Logger.Log($"Can't place gear on fire with no GUID!");
+                FinishCookingAction();
+                return;
+            }
+            
+            DropAndPlaceItem(Slot.m_GearPlacePoint, s_PendingCookingItem, SlotIndex, FireGUID);
+        }
+
+        public static void FinishCookingAction(string GearGUID = "", string FireGUID = "")
+        {
+            if (string.IsNullOrEmpty(GearGUID) || string.IsNullOrEmpty(FireGUID))
+            {
+                s_PendingCookingAction = string.Empty; // Отменяем действие
+            }
+            else
+            {
+                SkyCoop.Logger.Log($"FinishCookingAction GearGUID {GearGUID} FireGUID {FireGUID} Action {s_PendingCookingAction}");
+            }
+            
+            switch (s_PendingCookingAction)
+            {
+                case "DoFirePickerAction":
+                    break;
+                case "DoBoilPickerAction":
+                    if (!string.IsNullOrEmpty(s_PedningCookingCloneData.GearName))
+                    {
+                        s_ActiveCookignClone = GetCookingClone(s_PedningCookingCloneData.GearName, s_PedningCookingCloneData.JSON);
+
+                        if (s_ActiveCookignClone)
+                        {
+                            if (s_ActiveCookignClone.m_CookingPotItem)
+                            {
+                                Panel_CookWater Panel = InterfaceManager.GetPanel<Panel_CookWater>();
+
+                                if (Panel)
+                                {
+                                    Panel.SetFireContainer(s_PendingCookingFireObject);
+                                    Panel.SetCookingPot(s_ActiveCookignClone.m_CookingPotItem);
+                                    Panel.Enable(true);
+                                }
+                                break;
+                            }
+                            else
+                            {
+                                UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            SkyCoop.Logger.Log($"Failed to create cooking clone {s_PedningCookingCloneData.GearName}");
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        SkyCoop.Logger.Log($"Failed to create cooking clone there no data for clone");
+                        break;
+                    }
+                default:
+                    break;
+            }
+            s_PendingCookingAction = string.Empty;
+            s_PendingCookingFireObject = null;
+            s_PendingCookingItem = null;
+            s_PendingCookingInteractionGearGUID = string.Empty;
+            s_PedningCookingCloneData = new CookingCloneData("", "");
+        }
+
+        public static GearItem GetCookingClone(string GearNanem, string JSON)
+        {
+            GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearNanem);
+            if (reference)
+            {
+                GameObject GearObject = UnityEngine.Object.Instantiate(reference);
+
+                GearObject.name = GearNanem;
+
+                GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(JSON);
+                GearItem Gi = GearObject.GetComponent<GearItem>();
+                Gi.Deserialize(DataProxy, true);
+
+                GearsSync.GearManualPatch(Gi);
+                Gi.ManualStart();
+                Gi.ManualUpdate();
+
+                GearObject.AddComponent<Comps.GearCookingDummy>();
+                GearObject.SetActive(false);
+                return Gi;
+            }
+            return null;
+        }
+
+        public static void RequestFreeCookingSlot(string GUID)
+        {
+            if (!string.IsNullOrEmpty(GUID))
+            {
+                s_AnySlotsMode = true;
+                MenuHook.RemovePleaseWait();
+                MenuHook.DoPleaseWait("Please wait...", "Looking for cooking slot");
+                ClientSend.SendRequestFreeCookingSlot(GUID);
+            }
+        }
+
+        public static void RequestCookingSlotIsEmpty(string GUID, int SlotIndex)
+        {
+            if (!string.IsNullOrEmpty(GUID))
+            {
+                s_AnySlotsMode = false;
+                MenuHook.RemovePleaseWait();
+                MenuHook.DoPleaseWait("Please wait...", "Checking cooking slot");
+                ClientSend.SendRequestFreeCookingSlot(GUID, SlotIndex);
+            }
+        }
+
+        public static void RequestFreeCookingSlot(GameObject Obj)
+        {
+            string GUID = GetGUID(Obj);
+            RequestFreeCookingSlot(GUID);
+        }
+
+        public static CookingSlot GetCookingSlotByIndex(FireplaceInteraction FirePlace, int Index)
+        {
+            if (FirePlace == null)
+            {
+                return null;
+            }
+
+            if(Index < 0)
+            {
+                return null;
+            }
+
+            if(FirePlace.m_CookingSlots.Count-1 < Index)
+            {
+                return null;
+            }
+            return FirePlace.m_CookingSlots[Index];
+        }
+
+        public static CookingSlot GetCookingSlotByIndex(string GUID, int Index)
+        {
+            GameObject Obj = PdidTable.GetGameObject(GUID);
+
+            if (Obj != null)
+            {
+                Fire Fire = Obj.GetComponent<Fire>();
+                if (Fire)
+                {
+                    FireplaceInteraction FirePlace = GetFireplaceFromFire(Fire);
+                    if(FirePlace != null)
+                    {
+                        return GetCookingSlotByIndex(FirePlace, Index);
+                    }
+                }
+            }
+
+            return null;
+        }
+
+        public static int GetCookingSlotIndex(CookingSlot Slot)
+        {
+            if (Slot == null)
+            {
+                return -1;
+            }
+
+            FireplaceInteraction Fireplace = Slot.GetFireplaceHost();
+
+            if (Fireplace)
+            {
+                for (int i = 0; i < Fireplace.m_CookingSlots.Count; i++)
+                {
+                    CookingSlot OtherSlot = Fireplace.m_CookingSlots[i];
+
+                    if (OtherSlot != null)
+                    {
+                        if (OtherSlot == Slot)
+                        {
+                            return i;
+                        }
+                    }
+                }
+            }
+            return -1;
+        }
+
+        public static FireplaceInteraction GetFireplaceFromFire(Fire Fire)
+        {
+            if(Fire == null)
+            {
+                return null;
+            }
+            if (Fire.m_Campfire)
+            {
+                return Fire.m_Campfire;
+            }
+            FireplaceInteraction FirePlace = Fire.gameObject.GetComponent<FireplaceInteraction>();
+
+            if (FirePlace)
+            {
+                return FirePlace;
+            }
+            else
+            {
+                if (Fire.transform.parent)
+                {
+                    FirePlace = Fire.transform.parent.gameObject.GetComponent<FireplaceInteraction>();
+                }
+            }
+            return FirePlace;
+        }
+
+        public static string GetGUID(GameObject Obj)
+        {
+            Fire Fire = Obj.GetComponent<Fire>();
+
+            if (Fire == null)
+            {
+                FireplaceInteraction FirePlace = Obj.GetComponent<FireplaceInteraction>();
+
+                if (FirePlace)
+                {
+                    Fire = FirePlace.Fire;
+                }
+            }
+
+            if (Fire)
+            {
+                ObjectGuid GUIDOJB = Fire.gameObject.GetComponent<ObjectGuid>();
+
+                if (GUIDOJB == null)
+                {
+                    GUIDOJB = Fire.gameObject.AddComponent<ObjectGuid>();
+                    string GUID = System.Guid.NewGuid().ToString();
+                    PdidTable.RuntimeRegister(GUIDOJB, GUID);
+                }
+                else
+                {
+                    return GUIDOJB.Get();
+                }
+            }
+
+            return "";
         }
 
         public static void TakeTorch()
@@ -324,6 +916,22 @@ namespace SkyCoopClient
             GameObject Obj = PdidTable.GetGameObject(GUID);
 
             return Obj != null;
+        }
+
+        public static bool FireIsBurning(string GUID)
+        {
+            GameObject Obj = PdidTable.GetGameObject(GUID);
+
+            if(Obj != null)
+            {
+                Fire Fire = Obj.GetComponent<Fire>();
+                if (Fire)
+                {
+                    return Fire.m_FireState == FireState.FullBurn;
+                }
+            }
+
+            return false;
         }
 
         public static void CreateCampfire(string GUID, Vector3 Position, Quaternion Rotation)
@@ -407,6 +1015,21 @@ namespace SkyCoopClient
                         Fire.TurnOffImmediate();
                     }
 
+                    if(State == FireState.FullBurn)
+                    {
+                        if(Fire.m_ElapsedOnTODSeconds > Fire.m_MaxOnTODSeconds)
+                        {
+                            Fire.m_EmberTimer = 100;
+                        }
+                        else
+                        {
+                            Fire.m_EmberTimer = 0;
+                        }
+                    }
+                    else
+                    {
+                        Fire.m_EmberTimer = 0;
+                    }
                     Fire.FireStateSet(State);
 
                     if (Fire.m_FX)
@@ -431,7 +1054,7 @@ namespace SkyCoopClient
             }
         }
 
-        public static void HandleAddFire(string GUID)
+        public static void HandleAddFuel(string GUID)
         {
             SkyCoop.Logger.Log($"HandleFireSync {GUID}");
             GameObject Obj = PdidTable.GetGameObject(GUID);
@@ -485,6 +1108,54 @@ namespace SkyCoopClient
                             ")"
                         }), false, true);
                     }
+                }
+            }
+        }
+        public static void HandleFreeCookingSlot(int SlotIndex)
+        {
+            SkyCoop.Logger.Log($"HandleFreeCookingSlot {SlotIndex}");
+            ContinueCookingAction(SlotIndex);
+        }
+
+        public static void HandleCookingInteraction(string GearGUID, string FireGUID)
+        {
+            SkyCoop.Logger.Log($"HandleCookingInteraction Gear {GearGUID} Fire {FireGUID}");
+
+            FinishCookingAction(GearGUID, FireGUID);
+        }
+
+        public static void HandleCookFromPicker(DroppedGearVisual Visual)
+        {
+
+        }
+
+        public static void HandleBoilFromPicker(DroppedGearVisual Visual)
+        {
+            s_ActiveCookignClone = GetCookingClone(Visual.m_PrefabName, "");
+
+            if (s_ActiveCookignClone)
+            {
+                if (s_ActiveCookignClone.m_CookingPotItem)
+                {
+                    Panel_CookWater Panel = InterfaceManager.GetPanel<Panel_CookWater>();
+
+                    if (Panel)
+                    {
+                        if(Visual.m_CookingSlot != null)
+                        {
+                            FireplaceInteraction FirePlace = Visual.m_CookingSlot.GetFireplaceHost();
+                            if (FirePlace)
+                            {
+                                Panel.SetFireContainer(FirePlace.gameObject);
+                            }
+                        }
+                        Panel.SetCookingPot(s_ActiveCookignClone.m_CookingPotItem);
+                        Panel.Enable(true);
+                    }
+                }
+                else
+                {
+                    UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
                 }
             }
         }

@@ -1088,5 +1088,26 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendFreeCookingSlot(NetPeer Client, int Slot)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRequestFreeCookingSlot);
+
+            writer.Put(Slot);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendCookingInteraction(NetPeer Client, string GearGUID, string FireGUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientGearCookingInteration);
+
+            writer.Put(GearGUID);
+            writer.Put(FireGUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

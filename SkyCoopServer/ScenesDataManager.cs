@@ -15,6 +15,18 @@ namespace SkyCoopServer
         public Server m_ServerInstance;
         public Dictionary<string, SceneData> m_LoadedScenes = new Dictionary<string, SceneData>();
 
+        public struct AddedGearData
+        {
+            public string GUID;
+            public string FireGUID;
+
+            public AddedGearData(string guid,  string fireguid)
+            {
+                GUID = guid;
+                FireGUID = fireguid;
+            }
+        }
+
         public ScenesDataManager(Server Server)
         {
             m_ServerInstance = Server;
@@ -290,18 +302,32 @@ namespace SkyCoopServer
             return new V3Quat();
         }
 
-        public void AddGear(string SceneName, GearDataContainer DataContainer)
+        public AddedGearData AddGear(string SceneName, GearDataContainer DataContainer)
         {
+            bool IsCooking = false;
             SceneData SceneData = GetSceneData(SceneName);
             if (SceneData == null)
             {
                 Logger.Log(ConsoleColor.Red, $"[AddGear] called on scene {SceneName} that not exist!");
-                return;
+                return new AddedGearData("", "");
+            }
+
+            if(!string.IsNullOrEmpty(DataContainer.m_Visual.m_FireGUID) && DataContainer.m_Visual.m_CookingSlot != -1)
+            {
+                IsCooking = SetGearForCooking(SceneName, DataContainer.m_Visual.m_FireGUID, DataContainer.m_Visual.m_CookingSlot, DataContainer.m_Data.m_GUID);
+
+                // Такова не должно быть, но просто подстраховка
+                if (!IsCooking)
+                {
+                    DataContainer.m_Visual.m_FireGUID = "";
+                    DataContainer.m_Visual.m_CookingSlot = -1;
+                }
             }
 
             SceneData.m_Gears.Add(DataContainer.m_Data.m_GUID, DataContainer);
 
             ServerSend.SendGearVisual(DataContainer.m_Visual, SceneName, m_ServerInstance);
+            return new AddedGearData(DataContainer.m_Data.m_GUID, DataContainer.m_Visual.m_FireGUID);
         }
 
         public GearDataContainer GetGear(string SceneName, string GUID, bool Remove = false)
@@ -318,6 +344,20 @@ namespace SkyCoopServer
                 GearDataContainer Data = SceneData.m_Gears[GUID];
                 if (Remove)
                 {
+                    if(Data.m_Visual.m_CookingSlot != -1 && !string.IsNullOrEmpty(Data.m_Visual.m_FireGUID))
+                    {
+                        FireSyncData FireData = null;
+
+                        if(SceneData.m_Fires.TryGetValue(Data.m_Visual.m_FireGUID, out FireData))
+                        {
+                            if (FireData != null)
+                            {
+                                FireData.SetGearForCooking("", Data.m_Visual.m_CookingSlot);
+                            }
+                        }
+                    }
+                    
+                    
                     SceneData.m_Gears.Remove(GUID);
                     ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
                 }
@@ -326,7 +366,7 @@ namespace SkyCoopServer
             return null;
         }
 
-        public void AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON)
+        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, string FireGUID = "", int CookingSlot = -1)
         {
             string NewGUID = Guid.NewGuid().ToString();
 
@@ -335,12 +375,15 @@ namespace SkyCoopServer
             DataContainer.m_Data.m_GUID = NewGUID;
             DataContainer.m_Data.m_JSON = JSON;
 
+
             DataContainer.m_Visual.m_GUID = NewGUID;
             DataContainer.m_Visual.m_GearName = GearName;
             DataContainer.m_Visual.m_Position = Position;
             DataContainer.m_Visual.m_Rotation = Rotation;
+            DataContainer.m_Visual.m_FireGUID = FireGUID;
+            DataContainer.m_Visual.m_CookingSlot = CookingSlot;
 
-            AddGear(SceneName, DataContainer);
+            return AddGear(SceneName, DataContainer);
         }
 
         public void AddOpenableState(string SceneName, string GUID, bool OpenState)
@@ -886,6 +929,24 @@ namespace SkyCoopServer
             }
         }
 
+        public FireSyncData GetFire(string GUID, string SceneName)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[GetFire] called on scene {SceneName} that not exist!");
+                return null;
+            }
+
+            FireSyncData TempFire = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out TempFire))
+            {
+                return TempFire;
+            }
+            return null;
+        }
+
         public int RemoveFire(string SceneName, string GUID)
         {
             int Charcoal = 0;
@@ -901,6 +962,28 @@ namespace SkyCoopServer
             if (SceneData.m_Fires.TryGetValue(GUID, out FireData))
             {
                 Charcoal = FireData.TakeCharcoal();
+
+
+                foreach (CookingSlotData Slot in FireData.m_CookingSlots)
+                {
+                    if(Slot != null)
+                    {
+                        if (!string.IsNullOrEmpty(Slot.m_GearGUID))
+                        {
+                            GearDataContainer GearData = null;
+
+                            if(SceneData.m_Gears.TryGetValue(Slot.m_GearGUID, out GearData))
+                            {
+                                GearData.m_Visual.m_FireGUID = "";
+                                GearData.m_Visual.m_CookingSlot = -1;
+
+                                ServerSend.SendGearVisual(GearData.m_Visual, SceneName, m_ServerInstance);
+                            }
+                        }
+                    }
+                }
+
+
                 SceneData.m_Fires.Remove(GUID);
 
                 List<NetPeer> peers = new List<NetPeer>();
@@ -987,6 +1070,66 @@ namespace SkyCoopServer
                 }
             }
             return 0;
+        }
+
+        public int GetFreeCookingSlot(string SceneName, string GUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[GetFreeCookingSlot] called on scene {SceneName} that not exist!");
+                return -1;
+            }
+            DataStr.FireSyncData Fire = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out Fire))
+            {
+                if (Fire != null)
+                {
+                    return Fire.GetFreeCookingSlot();
+                }
+            }
+            return -1;
+        }
+
+        public bool CookingSlotIsFree(string SceneName, string GUID, int CookingSlotIndex)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[CookingSlotIsFree] called on scene {SceneName} that not exist!");
+                return false;
+            }
+            DataStr.FireSyncData Fire = null;
+
+            if (SceneData.m_Fires.TryGetValue(GUID, out Fire))
+            {
+                if (Fire != null)
+                {
+                    return Fire.CheckSlotIsFree(CookingSlotIndex);
+                }
+            }
+            return false;
+        }
+
+        public bool SetGearForCooking(string SceneName, string FireGUID, int CookingSlotIndex, string GearGUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[SetGearForCooking] called on scene {SceneName} that not exist!");
+                return false;
+            }
+            DataStr.FireSyncData Fire = null;
+
+            if (SceneData.m_Fires.TryGetValue(FireGUID, out Fire))
+            {
+                if (Fire != null)
+                {
+                    return Fire.SetGearForCooking(GearGUID, CookingSlotIndex);
+                }
+            }
+            return false;
         }
     }
 }
