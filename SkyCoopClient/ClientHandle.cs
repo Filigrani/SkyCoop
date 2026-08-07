@@ -4,7 +4,6 @@ using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
-using static Il2CppNodeCanvas.Tasks.Conditions.Condition_PlayerStats;
 using static SkyCoop.PlayersManager;
 using static SkyCoopServer.DataStr;
 
@@ -300,7 +299,10 @@ namespace SkyCoop
                 string GearName = Reader.GetString();
                 string JSON = Reader.GetString();
                 bool DropAround = Reader.GetBool();
-                GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement(GearName, JSON, DropAround, false));
+                float TimeBeingCooked = Reader.GetFloat();
+                string CookingResult = Reader.GetString();
+                float Volume = Reader.GetFloat();
+                GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement(GearName, JSON, DropAround, false, TimeBeingCooked, CookingResult, Volume));
             }
             else
             {
@@ -976,6 +978,32 @@ namespace SkyCoop
 
             MenuHook.RemovePleaseWait();
             FireHook.HandleCookingInteraction(GearGUID, FireGUID);
+        }
+
+        public static void ServerGearBeingCookedProgress(NetDataReader Reader)
+        {
+            string GearGUID = Reader.GetString();
+            float Progress = Reader.GetFloat();
+
+            GearsSync.HandleGearCooking(GearGUID, Progress);
+        }
+
+        public static void ServerWaterRefund(NetDataReader Reader)
+        {
+            float Volume = Reader.GetFloat();
+            bool GoodWater = Reader.GetBool();
+
+            if (GameManager.GetInventoryComponent())
+            {
+                if (GoodWater)
+                {
+                    GameManager.GetInventoryComponent().AddToWaterSupply(new Il2CppTLD.IntBackedUnit.ItemLiquidVolume(FireHook.ConvertVolumeToUnits(Volume)), LiquidQuality.Potable);
+                }
+                else
+                {
+                    GameManager.GetInventoryComponent().AddToWaterSupply(new Il2CppTLD.IntBackedUnit.ItemLiquidVolume(FireHook.ConvertVolumeToUnits(Volume)), LiquidQuality.NonPotable);
+                }
+            }
         }
     }
 }

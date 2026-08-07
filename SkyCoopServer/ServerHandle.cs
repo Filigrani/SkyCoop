@@ -294,25 +294,68 @@ namespace SkyCoopServer
             Vector3 Position = Reader.GetVector3();
             Quaternion Rotation = Reader.GetQuaternion();
             string JSON = Reader.GetString();
-            string FireGUID = Reader.GetString();
-            int CookingPoint = Reader.GetInt();
+            float NormalizedCondition = Reader.GetFloat();
+            int Style = Reader.GetInt();
+            string CookpotGUID = Reader.GetString();
 
-            //SkyCoopServer.Logger.Log(ConsoleColor.Green, $"ServerHandle.ClientSendGear {GearName} FireGUID {FireGUID} CookingSlot {CookingPoint}");
+            string FireGUID = "";
+            int CookingSlotIndex = -1;
+
+            bool HasCookingSlot = Reader.GetBool();
+
+            if (HasCookingSlot)
+            {
+                FireGUID = Reader.GetString();
+                CookingSlotIndex = Reader.GetInt();
+            }
+
+            string RecipeResult = "";
+            float CookTime = 0;
+            float BurnTime = 0;
+            float Volume = 0;
+            float BeingCooked = 0;
+
+            bool HasRecipe = Reader.GetBool();
+
+            if (HasRecipe || !string.IsNullOrEmpty(CookpotGUID))
+            {
+                RecipeResult = Reader.GetString();
+                CookTime = Reader.GetFloat();
+                BurnTime = Reader.GetFloat();
+                Volume = Reader.GetFloat();
+                BeingCooked = Reader.GetFloat();
+            }
+
+
+            SkyCoopServer.Logger.Log(ConsoleColor.Green, $"ServerHandle.ClientSendGear {GearName} FireGUID {FireGUID} CookingSlot {CookingSlotIndex} CookpotGUID {CookpotGUID} CookTime {CookTime} BurnTime {BurnTime}");
 
             if (!string.IsNullOrEmpty(FireGUID))
             {
-                bool CookingSlotIsAvaliable = ServerInstance.m_ScenesData.CookingSlotIsFree(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, FireGUID, CookingPoint);
+                bool CookingSlotIsAvaliable = ServerInstance.m_ScenesData.CookingSlotIsFree(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, FireGUID, CookingSlotIndex);
 
                 if (!CookingSlotIsAvaliable)
                 {
                     // Слот занят, делаем рефанд
-                    SkyCoopServer.Logger.Log(ConsoleColor.Yellow, $"CookingSlot {CookingPoint} is busy, refunding gear");
-                    ServerSend.SendPickUpGear(Client, GearName, JSON);
+                    SkyCoopServer.Logger.Log(ConsoleColor.Yellow, $"CookingSlot {CookingSlotIndex} is busy, refunding gear");
+                    ServerSend.SendPickUpGear(Client, GearName, JSON, true, BeingCooked, RecipeResult, Volume);
                     return;
                 }
             }
 
-            ScenesDataManager.AddedGearData AddGearResult = ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON, FireGUID, CookingPoint);
+            if (!string.IsNullOrEmpty(CookpotGUID))
+            {
+                GearDataContainer CookpotData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, CookpotGUID);
+
+                if (CookpotData == null || !string.IsNullOrEmpty(CookpotData.m_Visual.m_CookingResult) || !string.IsNullOrEmpty(CookpotData.m_Visual.m_ProductGUID))
+                {
+                    // Слот занят, делаем рефанд
+                    SkyCoopServer.Logger.Log(ConsoleColor.Yellow, $"CookingPot {CookpotGUID} is busy, refunding gear");
+                    ServerSend.SendPickUpGear(Client, GearName, JSON, true, BeingCooked, RecipeResult, Volume);
+                    return;
+                }
+            }
+
+            ScenesDataManager.AddedGearData AddGearResult = ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, RecipeResult, CookTime, BurnTime, Volume, BeingCooked, CookpotGUID);
 
             if(!string.IsNullOrEmpty(AddGearResult.FireGUID))
             {
@@ -325,7 +368,7 @@ namespace SkyCoopServer
                 {
                     SkyCoopServer.Logger.Log(ConsoleColor.Red, $"Gear expected to be added to fire, but it did not happend, deleting gear from server and doing refund!");
                     DataStr.GearDataContainer RefundGear = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, AddGearResult.GUID, true);
-                    ServerSend.SendPickUpGear(Client, RefundGear.m_Visual.m_GearName, RefundGear.m_Data.m_JSON);
+                    ServerSend.SendPickUpGear(Client, RefundGear.m_Visual.m_GearName, RefundGear.m_Data.m_JSON, true, BeingCooked, RecipeResult, Volume);
                 }
             }
         }
@@ -339,7 +382,7 @@ namespace SkyCoopServer
             }
             string GUID = Reader.GetString();
 
-            DataStr.GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID, true);
+            DataStr.GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID);
 
             if(GearData == null)
             {
@@ -347,7 +390,20 @@ namespace SkyCoopServer
             }
             else
             {
-                ServerSend.SendPickUpGear(Client, GearData.m_Visual.m_GearName, GearData.m_Data.m_JSON);
+                Logger.Log($"[ServerHandle] (ClientPickUpGear) GearData.m_Visual.m_ProductGUID {GearData.m_Visual.m_ProductGUID} ");
+                if (!string.IsNullOrEmpty(GearData.m_Visual.m_ProductGUID)) // Нельзя забрать котелок до того пока внутри него что-то есть, берём то что внутри.
+                {
+                    DataStr.GearDataContainer ProductData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearData.m_Visual.m_ProductGUID);
+
+                    if(ProductData != null)
+                    {
+                        ServerSend.SendPickUpGear(Client, ProductData.m_Visual.m_GearName, ProductData.m_Data.m_JSON, true, GearData.m_Visual.m_BeingCookedTime, ProductData.m_Visual.m_CookingResult, ProductData.m_Visual.m_Volume);
+                        ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, ProductData.m_Visual.m_GUID);
+                        return;
+                    }
+                }
+                ServerSend.SendPickUpGear(Client, GearData.m_Visual.m_GearName, GearData.m_Data.m_JSON, false, GearData.m_Visual.m_BeingCookedTime, GearData.m_Visual.m_CookingResult, GearData.m_Visual.m_Volume);
+                ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID);
             }
         }
 
@@ -1206,7 +1262,7 @@ namespace SkyCoopServer
 
                 if(FireData == null)
                 {
-                    FireData = FireSyncData.Create(GUID, Fuel, Heat, InnerRadius, OutterRadius, HeatingSpeed, CookingSlots, IsDynamic, ServerInstance.m_Timeline.m_ElapsedInGameHours);
+                    FireData = FireSyncData.Create(GUID, Fuel, Heat, InnerRadius, OutterRadius, HeatingSpeed, CookingSlots, IsDynamic, ServerInstance.m_Timeline.m_ElapsedInGameHours, Player.m_Scene, ServerInstance);
 
                     if (IsDynamic)
                     {
@@ -1217,7 +1273,7 @@ namespace SkyCoopServer
                 }
                 else
                 {
-                    FireData.Ignite(Fuel, Heat, InnerRadius, OutterRadius, ServerInstance.m_Timeline.m_ElapsedInGameHours);
+                    FireData.Ignite(Fuel, Heat, InnerRadius, OutterRadius, ServerInstance.m_Timeline.m_ElapsedInGameHours, Player.m_Scene, ServerInstance);
                 }
             }
         }
@@ -1299,6 +1355,39 @@ namespace SkyCoopServer
                     else
                     {
                         ServerSend.SendFreeCookingSlot(Client, DesiredSlot);
+                    }
+                }
+            }
+        }
+        public static void ClientGearSetRecipe(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                string RecipeResult = Reader.GetString();
+                float CookingTime = Reader.GetFloat();
+                float BurntTime = Reader.GetFloat();
+                float Volume = Reader.GetFloat();
+
+                GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(Player.m_Scene, GUID, false);
+
+                if(GearData != null)
+                {
+                    if (string.IsNullOrEmpty(GearData.m_Visual.m_CookingResult))
+                    {
+                        GearData.m_Visual.SetRecipe(RecipeResult, CookingTime, BurntTime, Volume, 0);
+                        ServerInstance.m_ScenesData.SetGearForCooking(Player.m_Scene, GearData.m_Visual);
+
+                        ServerSend.SendGearVisual(GearData.m_Visual, Player.m_Scene, ServerInstance);
+                    }
+                    else
+                    {
+                        if(RecipeResult == "GoodWater")
+                        {
+                            ServerSend.SendWaterRefund(Client, Volume, false);
+                        }
                     }
                 }
             }

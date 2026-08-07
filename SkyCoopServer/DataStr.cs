@@ -7,6 +7,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using static System.Net.WebRequestMethods;
@@ -662,8 +663,82 @@ namespace SkyCoopServer
             public Vector3 m_Position = new Vector3(0, 0, 0);
             public Quaternion m_Rotation = new Quaternion(0, 0, 0, 0);
             public string m_GUID = "";
+            public float m_ConditionNormalized = 1;
+            public int m_Style = 0;
+
+            public bool m_HasCookingSlot = false;
             public string m_FireGUID = "";
             public int m_CookingSlot = -1;
+
+            public bool m_HasCookingRecipe = false;
+            public string m_CookingResult = "";
+            public float m_CookingTime = 0;
+            public float m_BurntTime = 0;
+            public float m_Volume = 0;
+
+            public float m_BeingCookedTime = 0;
+
+            public bool m_IsCooking = false;
+
+            public string m_CookpotGUID = "";
+            public string m_ProductGUID = "";
+
+            public void SetCookingSlot(string FireGUID, int SlotIndex)
+            {
+                if(SlotIndex < 0 || string.IsNullOrEmpty(FireGUID))
+                {
+                    m_FireGUID = "";
+                    m_CookingSlot = -1;
+
+                    m_HasCookingSlot = false;
+                }
+                else
+                {
+                    m_FireGUID = FireGUID;
+                    m_CookingSlot = SlotIndex;
+
+                    m_HasCookingSlot = true;
+                }
+            }
+
+            public void StartCooking(float CurrentTime)
+            {
+                m_IsCooking = true;
+            }
+
+            public void StopCooking()
+            {
+                m_IsCooking = false;
+            }
+
+            public void AddCookingHours(float HoursCooked)
+            {
+                m_BeingCookedTime += HoursCooked;
+            }
+
+            public void SetRecipe(string Result, float CookingTime, float BurntTime, float Volume, float TimeBeingCooked)
+            {
+                if (string.IsNullOrEmpty(Result))
+                {
+                    m_CookingResult = "";
+                    m_CookingTime = 0;
+                    m_BurntTime = 0;
+                    m_Volume = 0;
+                    m_BeingCookedTime = 0;
+
+                    m_HasCookingRecipe = false;
+                }
+                else
+                {
+                    m_CookingResult = Result;
+                    m_CookingTime = CookingTime;
+                    m_BurntTime = BurntTime;
+                    m_Volume = Volume;
+                    m_BeingCookedTime = TimeBeingCooked;
+
+                    m_HasCookingRecipe = true;
+                }
+            }
         }
         public class GearData
         {
@@ -850,7 +925,7 @@ namespace SkyCoopServer
 
                                 //SkyCoopServer.Logger.Log($"[PopulateLoot] {m_SceneName} Point {PointIndex}({i}/{LootPerPoint}) picked {GearName}");
 
-                                ServerInstance.m_ScenesData.AddGear(m_SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty);
+                                ServerInstance.m_ScenesData.AddGear(m_SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0);
                                 AvaliablePoints.RemoveAt(Index);
                             }
                         }
@@ -2144,9 +2219,6 @@ namespace SkyCoopServer
         public class CookingSlotData
         {
             public string m_GearGUID = string.Empty;
-            public float m_MaxOnTODSeconds = 0;
-            public float m_ElapsedOnTODSeconds = 0;
-            public float m_BurnOutTimer = 0;
 
             public bool IsEmpty()
             {
@@ -2207,7 +2279,7 @@ namespace SkyCoopServer
                 return TimeLeft;
             }
 
-            public void Unlit()
+            public void Unlit(string SceneName, Server ServerInstance)
             {
                 m_NumGeneratedCharcoalPieces += (int)MathF.Floor((m_MaxOnTODSeconds / 60) / 60); // Игра даёт 1 уголь за каждый час горения огня.
                 m_FireState = 0;
@@ -2217,6 +2289,28 @@ namespace SkyCoopServer
                 m_EmberTimer = 0;
                 m_Heat = 0;
                 m_FuelHeatIncrease = 0;
+
+                SceneData SceneData = ServerInstance.m_ScenesData.GetSceneData(SceneName);
+
+                if (SceneData != null)
+                {
+                    foreach (CookingSlotData Slot in m_CookingSlots)
+                    {
+                        if (Slot != null)
+                        {
+                            if (!string.IsNullOrEmpty(Slot.m_GearGUID))
+                            {
+                                GearDataContainer GearData = null;
+
+                                if (SceneData.m_Gears.TryGetValue(Slot.m_GearGUID, out GearData))
+                                {
+                                    GearData.m_Visual.StopCooking();
+                                    ServerSend.SendGearVisual(GearData.m_Visual, SceneName, ServerInstance);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             public bool TakeTorch()
@@ -2279,8 +2373,30 @@ namespace SkyCoopServer
                 }
             }
 
-            public bool SetGearForCooking(string GearGUID, int SlotIndex)
+            public void ClearCookingSlot(int SlotIndex)
             {
+                if (SlotIndex < 0)
+                {
+                    return;
+                }
+                if (SlotIndex > m_CookingSlots.Count - 1)
+                {
+                    return;
+                }
+                CookingSlotData Slot = m_CookingSlots[SlotIndex];
+
+                if (Slot != null)
+                {
+                    Slot.m_GearGUID = string.Empty;
+                }
+            }
+
+            public bool SetGearForCooking(GearDataVisual GearVisual, int SlotIndex)
+            {
+                if(GearVisual == null)
+                {
+                    return false;
+                }
                 if(SlotIndex < 0)
                 {
                     return false;
@@ -2289,21 +2405,39 @@ namespace SkyCoopServer
                 {
                     return false;
                 }
-                
-                if (string.IsNullOrEmpty(GearGUID) || CheckSlotIsFree(SlotIndex))
-                {
-                    CookingSlotData Slot = m_CookingSlots[SlotIndex];
+                CookingSlotData Slot = m_CookingSlots[SlotIndex];
 
-                    if (Slot != null)
+                if (Slot != null)
+                {
+                    Slot.m_GearGUID = GearVisual.m_GUID;
+
+                    if(m_FireState == 6) // Full burn
                     {
-                        Slot.m_GearGUID = GearGUID;
-                        return true;
+                        if (GearVisual.m_HasCookingRecipe)
+                        {
+                            GearVisual.StartCooking(m_LastUpdateTime);
+                        }
                     }
+
+                    return true;
                 }
                 return false;
             }
 
-            public void Ignite(float Fuel, float Heat, float InnerRadius, float OuterRadius, float CurrentTime)
+            public CookingSlotData GetSlot(int SlotIndex)
+            {
+                if (SlotIndex < 0)
+                {
+                    return null;
+                }
+                if (SlotIndex > m_CookingSlots.Count - 1)
+                {
+                    return null;
+                }
+                return m_CookingSlots[SlotIndex];
+            }
+
+            public void Ignite(float Fuel, float Heat, float InnerRadius, float OuterRadius, float CurrentTime, string SceneName, Server ServerInstance)
             {
                 if(m_FireState == 0)
                 {
@@ -2322,9 +2456,33 @@ namespace SkyCoopServer
                 m_HeatInnerRadius = InnerRadius;
                 m_HeatOuterRadius = OuterRadius;
                 m_LastUpdateTime = CurrentTime;
+
+                SceneData SceneData = ServerInstance.m_ScenesData.GetSceneData(SceneName);
+
+                if(SceneData != null)
+                {
+                    foreach (CookingSlotData Slot in m_CookingSlots)
+                    {
+                        if (Slot != null)
+                        {
+                            if (string.IsNullOrEmpty(Slot.m_GearGUID))
+                            {
+                                GearDataContainer GearData = null;
+
+                                if(SceneData.m_Gears.TryGetValue(Slot.m_GearGUID, out GearData))
+                                {
+                                    if (GearData.m_Visual.m_HasCookingRecipe)
+                                    {
+                                        GearData.m_Visual.StartCooking(CurrentTime);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
-            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, int CookingSlots, bool IsDynamic, float CurrentTime)
+            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, int CookingSlots, bool IsDynamic, float CurrentTime, string SceneName, Server ServerInstance)
             {
                 FireSyncData Fire = new FireSyncData();
 
@@ -2333,7 +2491,7 @@ namespace SkyCoopServer
 
                 Fire.m_TimeToReachMaxTempInSeconds = HeatingSpeed;
 
-                Fire.Ignite(Fuel, Heat, InnerRadius, OuterRadius, CurrentTime);
+                Fire.Ignite(Fuel, Heat, InnerRadius, OuterRadius, CurrentTime, SceneName, ServerInstance);
 
                 Fire.m_CookingSlots = new List<CookingSlotData>();
 

@@ -1,6 +1,8 @@
 ﻿using Il2Cpp;
-using Il2CppSystem;
+using Il2CppTLD.Cooking;
+using Il2CppTLD.IntBackedUnit;
 using Il2CppTLD.PDID;
+using Il2CppTLD.Stats;
 using NAudio.CoreAudioApi;
 using SkyCoop;
 using System;
@@ -404,19 +406,17 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Panel_RecipeBook), "Enable")]
         private static class Panel_RecipeBook_Enable
         {
-            private static bool Prefix(Panel_RecipeBook __instance, bool enable)
+            private static void Prefix(Panel_RecipeBook __instance, bool enable)
             {
-                if (!ModMain.IsMultiplayer()) { return true; }
+                if (!ModMain.IsMultiplayer()) { return; }
 
                 if(!enable)
                 {
                     if (s_ActiveCookignClone)
                     {
-                        UnityEngine.Object.Destroy(s_ActiveCookignClone);
+                        UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
                     }
                 }
-
-                return false;
             }
         }
 
@@ -431,9 +431,402 @@ namespace SkyCoopClient
                 {
                     if (s_ActiveCookignClone)
                     {
-                        UnityEngine.Object.Destroy(s_ActiveCookignClone);
+                        UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
                     }
                 }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Cooking), "Enable")]
+        private static class Panel_Cooking_Enable
+        {
+            public static bool s_DontDestoryClone = false;
+            
+            private static void Prefix(Panel_Cooking __instance, bool enable)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (!enable)
+                {
+                    if (s_ActiveCookignClone)
+                    {
+                        if (!s_DontDestoryClone)
+                        {
+                            UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "GetGearPlacePoint")]
+        private static class PlayerManagere_GetGearPlacePoint
+        {
+            private static void Postfix(PlayerManager __instance, GameObject go, Vector3 searchPos, ref GearPlacePoint __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (go)
+                {
+                    CookingSlotVisual Slot = go.GetComponent<CookingSlotVisual>();
+
+                    if (Slot && Slot.m_Gear)
+                    {
+                        __result = null;
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "DoPositionCheck")]
+        private static class PlayerManagere_DoPositionCheck
+        {
+            private static void Postfix(PlayerManager __instance, ref MeshLocationCategory __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (__instance.m_LastGearPlacePoint)
+                {
+                    CookingSlot Slot = GetCookingSlotFromPlacePoint(__instance.m_LastGearPlacePoint);
+
+                    if (Slot)
+                    {
+                        CookingSlotVisual SlotVisual = Slot.GetComponent<CookingSlotVisual>();
+
+                        if(SlotVisual && SlotVisual.m_Gear)
+                        {
+                            __result = MeshLocationCategory.Invalid;
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(CookingPotItem), "UpdateCookingTimeAndState")]
+        private static class CookingPotIteme_UpdateCookingTimeAndState
+        {
+            private static bool Prefix(CookingPotItem __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                return false;
+            }
+        }
+
+
+        public static float ConvertVolume(long Units)
+        {
+            //1000000000 - is 1 liter.
+            const long CONVERSION = 1000000000;
+
+            // Use double for intermediate calculation to maintain precision
+            double Val = Units / (double)CONVERSION;
+
+            return (float)Val;
+        }
+
+        public static float ConvertLiquidVolume(ItemLiquidVolume Volume)
+        {
+            return ConvertVolume(Volume.m_Units);
+        }
+
+        public static float ConvertWeightVolume(ItemWeight Volume)
+        {
+            return ConvertVolume(Volume.m_Units);
+        }
+
+        public static long ConvertVolumeToUnits(float Liters)
+        {
+            const long CONVERSION = 1000000000;
+
+            // Round to nearest whole unit to minimize floating point errors
+            long Units = (long)Math.Round(Liters * CONVERSION, MidpointRounding.AwayFromZero);
+
+            return Units;
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_CookWater), "OnMeltSnow")]
+        private static class Panel_CookWater_OnMeltSnow
+        {
+            private static void Prefix(Panel_CookWater __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_ActiveCookignClone)
+                {
+                    GearCookingDummy Dummy = s_ActiveCookignClone.GetComponent<GearCookingDummy>();
+                    if (Dummy)
+                    {
+                        CookingPotItem PotClone = s_ActiveCookignClone.GetComponent<CookingPotItem>();
+
+                        if (PotClone)
+                        {
+                            GameAudioManager.Play3DSound(PotClone.m_CookSettings.m_PutSnowInPotAudio, GameManager.GetPlayerTransform().gameObject);
+                        }
+                        if (!string.IsNullOrEmpty(Dummy.m_RealGearGUID))
+                        {
+                            float Liters = ConvertLiquidVolume(__instance.m_MeltSnowLiters);
+
+                            if (Liters > 0)
+                            {
+                                float TimeToCook = (s_ActiveCookignClone.m_CookingPotItem.m_CookSettings.m_MinutesToMeltSnowPerLiter * Liters) / 60f;
+
+                                ClientSend.SendGearRecipe(Dummy.m_RealGearGUID, "BadWater", TimeToCook, 0, Liters);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_CookWater), "OnBoil")]
+        private static class Panel_CookWater_OnBoil
+        {
+            private static bool Prefix(Panel_CookWater __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (s_ActiveCookignClone)
+                {
+                    GearCookingDummy Dummy = s_ActiveCookignClone.GetComponent<GearCookingDummy>();
+                    if (Dummy)
+                    {
+                        CookingPotItem PotClone = s_ActiveCookignClone.GetComponent<CookingPotItem>();
+
+                        if (PotClone)
+                        {
+                            GameAudioManager.Play3DSound(PotClone.m_CookSettings.m_PutWaterInPotAudio, GameManager.GetPlayerTransform().gameObject);
+                        }
+                        if (!string.IsNullOrEmpty(Dummy.m_RealGearGUID))
+                        {
+
+                            float Liters = ConvertLiquidVolume(__instance.m_BoilWaterLiters);
+
+                            GearItem Bottle = GameManager.GetInventoryComponent().GetNonPotableWaterSupply();
+
+                            if (Bottle)
+                            {
+                                Bottle.m_WaterSupply.m_VolumeInLiters -= __instance.m_MeltSnowLiters;
+                                if (Bottle.m_WaterSupply.m_VolumeInLiters.m_Units < 0)
+                                {
+                                    Bottle.m_WaterSupply.m_VolumeInLiters = new ItemLiquidVolume(0);
+                                }
+                                //string message = Localization.Get("GAMEPLAY_WaterNonPotable") + " (" + Liters + ")";
+                                //GearMessage.AddMessage(Bottle, Localization.Get("GAMEPLAY_Dropped"), message, false, true);
+                            }
+
+                            if (Liters > 0)
+                            {
+                                float TimeToCook = (s_ActiveCookignClone.m_CookingPotItem.m_CookSettings.m_MinutesToBoilWaterPerLiter * Liters) / 60f;
+
+                                ClientSend.SendGearRecipe(Dummy.m_RealGearGUID, "GoodWater", TimeToCook, TimeToCook, Liters);
+                            }
+                        }
+                    }
+                }
+                __instance.Enable(false);
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Cooking), "OnDoAction")]
+        private static class Panel_Cooking_OnDoAction
+        {
+            private static bool Prefix(Panel_Cooking __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (s_ActiveCookignClone)
+                {
+                    SkyCoop.Logger.Log($"Cooking clone still alive!");
+
+                    CookableItem CookableItem = __instance.GetSelectedCookableItem();
+
+                    if(CookableItem.m_GearItem && CookableItem.m_GearItem.m_InPlayerInventory)
+                    {
+                        if (CookableItem.m_GearItem.m_FoodItem && CookableItem.m_GearItem.m_FoodItem.m_GearRequiredToOpen)
+                        {
+                            GameManager.GetPlayerManagerComponent().UseInventoryItem(CookableItem.m_GearItem);
+                            __instance.Enable(false);
+                            return false;
+                        }
+                        GearCookingDummy Dummy = s_ActiveCookignClone.GetComponent<GearCookingDummy>();
+                        if (Dummy)
+                        {
+                            if (!string.IsNullOrEmpty(Dummy.m_RealGearGUID))
+                            {
+                                string CookingResult = "Warming";
+                                float TimeToCook = 0;
+                                float BurntTime = 0;
+                                float Volume = 0;
+                                if (CookableItem.m_GearItem.m_Cookable)
+                                {
+                                    if (CookableItem.m_GearItem.m_Cookable.m_CookedPrefab)
+                                    {
+                                        CookingResult = CookableItem.m_GearItem.m_Cookable.m_CookedPrefab.name;
+                                    }
+                                    TimeToCook = CookableItem.m_GearItem.m_Cookable.m_CookTimeMinutes / 60f;
+                                    BurntTime = CookableItem.m_GearItem.m_Cookable.m_ReadyTimeMinutes / 60f;
+                                }
+                                if (CookableItem.m_GearItem.m_FoodItem)
+                                {
+                                    Volume = CookableItem.m_GearItem.m_FoodItem.m_CaloriesRemaining;
+                                }
+                                GearCookingTarget Target = CookableItem.m_GearItem.gameObject.GetComponent<GearCookingTarget>();
+
+                                if (Target == null)
+                                {
+                                    Target = CookableItem.m_GearItem.gameObject.AddComponent<GearCookingTarget>();
+                                }
+                                Target.m_CookpotGUID = Dummy.m_RealGearGUID;
+                                Target.m_CookingTime = TimeToCook;
+                                Target.m_BurntTime = BurntTime;
+                                Target.m_Volume = Volume;
+                                Target.m_CookingResult = CookingResult;
+                                CookableItem.m_GearItem.Drop(1);
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    SkyCoop.Logger.Log($"Cooking clone destroyed!");
+                }
+                if (s_ActiveCookignClone)
+                {
+                    UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                }
+                __instance.Enable(false);
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_CookWater), "OnDoActionSecondary")]
+        private static class Panel_CookWater_OnDoActionSecondary
+        {
+            private static bool Prefix(Panel_CookWater __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (s_ActiveCookignClone)
+                {
+                    GearCookingDummy Dummy = s_ActiveCookignClone.GetComponent<GearCookingDummy>();
+                    if (Dummy)
+                    {
+                        if (!string.IsNullOrEmpty(Dummy.m_RealGearGUID))
+                        {
+                            GameObject RealGear = PdidTable.GetGameObject(Dummy.m_RealGearGUID);
+
+                            if (RealGear)
+                            {
+                                DroppedGearVisual Visual = RealGear.GetComponent<DroppedGearVisual>();
+                                if (Visual)
+                                {
+                                    GearsSync.TryPickUp(Visual, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Cooking), "OnDoActionSecondary")]
+        private static class Panel_Cooking_OnDoActionSecondary
+        {
+            private static bool Prefix(Panel_Cooking __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (s_ActiveCookignClone)
+                {
+                    GearCookingDummy Dummy = s_ActiveCookignClone.GetComponent<GearCookingDummy>();
+                    if (Dummy)
+                    {
+                        if (!string.IsNullOrEmpty(Dummy.m_RealGearGUID))
+                        {
+                            GameObject RealGear = PdidTable.GetGameObject(Dummy.m_RealGearGUID);
+
+                            if (RealGear)
+                            {
+                                DroppedGearVisual Visual = RealGear.GetComponent<DroppedGearVisual>();
+                                if (Visual)
+                                {
+                                    GearsSync.TryPickUp(Visual, false);
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnFoodOpeningComplete")]
+        private static class PlayerManager_OnFoodOpeningComplete
+        {
+            private static bool Prefix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (__instance.m_FoodItemOpened == s_PendingCookingItem)
+                {
+                    if (success)
+                    {
+                        __instance.m_FoodItemOpened.m_FoodItem.m_Opened = true;
+                        __instance.m_FoodItemOpened.m_FoodItem.m_GearRequiredToOpen = false;
+                        StatsManager.IncrementValue(StatID.CansOpened, 1f);
+
+                        DoCookingAction("DoFirePickerAction", __instance.m_FoodItemOpened, s_PendingCookingFireObject, GearsSync.s_LastGearTimeBeingCooked);
+                        __instance.m_FoodItemOpened = null;
+                    }
+                    else
+                    {
+                        FinishCookingAction();
+                    }
+                    return false;
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnSmashComplete")]
+        private static class PlayerManager_OnSmashComplete
+        {
+            private static bool Prefix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (__instance.m_SmashableItemUsed == s_PendingCookingItem)
+                {
+                    if (success)
+                    {
+                        __instance.m_SmashableItemUsed.m_SmashableItem.m_HasBeenSmashed = true;
+                        StatsManager.IncrementValue(StatID.CansOpened, 1f);
+
+                        int LossProcent = UnityEngine.Random.Range(__instance.m_SmashableItemUsed.m_SmashableItem.m_MinPercentLoss, __instance.m_SmashableItemUsed.m_SmashableItem.m_MaxPercentLoss);
+                        if (GameManager.GetSkillCooking().NoCalorieLossWhenSmashingOpen())
+                        {
+                            LossProcent = 0;
+                        }
+                        float Loss = __instance.m_SmashableItemUsed.m_FoodItem.m_CaloriesTotal * (float)LossProcent * 0.01f;
+                        __instance.m_SmashableItemUsed.m_FoodItem.m_CaloriesRemaining = Mathf.Max(1f, __instance.m_SmashableItemUsed.m_FoodItem.m_CaloriesRemaining - Loss);
+                        __instance.m_SmashableItemUsed.m_FoodItem.m_GearRequiredToOpen = false;
+
+                        DoCookingAction("DoFirePickerAction", __instance.m_SmashableItemUsed, s_PendingCookingFireObject, GearsSync.s_LastGearTimeBeingCooked);
+
+                        __instance.m_SmashableItemUsed = null;
+                    }
+                    else
+                    {
+                        FinishCookingAction();
+                    }
+                    return false;
+                }
+
+                return true;
             }
         }
 
@@ -451,30 +844,81 @@ namespace SkyCoopClient
                 FinishCookingAction();
                 return;
             }
+            Gear.MaybePlayCookingSlotPlacementAudio(PlacePoint);
 
-
-            SkyCoop.Logger.Log($"DropAndPlaceItem {Gear.name} Slot {CookingIndex} FireGUID {FireGUID}");
+            //SkyCoop.Logger.Log($"DropAndPlaceItem {Gear.name} Slot {CookingIndex} FireGUID {FireGUID} s_LastGearTimeBeingCooked {GearsSync.s_LastGearTimeBeingCooked}");
             GearItemSaveDataProxy DataProxy = Gear.Serialize();
 
             s_PedningCookingCloneData = new CookingCloneData(Gear.name, Utils.SerializeObject(DataProxy));
 
             MenuHook.RemovePleaseWait();
             MenuHook.DoPleaseWait("Please wait...", "Placing gear to cooking slot...");
-            GearCookingTarget CookingTarget = Gear.gameObject.AddComponent<GearCookingTarget>();
+            GearCookingTarget CookingTarget = Gear.gameObject.GetComponent<GearCookingTarget>();
+
+            if(CookingTarget == null)
+            {
+                CookingTarget = Gear.gameObject.AddComponent<GearCookingTarget>();
+            }
+
             CookingTarget.m_CookingIndex = CookingIndex;
             CookingTarget.m_FireGUID = FireGUID;
             CookingTarget.m_PlacePoint = PlacePoint;
+            CookingTarget.m_TimeBeingCooked = GearsSync.s_LastGearTimeBeingCooked;
+
+            if (Gear.m_Cookable)
+            {
+                CookingTarget.m_CookingTime = Gear.m_Cookable.m_CookTimeMinutes / 60f;
+                CookingTarget.m_BurntTime = Gear.m_Cookable.m_ReadyTimeMinutes / 60f;
+
+                if (Gear.m_Cookable.m_CookedPrefab)
+                {
+                    CookingTarget.m_CookingResult = Gear.m_Cookable.m_CookedPrefab.name;
+                }
+                else
+                {
+                    CookingTarget.m_CookingResult = "Warming";
+                }
+
+                if (Gear.m_FoodItem)
+                {
+                    CookingTarget.m_Volume = Gear.m_FoodItem.m_CaloriesRemaining;
+                }
+            }
+
             Gear.Drop(1, false, true);
         }
 
-        public static void DoCookingAction(string Action, GearItem SelectedItem, GameObject FireObj)
+        public static void DoCookingAction(string Action, GearItem SelectedItem, GameObject FireObj, float TimeBeingCooked = 0)
         {
+            s_PendingCookingAction = Action;
+            s_PendingCookingItem = SelectedItem;
+            GearsSync.s_LastGearTimeBeingCooked = TimeBeingCooked;
+
+            if (SelectedItem)
+            {
+                if(SelectedItem.m_FoodItem && SelectedItem.m_FoodItem.m_GearRequiredToOpen)
+                {
+                    GameManager.GetPlayerManagerComponent().UseInventoryItem(SelectedItem);
+                    Panel_GearSelect _Panel = InterfaceManager.GetPanel<Panel_GearSelect>();
+
+                    if (_Panel)
+                    {
+                        _Panel.Enable(false, Panel_GearSelect.ListItemFilter.None, false);
+                        _Panel.m_FeedFireGameObject = null;
+                        _Panel.m_OnSelectAction = null;
+                        _Panel.m_FeedFireGameObject = null;
+                    }
+                    s_PendingCookingFireObject = FireObj;
+                    return;
+                }
+            }
+
             bool IsCookingSlot = false;
             int SlotIndex = -1;
 
-            if(FireObj != null)
+            if (FireObj != null)
             {
-                SkyCoop.Logger.Log($"DoCookingAction True FireObj name {FireObj.name}");
+                SkyCoop.Logger.Log($"DoCookingAction True FireObj name {FireObj.name} TimeBeingCooked {TimeBeingCooked}");
                 CookingSlot Slot = FireObj.GetComponent<CookingSlot>();
 
                 if (Slot)
@@ -503,8 +947,6 @@ namespace SkyCoopClient
             {
                 s_PendingCookingFireObject = null;
             }
-            s_PendingCookingAction = Action;
-            s_PendingCookingItem = SelectedItem;
 
             //if(SelectedItem == null)
             //{
@@ -592,7 +1034,7 @@ namespace SkyCoopClient
                         {
                             SkyCoop.Logger.Log($"Pending fire object does not contains fireplaceinteraction, failed to find fireplace by fire!");
                             FinishCookingAction();
-                            return;
+                            return; 
                         }
                     }
                 }
@@ -657,7 +1099,7 @@ namespace SkyCoopClient
                 case "DoBoilPickerAction":
                     if (!string.IsNullOrEmpty(s_PedningCookingCloneData.GearName))
                     {
-                        s_ActiveCookignClone = GetCookingClone(s_PedningCookingCloneData.GearName, s_PedningCookingCloneData.JSON);
+                        s_ActiveCookignClone = GetCookingClone(s_PedningCookingCloneData.GearName, s_PedningCookingCloneData.JSON, GearGUID);
 
                         if (s_ActiveCookignClone)
                         {
@@ -700,7 +1142,7 @@ namespace SkyCoopClient
             s_PedningCookingCloneData = new CookingCloneData("", "");
         }
 
-        public static GearItem GetCookingClone(string GearNanem, string JSON)
+        public static GearItem GetCookingClone(string GearNanem, string JSON, string RealGUID = "")
         {
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearNanem);
             if (reference)
@@ -717,7 +1159,13 @@ namespace SkyCoopClient
                 Gi.ManualStart();
                 Gi.ManualUpdate();
 
-                GearObject.AddComponent<Comps.GearCookingDummy>();
+                Comps.GearCookingDummy Hook = GearObject.AddComponent<Comps.GearCookingDummy>();
+
+                if (Hook)
+                {
+                    Hook.m_RealGearGUID = RealGUID;
+                }
+
                 GearObject.SetActive(false);
                 return Gi;
             }
@@ -842,6 +1290,33 @@ namespace SkyCoopClient
                 }
             }
             return FirePlace;
+        }
+
+        public static CookingSlot GetCookingSlotFromPlacePoint(GearPlacePoint Point)
+        {
+            if(Point == null)
+            {
+                return null;
+            }
+            if (Point.m_FireToAttach == null)
+            {
+                return null;
+            }
+            FireplaceInteraction FirePlace = GetFireplaceFromFire(Point.m_FireToAttach);
+
+            if (FirePlace == null)
+            {
+                return null;
+            }
+
+            foreach (CookingSlot Slot in FirePlace.m_CookingSlots)
+            {
+                if(Slot.m_GearPlacePoint == Point)
+                {
+                    return Slot;
+                }
+            }
+            return null;
         }
 
         public static string GetGUID(GameObject Obj)
@@ -1126,12 +1601,51 @@ namespace SkyCoopClient
 
         public static void HandleCookFromPicker(DroppedGearVisual Visual)
         {
+            SkyCoop.Logger.Log($"HandleCookFromPicker");
+            s_ActiveCookignClone = GetCookingClone(Visual.m_PrefabName, "", Visual.m_GUID);
 
+            if (s_ActiveCookignClone)
+            {
+                if (s_ActiveCookignClone.m_CookingPotItem)
+                {
+                    Panel_Cooking Panel = InterfaceManager.GetPanel<Panel_Cooking>();
+
+                    if (Panel)
+                    {
+                        Panel.Enable(true);
+                        Panel.SetCookingPot(s_ActiveCookignClone.m_CookingPotItem);
+
+                        if (Visual.m_CookingVisual)
+                        {
+                            Panel.SetCookingSlot(Visual.m_CookingVisual.m_CookingSlot);
+                            Panel.SetFilterBasedOnCookingPot();
+
+                            if (Visual.m_CookingVisual.m_CookingSlot)
+                            {
+                                FireplaceInteraction FirePlace = Visual.m_CookingVisual.m_CookingSlot.GetFireplaceHost();
+
+                                if (FirePlace)
+                                {
+                                    Panel.m_Fire = FirePlace.Fire;
+                                }
+                            }
+                        }
+                    }
+                    else
+                    {
+                        UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                    }
+                }
+                else
+                {
+                    UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                }
+            }
         }
 
         public static void HandleBoilFromPicker(DroppedGearVisual Visual)
         {
-            s_ActiveCookignClone = GetCookingClone(Visual.m_PrefabName, "");
+            s_ActiveCookignClone = GetCookingClone(Visual.m_PrefabName, "", Visual.m_GUID);
 
             if (s_ActiveCookignClone)
             {
@@ -1141,9 +1655,9 @@ namespace SkyCoopClient
 
                     if (Panel)
                     {
-                        if(Visual.m_CookingSlot != null)
+                        if(Visual.m_CookingVisual && Visual.m_CookingVisual.m_CookingSlot)
                         {
-                            FireplaceInteraction FirePlace = Visual.m_CookingSlot.GetFireplaceHost();
+                            FireplaceInteraction FirePlace = Visual.m_CookingVisual.m_CookingSlot.GetFireplaceHost();
                             if (FirePlace)
                             {
                                 Panel.SetFireContainer(FirePlace.gameObject);

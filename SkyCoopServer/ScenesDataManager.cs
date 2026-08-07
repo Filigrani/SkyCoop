@@ -314,13 +314,12 @@ namespace SkyCoopServer
 
             if(!string.IsNullOrEmpty(DataContainer.m_Visual.m_FireGUID) && DataContainer.m_Visual.m_CookingSlot != -1)
             {
-                IsCooking = SetGearForCooking(SceneName, DataContainer.m_Visual.m_FireGUID, DataContainer.m_Visual.m_CookingSlot, DataContainer.m_Data.m_GUID);
+                IsCooking = SetGearForCooking(SceneName, DataContainer.m_Visual);
 
                 // Такова не должно быть, но просто подстраховка
                 if (!IsCooking)
                 {
-                    DataContainer.m_Visual.m_FireGUID = "";
-                    DataContainer.m_Visual.m_CookingSlot = -1;
+                    DataContainer.m_Visual.SetCookingSlot("", -1);
                 }
             }
 
@@ -328,6 +327,70 @@ namespace SkyCoopServer
 
             ServerSend.SendGearVisual(DataContainer.m_Visual, SceneName, m_ServerInstance);
             return new AddedGearData(DataContainer.m_Data.m_GUID, DataContainer.m_Visual.m_FireGUID);
+        }
+
+        public void RemoveGear(string SceneName, string GUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[RemoveGear] called on scene {SceneName} that not exist!");
+                return;
+            }
+            if (SceneData.m_Gears.ContainsKey(GUID))
+            {
+                GearDataContainer Data = null;
+
+                if (SceneData.m_Gears.TryGetValue(GUID, out Data))
+                {
+                    if (Data.m_Visual.m_HasCookingSlot)
+                    {
+                        FireSyncData FireData = null;
+
+                        if (SceneData.m_Fires.TryGetValue(Data.m_Visual.m_FireGUID, out FireData))
+                        {
+                            if (FireData != null)
+                            {
+                                FireData.ClearCookingSlot(Data.m_Visual.m_CookingSlot);
+                            }
+                        }
+                    }
+
+                    if (!string.IsNullOrEmpty(Data.m_Visual.m_CookpotGUID))
+                    {
+                        GearDataContainer CookpotData = null;
+
+                        if (SceneData.m_Gears.TryGetValue(Data.m_Visual.m_CookpotGUID, out CookpotData))
+                        {
+                            if (CookpotData != null)
+                            {
+                                CookpotData.m_Visual.m_ProductGUID = "";
+                                CookpotData.m_Visual.SetRecipe("", 0, 0, 0, 0);
+                                ServerSend.SendGearVisual(CookpotData.m_Visual, SceneName, m_ServerInstance);
+                            }
+                        }
+                        Data.m_Visual.m_CookpotGUID = "";
+                    }
+
+                    if (!string.IsNullOrEmpty(Data.m_Visual.m_ProductGUID))
+                    {
+                        GearDataContainer ProductData = null;
+
+                        if (SceneData.m_Gears.TryGetValue(Data.m_Visual.m_ProductGUID, out ProductData))
+                        {
+                            if (ProductData != null)
+                            {
+                                ProductData.m_Visual.m_CookpotGUID = "";
+                                ServerSend.SendGearVisual(ProductData.m_Visual, SceneName, m_ServerInstance);
+                            }
+                        }
+                        Data.m_Visual.m_ProductGUID = "";
+                    }
+
+                    SceneData.m_Gears.Remove(GUID);
+                    ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
+                }
+            }
         }
 
         public GearDataContainer GetGear(string SceneName, string GUID, bool Remove = false)
@@ -341,32 +404,23 @@ namespace SkyCoopServer
 
             if (SceneData.m_Gears.ContainsKey(GUID))
             {
-                GearDataContainer Data = SceneData.m_Gears[GUID];
-                if (Remove)
-                {
-                    if(Data.m_Visual.m_CookingSlot != -1 && !string.IsNullOrEmpty(Data.m_Visual.m_FireGUID))
-                    {
-                        FireSyncData FireData = null;
+                GearDataContainer Data = null;
 
-                        if(SceneData.m_Fires.TryGetValue(Data.m_Visual.m_FireGUID, out FireData))
-                        {
-                            if (FireData != null)
-                            {
-                                FireData.SetGearForCooking("", Data.m_Visual.m_CookingSlot);
-                            }
-                        }
+                if(SceneData.m_Gears.TryGetValue(GUID, out Data))
+                {
+                    if (Remove)
+                    {
+                        RemoveGear(SceneName, GUID);
                     }
-                    
-                    
-                    SceneData.m_Gears.Remove(GUID);
-                    ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
                 }
+
+
                 return Data;
             }
             return null;
         }
 
-        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, string FireGUID = "", int CookingSlot = -1)
+        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float CookingTime = 0, float BurnTime = 0, float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "")
         {
             string NewGUID = Guid.NewGuid().ToString();
 
@@ -375,13 +429,30 @@ namespace SkyCoopServer
             DataContainer.m_Data.m_GUID = NewGUID;
             DataContainer.m_Data.m_JSON = JSON;
 
-
+            DataContainer.m_Visual.m_Style = Style;
+            DataContainer.m_Visual.m_ConditionNormalized = Condition;
             DataContainer.m_Visual.m_GUID = NewGUID;
             DataContainer.m_Visual.m_GearName = GearName;
             DataContainer.m_Visual.m_Position = Position;
             DataContainer.m_Visual.m_Rotation = Rotation;
-            DataContainer.m_Visual.m_FireGUID = FireGUID;
-            DataContainer.m_Visual.m_CookingSlot = CookingSlot;
+            DataContainer.m_Visual.SetCookingSlot(FireGUID, CookingSlot);
+            DataContainer.m_Visual.SetRecipe(RecipeResult, CookingTime, BurnTime, Volume, TimeBeingCooked);
+
+            if (!string.IsNullOrEmpty(CookpotGUID))
+            {
+                GearDataContainer CookingPot = GetGear(SceneName, CookpotGUID);
+
+                if(CookingPot != null)
+                {
+                    DataContainer.m_Visual.m_CookpotGUID = CookpotGUID;
+                    CookingPot.m_Visual.m_ProductGUID = NewGUID;
+
+                    CookingPot.m_Visual.SetRecipe(GearName, CookingTime, BurnTime, Volume, TimeBeingCooked);
+
+                    ServerSend.SendGearVisual(CookingPot.m_Visual, SceneName, m_ServerInstance);
+                }
+            }
+
 
             return AddGear(SceneName, DataContainer);
         }
@@ -706,6 +777,9 @@ namespace SkyCoopServer
         {
             List<NetPeer> peers = new List<NetPeer>();
             m_ServerInstance.m_Instance.GetConnectedPeers(peers);
+
+            float CurrentTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
                 if (Data.m_ActiveZone != null)
@@ -718,10 +792,68 @@ namespace SkyCoopServer
                 {
                     if(FireData.m_FireState == 6)
                     {
-                        float ElapsedHoursFromLastUpdate = m_ServerInstance.m_Timeline.m_ElapsedInGameHours - FireData.m_LastUpdateTime;
+                        float ElapsedHoursFromLastUpdate = CurrentTime - FireData.m_LastUpdateTime;
                         float ElapsedSecondsFromLastUpdate = (ElapsedHoursFromLastUpdate * 60) * 60;
+
+                        // Сколько огню осталось ещё гореть после последнего обновления
+                        float RemaningSecondsFireCanBeActive = (FireData.m_MaxOnTODSeconds + FireSyncData.c_EmbersDuration)- FireData.m_ElapsedOnTODSeconds;
+
+                        // Сколько огонь по факту горел. Мы же загружаем сцену, и могло пройти очень много времени нужно знать сколько из этого времени огонь горел
+                        float ElapsedSecondsWithFireActive;
+
+                        if (ElapsedSecondsFromLastUpdate > RemaningSecondsFireCanBeActive)
+                        {
+                            ElapsedSecondsWithFireActive = RemaningSecondsFireCanBeActive;
+                        }
+                        else
+                        {
+                            ElapsedSecondsWithFireActive = ElapsedSecondsFromLastUpdate;
+                        }
+                        float ElapseHoursWithFireActive = (ElapsedSecondsWithFireActive / 60f) / 60f;
+
+
                         FireData.m_ElapsedOnTODSeconds += ElapsedSecondsFromLastUpdate;
-                        FireData.m_LastUpdateTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+                        //Logger.Log(ConsoleColor.Green, $"ElapsedSecondsWithFireActive {ElapsedSecondsWithFireActive}");
+                        //Logger.Log(ConsoleColor.Green, $"ElapseHoursWithFireActive {ElapseHoursWithFireActive}");
+                        if (ElapseHoursWithFireActive > 0)
+                        {
+                            foreach (CookingSlotData Slot in FireData.m_CookingSlots)
+                            {
+                                if (!string.IsNullOrEmpty(Slot.m_GearGUID))
+                                {
+                                    GearDataContainer GearData = null;
+
+                                    if (Data.m_Gears.TryGetValue(Slot.m_GearGUID, out GearData))
+                                    {
+                                        GearData.m_Visual.AddCookingHours(ElapseHoursWithFireActive);
+                                        //Logger.Log(ConsoleColor.Green, $"{GearData.m_Visual.m_GearName} {GearData.m_Visual.m_CookingResult} {GearData.m_Visual.m_BeingCookedTime}");
+
+                                        bool SendProgress = true;
+
+                                        if (GearData.m_Visual.m_CookingResult == "BadWater")
+                                        {
+                                            if (GearData.m_Visual.m_BeingCookedTime > GearData.m_Visual.m_CookingTime)
+                                            {
+                                                float Overcooked = GearData.m_Visual.m_BeingCookedTime - GearData.m_Visual.m_CookingTime;
+
+                                                GearData.m_Visual.m_CookingResult = "GoodWater";
+
+                                                GearData.m_Visual.m_BeingCookedTime = Overcooked;
+                                                ServerSend.SendGearVisual(GearData.m_Visual, Data.m_SceneName, m_ServerInstance);
+                                                SendProgress = false;
+                                            }
+                                        }
+
+                                        if (SendProgress)
+                                        {
+                                            ServerSend.SendGearCookingUpdate(Slot.m_GearGUID, GearData.m_Visual.m_BeingCookedTime, Data.m_SceneName, m_ServerInstance);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+
 
                         if(FireData.m_Heat < FireData.m_FuelHeatIncrease)
                         {
@@ -747,7 +879,7 @@ namespace SkyCoopServer
                                 // Если времени промотанно больше чем вся длительность золы, скипаем её просто.
                                 if (EmbersTimeRemaning <= 0)
                                 {
-                                    FireData.Unlit();
+                                    FireData.Unlit(Data.m_SceneName, m_ServerInstance);
                                 }
                                 else
                                 {
@@ -763,11 +895,12 @@ namespace SkyCoopServer
 
                                     if(FireData.m_EmberTimer <= 0)
                                     {
-                                        FireData.Unlit();
+                                        FireData.Unlit(Data.m_SceneName, m_ServerInstance);
                                     }
                                 }
                             }
                         }
+                        FireData.m_LastUpdateTime = CurrentTime;
                     }
                     
                     
@@ -974,10 +1107,7 @@ namespace SkyCoopServer
 
                             if(SceneData.m_Gears.TryGetValue(Slot.m_GearGUID, out GearData))
                             {
-                                GearData.m_Visual.m_FireGUID = "";
-                                GearData.m_Visual.m_CookingSlot = -1;
-
-                                ServerSend.SendGearVisual(GearData.m_Visual, SceneName, m_ServerInstance);
+                                GearData.m_Visual.SetCookingSlot("", -1);
                             }
                         }
                     }
@@ -1112,7 +1242,7 @@ namespace SkyCoopServer
             return false;
         }
 
-        public bool SetGearForCooking(string SceneName, string FireGUID, int CookingSlotIndex, string GearGUID)
+        public bool SetGearForCooking(string SceneName, GearDataVisual GearVisual)
         {
             SceneData SceneData = GetSceneData(SceneName);
             if (SceneData == null)
@@ -1122,11 +1252,11 @@ namespace SkyCoopServer
             }
             DataStr.FireSyncData Fire = null;
 
-            if (SceneData.m_Fires.TryGetValue(FireGUID, out Fire))
+            if (SceneData.m_Fires.TryGetValue(GearVisual.m_FireGUID, out Fire))
             {
                 if (Fire != null)
                 {
-                    return Fire.SetGearForCooking(GearGUID, CookingSlotIndex);
+                    return Fire.SetGearForCooking(GearVisual, GearVisual.m_CookingSlot);
                 }
             }
             return false;

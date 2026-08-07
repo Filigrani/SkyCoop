@@ -183,7 +183,10 @@ namespace SkyCoop
                             Comps.DroppedGearVisual Gear = Obj.GetComponent<Comps.DroppedGearVisual>();
                             if (Gear)
                             {
-                                GameManager.GetPlayerManagerComponent().InteractiveObjectsProcessAltFire();
+                                if(Gear.m_CookingVisual == null || Gear.m_CookingVisual.m_CookingSlot == null)
+                                {
+                                    GameManager.GetPlayerManagerComponent().InteractiveObjectsProcessAltFire();
+                                }
                             }
                         }
                     }

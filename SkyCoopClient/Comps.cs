@@ -1,9 +1,11 @@
 ﻿
 using Harmony;
 using Il2Cpp;
+using Il2CppAK;
 using Il2CppInterop.Runtime.Injection;
 using Il2CppMS.Internal.Xml.XPath;
 using Il2CppRewired;
+using Il2CppTLD.Cooking;
 using Il2CppTLD.Interactions;
 using Il2CppTMPro;
 using SkyCoopClient;
@@ -51,6 +53,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<ChatMessage>();
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingTarget>();
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingDummy>();
+            ClassInjector.RegisterTypeInIl2Cpp<GearCookingVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<CookingSlotVisual>();
         }
 
@@ -129,25 +132,261 @@ namespace SkyCoop
             public string m_PrefabName = "";
             public string m_GUID = "";
             public string m_LocalizedName = "GearItem";
-            public string m_FireGUID = "";
-            public int m_CookingSlotIndex = -1;
-            public bool m_IsCookable = false;
-            public bool m_IsCookpotItem = false;
-            public CookingSlot m_CookingSlot = null;
+            public int m_Style = 0;
+            public GearCookingVisual m_CookingVisual;
+
+            public SimpleInteraction m_SimpeInteraction = null;
 
             void Start()
             {
                 LocalizedString Str = new LocalizedString();
                 Str.m_LocalizationID = m_LocalizedName;
-                SimpleInteraction SI = gameObject.AddComponent<SimpleInteraction>();
-                SI.m_DefaultHoverText = Str;
-                SI.HoverText = m_LocalizedName;
-                SI.m_CanInteract = true;
+
+                if (m_SimpeInteraction == null)
+                {
+                    m_SimpeInteraction = gameObject.AddComponent<SimpleInteraction>();
+                    m_SimpeInteraction.m_DefaultHoverText = Str;
+                    m_SimpeInteraction.HoverText = m_LocalizedName;
+                    m_SimpeInteraction.m_CanInteract = true;
+                }
             }
+
+            void FixedUpdate()
+            {
+                if (m_SimpeInteraction)
+                {
+                    if(m_CookingVisual == null || string.IsNullOrEmpty(m_CookingVisual.m_CookingResult))
+                    {
+                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = m_LocalizedName;
+                        m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
+                    }else
+                    {
+                        Panel_ActionsRadial Panel = InterfaceManager.GetPanel<Panel_ActionsRadial>();
+
+                        Color RuinedColor = Color.red;
+                        Color HotColor = Color.yellow;
+                        Color ColdColor = Color.cyan;
+                        Color ReadyColor = Color.yellow;
+
+                        if (Panel)
+                        {
+                            HotColor = Panel.m_FoodColdStatusColor;
+                            ColdColor = Panel.m_FoodColdStatusColor;
+                            ReadyColor = HotColor;
+                        }
+
+
+                        if (!string.IsNullOrEmpty(m_CookingVisual.m_CookingResult) && !m_CookingVisual.IsCooking() && !m_CookingVisual.IsRuined())
+                        {
+
+                            string ItemName = m_LocalizedName;
+
+                            if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedOverrideName))
+                            {
+                                ItemName = m_CookingVisual.m_LocalizedOverrideName;
+                            }
+
+                            string CookedName = ItemName;
+
+                            string NameToUse = ItemName;
+                            string Affix = "";
+                            string Debug = "";
+
+
+                            if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedCookedName))
+                            {
+                                CookedName = m_CookingVisual.m_LocalizedCookedName;
+                            }
+
+                            if (m_CookingVisual.GetPercentCooked() >= 1)
+                            {
+                                if(m_CookingVisual.m_CookingResult == "GoodWater")
+                                {
+                                    NameToUse = Localization.Get("GAMEPLAY_CookingPotableWater");
+                                    Affix = $"\n{Localization.Get("GAMEPLAY_Boiled")}";
+                                }
+                                else if(m_CookingVisual.m_CookingResult == "BadWater")
+                                {
+                                    NameToUse = Localization.Get("GAMEPLAY_CookingNonPotableWater");
+                                    Affix = $"\n{Localization.Get("GAMEPLAY_Paused")}";
+                                    if (GearsSync.s_LiquidCookingDebug)
+                                    {
+                                        Debug = $" {GearsSync.CalculateWaterVolume_Debug(m_CookingVisual.m_BeingCookedTime, m_CookingVisual.m_Volume)}L";
+                                    }
+                                }
+                                else
+                                {
+                                    NameToUse = CookedName;
+                                    Affix = $"\n{Localization.Get("GAMEPLAY_Cooked")}";
+                                }
+                            }
+                            else
+                            {
+                                NameToUse = ItemName;
+
+                                if(m_CookingVisual.GetPercentCooked() > 0)
+                                {
+                                    Affix = $"\n{Localization.Get("GAMEPLAY_Paused")}";
+                                }
+                                else
+                                {
+                                    Affix = "";
+                                }
+                            }
+
+                            m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{NameToUse}{Affix}{Debug}";
+                            m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
+                        }
+                        else
+                        {
+                            float IngameHourstillReady = m_CookingVisual.GetHoursTillCooked();
+                            float IngameHourstillBurnt = m_CookingVisual.GetHoursTillBurnt();
+
+                            if (m_CookingVisual.m_CookingResult == "BadWater")
+                            {
+                                string TimeLable = Localization.Get("GAMEPLAY_TimeUntilMelted");
+                                TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillReady * 60)));
+
+                                string Debug = "";
+
+                                if (GearsSync.s_LiquidCookingDebug)
+                                {
+                                    Debug = $" {GearsSync.CalculateWaterVolume_Debug(m_CookingVisual.m_BeingCookedTime, m_CookingVisual.m_Volume)}L";
+                                }
+
+                                m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Localization.Get("GAMEPLAY_Snow")}\n{TimeLable}{Debug}";
+                                m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
+                            }
+                            else if (m_CookingVisual.m_CookingResult == "GoodWater")
+                            {
+                                string TimeLable = "";
+
+                                if (IngameHourstillReady > 0)
+                                {
+                                    TimeLable = Localization.Get("GAMEPLAY_TimeUntilBoiled");
+                                    TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillReady * 60)));
+                                    m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Localization.Get("GAMEPLAY_CookingNonPotableWater")}\n{TimeLable}";
+                                }
+                                else
+                                {
+                                    if (IngameHourstillBurnt > 0)
+                                    {
+                                        TimeLable = Localization.Get("GAMEPLAY_TimeUntilBoiledDry");
+                                        TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillBurnt * 60)));
+                                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Localization.Get("GAMEPLAY_CookingPotableWater")}\n{TimeLable}";
+                                    }
+                                    else
+                                    {
+                                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = m_LocalizedName;
+                                    }
+                                }
+                                m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
+                            }
+                            else
+                            {
+                                string TimeLable = "";
+
+                                if(IngameHourstillReady > 0)
+                                {
+                                    TimeLable = Localization.Get("GAMEPLAY_TimeUntilReady");
+                                    TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillReady * 60)));
+                                    string ItemName = m_LocalizedName;
+                                    if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedOverrideName))
+                                    {
+                                        ItemName = m_CookingVisual.m_LocalizedOverrideName;
+                                    }
+                                    m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{ItemName}\n{TimeLable}";
+                                }
+                                else
+                                {
+                                    if (!m_CookingVisual.IsRuined())
+                                    {
+                                        TimeLable = Localization.Get("GAMEPLAY_TimeUntilBurned");
+                                        TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillBurnt * 60)));
+
+
+                                        string ItemName = m_LocalizedName;
+                                        if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedOverrideName))
+                                        {
+                                            ItemName = m_CookingVisual.m_LocalizedOverrideName;
+                                        }
+
+                                        if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedCookedName))
+                                        {
+                                            ItemName = m_CookingVisual.m_LocalizedCookedName;
+                                        }
+
+                                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{ItemName}\n{TimeLable}";
+                                    }
+                                    else
+                                    {
+                                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Utils.GetStringFromColor(RuinedColor)}{Localization.Get("GAMEPLAY_InedibleBurnedDebris")}[-]";
+                                    }
+                                }
+                                m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
+                            }
+                        }
+                    }
+                }
+            }
+
+
+        }
+
+        public class GearCookingVisual : MonoBehaviour
+        {
+            public GearCookingVisual(IntPtr ptr) : base(ptr) { }
+            public DroppedGearVisual m_Gear;
+            public CookingSlot m_CookingSlot = null;
+            public int m_CookingSlotIndex = -1;
+            public string m_FireGUID = "";
+            public string m_CookingResult = "";
+            public float m_CookingTime = 0;
+            public float m_BurningTime = 0;
+            public float m_BeingCookedTime = 0;
+            public float m_Volume = 0;
+            public string m_LocalizedCookedName = string.Empty;
+            public string m_LocalizedOverrideName = string.Empty;
+
+            public MeshRenderer m_GrubMeshRenderer;
+            public MeshFilter m_GrubMeshFilter;
+
+            public GameObject m_RawObject = null;
+            public GameObject m_CookingReadyObject = null;
+            public Material[] m_RuinedMaterials;
+            public Material[] m_CookingPotMaterialsList;
+            public Material[] m_CookingPotRawMaterialsList;
+            public Mesh m_RawMesh;
+            public Mesh m_ReadyMesh;
+
+            public Material[] m_MeltSnowMaterialsList;
+            public Material[] m_BoilWaterPotMaterialsList;
+            public Material[] m_BoilWaterReadyMaterialsList;
+
+            public Mesh m_SnowMesh;
+            public Mesh m_WaterMesh;
+
+            public GameObject m_ParticlesItemCooking;
+            public GameObject m_ParticlesItemReady;
+            public GameObject m_ParticlesItemRuined;
+            public GameObject m_ParticlesSnowMelting;
+            public GameObject m_ParticlesWaterBoiling;
+            public GameObject m_ParticlesWaterReady;
+            public GameObject m_ParticlesWaterRuined;
+
+            public uint m_CookingAudioId = 0U;
+
+            public CookSettings m_CookSettings;
+            public Il2CppAK.Wwise.Event m_CookAudio;
+
+            public float m_LastBeingCookedTime = 0;
+            public string m_LastCookingResult = "";
+            public bool m_IsCookPot = false;
+            public CookingPotItem.GrubMeshType m_Style = CookingPotItem.GrubMeshType.Pot;
 
             public void RelinkCookingSlot()
             {
-                if(m_CookingSlotIndex == -1 || string.IsNullOrEmpty(m_FireGUID))
+                if (m_CookingSlotIndex == -1 || string.IsNullOrEmpty(m_FireGUID))
                 {
                     if (m_CookingSlot)
                     {
@@ -155,13 +394,13 @@ namespace SkyCoop
 
                         if (VisualHook)
                         {
-                            if(VisualHook.m_Gear == this)
+                            if (VisualHook.m_Gear == this)
                             {
                                 VisualHook.m_Gear = null;
-                            } 
+                            }
                         }
                     }
-                    
+
                     m_CookingSlot = null;
                 }
                 else
@@ -174,11 +413,586 @@ namespace SkyCoop
 
                         if (VisualHook)
                         {
-                            VisualHook.m_Gear = this;
+                            VisualHook.m_Gear = m_Gear;
                         }
                     }
                 }
             }
+
+            public bool IsCooking()
+            {
+                if (m_CookingSlot)
+                {
+                    FireplaceInteraction FirePlace = m_CookingSlot.GetFireplaceHost();
+
+                    if(FirePlace && FirePlace.Fire)
+                    {
+                        return FirePlace.Fire.GetFireState() == FireState.FullBurn;
+                    }
+                }
+
+                return false;
+            }
+
+            public void Override(CookingPotItem CookPot)
+            {
+                if (CookPot)
+                {
+                    m_IsCookPot = true;
+                    m_Style = CookPot.m_GrubMeshType;
+
+
+                    m_GrubMeshRenderer = CookPot.m_GrubMeshRenderer;
+                    m_GrubMeshFilter = CookPot.m_GrubMeshFilter;
+
+                    m_MeltSnowMaterialsList = CookPot.m_MeltSnowMaterialsList;
+                    m_BoilWaterPotMaterialsList = CookPot.m_BoilWaterPotMaterialsList;
+                    m_BoilWaterReadyMaterialsList = CookPot.m_BoilWaterReadyMaterialsList;
+
+                    m_SnowMesh = CookPot.m_SnowMesh;
+                    m_WaterMesh = CookPot.m_WaterMesh;
+
+                    m_ParticlesItemCooking = CookPot.m_ParticlesItemCooking;
+                    m_ParticlesItemReady = CookPot.m_ParticlesItemReady;
+                    m_ParticlesItemRuined = CookPot.m_ParticlesItemRuined;
+                    m_ParticlesSnowMelting = CookPot.m_ParticlesSnowMelting;
+                    m_ParticlesWaterBoiling = CookPot.m_ParticlesWaterBoiling;
+                    m_ParticlesWaterReady = CookPot.m_ParticlesWaterReady;
+
+                    m_CookSettings = CookPot.m_CookSettings;
+                    SetupGrubMesh();
+                }
+            }
+
+            public void Override(Cookable Cookable, float Caloreis = 0)
+            {
+                if (Cookable)
+                {
+                    if(m_CookingResult != "Warming")
+                    {
+                        MeshSwapItem Swap = Cookable.gameObject.GetComponent<MeshSwapItem>();
+
+                        if (Swap)
+                        {
+                            m_RawObject = Swap.m_MeshObjUnopened;
+                            m_CookingReadyObject = Swap.m_MeshObjCookingReady;
+                        }
+                    }
+
+                    if (Cookable.m_CookedPrefab)
+                    {
+                        m_LocalizedCookedName = Cookable.m_CookedPrefab.DisplayName;
+                    }
+
+                    FoodItem Food = Cookable.gameObject.GetComponent<FoodItem>();
+
+                    if (Food && Caloreis > 0)
+                    {
+                        FoodWeight FoodW = Cookable.gameObject.GetComponent<FoodWeight>();
+
+                        float Val = Food.m_CaloriesTotal;
+                        if (FoodW)
+                        {
+                            Val = FoodW.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodW.m_MaxWeight);
+                        }
+                        m_CookingTime = (Caloreis / Val * Cookable.m_CookTimeMinutes) / 60f;
+                    }
+                    else
+                    {
+                        m_CookingTime = Cookable.m_CookTimeMinutes / 60f;
+                    }
+                    m_BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
+
+                    m_CookAudio = Cookable.m_CookEvent;
+
+                    m_RuinedMaterials = Cookable.m_RuinedMaterials;
+                    SetupGrubMesh();
+
+                    GameObject Reference = AssetManager.GetAssetFromGame<GameObject>("GEAR_CookingPotDummy");
+                    if (Reference)
+                    {
+                        GameObject DummyObj = GameObject.Instantiate(Reference);
+                        if (DummyObj)
+                        {
+                            CookingPotItem CookPot = DummyObj.GetComponent<CookingPotItem>();
+
+                            if (CookPot)
+                            {
+                                m_ParticlesItemCooking = CookPot.m_ParticlesItemCooking;
+                                m_ParticlesItemReady = CookPot.m_ParticlesItemReady;
+                                m_ParticlesItemRuined = CookPot.m_ParticlesItemRuined;
+                                m_ParticlesSnowMelting = CookPot.m_ParticlesSnowMelting;
+                                m_ParticlesWaterBoiling = CookPot.m_ParticlesWaterBoiling;
+                                m_ParticlesWaterReady = CookPot.m_ParticlesWaterReady;
+
+                                if (m_ParticlesItemCooking)
+                                {
+                                    m_ParticlesItemCooking.transform.SetParent(transform);
+                                    m_ParticlesItemCooking.transform.localPosition = Vector3.zero;
+                                }
+                                if (m_ParticlesItemReady)
+                                {
+                                    m_ParticlesItemReady.transform.SetParent(transform);
+                                    m_ParticlesItemReady.transform.localPosition = Vector3.zero;
+                                }
+                                if (m_ParticlesItemRuined)
+                                {
+                                    m_ParticlesItemRuined.transform.SetParent(transform);
+                                    m_ParticlesItemRuined.transform.localPosition = Vector3.zero;
+                                }
+                                if (m_ParticlesSnowMelting)
+                                {
+                                    m_ParticlesSnowMelting.transform.SetParent(transform);
+                                    m_ParticlesSnowMelting.transform.localPosition = Vector3.zero;
+                                }
+                                if (m_ParticlesWaterBoiling)
+                                {
+                                    m_ParticlesWaterBoiling.transform.SetParent(transform);
+                                    m_ParticlesWaterBoiling.transform.localPosition = Vector3.zero;
+                                }
+                                if (m_ParticlesWaterReady)
+                                {
+                                    m_ParticlesWaterReady.transform.SetParent(transform);
+                                    m_ParticlesWaterReady.transform.localPosition = Vector3.zero;
+                                }
+                            }
+                            UnityEngine.Object.Destroy(DummyObj);
+                        }
+                    }
+                }
+            }
+
+            public void SetupGrubMesh()
+            {
+                if (string.IsNullOrEmpty(m_CookingResult))
+                {
+                    if (m_GrubMeshRenderer)
+                    {
+                        m_GrubMeshRenderer.gameObject.SetActive(false);
+                        return;
+                    }
+                }
+                
+                
+                if (!string.IsNullOrEmpty(m_CookingResult) && m_CookingResult != "Warming")
+                {
+                    if (m_CookingResult == "BadWater" || m_CookingResult == "GoodWater")
+                    {
+                        m_CookAudio = m_CookSettings.m_MeltAndBoilAudio;
+
+                        if (m_CookingResult == "BadWater")
+                        {
+                            if (IsRuined())
+                            {
+                                m_GrubMeshRenderer.gameObject.SetActive(false);
+                                return;
+                            }
+
+                            m_GrubMeshRenderer.sharedMaterials = m_MeltSnowMaterialsList;
+                            m_GrubMeshFilter.sharedMesh = m_SnowMesh;
+
+                            m_GrubMeshRenderer.gameObject.SetActive(true);
+
+                            m_CookingTime = (m_CookSettings.m_MinutesToMeltSnowPerLiter * m_Volume) / 60;
+                            m_BurningTime = 0;
+                        }
+                        else if (m_CookingResult == "GoodWater")
+                        {
+                            if (IsRuined())
+                            {
+                                m_GrubMeshRenderer.gameObject.SetActive(false);
+                                return;
+                            }
+
+                            if (GetPercentCooked() >= 1)
+                            {
+                                m_GrubMeshRenderer.sharedMaterials = m_BoilWaterReadyMaterialsList;
+                                m_GrubMeshFilter.sharedMesh = m_WaterMesh;
+                            }
+                            else
+                            {
+                                m_GrubMeshRenderer.sharedMaterials = m_BoilWaterPotMaterialsList;
+                                m_GrubMeshFilter.sharedMesh = m_WaterMesh;
+                            }
+
+                            m_GrubMeshRenderer.gameObject.SetActive(true);
+
+                            m_CookingTime = (m_CookSettings.m_MinutesToBoilWaterPerLiter * m_Volume) / 60;
+                            m_BurningTime = m_CookingTime;
+                        }
+                    }
+                    else
+                    {
+                        if (m_IsCookPot)
+                        {
+                            if(m_LastCookingResult != m_CookingResult)
+                            {
+                                m_LastCookingResult = m_CookingResult;
+
+                                GameObject Reference = AssetManager.GetAssetFromGame<GameObject>(m_CookingResult);
+
+                                if (Reference)
+                                {
+                                    Cookable Cookable = Reference.GetComponent<Cookable>();
+                                    GearItem Gear = Reference.GetComponent<GearItem>();
+
+                                    if (Gear)
+                                    {
+                                        m_LocalizedOverrideName = Gear.DisplayName;
+                                    }
+
+                                    if (Cookable)
+                                    {
+                                        m_RuinedMaterials = Cookable.m_RuinedMaterials;
+                                        m_CookingPotRawMaterialsList = Cookable.m_CookingPotRawMaterialsList;
+                                        m_CookingPotMaterialsList = Cookable.m_CookingPotMaterialsList;
+                                        m_CookAudio = Cookable.m_CookEvent;
+
+                                        if (Cookable.m_CookedPrefab)
+                                        {
+                                            m_LocalizedCookedName = Cookable.m_CookedPrefab.DisplayName;
+                                        }
+
+                                        switch (m_Style)
+                                        {
+                                            case CookingPotItem.GrubMeshType.Pot:
+                                                m_RawMesh = Cookable.m_MeshRawPotStyle;
+                                                m_ReadyMesh = Cookable.m_MeshPotStyle;
+                                                break;
+                                            case CookingPotItem.GrubMeshType.Can:
+                                                m_RawMesh = Cookable.m_MeshRawCanStyle;
+                                                m_ReadyMesh = Cookable.m_MeshCanStyle;
+                                                break;
+                                            case CookingPotItem.GrubMeshType.FryingPan:
+                                                m_RawMesh = Cookable.m_MeshRawFryingPanStyle;
+                                                m_ReadyMesh = Cookable.m_MeshFryingPanStyle;
+                                                break;
+                                            default:
+                                                break;
+                                        }
+                                        FoodItem Food = Cookable.gameObject.GetComponent<FoodItem>();
+
+                                        if (Food && m_Volume > 0)
+                                        {
+                                            FoodWeight FoodW = Cookable.gameObject.GetComponent<FoodWeight>();
+
+                                            float Val = Food.m_CaloriesTotal;
+                                            if (FoodW)
+                                            {
+                                                Val = FoodW.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodW.m_MaxWeight);
+                                            }
+                                            m_CookingTime = (m_Volume / Val * Cookable.m_CookTimeMinutes) / 60f;
+                                        }
+                                        else
+                                        {
+                                            m_CookingTime = Cookable.m_CookTimeMinutes / 60f;
+                                            m_BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
+                                        }
+                                    }
+                                }
+                            }
+
+                            if (m_GrubMeshRenderer)
+                            {
+                                m_GrubMeshRenderer.gameObject.SetActive(true);
+
+                                if (IsRuined())
+                                {
+                                    m_GrubMeshRenderer.sharedMaterials = m_RuinedMaterials;
+                                }
+                                else
+                                {
+                                    m_GrubMeshRenderer.sharedMaterials = m_CookingPotMaterialsList;
+                                }
+                            }
+                            if (m_GrubMeshFilter)
+                            {
+                                if(GetPercentCooked() >= 1)
+                                {
+                                    if (m_ReadyMesh)
+                                    {
+                                        m_GrubMeshFilter.sharedMesh = m_ReadyMesh;
+                                    }
+                                    else
+                                    {
+                                        m_GrubMeshFilter.sharedMesh = m_RawMesh;
+                                    }
+                                }
+                                else
+                                {
+                                    if(m_RawMesh)
+                                    {
+                                        m_GrubMeshFilter.sharedMesh = m_RawMesh;
+                                    }
+                                    else
+                                    {
+                                        m_GrubMeshFilter.sharedMesh = m_ReadyMesh;
+                                    }
+                                }
+                            }
+                        }
+                        
+                        
+                        if (m_CookingReadyObject)
+                        {
+                            if(GetPercentCooked() >= 1)
+                            {
+                                m_CookingReadyObject.SetActive(true);
+                                m_RawObject.SetActive(false);
+                                if (IsRuined())
+                                {
+                                    MeshRenderer Renderer = m_CookingReadyObject.GetComponent<MeshRenderer>();
+                                    if (Renderer)
+                                    {
+                                        Renderer.sharedMaterials = m_RuinedMaterials;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                m_CookingReadyObject.SetActive(false);
+                                m_RawObject.SetActive(true);
+                            }
+                        }
+                        else
+                        {
+                            if (m_RawObject)
+                            {
+                                m_RawObject.SetActive(true);
+                                if (IsRuined())
+                                {
+                                    MeshRenderer Renderer = m_RawObject.GetComponent<MeshRenderer>();
+                                    if (Renderer)
+                                    {
+                                        Renderer.sharedMaterials = m_RuinedMaterials;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void OnDestroy()
+            {
+                if (m_CookingAudioId != 0U)
+                {
+                    AkSoundEngine.StopPlayingID(m_CookingAudioId, 10);
+                    m_CookingAudioId = 0U;
+                }
+            }
+
+            public float GetHoursTillCooked()
+            {
+                float NormalizedProcent = 1 - GetPercentCooked();
+
+                return m_CookingTime * NormalizedProcent;
+            }
+
+            public float GetHoursTillBurnt()
+            {
+                float NormalizedProcent = 1 - GetPercentBurnt();
+
+                return m_BurningTime * NormalizedProcent;
+            }
+
+            public float GetPercentCooked()
+            {
+                float NormalizedProgress = m_BeingCookedTime / m_CookingTime;
+
+                if (NormalizedProgress > 1)
+                {
+                    return 1;
+                }
+                else if (NormalizedProgress < 0)
+                {
+                    return 0;
+                }
+                return NormalizedProgress;
+            }
+
+            public float GetPercentBurnt()
+            {
+                if (m_BurningTime <= 0)
+                {
+                    return 0;
+                }
+
+                if (m_BeingCookedTime < m_CookingTime)
+                {
+                    return 0;
+                }
+
+                float Overcooked = m_BeingCookedTime - m_CookingTime;
+                float NormalizedProgress = Overcooked / m_BurningTime;
+
+                if (NormalizedProgress > 1)
+                {
+                    return 1;
+                }
+                else if (NormalizedProgress < 0)
+                {
+                    return 0;
+                }
+                return NormalizedProgress;
+            }
+
+            public bool IsRuined()
+            {
+                return GetPercentBurnt() >= 1;
+            }
+
+            public void UpdateParticles()
+            {
+                GameObject particlesToTurnOn = null;
+
+                if (IsCooking() && !string.IsNullOrEmpty(m_CookingResult) && !IsRuined())
+                {
+                    if (m_CookingResult == "BadWater")
+                    {
+                        if (GetPercentCooked() < 1)
+                        {
+                            particlesToTurnOn = m_ParticlesSnowMelting;
+                        }
+                        else
+                        {
+                            particlesToTurnOn = m_ParticlesWaterReady;
+                        }
+                    }
+                    else if (m_CookingResult == "GoodWater")
+                    {
+                        if (GetPercentCooked() < 1)
+                        {
+                            particlesToTurnOn = m_ParticlesWaterBoiling;
+                        }
+                        else
+                        {
+                            particlesToTurnOn = m_ParticlesWaterReady;
+                        }
+                    }
+                    else
+                    {
+                        if (GetPercentCooked() < 1)
+                        {
+                            particlesToTurnOn = m_ParticlesItemCooking;
+                        }
+                        else
+                        {
+                            particlesToTurnOn = m_ParticlesItemReady;
+                        }
+                    }
+                }
+
+                if (m_ParticlesItemCooking)
+                {
+                    Utils.SetActive(m_ParticlesItemCooking, m_ParticlesItemCooking == particlesToTurnOn);
+                }
+                if (m_ParticlesItemReady)
+                {
+                    Utils.SetActive(m_ParticlesItemReady, m_ParticlesItemReady == particlesToTurnOn);
+                }
+                if (m_ParticlesItemRuined)
+                {
+                    Utils.SetActive(m_ParticlesItemRuined, m_ParticlesItemRuined == particlesToTurnOn);
+                }
+                if (m_ParticlesSnowMelting)
+                {
+                    Utils.SetActive(m_ParticlesSnowMelting, m_ParticlesSnowMelting == particlesToTurnOn);
+                }
+                if (m_ParticlesWaterBoiling)
+                {
+                    Utils.SetActive(m_ParticlesWaterBoiling, m_ParticlesWaterBoiling == particlesToTurnOn);
+                }
+                if (m_ParticlesWaterReady)
+                {
+                    Utils.SetActive(m_ParticlesWaterReady, m_ParticlesWaterReady == particlesToTurnOn);
+                }
+                if (m_ParticlesWaterRuined)
+                {
+                    Utils.SetActive(m_ParticlesWaterRuined, m_ParticlesWaterRuined == particlesToTurnOn);
+                }
+            }
+
+            public void UpdateAudio()
+            {
+                if (!string.IsNullOrEmpty(m_CookingResult) && IsCooking() && !IsRuined())
+                {
+                    if (m_CookingAudioId == 0U)
+                    {
+                        if (m_CookAudio != null)
+                        {
+                            m_CookingAudioId = GameAudioManager.Play3DSound(m_CookAudio, gameObject);
+                        }
+                    }
+
+                    float PercentCooked = GetPercentCooked();
+                    float PercentRuined = GetPercentBurnt();
+
+                    float rtpcValue = PercentCooked * 100f + PercentRuined * 100f;
+
+                    if (m_CookingResult == "BadWater")
+                    {
+                        rtpcValue = PercentCooked * 100f * 0.5f;
+                    }
+                    else if (m_CookingResult == "GoodWater")
+                    {
+                        rtpcValue = 50f + PercentCooked * 100f * 0.5f + PercentRuined * 100f;
+                    }
+                    GameAudioManager.SetRTPCValue(GAME_PARAMETERS.COOKINGSTATE, rtpcValue, gameObject);
+                }
+                else
+                {
+                    if (m_CookingAudioId != 0U)
+                    {
+                        AkSoundEngine.StopPlayingID(m_CookingAudioId, 10);
+                        m_CookingAudioId = 0U;
+                    }
+                }
+            }
+
+            public void Update()
+            {
+                UpdateAudio();
+                UpdateParticles();
+
+                if(m_LastBeingCookedTime != m_BeingCookedTime)
+                {
+                    m_LastBeingCookedTime = m_BeingCookedTime;
+
+                    SetupGrubMesh();
+                }
+                if(m_LastCookingResult != m_CookingResult)
+                {
+                    SetupGrubMesh();
+                }
+            }
+        }
+
+        public class GearCookingTarget : MonoBehaviour
+        {
+            public GearCookingTarget(IntPtr ptr) : base(ptr) { }
+            public string m_FireGUID = string.Empty;
+            public int m_CookingIndex = 0;
+            public GearPlacePoint m_PlacePoint;
+            public string m_CookingResult = string.Empty;
+            public float m_CookingTime = 0;
+            public float m_BurntTime = 0;
+            public float m_Volume = 0;
+            public float m_TimeBeingCooked = 0;
+            public string m_CookpotGUID = string.Empty;
+        }
+
+        public class GearCookingDummy : MonoBehaviour
+        {
+            public GearCookingDummy(IntPtr ptr) : base(ptr) { }
+            public string m_RealGearGUID = "";
+        }
+
+        public class CookingSlotVisual : MonoBehaviour
+        {
+            public CookingSlotVisual(IntPtr ptr) : base(ptr) { }
+
+            public DroppedGearVisual m_Gear;
         }
 
         public class StoneThrowHook : MonoBehaviour
@@ -2333,8 +3147,14 @@ namespace SkyCoop
             public SendGearIfNotDestoryed(IntPtr ptr) : base(ptr) { }
             public GearItem m_Gear = null;
             public bool m_SkipThisFrame = true;
+            public bool m_CancleSending = false;
             void Update()
             {
+                if (m_CancleSending)
+                {
+                    return;
+                }
+                
                 if (m_SkipThisFrame)
                 {
                     m_SkipThisFrame = false;
@@ -2343,8 +3163,26 @@ namespace SkyCoop
                 
                 if (m_Gear)
                 {
+                    m_CancleSending = true;
                     SkyCoop.Logger.Log($"Gear {m_Gear.name} refused");
-                    GearsSync.SendDropItem(m_Gear, 0, 0, true);
+
+                    if (GearsSync.s_LastCookingSlotGearPickedFrom)
+                    {
+                        CookingSlotVisual CookingSlot = GearsSync.s_LastCookingSlotGearPickedFrom.GetComponent<CookingSlotVisual>();
+                        if (CookingSlot && CookingSlot.m_Gear == null)
+                        {
+                            FireHook.DoCookingAction("DoFirePickerAction", m_Gear, GearsSync.s_LastCookingSlotGearPickedFrom.gameObject, GearsSync.s_LastGearTimeBeingCooked);
+                        }
+                        else
+                        {
+                            GearsSync.SendDropItem(m_Gear, 0, 0, false);
+                        }
+                    }
+                    else
+                    {
+                        GearsSync.SendDropItem(m_Gear, 0, 0, true);
+                    }
+                    GearsSync.s_LastPickedGearGUID = string.Empty;
                 }
             }
         }
@@ -2410,25 +3248,6 @@ namespace SkyCoop
                     }
                 }
             }
-        }
-        public class GearCookingTarget : MonoBehaviour
-        {
-            public GearCookingTarget(IntPtr ptr) : base(ptr) { }
-            public string m_FireGUID = string.Empty;
-            public int m_CookingIndex = 0;
-            public GearPlacePoint m_PlacePoint;
-        }
-
-        public class GearCookingDummy : MonoBehaviour
-        {
-            public GearCookingDummy(IntPtr ptr) : base(ptr) { }
-        }
-
-        public class CookingSlotVisual : MonoBehaviour
-        {
-            public CookingSlotVisual(IntPtr ptr) : base(ptr) { }
-
-            public DroppedGearVisual m_Gear;
         }
     }
 }

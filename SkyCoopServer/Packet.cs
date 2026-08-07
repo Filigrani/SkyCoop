@@ -93,6 +93,9 @@ namespace SkyCoopServer
             ClientCharcoalCollect,
             ClientRequestFreeCookingSlot,
             ClientGearCookingInteration,
+            ClientGearSetRecipe,
+            ServerGearBeingCookedProgress,
+            ServerWaterRefund,
         }
 
         public enum SquadResponce
@@ -196,8 +199,26 @@ namespace SkyCoopServer
             Writer.Put(Visual.m_Position);
             Writer.Put(Visual.m_Rotation);
             Writer.Put(Visual.m_GUID);
-            Writer.Put(Visual.m_FireGUID);
-            Writer.Put(Visual.m_CookingSlot);
+            Writer.Put(Visual.m_ConditionNormalized);
+            Writer.Put(Visual.m_Style);
+
+            Writer.Put(Visual.m_HasCookingSlot);
+
+            if (Visual.m_HasCookingSlot)
+            {
+                Writer.Put(Visual.m_FireGUID);
+                Writer.Put(Visual.m_CookingSlot);
+            }
+
+            Writer.Put(Visual.m_HasCookingRecipe);
+
+            if (Visual.m_HasCookingRecipe)
+            {
+                Writer.Put(Visual.m_CookingResult);
+                Writer.Put(Visual.m_Volume);
+            }
+
+            Writer.Put(Visual.m_BeingCookedTime);
         }
 
         public static DataStr.GearDataVisual GetGearVisual(this NetDataReader Reader)
@@ -208,8 +229,26 @@ namespace SkyCoopServer
             Visual.m_Position = Reader.GetVector3();
             Visual.m_Rotation = Reader.GetQuaternion();
             Visual.m_GUID = Reader.GetString();
-            Visual.m_FireGUID = Reader.GetString();
-            Visual.m_CookingSlot = Reader.GetInt();
+            Visual.m_ConditionNormalized = Reader.GetFloat();
+            Visual.m_Style = Reader.GetInt();
+
+            Visual.m_HasCookingSlot = Reader.GetBool();
+
+            if (Visual.m_HasCookingSlot)
+            {
+                Visual.m_FireGUID = Reader.GetString();
+                Visual.m_CookingSlot = Reader.GetInt();
+            }
+
+            Visual.m_HasCookingRecipe = Reader.GetBool();
+
+            if (Visual.m_HasCookingRecipe)
+            {
+                Visual.m_CookingResult = Reader.GetString();
+                Visual.m_Volume = Reader.GetFloat();
+            }
+
+            Visual.m_BeingCookedTime = Reader.GetFloat();
 
             return Visual;
         }

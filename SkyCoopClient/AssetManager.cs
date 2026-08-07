@@ -6,6 +6,7 @@ using Il2CppTLD.Scenes;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.ResourceLocations;
+using static SkyCoop.Comps;
 using Il2CppCollection = Il2CppSystem.Collections.Generic;
 
 namespace SkyCoop
@@ -90,7 +91,7 @@ namespace SkyCoop
             }
         }
 
-        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, out bool HasCookPotItem, out bool HasCookable, Transform parent = null)
+        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, float Volume = 0, float ConditionNormalized = 1, int Style = 0, Transform parent = null)
         {
             string LN = "Invalid";
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
@@ -106,8 +107,55 @@ namespace SkyCoop
                     {
                         LN = gi.DisplayName;
                     }
-                    HasCookPotItem = gi.GetComponent<CookingPotItem>();
-                    HasCookable = gi.GetComponent<Cookable>();
+
+                    if (gi.m_CookingPotItem)
+                    {
+                        Comps.GearCookingVisual Cooking = GearObject.AddComponent<GearCookingVisual>();
+                        if (Cooking)
+                        {
+                            Cooking.Override(gi.m_CookingPotItem);
+                        }
+                    }
+                    if (gi.m_Cookable)
+                    {
+                        Comps.GearCookingVisual Cooking = GearObject.AddComponent<GearCookingVisual>();
+                        if (Cooking)
+                        {
+                            Cooking.Override(gi.m_Cookable, Volume);
+                        }
+                    }
+
+                    gi.SetNormalizedHP(ConditionNormalized);
+
+                    MeshSwapItem Swap = GearObject.GetComponent<MeshSwapItem>();
+
+                    if (Swap)
+                    {
+                        if (gi.m_FoodItem)
+                        {
+                            if (Swap.m_MeshObjUnopened)
+                            {
+                                Swap.m_MeshObjUnopened.SetActive(Style == 0);
+                            }
+                            if (Swap.m_MeshObjOpened)
+                            {
+                                Swap.m_MeshObjOpened.SetActive(Style == 1);
+                            }
+                        }
+                    }
+                    if (gi.m_Bed)
+                    {
+                        if (gi.m_Bed.m_BedRollMesh)
+                        {
+                            gi.m_Bed.m_BedRollMesh.SetActive(Style == 0);
+                        }
+                        if (gi.m_Bed.m_BedRollPlacedMesh)
+                        {
+                            gi.m_Bed.m_BedRollPlacedMesh.gameObject.SetActive(Style == 1);
+                        }
+                    }
+
+
                     foreach (Component Com in GearObject.GetComponents<Component>())
                     {
                         string ComName = Com.GetIl2CppType().Name;
@@ -122,7 +170,8 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<Rigidbody>().Name
                             && ComName != Il2CppType.Of<MeshRenderer>().Name
                             && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
-                            && ComName != Il2CppType.Of<AudioSource>().Name)
+                            && ComName != Il2CppType.Of<AudioSource>().Name
+                            && ComName != Il2CppType.Of<GearCookingVisual>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }
@@ -135,8 +184,6 @@ namespace SkyCoop
                     Logger.Log(ConsoleColor.Red, "Can't instantiate " + Prefab.name);
                 }
             }
-            HasCookPotItem = false;
-            HasCookable = false;
             LocalizedName = LN;
             return null;
         }

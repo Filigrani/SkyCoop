@@ -45,6 +45,8 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("spawn", new Action(Spawn));
             uConsole.RegisterCommand("give", new Action(GiveIlegalGear));
             uConsole.RegisterCommand("campfire", new Action(GiveCampfireKit));
+            uConsole.RegisterCommand("liquidboildebug", new Action(LiquiadBoilDebug));
+            uConsole.RegisterCommand("removepleasewait", new Action(RemovePleaseWait));
         }
 
         public static void GiveIlegalGear()
@@ -93,6 +95,16 @@ namespace SkyCoopClient
             uConsole.RunCommandSilent("add softwood");
             uConsole.RunCommandSilent("add softwood");
             uConsole.RunCommandSilent("add accelerant");
+        }
+
+        public static void LiquiadBoilDebug()
+        {
+            GearsSync.s_LiquidCookingDebug = !GearsSync.s_LiquidCookingDebug;
+        }
+
+        public static void RemovePleaseWait()
+        {
+            MenuHook.RemovePleaseWait();
         }
 
 

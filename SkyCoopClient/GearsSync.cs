@@ -2,7 +2,9 @@
 using Il2Cpp;
 using Il2CppRewired;
 using Il2CppRewired.HID;
+using Il2CppTLD.Cooking;
 using Il2CppTLD.Gear;
+using Il2CppTLD.IntBackedUnit;
 using Il2CppTLD.Interactions;
 using Il2CppTLD.PDID;
 using MelonLoader;
@@ -30,6 +32,10 @@ namespace SkyCoopClient
         public static List<GameObject> s_SpawnersMarkersObjects = new List<GameObject>();
 
         public static List<GearPickedElement> s_GearQueue = new List<GearPickedElement>();
+        public static CookingSlot s_LastCookingSlotGearPickedFrom = null;
+        public static float s_LastGearTimeBeingCooked = 0;
+        public static bool s_LiquidCookingDebug = false;
+        public static string s_LastPickedGearGUID = string.Empty;
 
         public class GearPickedElement
         {
@@ -37,13 +43,19 @@ namespace SkyCoopClient
             public string m_JSON = "";
             public bool m_DropAround = false;
             public bool m_SpawnLoaded = false;
+            public float m_TimeBeingCooked = 0;
+            public string m_CookingResult = "";
+            public float m_Volume = 0;
 
-            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false)
+            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false, float timebeingcooked = 0, string cookingresult = "", float volume = 0)
             {
                 m_GearName = gearName;
                 m_JSON = json;
                 m_DropAround = dropAround;
                 m_SpawnLoaded = spawnLoaded;
+                m_TimeBeingCooked = timebeingcooked;
+                m_CookingResult = cookingresult;
+                m_Volume = volume;
             }
         }
 
@@ -359,6 +371,13 @@ namespace SkyCoopClient
                     return;
                 }
 
+                if (__result && __result.name == "GEAR_CookingPotDummy")
+                {
+                    SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} cancled");
+                    UnityEngine.Object.Destroy(__result.gameObject);
+                    return;
+                }
+
                 SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
             }
@@ -375,7 +394,14 @@ namespace SkyCoopClient
                     return;
                 }
 
-                SkyCoop.Logger.Log($"InstantiateItemAtLocation GUID {assetReference.AssetGUID} numUnits {numUnits}");
+
+                if (__result && __result.name == "GEAR_CookingPotDummy")
+                {
+                    UnityEngine.Object.Destroy(__result.gameObject);
+                    return;
+                }
+
+                SkyCoop.Logger.Log($"InstantiateItemAtLocation {__result.name} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
             }
         }
@@ -406,8 +432,16 @@ namespace SkyCoopClient
                     GearItem gi = saveObj.GetComponent<GearItem>();
                     if (gi)
                     {
-                        SkyCoop.Logger.Log("RestoreTransform");
-                        SendDropItem(gi, 0, 0, true);
+                        SkyCoop.Logger.Log($"RestoreTransform {gi.name}");
+
+                        if (s_LastCookingSlotGearPickedFrom)
+                        {
+                            FireHook.DoCookingAction("DoFirePickerAction", gi, s_LastCookingSlotGearPickedFrom.gameObject, s_LastGearTimeBeingCooked);
+                        }
+                        else
+                        {
+                            SendDropItem(gi, 0, 0, true);
+                        }
                     }
                 }
             }
@@ -416,13 +450,62 @@ namespace SkyCoopClient
         private static class PlayerManager_PlaceMeshInWorld
         {
             private static GameObject saveObj;
-            internal static void Prefix(PlayerManager __instance)
+            private static bool s_SkipPost = false;
+            internal static bool Prefix(PlayerManager __instance)
             {
+                if (!ModMain.IsMultiplayer()) { return true; }
                 if (s_NoSyncFlag)
                 {
-                    return;
+                    return true;
                 }
                 saveObj = __instance.m_ObjectToPlace;
+
+                if (saveObj)
+                {
+                    GearItem gi = saveObj.GetComponent<GearItem>();
+                    if (gi)
+                    {
+                        if (gi)
+                        {
+                            if (__instance.m_IsPlacingCookableOnCookingSlot && __instance.m_LastGearPlacePoint)
+                            {
+                                CookingSlot Slot = FireHook.GetCookingSlotFromPlacePoint(__instance.m_LastGearPlacePoint);
+                                if (Slot)
+                                {
+                                    // Где то внутри кода игры этот предмет будет уничтожен после размещения на слот готовки!
+                                    // я долго копался и не нашёл где именно, по этому позволю ему удалиться но создам клон.
+
+                                    // Скорее всего этот как то связанно с фейковыми ёмкостями для готовки, которые ванила спавнит
+
+                                    gi.transform.position = Vector3.zero;
+
+                                    GearItemSaveDataProxy DataProxy = gi.Serialize();
+
+                                    GameObject Reference = AssetManager.GetAssetFromGame<GameObject>(gi.name);
+
+                                    if (Reference)
+                                    {
+                                        GameObject CloneObj = UnityEngine.Object.Instantiate(Reference, gi.transform.position, gi.transform.rotation);
+                                        if (CloneObj)
+                                        {
+                                            CloneObj.name = gi.name;
+                                            GearItem CloneGi = CloneObj.GetComponent<GearItem>();
+
+                                            if (CloneGi)
+                                            {
+                                                CloneGi.Deserialize(DataProxy, true);
+                                                FireHook.DoCookingAction("DoFirePickerAction", CloneGi, Slot.gameObject, s_LastGearTimeBeingCooked);
+                                                s_SkipPost = true;
+                                                return false;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                return true;
             }
             internal static void Postfix(PlayerManager __instance)
             {
@@ -432,14 +515,22 @@ namespace SkyCoopClient
                 {
                     return;
                 }
+                if (s_SkipPost)
+                {
+                    s_SkipPost = false;
+                    return;
+                }
 
                 if (saveObj)
                 {
                     GearItem gi = saveObj.GetComponent<GearItem>();
                     if (gi)
                     {
-                        SkyCoop.Logger.Log("PlaceMeshInWorld");
-                        SendDropItem(gi, 0, 0, true);
+                        SkyCoop.Logger.Log($"PlaceMeshInWorld {gi.name}");
+                        if (gi)
+                        {
+                            SendDropItem(gi, 0, 0, true);
+                        }
                     }
                 }
             }
@@ -464,6 +555,70 @@ namespace SkyCoopClient
 
                 if (__instance.m_Gear)
                 {
+                    SkyCoop.Logger.Log($"ExitInspectGearMode {__instance.m_Gear.name}");
+
+                    if(__instance.m_Gear && __instance.m_Gear.m_CookingPotItem)
+                    {
+                        if (__instance.m_Gear.m_InPlayerInventory)
+                        {
+                            if (__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted.m_Units > 0 || __instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled.m_Units > 0)
+                            {
+                                if (__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted.m_Units > 0)
+                                {
+                                    SkyCoop.Logger.Log($"Took water {FireHook.ConvertLiquidVolume(__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted * __instance.m_Gear.m_CookingPotItem.m_PercentCooked)}l of bad water (cooking progress {__instance.m_Gear.m_CookingPotItem.m_PercentCooked} cooking state {__instance.m_Gear.m_CookingPotItem.m_CookingState})");
+                                }
+                                if (__instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled.m_Units > 0)
+                                {
+                                    SkyCoop.Logger.Log($"Took water {FireHook.ConvertLiquidVolume(__instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled * __instance.m_Gear.m_CookingPotItem.m_PercentCooked)}l of good water (cooking progress {__instance.m_Gear.m_CookingPotItem.m_PercentCooked} cooking state {__instance.m_Gear.m_CookingPotItem.m_CookingState})");
+
+                                    GameManager.GetInventoryComponent().GetPotableWaterSupply(); // Из-за нашей системы стартового лута, у игрока может не оказаться бутылки под воду, вызвав этот метод игра создаст бутылку если её нет.
+                                }
+
+                                __instance.m_Gear.m_CookingPotItem.PickUpCookedItem();
+                                __instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted = new ItemLiquidVolume(0);
+                                __instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled = new ItemLiquidVolume(0);
+
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            SkyCoop.Logger.Log($"Is left m_LitersSnowBeingMelted {__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted.m_Units} m_LitersWaterBeingBoiled {__instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled.m_Units}");
+
+                            if (__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted.m_Units > 0 || __instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled.m_Units > 0)
+                            {
+                                string ResultGear = "";
+                                float CookingTime = 0;
+                                float Volume = 0;
+                                if (__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted.m_Units > 0)
+                                {
+                                    ResultGear = "BadWater";
+                                    Volume = FireHook.ConvertLiquidVolume(__instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted);
+                                    CookingTime = (__instance.m_Gear.m_CookingPotItem.m_CookSettings.m_MinutesToMeltSnowPerLiter * Volume) / 60f;
+                                }
+                                if (__instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled.m_Units > 0)
+                                {
+                                    ResultGear = "GoodWater";
+                                    Volume = FireHook.ConvertLiquidVolume(__instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled);
+                                    CookingTime = (__instance.m_Gear.m_CookingPotItem.m_CookSettings.m_MinutesToBoilWaterPerLiter * Volume) / 60f;
+                                }
+                                __instance.m_Gear.m_CookingPotItem.m_CookingState = CookingPotItem.CookingState.Cooking;
+                                __instance.m_Gear.m_CookingPotItem.m_LitersSnowBeingMelted = new ItemLiquidVolume(0);
+                                __instance.m_Gear.m_CookingPotItem.m_LitersWaterBeingBoiled = new ItemLiquidVolume(0);
+                                Comps.GearCookingTarget Target = __instance.m_Gear.gameObject.GetComponent<Comps.GearCookingTarget>();
+                                if (Target == null)
+                                {
+                                    Target = __instance.m_Gear.gameObject.AddComponent<Comps.GearCookingTarget>();
+                                }
+                                Target.m_Volume = Volume;
+                                Target.m_CookingResult = ResultGear;
+                                Target.m_CookingTime = CookingTime;
+                                Target.m_BurntTime = 0;
+                            }
+                        }
+                    }
+
+
                     if (!__instance.m_Gear.m_InPlayerInventory)
                     {
                         __instance.m_Gear.transform.position = __instance.m_RestorePos;
@@ -482,6 +637,10 @@ namespace SkyCoopClient
                             Hook = Gear.gameObject.AddComponent<Comps.SendGearIfNotDestoryed>();
                             Hook.m_Gear = Gear;
                         }
+                    }
+                    else
+                    {
+                        s_LastPickedGearGUID = string.Empty;
                     }
                 }
             }
@@ -659,10 +818,62 @@ namespace SkyCoopClient
             if (!ModMain.IsMultiplayer()) { return; }
             if (gear != null && gear.gameObject != null)
             {
+                //if(gear.m_CookingPotItem && gear.m_CookingPotItem.IsDummyPot())
+                //{
+                //    CookingSlot DummysCookingSlot = null;
+                //    if (gear.m_CookingPotItem.m_GearPlacePointAttachedTo != null)
+                //    {
+                //        SkyCoop.Logger.Log(ConsoleColor.Magenta, $"Dummy cookingpot has cooking slot");
+                //        if (gear.m_CookingPotItem.m_GearPlacePointAttachedTo)
+                //        {
+                //            DummysCookingSlot = FireHook.GetCookingSlotFromPlacePoint(gear.m_CookingPotItem.m_GearPlacePointAttachedTo);
+                //        }
+                //    }
+
+                //    GameObject Dummy = gear.m_CookingPotItem.gameObject;
+                //    gear = gear.m_CookingPotItem.m_GearItemBeingCooked;
+
+                //    if(gear && gear.GetComponent<Comps.GearCookingTarget>() == null && DummysCookingSlot)
+                //    {
+                //        UnityEngine.Object.Destroy(Dummy);
+                //        FireHook.DoCookingAction("DoFirePickerAction", gear, DummysCookingSlot.gameObject, s_LastGearTimeBeingCooked);
+                //        return;
+                //    }
+
+                //    UnityEngine.Object.Destroy(Dummy);
+
+                //    if (gear == null)
+                //    {
+                //        return;
+                //    }
+                //}
+
+
                 GameObject obj = gear.gameObject;
 
                 string FireGUID = "";
                 int CookingSlotIndex = -1;
+                string CookingResult = "";
+                float CookingTime = 0;
+                float BurntTime = 0;
+                float Volume = 0;
+                float BeingCookedTime = 0;
+                float NormalizedCondition = gear.GetNormalizedCondition();
+                int Style = 0;
+                string CookpotGUID = "";
+
+                if (gear.m_FoodItem && gear.m_FoodItem.m_Opened)
+                {
+                    Style = 1;
+                }
+                if (gear.m_SmashableItem && gear.m_SmashableItem.m_HasBeenSmashed)
+                {
+                    Style = 1;
+                }
+                if (gear.m_Bed && gear.m_Bed.m_BedRollState == BedRollState.Placed)
+                {
+                    Style = 1;
+                }
 
                 Vector3 v3 = gear.gameObject.transform.position;
                 Quaternion rot = gear.gameObject.transform.rotation;
@@ -673,6 +884,12 @@ namespace SkyCoopClient
                 {
                     FireGUID = CookingTarget.m_FireGUID;
                     CookingSlotIndex = CookingTarget.m_CookingIndex;
+                    CookingResult = CookingTarget.m_CookingResult;
+                    CookingTime = CookingTarget.m_CookingTime;
+                    BurntTime = CookingTarget.m_BurntTime;
+                    Volume = CookingTarget.m_Volume;
+                    BeingCookedTime = CookingTarget.m_TimeBeingCooked;
+                    CookpotGUID = CookingTarget.m_CookpotGUID;
 
                     if (CookingTarget.m_PlacePoint)
                     {
@@ -683,6 +900,43 @@ namespace SkyCoopClient
                     v3 = gear.gameObject.transform.position;
                     rot = gear.gameObject.transform.rotation;
                     samepose = true;
+                }
+
+                if (string.IsNullOrEmpty(CookpotGUID))
+                {
+                    if (!string.IsNullOrEmpty(s_LastPickedGearGUID))
+                    {
+                        GameObject StillExistGear = PdidTable.GetGameObject(s_LastPickedGearGUID);
+                        if (StillExistGear)
+                        {
+                            Comps.GearCookingVisual CookingVisual = StillExistGear.GetComponent<Comps.GearCookingVisual>();
+                            if (CookingVisual && CookingVisual.m_IsCookPot)
+                            {
+                                CookpotGUID = s_LastPickedGearGUID;
+
+                                if (gear.m_Cookable)
+                                {
+                                    CookingTime = gear.m_Cookable.m_CookTimeMinutes / 60f;
+                                    BurntTime = gear.m_Cookable.m_ReadyTimeMinutes / 60f;
+
+                                    if (gear.m_FoodItem)
+                                    {
+                                        Volume = gear.m_FoodItem.m_CaloriesRemaining;
+                                    }
+                                    if (gear.m_Cookable.m_CookedPrefab)
+                                    {
+                                        CookingResult = gear.m_Cookable.m_CookedPrefab.name;
+                                    }
+                                    else
+                                    {
+                                        CookingResult = "Warming";
+                                    }
+                                }
+                                BeingCookedTime = s_LastGearTimeBeingCooked;
+                            }
+                        }
+                        s_LastPickedGearGUID = string.Empty;
+                    }
                 }
 
                 if (samepose == false)
@@ -716,7 +970,7 @@ namespace SkyCoopClient
 
                 if (ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanDropItems)
                 {
-                    ClientSend.SendGear(gear.name, v3, rot, JSON, FireGUID, CookingSlotIndex);
+                    ClientSend.SendGear(gear.name, v3, rot, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, CookingResult, CookingTime, BurntTime, Volume, BeingCookedTime, CookpotGUID);
                 }
 
                 if (total < 2)
@@ -738,54 +992,93 @@ namespace SkyCoopClient
             }
         }
 
-        public static void HandleGearDropped(DataStr.GearDataVisual Visual)
+        public static void HandleGearCooking(string GUID, float Cooking)
         {
-            GameObject GearObject = PdidTable.GetGameObject(Visual.m_GUID);
+            //SkyCoop.Logger.Log(ConsoleColor.Green, $"HandleGearCooking {GUID} Progress {Cooking}");
+            GameObject GearObject = PdidTable.GetGameObject(GUID);
+            if (GearObject)
+            {
+                Comps.GearCookingVisual CookingVisual = GearObject.GetComponent<Comps.GearCookingVisual>();
+                if (CookingVisual)
+                {
+                    CookingVisual.m_BeingCookedTime = Cooking;
+                }
+            }
+        }
+
+        public static void HandleGearDropped(DataStr.GearDataVisual Data)
+        {
+            GameObject GearObject = PdidTable.GetGameObject(Data.m_GUID);
 
             if(GearObject == null)
             {
                 string LocalizedGearName = "InvalidGearName";
                 bool IsCookpotItem = false;
                 bool IsCookable = false;
-                GearObject = AssetManager.CreateLocalizedBogusGear(Visual.m_GearName, out LocalizedGearName, out IsCookpotItem, out IsCookable);
+                GearObject = AssetManager.CreateLocalizedBogusGear(Data.m_GearName, out LocalizedGearName, Data.m_Volume, Data.m_ConditionNormalized, Data.m_Style);
                 if (GearObject != null)
                 {
                     //SkyCoop.Logger.Log(ConsoleColor.Green, $"Bogus created!");
-                    GearObject.transform.position = Visual.m_Position.ConvertToUnity();
-                    GearObject.transform.rotation = Visual.m_Rotation.ConvertToUnity();
-                    GearObject.name = Visual.m_GearName;
+                    GearObject.transform.position = Data.m_Position.ConvertToUnity();
+                    GearObject.transform.rotation = Data.m_Rotation.ConvertToUnity();
+                    GearObject.name = Data.m_GearName;
                     Utils.SetObjectAndChildrenLayer(GearObject, vp_Layer.Gear, vp_Layer.Gear);
                     ObjectGuid GUIDObj = GearObject.GetComponent<ObjectGuid>();
                     if (GUIDObj == null)
                     {
                         GUIDObj = GearObject.AddComponent<ObjectGuid>();
                     }
-                    Comps.DroppedGearVisual VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
-                    VisualComp.m_PrefabName = Visual.m_GearName;
-                    VisualComp.m_GUID = Visual.m_GUID;
-                    VisualComp.m_LocalizedName = LocalizedGearName;
-                    VisualComp.m_FireGUID = Visual.m_FireGUID;
-                    VisualComp.m_CookingSlotIndex = Visual.m_CookingSlot;
-                    VisualComp.RelinkCookingSlot();
+                    Comps.DroppedGearVisual GearComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
+                    GearComp.m_PrefabName = Data.m_GearName;
+                    GearComp.m_GUID = Data.m_GUID;
+                    GearComp.m_LocalizedName = LocalizedGearName;
+                    GearComp.m_Style = Data.m_Style;
 
+                    GearComp.m_CookingVisual = GearObject.GetComponent<Comps.GearCookingVisual>();
+                    if (GearComp.m_CookingVisual)
+                    {
+                        GearComp.m_CookingVisual.m_Gear = GearComp;
+                        GearComp.m_CookingVisual.m_FireGUID = Data.m_FireGUID;
+                        GearComp.m_CookingVisual.m_CookingSlotIndex = Data.m_CookingSlot;
+                        GearComp.m_CookingVisual.RelinkCookingSlot();
+                        GearComp.m_CookingVisual.m_BeingCookedTime = Data.m_BeingCookedTime;
+                        GearComp.m_CookingVisual.m_CookingResult = Data.m_CookingResult;
+                        GearComp.m_CookingVisual.m_Volume = Data.m_Volume;
 
-                    VisualComp.m_IsCookable = IsCookable;
-                    VisualComp.m_IsCookpotItem = IsCookpotItem;
+                        GearComp.m_CookingVisual.SetupGrubMesh();
+                    }
+
                     GearsSync.ApplyTextureDoner(GearObject);
 
-                    PdidTable.RuntimeRegister(GUIDObj, Visual.m_GUID);
+                    PdidTable.RuntimeRegister(GUIDObj, Data.m_GUID);
                 }
             }
             else
-            {
-                Comps.DroppedGearVisual VisualComp = GearObject.GetComponent<Comps.DroppedGearVisual>();
-                if(VisualComp == null)
+            {                
+                Comps.DroppedGearVisual GearComp = GearObject.GetComponent<Comps.DroppedGearVisual>();
+
+                if(GearComp.gameObject.name != Data.m_GearName)
                 {
-                    VisualComp = GearObject.AddComponent<Comps.DroppedGearVisual>();
+                    PdidTable.RuntimeUnregister(Data.m_GUID);
+                    UnityEngine.Object.Destroy(GearComp.gameObject);
+                    HandleGearDropped(Data);
+                    return;
                 }
-                VisualComp.m_FireGUID = Visual.m_FireGUID;
-                VisualComp.m_CookingSlotIndex = Visual.m_CookingSlot;
-                VisualComp.RelinkCookingSlot();
+
+                GearComp.m_Style = Data.m_Style;
+
+                if (GearComp.m_CookingVisual)
+                {
+                    GearComp.m_CookingVisual.m_Gear = GearComp;
+                    GearComp.m_CookingVisual.m_FireGUID = Data.m_FireGUID;
+                    GearComp.m_CookingVisual.m_CookingSlotIndex = Data.m_CookingSlot;
+                    GearComp.m_CookingVisual.RelinkCookingSlot();
+                    GearComp.m_CookingVisual.m_BeingCookedTime = Data.m_BeingCookedTime;
+                    GearComp.m_CookingVisual.m_CookingResult = Data.m_CookingResult;
+                    GearComp.m_CookingVisual.m_Volume = Data.m_Volume;
+
+                    GearComp.m_CookingVisual.SetupGrubMesh();
+                }
             }
         }
 
@@ -803,6 +1096,74 @@ namespace SkyCoopClient
             }
         }
 
+        public enum CookedStae
+        {
+            Raw,
+            Cooked,
+            Overcooked,
+        }
+
+        public static float CalculateWaterVolume_Debug(float TimeBeingCooked, float Volume)
+        {
+            float FinalVolume = Volume;
+            float MinutesToMeltSnowPerLiter = 37.5f;
+            float TimeToCook = (MinutesToMeltSnowPerLiter * Volume) / 60f;
+
+            if (TimeBeingCooked <= TimeToCook)
+            {
+                FinalVolume = (TimeBeingCooked * 60f) / MinutesToMeltSnowPerLiter;
+            }
+            return FinalVolume;
+        }
+
+        public static CookedStae GetCookingState(string GearName, float TimeBeingCooked, float Caloreis)
+        {
+            GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
+
+            if (reference)
+            {
+                Cookable Cookable = reference.GetComponent<Cookable>();
+                if (Cookable)
+                {
+                    float CookingTime = 0;
+                    float BurningTime = 0;
+                    FoodItem Food = Cookable.gameObject.GetComponent<FoodItem>();
+
+                    if (Food && Caloreis > 0)
+                    {
+                        FoodWeight FoodW = Cookable.gameObject.GetComponent<FoodWeight>();
+
+                        float Val = Food.m_CaloriesTotal;
+                        if (FoodW)
+                        {
+                            Val = FoodW.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodW.m_MaxWeight);
+                        }
+                        CookingTime = (Caloreis / Val * Cookable.m_CookTimeMinutes) / 60f;
+                    }
+                    else
+                    {
+                        CookingTime = Cookable.m_CookTimeMinutes / 60f;
+                    }
+                    BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
+
+                    if(TimeBeingCooked >= CookingTime)
+                    {
+                        float Overcooked = TimeBeingCooked - CookingTime;
+                        float NormalizedProgress = Overcooked / BurningTime;
+                        if (NormalizedProgress < 1)
+                        {
+                            return CookedStae.Cooked;
+                        }
+                        else
+                        {
+                            return CookedStae.Overcooked;
+                        }
+                    }
+                }
+            }
+            return CookedStae.Raw;
+        }
+
         public static void ProcessGearPickUpQueue(GearPickedElement Data)
         {
             CanclePickingUp();
@@ -816,6 +1177,14 @@ namespace SkyCoopClient
                 Explosive = true;
             }
 
+            CookedStae CookingState = CookedStae.Raw;
+
+            if (!string.IsNullOrEmpty(Data.m_CookingResult))
+            {
+                CookingState = GetCookingState(Data.m_GearName, Data.m_TimeBeingCooked, Data.m_Volume);
+            }
+
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueuer {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} CookingState {CookingState}");
 
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(Data.m_GearName);
             if (reference)
@@ -826,10 +1195,14 @@ namespace SkyCoopClient
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Going to deserialize...");
 
                 GearItemSaveDataProxy DataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(Data.m_JSON);
+
                 GearItem Gi = GearObject.GetComponent<GearItem>();
 
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
                 Gi.Deserialize(DataProxy, true);
+
+            Post_Deserialize:
+
                 if (Data.m_DropAround)
                 {
                     Gi.StickToGroundAtPlayerFeet(GameManager.GetPlayerTransform().position);
@@ -856,8 +1229,114 @@ namespace SkyCoopClient
                     }
                 }
 
+                if(Data.m_CookingResult == "Warming")
+                {
+                    if (Gi.m_FoodItem)
+                    {
+                        if(Data.m_TimeBeingCooked > (Gi.m_Cookable.m_CookTimeMinutes / 60f))
+                        {
+                            Gi.m_FoodItem.m_HeatPercent = 100;
+                        }
+                    }
+                }
+
                 GearManualPatch(Gi);
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Gear deserialized!");
+
+                if (Gi.m_CookingPotItem)
+                {
+                    Gi.m_CookingPotItem.m_CookingState = CookingPotItem.CookingState.Cooking;
+                    Gi.m_CookingPotItem.m_PercentCooked = 0;
+                    Gi.m_CookingPotItem.m_LitersSnowBeingMelted = new ItemLiquidVolume(0);
+                    Gi.m_CookingPotItem.m_LitersWaterBeingBoiled = new ItemLiquidVolume(0);
+                    if (Data.m_CookingResult == "BadWater")
+                    {
+                        float TimeToCook = (Gi.m_CookingPotItem.m_CookSettings.m_MinutesToMeltSnowPerLiter * Data.m_Volume) / 60f;
+                        float TimeBeingCooked = Data.m_TimeBeingCooked;
+
+                        if (TimeBeingCooked >= TimeToCook)
+                        {
+                            TimeBeingCooked = TimeToCook;
+                            Gi.m_CookingPotItem.m_CookingState = CookingPotItem.CookingState.Ready;
+                        }
+                        else
+                        {
+                            Gi.m_CookingPotItem.m_CookingState = CookingPotItem.CookingState.Cooking;
+                        }
+
+                        Gi.m_CookingPotItem.m_PercentCooked = TimeBeingCooked / TimeToCook;
+                        Gi.m_CookingPotItem.m_LitersSnowBeingMelted = new ItemLiquidVolume(FireHook.ConvertVolumeToUnits(Data.m_Volume));
+                        Gi.m_CookingPotItem.SetUpWaterMesh();
+                    }
+                    else if(Data.m_CookingResult == "GoodWater")
+                    {
+                        float TimeToCook = (Gi.m_CookingPotItem.m_CookSettings.m_MinutesToBoilWaterPerLiter * Data.m_Volume) / 60f;
+                        float TimeBeingCooked = Data.m_TimeBeingCooked;
+
+                        if (TimeBeingCooked < TimeToCook * 2) // Ещё не выкипело к чертям собачим
+                        {
+                            if (TimeBeingCooked < TimeToCook) // Недокепитил
+                            {
+                                Gi.m_CookingPotItem.m_CookingState = CookingPotItem.CookingState.Cooking;
+                                Gi.m_CookingPotItem.m_MinutesUntilCooked = (TimeToCook - TimeBeingCooked) / 60;
+                            }
+                            else
+                            {
+                                
+                                Gi.m_CookingPotItem.m_CookingState = CookingPotItem.CookingState.Ready;
+                                Gi.m_CookingPotItem.m_MinutesUntilCooked = 0;
+                            }
+                            Gi.m_CookingPotItem.m_PercentCooked = 1;
+                            Gi.m_CookingPotItem.m_LitersWaterBeingBoiled = new ItemLiquidVolume(FireHook.ConvertVolumeToUnits(Data.m_Volume));
+                            Gi.m_CookingPotItem.SetUpWaterMesh();
+                            if (Gi.m_CookingPotItem.m_CookingState == CookingPotItem.CookingState.Ready)
+                            {
+                                Gi.m_CookingPotItem.m_GrubMeshRenderer.sharedMaterials = Gi.m_CookingPotItem.m_BoilWaterReadyMaterialsList;
+                            }
+                        }
+                    }
+                }
+
+
+                if (CookingState == CookedStae.Cooked && Data.m_CookingResult != "Warming")
+                {
+                    GameObject DummyCookPot = UnityEngine.Object.Instantiate(AssetManager.GetAssetFromGame<GameObject>("GEAR_CookingPot"), s_LastPickedGearPosition, s_LastPickedGearRotation);
+                    if (DummyCookPot)
+                    {
+                        CookingPotItem Pot = DummyCookPot.GetComponent<CookingPotItem>();
+
+                        if (Pot)
+                        {
+                            GameObject CookedReference = AssetManager.GetAssetFromGame<GameObject>(Data.m_CookingResult);
+
+                            if (CookedReference)
+                            {
+                                GameObject CookedInstance = UnityEngine.Object.Instantiate(CookedReference, s_LastPickedGearPosition, s_LastPickedGearRotation);
+
+                                if (CookedInstance)
+                                {
+                                    Pot.SetCookedGearProperties(Gi, CookedInstance.GetComponent<GearItem>());
+
+                                    UnityEngine.Object.Destroy(Gi.gameObject);
+                                    UnityEngine.Object.Destroy(DummyCookPot);
+                                    Gi = CookedInstance.GetComponent<GearItem>();
+                                    GearObject = Gi.gameObject;
+                                    GearObject.name = Data.m_CookingResult;
+                                    CookingState = CookedStae.Raw;
+                                    goto Post_Deserialize;
+                                }
+                            }
+                        }
+                        UnityEngine.Object.Destroy(DummyCookPot);
+                        return;
+                    }
+                }
+                else if (CookingState == CookedStae.Overcooked)
+                {
+                    GameAudioManager.Play3DSound("Play_RemoveRuined", GameManager.GetPlayerTransform().gameObject);
+                    UnityEngine.Object.Destroy(GearObject);
+                    return;
+                }
 
                 if (s_PlaceModeAfterPickup)
                 {
@@ -898,18 +1377,18 @@ namespace SkyCoopClient
             CanclePickingUp();
         }
 
-        public static void TryPickUp(Comps.DroppedGearVisual Visual, bool PlaceMode = false)
+        public static void TryPickUp(Comps.DroppedGearVisual Visual, bool PlaceMode = false, bool ActionPicker = false)
         {
             if (Visual)
             {
-                if (Visual.m_IsCookpotItem && !string.IsNullOrEmpty(Visual.m_FireGUID) && FireHook.FireIsBurning(Visual.m_FireGUID))
+                if (!ActionPicker && Visual.m_CookingVisual && Visual.m_CookingVisual.IsCooking() && string.IsNullOrEmpty(Visual.m_CookingVisual.m_CookingResult))
                 {
                     Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
                     if (Panel)
                     {
                         Panel.Enable(true);
                         Panel.m_ActionPickerItemDataList.Clear();
-                        Action PickupDelegate = new Action(() => TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, false));
+                        Action PickupDelegate = new Action(() => TryPickUp(Visual, PlaceMode, true));
                         Action CookDelegate = new Action(() => FireHook.HandleCookFromPicker(Visual));
                         Action BoilDeleagte = new Action(() => FireHook.HandleBoilFromPicker(Visual));
 
@@ -923,24 +1402,31 @@ namespace SkyCoopClient
                 }
                 else
                 {
-                    TryPickUp(Visual.m_GUID, Visual.transform.position, Visual.transform.rotation, PlaceMode);
+                    Panel_HUD Panel;
+                    if (InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
+                    {
+                        s_ControlModeBeforePickingUp = GameManager.GetPlayerManagerComponent().m_ControlMode;
+                        GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
+                        Panel.StartItemProgressBar(10, "Picking Up...", null, new System.Action(PickUpFailedSilent));
+                    }
+                    s_PlaceModeAfterPickup = PlaceMode;
+                    s_LastPickedGearPosition = Visual.transform.position;
+                    s_LastPickedGearRotation = Visual.transform.rotation;
+
+                    if (Visual.m_CookingVisual)
+                    {
+                        s_LastCookingSlotGearPickedFrom = Visual.m_CookingVisual.m_CookingSlot;
+                        s_LastGearTimeBeingCooked = Visual.m_CookingVisual.m_BeingCookedTime;
+                    }
+                    else
+                    {
+                        s_LastCookingSlotGearPickedFrom = null;
+                        s_LastGearTimeBeingCooked = 0;
+                    }
+                    s_LastPickedGearGUID = Visual.m_GUID;
+                    ClientSend.SendGearPickUp(Visual.m_GUID);
                 }
             }
-        }
-
-        public static void TryPickUp(string GUID, Vector3 Position, Quaternion Rotation, bool PlaceMode = false)
-        {
-            Panel_HUD Panel;
-            if(InterfaceManager.TryGetPanel<Panel_HUD>(out Panel))
-            {
-                s_ControlModeBeforePickingUp = GameManager.GetPlayerManagerComponent().m_ControlMode;
-                GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-                Panel.StartItemProgressBar(10, "Picking Up...", null, new System.Action(PickUpFailedSilent));
-            }
-            s_PlaceModeAfterPickup = PlaceMode;
-            s_LastPickedGearPosition = Position;
-            s_LastPickedGearRotation = Rotation;
-            ClientSend.SendGearPickUp(GUID);
         }
     }
 }

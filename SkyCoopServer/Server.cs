@@ -99,6 +99,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientDismantleCampfire, ServerHandle.ClientDismantleCampfire },
             { (int)Packet.Type.ClientCharcoalCollect, ServerHandle.ClientCharcoalCollect },
             { (int)Packet.Type.ClientRequestFreeCookingSlot, ServerHandle.ClientRequestFreeCookingSlot },
+            { (int)Packet.Type.ClientGearSetRecipe, ServerHandle.ClientGearSetRecipe },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

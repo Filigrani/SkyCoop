@@ -312,13 +312,40 @@ namespace SkyCoopServer
 
         public static void SendGearVisual(DataStr.GearDataVisual Visual, NetPeer Client)
         {
+            if (string.IsNullOrEmpty(Visual.m_CookpotGUID)) // Только если не находиться внутри чего либо
+            {
+                NetDataWriter writer = new NetDataWriter();
+                writer.Put((int)Packet.Type.ClientSendGear);
+                writer.Put(Visual);
+                Client.Send(writer, DeliveryMethod.ReliableOrdered);
+
+            }
+        }
+
+        public static void SendGearCookingUpdate(string GUID, float BeingCooked, string SceneName, Server ServerInstance)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    SendGearCookingUpdate(GUID, BeingCooked, Peer);
+                }
+            }
+        }
+
+        public static void SendGearCookingUpdate(string GUID, float BeingCooked, NetPeer Client)
+        {
             NetDataWriter writer = new NetDataWriter();
-            writer.Put((int)Packet.Type.ClientSendGear);
-            writer.Put(Visual);
+            writer.Put((int)Packet.Type.ServerGearBeingCookedProgress);
+
+            writer.Put(GUID);
+            writer.Put(BeingCooked);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON, bool DropAround = false)
+        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON, bool DropAround = false, float TimeBeingCooked = 0, string CookingResult = "", float Volume = 0)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientPickUpGear);
@@ -327,6 +354,9 @@ namespace SkyCoopServer
             writer.Put(GearName);
             writer.Put(JSON);
             writer.Put(DropAround);
+            writer.Put(TimeBeingCooked);
+            writer.Put(CookingResult);
+            writer.Put(Volume);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -1106,6 +1136,17 @@ namespace SkyCoopServer
 
             writer.Put(GearGUID);
             writer.Put(FireGUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendWaterRefund(NetPeer Client, float Volume, bool GoodWater = true)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerWaterRefund);
+
+            writer.Put(Volume);
+            writer.Put(GoodWater);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
