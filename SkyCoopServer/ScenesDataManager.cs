@@ -365,7 +365,7 @@ namespace SkyCoopServer
                             if (CookpotData != null)
                             {
                                 CookpotData.m_Visual.m_ProductGUID = "";
-                                CookpotData.m_Visual.SetRecipe("", 0, 0, 0, 0);
+                                CookpotData.m_Visual.SetRecipe("", 0, 0);
                                 ServerSend.SendGearVisual(CookpotData.m_Visual, SceneName, m_ServerInstance);
                             }
                         }
@@ -420,7 +420,7 @@ namespace SkyCoopServer
             return null;
         }
 
-        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float CookingTime = 0, float BurnTime = 0, float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "")
+        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "")
         {
             string NewGUID = Guid.NewGuid().ToString();
 
@@ -436,7 +436,7 @@ namespace SkyCoopServer
             DataContainer.m_Visual.m_Position = Position;
             DataContainer.m_Visual.m_Rotation = Rotation;
             DataContainer.m_Visual.SetCookingSlot(FireGUID, CookingSlot);
-            DataContainer.m_Visual.SetRecipe(RecipeResult, CookingTime, BurnTime, Volume, TimeBeingCooked);
+            DataContainer.m_Visual.SetRecipe(RecipeResult, Volume, TimeBeingCooked);
 
             if (!string.IsNullOrEmpty(CookpotGUID))
             {
@@ -447,7 +447,7 @@ namespace SkyCoopServer
                     DataContainer.m_Visual.m_CookpotGUID = CookpotGUID;
                     CookingPot.m_Visual.m_ProductGUID = NewGUID;
 
-                    CookingPot.m_Visual.SetRecipe(GearName, CookingTime, BurnTime, Volume, TimeBeingCooked);
+                    CookingPot.m_Visual.SetRecipe(GearName, Volume, TimeBeingCooked);
 
                     ServerSend.SendGearVisual(CookingPot.m_Visual, SceneName, m_ServerInstance);
                 }
@@ -832,9 +832,11 @@ namespace SkyCoopServer
 
                                         if (GearData.m_Visual.m_CookingResult == "BadWater")
                                         {
-                                            if (GearData.m_Visual.m_BeingCookedTime > GearData.m_Visual.m_CookingTime)
+                                            float TimeToCook = (37.5f / 60f) * GearData.m_Visual.m_Volume;
+
+                                            if (GearData.m_Visual.m_BeingCookedTime > TimeToCook)
                                             {
-                                                float Overcooked = GearData.m_Visual.m_BeingCookedTime - GearData.m_Visual.m_CookingTime;
+                                                float Overcooked = GearData.m_Visual.m_BeingCookedTime - TimeToCook;
 
                                                 GearData.m_Visual.m_CookingResult = "GoodWater";
 

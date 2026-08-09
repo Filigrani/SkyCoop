@@ -175,8 +175,9 @@ namespace SkyCoop
                             ReadyColor = HotColor;
                         }
 
+                        GearsSync.CookedState State = m_CookingVisual.GetState();
 
-                        if (!string.IsNullOrEmpty(m_CookingVisual.m_CookingResult) && !m_CookingVisual.IsCooking() && !m_CookingVisual.IsRuined())
+                        if (!string.IsNullOrEmpty(m_CookingVisual.m_CookingResult) && !m_CookingVisual.IsCooking() && State != GearsSync.CookedState.Overcooked)
                         {
 
                             string ItemName = m_LocalizedName;
@@ -198,7 +199,7 @@ namespace SkyCoop
                                 CookedName = m_CookingVisual.m_LocalizedCookedName;
                             }
 
-                            if (m_CookingVisual.GetPercentCooked() >= 1)
+                            if (State == GearsSync.CookedState.Cooked)
                             {
                                 if(m_CookingVisual.m_CookingResult == "GoodWater")
                                 {
@@ -224,7 +225,7 @@ namespace SkyCoop
                             {
                                 NameToUse = ItemName;
 
-                                if(m_CookingVisual.GetPercentCooked() > 0)
+                                if(m_CookingVisual.m_BeingCookedTime > 0)
                                 {
                                     Affix = $"\n{Localization.Get("GAMEPLAY_Paused")}";
                                 }
@@ -239,13 +240,10 @@ namespace SkyCoop
                         }
                         else
                         {
-                            float IngameHourstillReady = m_CookingVisual.GetHoursTillCooked();
-                            float IngameHourstillBurnt = m_CookingVisual.GetHoursTillBurnt();
-
                             if (m_CookingVisual.m_CookingResult == "BadWater")
                             {
                                 string TimeLable = Localization.Get("GAMEPLAY_TimeUntilMelted");
-                                TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillReady * 60)));
+                                string DurationString = Utils.GetDurationString(Mathf.CeilToInt(m_CookingVisual.GetHours() * 60));
 
                                 string Debug = "";
 
@@ -260,52 +258,50 @@ namespace SkyCoop
                             else if (m_CookingVisual.m_CookingResult == "GoodWater")
                             {
                                 string TimeLable = "";
+                                string DurationString = Utils.GetDurationString(Mathf.CeilToInt(m_CookingVisual.GetHours() * 60));
 
-                                if (IngameHourstillReady > 0)
+                                switch (State)
                                 {
-                                    TimeLable = Localization.Get("GAMEPLAY_TimeUntilBoiled");
-                                    TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillReady * 60)));
-                                    m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Localization.Get("GAMEPLAY_CookingNonPotableWater")}\n{TimeLable}";
-                                }
-                                else
-                                {
-                                    if (IngameHourstillBurnt > 0)
-                                    {
+                                    case GearsSync.CookedState.Raw:
+                                        TimeLable = Localization.Get("GAMEPLAY_TimeUntilBoiled");
+                                        TimeLable = TimeLable.Replace("{time-val}", DurationString);
+                                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Localization.Get("GAMEPLAY_CookingNonPotableWater")}\n{TimeLable}";
+                                        break;
+                                    case GearsSync.CookedState.Cooked:
                                         TimeLable = Localization.Get("GAMEPLAY_TimeUntilBoiledDry");
-                                        TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillBurnt * 60)));
+                                        TimeLable = TimeLable.Replace("{time-val}", DurationString);
                                         m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Localization.Get("GAMEPLAY_CookingPotableWater")}\n{TimeLable}";
-                                    }
-                                    else
-                                    {
+                                        break;
+                                    case GearsSync.CookedState.Overcooked:
                                         m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = m_LocalizedName;
-                                    }
+                                        break;
+                                    default:
+                                        break;
                                 }
                                 m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
                             }
                             else
                             {
                                 string TimeLable = "";
+                                string DurationString = Utils.GetDurationString(Mathf.CeilToInt(m_CookingVisual.GetHours() * 60));
+                                string ItemName = m_LocalizedName;
 
-                                if(IngameHourstillReady > 0)
+                                switch (State)
                                 {
-                                    TimeLable = Localization.Get("GAMEPLAY_TimeUntilReady");
-                                    TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillReady * 60)));
-                                    string ItemName = m_LocalizedName;
-                                    if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedOverrideName))
-                                    {
-                                        ItemName = m_CookingVisual.m_LocalizedOverrideName;
-                                    }
-                                    m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{ItemName}\n{TimeLable}";
-                                }
-                                else
-                                {
-                                    if (!m_CookingVisual.IsRuined())
-                                    {
+                                    case GearsSync.CookedState.Raw:
+                                        TimeLable = Localization.Get("GAMEPLAY_TimeUntilReady");
+                                        TimeLable = TimeLable.Replace("{time-val}", DurationString);
+                                        
+                                        if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedOverrideName))
+                                        {
+                                            ItemName = m_CookingVisual.m_LocalizedOverrideName;
+                                        }
+                                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{ItemName}\n{TimeLable}";
+                                        break;
+                                    case GearsSync.CookedState.Cooked:
                                         TimeLable = Localization.Get("GAMEPLAY_TimeUntilBurned");
-                                        TimeLable = TimeLable.Replace("{time-val}", Utils.GetDurationString(Mathf.CeilToInt(IngameHourstillBurnt * 60)));
+                                        TimeLable = TimeLable.Replace("{time-val}", DurationString);
 
-
-                                        string ItemName = m_LocalizedName;
                                         if (!string.IsNullOrEmpty(m_CookingVisual.m_LocalizedOverrideName))
                                         {
                                             ItemName = m_CookingVisual.m_LocalizedOverrideName;
@@ -315,13 +311,13 @@ namespace SkyCoop
                                         {
                                             ItemName = m_CookingVisual.m_LocalizedCookedName;
                                         }
-
                                         m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{ItemName}\n{TimeLable}";
-                                    }
-                                    else
-                                    {
+                                        break;
+                                    case GearsSync.CookedState.Overcooked:
                                         m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = $"{Utils.GetStringFromColor(RuinedColor)}{Localization.Get("GAMEPLAY_InedibleBurnedDebris")}[-]";
-                                    }
+                                        break;
+                                    default:
+                                        break;
                                 }
                                 m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
                             }
@@ -460,7 +456,7 @@ namespace SkyCoop
                     m_ParticlesWaterReady = CookPot.m_ParticlesWaterReady;
 
                     m_CookSettings = CookPot.m_CookSettings;
-                    SetupGrubMesh();
+                    SetupGrubMesh(GetState());
                 }
             }
 
@@ -484,29 +480,12 @@ namespace SkyCoop
                         m_LocalizedCookedName = Cookable.m_CookedPrefab.DisplayName;
                     }
 
-                    FoodItem Food = Cookable.gameObject.GetComponent<FoodItem>();
-
-                    if (Food && Caloreis > 0)
-                    {
-                        FoodWeight FoodW = Cookable.gameObject.GetComponent<FoodWeight>();
-
-                        float Val = Food.m_CaloriesTotal;
-                        if (FoodW)
-                        {
-                            Val = FoodW.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodW.m_MaxWeight);
-                        }
-                        m_CookingTime = (Caloreis / Val * Cookable.m_CookTimeMinutes) / 60f;
-                    }
-                    else
-                    {
-                        m_CookingTime = Cookable.m_CookTimeMinutes / 60f;
-                    }
-                    m_BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
+                    GearsSync.GetCookngTime(Cookable.GetComponent<GearItem>(), Caloreis, out m_CookingTime, out m_BurningTime);
 
                     m_CookAudio = Cookable.m_CookEvent;
 
                     m_RuinedMaterials = Cookable.m_RuinedMaterials;
-                    SetupGrubMesh();
+                    SetupGrubMesh(GetState());
 
                     GameObject Reference = AssetManager.GetAssetFromGame<GameObject>("GEAR_CookingPotDummy");
                     if (Reference)
@@ -562,7 +541,7 @@ namespace SkyCoop
                 }
             }
 
-            public void SetupGrubMesh()
+            public void SetupGrubMesh(GearsSync.CookedState State)
             {
                 if (string.IsNullOrEmpty(m_CookingResult))
                 {
@@ -573,7 +552,6 @@ namespace SkyCoop
                     }
                 }
                 
-                
                 if (!string.IsNullOrEmpty(m_CookingResult) && m_CookingResult != "Warming")
                 {
                     if (m_CookingResult == "BadWater" || m_CookingResult == "GoodWater")
@@ -582,7 +560,7 @@ namespace SkyCoop
 
                         if (m_CookingResult == "BadWater")
                         {
-                            if (IsRuined())
+                            if (State == GearsSync.CookedState.Overcooked)
                             {
                                 m_GrubMeshRenderer.gameObject.SetActive(false);
                                 return;
@@ -598,13 +576,13 @@ namespace SkyCoop
                         }
                         else if (m_CookingResult == "GoodWater")
                         {
-                            if (IsRuined())
+                            if (State == GearsSync.CookedState.Overcooked)
                             {
                                 m_GrubMeshRenderer.gameObject.SetActive(false);
                                 return;
                             }
 
-                            if (GetPercentCooked() >= 1)
+                            if (State == GearsSync.CookedState.Cooked)
                             {
                                 m_GrubMeshRenderer.sharedMaterials = m_BoilWaterReadyMaterialsList;
                                 m_GrubMeshFilter.sharedMesh = m_WaterMesh;
@@ -633,13 +611,17 @@ namespace SkyCoop
 
                                 if (Reference)
                                 {
-                                    Cookable Cookable = Reference.GetComponent<Cookable>();
                                     GearItem Gear = Reference.GetComponent<GearItem>();
+                                    // Достаём именно так. А не Gear.m_Cookable и т.п. потому что не у всех префабов как оказалось эти переенные назачены в эдиторе
+                                    Cookable Cookable = Reference.GetComponent<Cookable>();
+                                    FoodItem FoodItem = Reference.GetComponent<FoodItem>();
+                                    FoodWeight FoodWeight = Reference.GetComponent<FoodWeight>();
 
                                     if (Gear)
                                     {
                                         m_LocalizedOverrideName = Gear.DisplayName;
                                     }
+                                    GearsSync.GetCookngTime(Cookable, FoodItem, FoodWeight, m_Volume, out m_CookingTime, out m_BurningTime);
 
                                     if (Cookable)
                                     {
@@ -652,7 +634,10 @@ namespace SkyCoop
                                         {
                                             m_LocalizedCookedName = Cookable.m_CookedPrefab.DisplayName;
                                         }
-
+                                        else
+                                        {
+                                            m_LocalizedCookedName = string.Empty;
+                                        }
                                         switch (m_Style)
                                         {
                                             case CookingPotItem.GrubMeshType.Pot:
@@ -670,24 +655,6 @@ namespace SkyCoop
                                             default:
                                                 break;
                                         }
-                                        FoodItem Food = Cookable.gameObject.GetComponent<FoodItem>();
-
-                                        if (Food && m_Volume > 0)
-                                        {
-                                            FoodWeight FoodW = Cookable.gameObject.GetComponent<FoodWeight>();
-
-                                            float Val = Food.m_CaloriesTotal;
-                                            if (FoodW)
-                                            {
-                                                Val = FoodW.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodW.m_MaxWeight);
-                                            }
-                                            m_CookingTime = (m_Volume / Val * Cookable.m_CookTimeMinutes) / 60f;
-                                        }
-                                        else
-                                        {
-                                            m_CookingTime = Cookable.m_CookTimeMinutes / 60f;
-                                            m_BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
-                                        }
                                     }
                                 }
                             }
@@ -696,7 +663,7 @@ namespace SkyCoop
                             {
                                 m_GrubMeshRenderer.gameObject.SetActive(true);
 
-                                if (IsRuined())
+                                if (State == GearsSync.CookedState.Overcooked)
                                 {
                                     m_GrubMeshRenderer.sharedMaterials = m_RuinedMaterials;
                                 }
@@ -707,7 +674,7 @@ namespace SkyCoop
                             }
                             if (m_GrubMeshFilter)
                             {
-                                if(GetPercentCooked() >= 1)
+                                if(State == GearsSync.CookedState.Cooked)
                                 {
                                     if (m_ReadyMesh)
                                     {
@@ -735,18 +702,20 @@ namespace SkyCoop
                         
                         if (m_CookingReadyObject)
                         {
-                            if(GetPercentCooked() >= 1)
+                            if (State == GearsSync.CookedState.Overcooked)
+                            {
+                                MeshRenderer Renderer = m_CookingReadyObject.GetComponent<MeshRenderer>();
+                                if (Renderer)
+                                {
+                                    Renderer.sharedMaterials = m_RuinedMaterials;
+                                }
+                            }
+
+                            if (State == GearsSync.CookedState.Cooked)
                             {
                                 m_CookingReadyObject.SetActive(true);
                                 m_RawObject.SetActive(false);
-                                if (IsRuined())
-                                {
-                                    MeshRenderer Renderer = m_CookingReadyObject.GetComponent<MeshRenderer>();
-                                    if (Renderer)
-                                    {
-                                        Renderer.sharedMaterials = m_RuinedMaterials;
-                                    }
-                                }
+
                             }
                             else
                             {
@@ -759,7 +728,7 @@ namespace SkyCoop
                             if (m_RawObject)
                             {
                                 m_RawObject.SetActive(true);
-                                if (IsRuined())
+                                if (State == GearsSync.CookedState.Overcooked)
                                 {
                                     MeshRenderer Renderer = m_RawObject.GetComponent<MeshRenderer>();
                                     if (Renderer)
@@ -782,75 +751,63 @@ namespace SkyCoop
                 }
             }
 
-            public float GetHoursTillCooked()
+            public float GetHours()
             {
-                float NormalizedProcent = 1 - GetPercentCooked();
+                GearsSync.CookedState State = GetState();
 
-                return m_CookingTime * NormalizedProcent;
+                switch (State)
+                {
+                    case GearsSync.CookedState.Raw:
+                        return m_CookingTime * (1-(m_BeingCookedTime / m_CookingTime));
+                    case GearsSync.CookedState.Cooked:
+                        if(m_BurningTime > 0)
+                        {
+                            float Overcooked = m_BeingCookedTime - m_CookingTime;
+                            return m_BurningTime * (1-(Overcooked / m_BurningTime));
+                        }
+                        return 0;
+                    case GearsSync.CookedState.Overcooked:
+                        return 0;
+                    default:
+                        return 0;
+                }
             }
 
-            public float GetHoursTillBurnt()
+            public GearsSync.CookedState GetState()
             {
-                float NormalizedProcent = 1 - GetPercentBurnt();
-
-                return m_BurningTime * NormalizedProcent;
+                if(m_BeingCookedTime < m_CookingTime)
+                {
+                    return GearsSync.CookedState.Raw;
+                }
+                else
+                {
+                    if(m_BurningTime > 0)
+                    {
+                        if(m_BeingCookedTime > m_CookingTime + m_BurningTime)
+                        {
+                            return GearsSync.CookedState.Overcooked;
+                        }
+                        else
+                        {
+                            return GearsSync.CookedState.Cooked;
+                        }
+                    }
+                    else
+                    {
+                        return GearsSync.CookedState.Cooked;
+                    }
+                }
             }
 
-            public float GetPercentCooked()
-            {
-                float NormalizedProgress = m_BeingCookedTime / m_CookingTime;
-
-                if (NormalizedProgress > 1)
-                {
-                    return 1;
-                }
-                else if (NormalizedProgress < 0)
-                {
-                    return 0;
-                }
-                return NormalizedProgress;
-            }
-
-            public float GetPercentBurnt()
-            {
-                if (m_BurningTime <= 0)
-                {
-                    return 0;
-                }
-
-                if (m_BeingCookedTime < m_CookingTime)
-                {
-                    return 0;
-                }
-
-                float Overcooked = m_BeingCookedTime - m_CookingTime;
-                float NormalizedProgress = Overcooked / m_BurningTime;
-
-                if (NormalizedProgress > 1)
-                {
-                    return 1;
-                }
-                else if (NormalizedProgress < 0)
-                {
-                    return 0;
-                }
-                return NormalizedProgress;
-            }
-
-            public bool IsRuined()
-            {
-                return GetPercentBurnt() >= 1;
-            }
-
-            public void UpdateParticles()
+            public void UpdateParticles(GearsSync.CookedState State)
             {
                 GameObject particlesToTurnOn = null;
 
-                if (IsCooking() && !string.IsNullOrEmpty(m_CookingResult) && !IsRuined())
+                if (IsCooking() && !string.IsNullOrEmpty(m_CookingResult) && State != GearsSync.CookedState.Overcooked)
                 {
                     if (m_CookingResult == "BadWater")
                     {
-                        if (GetPercentCooked() < 1)
+                        if (State == GearsSync.CookedState.Raw)
                         {
                             particlesToTurnOn = m_ParticlesSnowMelting;
                         }
@@ -861,7 +818,7 @@ namespace SkyCoop
                     }
                     else if (m_CookingResult == "GoodWater")
                     {
-                        if (GetPercentCooked() < 1)
+                        if (State == GearsSync.CookedState.Raw)
                         {
                             particlesToTurnOn = m_ParticlesWaterBoiling;
                         }
@@ -872,7 +829,7 @@ namespace SkyCoop
                     }
                     else
                     {
-                        if (GetPercentCooked() < 1)
+                        if (State == GearsSync.CookedState.Raw)
                         {
                             particlesToTurnOn = m_ParticlesItemCooking;
                         }
@@ -913,9 +870,9 @@ namespace SkyCoop
                 }
             }
 
-            public void UpdateAudio()
+            public void UpdateAudio(GearsSync.CookedState State)
             {
-                if (!string.IsNullOrEmpty(m_CookingResult) && IsCooking() && !IsRuined())
+                if (!string.IsNullOrEmpty(m_CookingResult) && IsCooking() && State != GearsSync.CookedState.Overcooked)
                 {
                     if (m_CookingAudioId == 0U)
                     {
@@ -925,9 +882,20 @@ namespace SkyCoop
                         }
                     }
 
-                    float PercentCooked = GetPercentCooked();
-                    float PercentRuined = GetPercentBurnt();
+                    float PercentCooked = 0;
+                    float PercentRuined = 0;
 
+                    if(State == GearsSync.CookedState.Raw)
+                    {
+                        PercentCooked = m_BeingCookedTime / m_CookingTime;
+                    }else if(State == GearsSync.CookedState.Cooked)
+                    {
+                        PercentCooked = 1f;
+
+                        float Overcooked = m_BeingCookedTime - m_CookingTime;
+                        PercentRuined = Overcooked / m_BurningTime;
+                    }
+                    
                     float rtpcValue = PercentCooked * 100f + PercentRuined * 100f;
 
                     if (m_CookingResult == "BadWater")
@@ -952,18 +920,19 @@ namespace SkyCoop
 
             public void Update()
             {
-                UpdateAudio();
-                UpdateParticles();
+                GearsSync.CookedState State = GetState();
+                UpdateAudio(State);
+                UpdateParticles(State);
 
                 if(m_LastBeingCookedTime != m_BeingCookedTime)
                 {
                     m_LastBeingCookedTime = m_BeingCookedTime;
 
-                    SetupGrubMesh();
+                    SetupGrubMesh(State);
                 }
                 if(m_LastCookingResult != m_CookingResult)
                 {
-                    SetupGrubMesh();
+                    SetupGrubMesh(State);
                 }
             }
         }
@@ -975,8 +944,6 @@ namespace SkyCoop
             public int m_CookingIndex = 0;
             public GearPlacePoint m_PlacePoint;
             public string m_CookingResult = string.Empty;
-            public float m_CookingTime = 0;
-            public float m_BurntTime = 0;
             public float m_Volume = 0;
             public float m_TimeBeingCooked = 0;
             public string m_CookpotGUID = string.Empty;

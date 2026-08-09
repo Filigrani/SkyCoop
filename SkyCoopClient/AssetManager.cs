@@ -3,6 +3,7 @@ using Il2CppInterop.Runtime;
 using Il2CppSystem.Linq;
 using Il2CppTLD.AddressableAssets;
 using Il2CppTLD.Scenes;
+using SkyCoopClient;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -153,6 +154,13 @@ namespace SkyCoop
                         {
                             gi.m_Bed.m_BedRollPlacedMesh.gameObject.SetActive(Style == 1);
                         }
+                    }
+
+                    Collider Collider = gi.gameObject.GetComponent<Collider>();
+
+                    if(Collider == null)
+                    {
+                        UncookedGearsFix.UncookedGearPatch(GearObject);
                     }
 
 

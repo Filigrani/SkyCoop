@@ -275,11 +275,20 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Panel_GearSelect), "SelectGear")]
         private static class Panel_GearSelect_SelectGear
         {
-            private static bool Prefix(Panel_GearSelect __instance)
+            private static GearItem s_SelectedGear = null;
+            private static GameObject s_CookingObject = null;
+            private static string s_MethodName = string.Empty;
+            private static bool s_DoCookingAction = false;
+            
+            private static void Prefix(Panel_GearSelect __instance)
             {
-                if (!ModMain.IsMultiplayer()) { return true; }
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                if(__instance.m_OnSelectAction != null)
+                s_SelectedGear = __instance.GetScrolllistCurrentItem();
+                s_CookingObject = __instance.m_CookingGameObject;
+                s_DoCookingAction = false;
+
+                if (__instance.m_OnSelectAction != null)
                 {
                     string MethodName = __instance.m_OnSelectAction.Method.Name;
 
@@ -287,14 +296,24 @@ namespace SkyCoopClient
                     {
                         case "DoFirePickerAction":
                         case "DoBoilPickerAction":
-
-                            DoCookingAction(MethodName, __instance.GetScrolllistCurrentItem(), __instance.m_CookingGameObject);
-                            return false;
+                            s_DoCookingAction = true;
+                            s_MethodName = __instance.m_OnSelectAction.Method.Name;
+                            __instance.m_OnSelectAction = null; // Не вызываем действие готовки, но что бы сам Panel_GearSelect.SelectGear() закончил своё выполнение
+                            break;
                         default:
-                            return true;
+                            break;
                     }
                 }
-                return true;
+                return;
+            }
+            private static void Postfix(Panel_GearSelect __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_DoCookingAction)
+                {
+                    DoCookingAction(s_MethodName, s_SelectedGear, s_CookingObject);
+                }
             }
         }
 
@@ -569,9 +588,7 @@ namespace SkyCoopClient
 
                             if (Liters > 0)
                             {
-                                float TimeToCook = (s_ActiveCookignClone.m_CookingPotItem.m_CookSettings.m_MinutesToMeltSnowPerLiter * Liters) / 60f;
-
-                                ClientSend.SendGearRecipe(Dummy.m_RealGearGUID, "BadWater", TimeToCook, 0, Liters);
+                                ClientSend.SendGearRecipe(Dummy.m_RealGearGUID, "BadWater", Liters);
                             }
                         }
                     }
@@ -619,7 +636,7 @@ namespace SkyCoopClient
                             {
                                 float TimeToCook = (s_ActiveCookignClone.m_CookingPotItem.m_CookSettings.m_MinutesToBoilWaterPerLiter * Liters) / 60f;
 
-                                ClientSend.SendGearRecipe(Dummy.m_RealGearGUID, "GoodWater", TimeToCook, TimeToCook, Liters);
+                                ClientSend.SendGearRecipe(Dummy.m_RealGearGUID, "GoodWater", Liters);
                             }
                         }
                     }
@@ -629,25 +646,21 @@ namespace SkyCoopClient
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Cooking), "OnDoAction")]
-        private static class Panel_Cooking_OnDoAction
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Cooking), "OnCookNormalFood")]
+        private static class Panel_Cooking_OnCookNormalFood
         {
-            private static bool Prefix(Panel_Cooking __instance)
+            private static bool Prefix(Panel_Cooking __instance, GearItem gi)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
                 if (s_ActiveCookignClone)
                 {
-                    SkyCoop.Logger.Log($"Cooking clone still alive!");
-
-                    CookableItem CookableItem = __instance.GetSelectedCookableItem();
-
-                    if(CookableItem.m_GearItem && CookableItem.m_GearItem.m_InPlayerInventory)
+                    if (gi)
                     {
-                        if (CookableItem.m_GearItem.m_FoodItem && CookableItem.m_GearItem.m_FoodItem.m_GearRequiredToOpen)
+                        if (gi.m_FoodItem && gi.m_FoodItem.m_GearRequiredToOpen)
                         {
-                            GameManager.GetPlayerManagerComponent().UseInventoryItem(CookableItem.m_GearItem);
-                            __instance.Enable(false);
+                            GameManager.GetPlayerManagerComponent().UseInventoryItem(gi);
+                            gi.m_FoodItem.m_ReturnToCookingAfterOpen = true;
                             return false;
                         }
                         GearCookingDummy Dummy = s_ActiveCookignClone.GetComponent<GearCookingDummy>();
@@ -659,45 +672,62 @@ namespace SkyCoopClient
                                 float TimeToCook = 0;
                                 float BurntTime = 0;
                                 float Volume = 0;
-                                if (CookableItem.m_GearItem.m_Cookable)
+                                if (gi.m_Cookable)
                                 {
-                                    if (CookableItem.m_GearItem.m_Cookable.m_CookedPrefab)
+                                    if (gi.m_Cookable.m_CookedPrefab)
                                     {
-                                        CookingResult = CookableItem.m_GearItem.m_Cookable.m_CookedPrefab.name;
+                                        CookingResult = gi.m_Cookable.m_CookedPrefab.name;
                                     }
-                                    TimeToCook = CookableItem.m_GearItem.m_Cookable.m_CookTimeMinutes / 60f;
-                                    BurntTime = CookableItem.m_GearItem.m_Cookable.m_ReadyTimeMinutes / 60f;
-                                }
-                                if (CookableItem.m_GearItem.m_FoodItem)
-                                {
-                                    Volume = CookableItem.m_GearItem.m_FoodItem.m_CaloriesRemaining;
-                                }
-                                GearCookingTarget Target = CookableItem.m_GearItem.gameObject.GetComponent<GearCookingTarget>();
+                                    TimeToCook = gi.m_Cookable.m_CookTimeMinutes / 60f;
+                                    BurntTime = gi.m_Cookable.m_ReadyTimeMinutes / 60f;
 
-                                if (Target == null)
-                                {
-                                    Target = CookableItem.m_GearItem.gameObject.AddComponent<GearCookingTarget>();
+                                    if (gi.m_FoodItem)
+                                    {
+                                        Volume = gi.m_FoodItem.m_CaloriesRemaining;
+                                    }
+                                    GearCookingTarget Target = gi.gameObject.GetComponent<GearCookingTarget>();
+
+                                    if (Target == null)
+                                    {
+                                        Target = gi.gameObject.AddComponent<GearCookingTarget>();
+                                    }
+                                    Target.m_CookpotGUID = Dummy.m_RealGearGUID;
+                                    Target.m_Volume = Volume;
+                                    Target.m_CookingResult = CookingResult;
+
+                                    if (gi.m_Cookable.m_PotableWaterRequired.m_Units > 0)
+                                    {
+                                        GearItem Bottle = GameManager.GetInventoryComponent().GetPotableWaterSupply();
+
+                                        if (Bottle)
+                                        {
+                                            Bottle.m_WaterSupply.m_VolumeInLiters -= gi.m_Cookable.m_PotableWaterRequired;
+                                            if (Bottle.m_WaterSupply.m_VolumeInLiters.m_Units < 0)
+                                            {
+                                                Bottle.m_WaterSupply.m_VolumeInLiters = new ItemLiquidVolume(0);
+                                            }
+                                        }
+                                    }
+
+                                    gi.Drop(1);
                                 }
-                                Target.m_CookpotGUID = Dummy.m_RealGearGUID;
-                                Target.m_CookingTime = TimeToCook;
-                                Target.m_BurntTime = BurntTime;
-                                Target.m_Volume = Volume;
-                                Target.m_CookingResult = CookingResult;
-                                CookableItem.m_GearItem.Drop(1);
                             }
                         }
                     }
                 }
-                else
-                {
-                    SkyCoop.Logger.Log($"Cooking clone destroyed!");
-                }
-                if (s_ActiveCookignClone)
-                {
-                    UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
-                }
                 __instance.Enable(false);
                 return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Cooking), "OnCookRecipe")]
+        private static class Panel_Cooking_OnCookRecipe
+        {
+            private static void Postfix(Panel_Cooking __instance, RecipeData recipe)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                GameManager.GetTimeOfDayComponent().SetDayLengthScale(1.003f);
             }
         }
 
@@ -766,67 +796,102 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnFoodOpeningComplete")]
         private static class PlayerManager_OnFoodOpeningComplete
         {
-            private static bool Prefix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            private static bool s_ReturnToCookingAfterOpen = false;
+            private static GearItem s_Gear;
+            private static void Prefix(PlayerManager __instance, bool success, bool playerCancel, float progress)
             {
-                if (!ModMain.IsMultiplayer()) { return true; }
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                if (__instance.m_FoodItemOpened == s_PendingCookingItem)
+                s_ReturnToCookingAfterOpen = false;
+                s_Gear = __instance.m_FoodItemOpened;
+                if (success)
                 {
-                    if (success)
+                    if (s_Gear && s_Gear.m_FoodItem)
                     {
-                        __instance.m_FoodItemOpened.m_FoodItem.m_Opened = true;
-                        __instance.m_FoodItemOpened.m_FoodItem.m_GearRequiredToOpen = false;
-                        StatsManager.IncrementValue(StatID.CansOpened, 1f);
+                        s_ReturnToCookingAfterOpen = s_Gear.m_FoodItem.m_ReturnToCookingAfterOpen;
+                    }
+                }
+            }
+            private static void Postfix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                        DoCookingAction("DoFirePickerAction", __instance.m_FoodItemOpened, s_PendingCookingFireObject, GearsSync.s_LastGearTimeBeingCooked);
-                        __instance.m_FoodItemOpened = null;
+                if (success)
+                {
+                    Panel_Cooking Panel = InterfaceManager.GetPanel<Panel_Cooking>();
+                    if (Panel && Panel.IsEnabled())
+                    {
+                        if (s_Gear && success)
+                        {
+                            Panel.OnCookNormalFood(s_Gear);
+                        }
+                        else
+                        {
+                            FinishCookingAction();
+                        }
                     }
                     else
                     {
-                        FinishCookingAction();
+                        if (s_ReturnToCookingAfterOpen && success)
+                        {
+                            DoCookingAction("DoFirePickerAction", s_Gear, s_PendingCookingFireObject);
+                        }
+                        else
+                        {
+                            FinishCookingAction();
+                        }
                     }
-                    return false;
                 }
-
-                return true;
             }
         }
 
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "OnSmashComplete")]
         private static class PlayerManager_OnSmashComplete
         {
-            private static bool Prefix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            private static bool s_ReturnToCookingAfterOpen = false;
+            private static GearItem s_Gear;
+            private static void Prefix(PlayerManager __instance, bool success, bool playerCancel, float progress)
             {
-                if (!ModMain.IsMultiplayer()) { return true; }
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                if (__instance.m_SmashableItemUsed == s_PendingCookingItem)
+                s_ReturnToCookingAfterOpen = false;
+                s_Gear = __instance.m_SmashableItemUsed;
+                if (success)
                 {
-                    if (success)
+                    if (s_Gear && s_Gear.m_FoodItem)
                     {
-                        __instance.m_SmashableItemUsed.m_SmashableItem.m_HasBeenSmashed = true;
-                        StatsManager.IncrementValue(StatID.CansOpened, 1f);
+                        s_ReturnToCookingAfterOpen = s_Gear.m_FoodItem.m_ReturnToCookingAfterOpen;
+                    }
+                }
+            }
 
-                        int LossProcent = UnityEngine.Random.Range(__instance.m_SmashableItemUsed.m_SmashableItem.m_MinPercentLoss, __instance.m_SmashableItemUsed.m_SmashableItem.m_MaxPercentLoss);
-                        if (GameManager.GetSkillCooking().NoCalorieLossWhenSmashingOpen())
-                        {
-                            LossProcent = 0;
-                        }
-                        float Loss = __instance.m_SmashableItemUsed.m_FoodItem.m_CaloriesTotal * (float)LossProcent * 0.01f;
-                        __instance.m_SmashableItemUsed.m_FoodItem.m_CaloriesRemaining = Mathf.Max(1f, __instance.m_SmashableItemUsed.m_FoodItem.m_CaloriesRemaining - Loss);
-                        __instance.m_SmashableItemUsed.m_FoodItem.m_GearRequiredToOpen = false;
+            private static void Postfix(PlayerManager __instance, bool success, bool playerCancel, float progress)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
 
-                        DoCookingAction("DoFirePickerAction", __instance.m_SmashableItemUsed, s_PendingCookingFireObject, GearsSync.s_LastGearTimeBeingCooked);
-
-                        __instance.m_SmashableItemUsed = null;
+                Panel_Cooking Panel = InterfaceManager.GetPanel<Panel_Cooking>();
+                if (Panel && Panel.IsEnabled())
+                {
+                    if (s_Gear && success)
+                    {
+                        Panel.OnCookNormalFood(s_Gear);
                     }
                     else
                     {
                         FinishCookingAction();
                     }
-                    return false;
                 }
-
-                return true;
+                else
+                {
+                    if (s_ReturnToCookingAfterOpen && success)
+                    {
+                        DoCookingAction("DoFirePickerAction", s_Gear, s_PendingCookingFireObject);
+                    }
+                    else
+                    {
+                        FinishCookingAction();
+                    }
+                }
             }
         }
 
@@ -867,9 +932,6 @@ namespace SkyCoopClient
 
             if (Gear.m_Cookable)
             {
-                CookingTarget.m_CookingTime = Gear.m_Cookable.m_CookTimeMinutes / 60f;
-                CookingTarget.m_BurntTime = Gear.m_Cookable.m_ReadyTimeMinutes / 60f;
-
                 if (Gear.m_Cookable.m_CookedPrefab)
                 {
                     CookingTarget.m_CookingResult = Gear.m_Cookable.m_CookedPrefab.name;
@@ -899,6 +961,7 @@ namespace SkyCoopClient
                 if(SelectedItem.m_FoodItem && SelectedItem.m_FoodItem.m_GearRequiredToOpen)
                 {
                     GameManager.GetPlayerManagerComponent().UseInventoryItem(SelectedItem);
+                    SelectedItem.m_FoodItem.m_ReturnToCookingAfterOpen = true;
                     Panel_GearSelect _Panel = InterfaceManager.GetPanel<Panel_GearSelect>();
 
                     if (_Panel)
@@ -909,6 +972,21 @@ namespace SkyCoopClient
                         _Panel.m_FeedFireGameObject = null;
                     }
                     s_PendingCookingFireObject = FireObj;
+                    return;
+                }
+            }
+            else
+            {
+                // Когда пытаешься разложить "Иструмента нет"
+
+                s_PendingCookingFireObject = FireObj;
+                Panel_Cooking PanelC = InterfaceManager.GetPanel<Panel_Cooking>();
+
+                if (PanelC)
+                {
+                    PanelC.SetCookingPot(null);
+                    PanelC.SetFilterBasedOnCookingPot();
+                    PanelC.Enable(true);
                     return;
                 }
             }
@@ -1612,7 +1690,6 @@ namespace SkyCoopClient
 
                     if (Panel)
                     {
-                        Panel.Enable(true);
                         Panel.SetCookingPot(s_ActiveCookignClone.m_CookingPotItem);
 
                         if (Visual.m_CookingVisual)
@@ -1630,6 +1707,7 @@ namespace SkyCoopClient
                                 }
                             }
                         }
+                        Panel.Enable(true);
                     }
                     else
                     {

@@ -672,8 +672,6 @@ namespace SkyCoopServer
 
             public bool m_HasCookingRecipe = false;
             public string m_CookingResult = "";
-            public float m_CookingTime = 0;
-            public float m_BurntTime = 0;
             public float m_Volume = 0;
 
             public float m_BeingCookedTime = 0;
@@ -716,13 +714,11 @@ namespace SkyCoopServer
                 m_BeingCookedTime += HoursCooked;
             }
 
-            public void SetRecipe(string Result, float CookingTime, float BurntTime, float Volume, float TimeBeingCooked)
+            public void SetRecipe(string Result, float Volume, float TimeBeingCooked)
             {
                 if (string.IsNullOrEmpty(Result))
                 {
                     m_CookingResult = "";
-                    m_CookingTime = 0;
-                    m_BurntTime = 0;
                     m_Volume = 0;
                     m_BeingCookedTime = 0;
 
@@ -731,8 +727,6 @@ namespace SkyCoopServer
                 else
                 {
                     m_CookingResult = Result;
-                    m_CookingTime = CookingTime;
-                    m_BurntTime = BurntTime;
                     m_Volume = Volume;
                     m_BeingCookedTime = TimeBeingCooked;
 

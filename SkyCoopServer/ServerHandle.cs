@@ -310,9 +310,7 @@ namespace SkyCoopServer
             }
 
             string RecipeResult = "";
-            float CookTime = 0;
-            float BurnTime = 0;
-            float Volume = 0;
+            float Volume = 1;
             float BeingCooked = 0;
 
             bool HasRecipe = Reader.GetBool();
@@ -320,14 +318,12 @@ namespace SkyCoopServer
             if (HasRecipe || !string.IsNullOrEmpty(CookpotGUID))
             {
                 RecipeResult = Reader.GetString();
-                CookTime = Reader.GetFloat();
-                BurnTime = Reader.GetFloat();
                 Volume = Reader.GetFloat();
                 BeingCooked = Reader.GetFloat();
             }
 
 
-            SkyCoopServer.Logger.Log(ConsoleColor.Green, $"ServerHandle.ClientSendGear {GearName} FireGUID {FireGUID} CookingSlot {CookingSlotIndex} CookpotGUID {CookpotGUID} CookTime {CookTime} BurnTime {BurnTime}");
+            SkyCoopServer.Logger.Log(ConsoleColor.Green, $"ServerHandle.ClientSendGear {GearName} FireGUID {FireGUID} CookingSlot {CookingSlotIndex} CookpotGUID {CookpotGUID}");
 
             if (!string.IsNullOrEmpty(FireGUID))
             {
@@ -355,7 +351,7 @@ namespace SkyCoopServer
                 }
             }
 
-            ScenesDataManager.AddedGearData AddGearResult = ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, RecipeResult, CookTime, BurnTime, Volume, BeingCooked, CookpotGUID);
+            ScenesDataManager.AddedGearData AddGearResult = ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, RecipeResult, Volume, BeingCooked, CookpotGUID);
 
             if(!string.IsNullOrEmpty(AddGearResult.FireGUID))
             {
@@ -1367,8 +1363,6 @@ namespace SkyCoopServer
             {
                 string GUID = Reader.GetString();
                 string RecipeResult = Reader.GetString();
-                float CookingTime = Reader.GetFloat();
-                float BurntTime = Reader.GetFloat();
                 float Volume = Reader.GetFloat();
 
                 GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(Player.m_Scene, GUID, false);
@@ -1377,7 +1371,7 @@ namespace SkyCoopServer
                 {
                     if (string.IsNullOrEmpty(GearData.m_Visual.m_CookingResult))
                     {
-                        GearData.m_Visual.SetRecipe(RecipeResult, CookingTime, BurntTime, Volume, 0);
+                        GearData.m_Visual.SetRecipe(RecipeResult, Volume, 0);
                         ServerInstance.m_ScenesData.SetGearForCooking(Player.m_Scene, GearData.m_Visual);
 
                         ServerSend.SendGearVisual(GearData.m_Visual, Player.m_Scene, ServerInstance);

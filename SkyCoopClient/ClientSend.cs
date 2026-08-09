@@ -181,7 +181,7 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendGear(string GearName, Vector3 Position, Quaternion Rotation, string JSON, float NormalizedCondition, int Style, string FireGUID = "", int CookingSlot = -1, string CookingResult = "", float CookingTime = 0, float BurnOut = 0, float Volume = 0, float BeingCookedTime = 0, string CookPotGUID = "")
+        public static void SendGear(string GearName, Vector3 Position, Quaternion Rotation, string JSON, float NormalizedCondition, int Style, string FireGUID = "", int CookingSlot = -1, string CookingResult = "", float Volume = 1, float BeingCookedTime = 0, string CookPotGUID = "")
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientSendGear);
@@ -211,8 +211,6 @@ namespace SkyCoop
             if (HasRecipe || !string.IsNullOrEmpty(CookPotGUID))
             {
                 writer.Put(CookingResult);
-                writer.Put(CookingTime);
-                writer.Put(BurnOut);
                 writer.Put(Volume);
                 writer.Put(BeingCookedTime);
             }
@@ -223,15 +221,13 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendGearRecipe(string GearGUID = "", string CookingResult = "", float CookingTime = 0, float BurnOut = 0, float Volume = 0)
+        public static void SendGearRecipe(string GearGUID = "", string CookingResult = "", float Volume = 0)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientGearSetRecipe);
 
             writer.Put(GearGUID);
             writer.Put(CookingResult);
-            writer.Put(CookingTime);
-            writer.Put(BurnOut);
             writer.Put(Volume);
 
             SkyCoop.Logger.Log(ConsoleColor.Green, $"ClientSend.SendGearRecipe {GearGUID} {CookingResult} {Volume}");

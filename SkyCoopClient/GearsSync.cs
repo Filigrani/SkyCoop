@@ -17,6 +17,8 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using static Il2Cpp.CookingPotItem;
+using static Il2CppSystem.Linq.Expressions.Interpreter.InitializeLocalInstruction;
 
 namespace SkyCoopClient
 {
@@ -45,9 +47,9 @@ namespace SkyCoopClient
             public bool m_SpawnLoaded = false;
             public float m_TimeBeingCooked = 0;
             public string m_CookingResult = "";
-            public float m_Volume = 0;
+            public float m_Volume = 1;
 
-            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false, float timebeingcooked = 0, string cookingresult = "", float volume = 0)
+            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false, float timebeingcooked = 0, string cookingresult = "", float volume = 1)
             {
                 m_GearName = gearName;
                 m_JSON = json;
@@ -612,8 +614,6 @@ namespace SkyCoopClient
                                 }
                                 Target.m_Volume = Volume;
                                 Target.m_CookingResult = ResultGear;
-                                Target.m_CookingTime = CookingTime;
-                                Target.m_BurntTime = 0;
                             }
                         }
                     }
@@ -757,6 +757,7 @@ namespace SkyCoopClient
             MeleeManager.MeeleWeaponPatch(__instance);
             CookpotHelmetPatch(__instance);
             CanLauncherPatch(__instance);
+            UncookedGearsFix.UncookedGearPatch(__instance.gameObject);
             //SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
         }
 
@@ -853,10 +854,8 @@ namespace SkyCoopClient
 
                 string FireGUID = "";
                 int CookingSlotIndex = -1;
-                string CookingResult = "";
-                float CookingTime = 0;
-                float BurntTime = 0;
-                float Volume = 0;
+                string CookingResult = "";;
+                float Volume = 1;
                 float BeingCookedTime = 0;
                 float NormalizedCondition = gear.GetNormalizedCondition();
                 int Style = 0;
@@ -885,8 +884,6 @@ namespace SkyCoopClient
                     FireGUID = CookingTarget.m_FireGUID;
                     CookingSlotIndex = CookingTarget.m_CookingIndex;
                     CookingResult = CookingTarget.m_CookingResult;
-                    CookingTime = CookingTarget.m_CookingTime;
-                    BurntTime = CookingTarget.m_BurntTime;
                     Volume = CookingTarget.m_Volume;
                     BeingCookedTime = CookingTarget.m_TimeBeingCooked;
                     CookpotGUID = CookingTarget.m_CookpotGUID;
@@ -916,9 +913,6 @@ namespace SkyCoopClient
 
                                 if (gear.m_Cookable)
                                 {
-                                    CookingTime = gear.m_Cookable.m_CookTimeMinutes / 60f;
-                                    BurntTime = gear.m_Cookable.m_ReadyTimeMinutes / 60f;
-
                                     if (gear.m_FoodItem)
                                     {
                                         Volume = gear.m_FoodItem.m_CaloriesRemaining;
@@ -936,6 +930,21 @@ namespace SkyCoopClient
                             }
                         }
                         s_LastPickedGearGUID = string.Empty;
+                    }
+                }
+
+                if (gear.m_InProgressCraftItem)
+                {
+                    if (gear.m_InProgressCraftItem.m_PercentComplete > 0)
+                    {
+                        float Scaler = gear.m_InProgressCraftItem.m_PercentComplete / 100f;
+
+                        if (gear.m_Cookable)
+                        {
+                            float TimeToCook = gear.m_Cookable.m_CookTimeMinutes / 60f;
+
+                            BeingCookedTime = TimeToCook * Scaler;
+                        }
                     }
                 }
 
@@ -970,7 +979,7 @@ namespace SkyCoopClient
 
                 if (ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanDropItems)
                 {
-                    ClientSend.SendGear(gear.name, v3, rot, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, CookingResult, CookingTime, BurntTime, Volume, BeingCookedTime, CookpotGUID);
+                    ClientSend.SendGear(gear.name, v3, rot, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, CookingResult, Volume, BeingCookedTime, CookpotGUID);
                 }
 
                 if (total < 2)
@@ -1045,7 +1054,7 @@ namespace SkyCoopClient
                         GearComp.m_CookingVisual.m_CookingResult = Data.m_CookingResult;
                         GearComp.m_CookingVisual.m_Volume = Data.m_Volume;
 
-                        GearComp.m_CookingVisual.SetupGrubMesh();
+                        GearComp.m_CookingVisual.SetupGrubMesh(GearComp.m_CookingVisual.GetState());
                     }
 
                     GearsSync.ApplyTextureDoner(GearObject);
@@ -1077,7 +1086,7 @@ namespace SkyCoopClient
                     GearComp.m_CookingVisual.m_CookingResult = Data.m_CookingResult;
                     GearComp.m_CookingVisual.m_Volume = Data.m_Volume;
 
-                    GearComp.m_CookingVisual.SetupGrubMesh();
+                    GearComp.m_CookingVisual.SetupGrubMesh(GearComp.m_CookingVisual.GetState());
                 }
             }
         }
@@ -1096,7 +1105,7 @@ namespace SkyCoopClient
             }
         }
 
-        public enum CookedStae
+        public enum CookedState
         {
             Raw,
             Cooked,
@@ -1116,52 +1125,116 @@ namespace SkyCoopClient
             return FinalVolume;
         }
 
-        public static CookedStae GetCookingState(string GearName, float TimeBeingCooked, float Caloreis)
+        public static void GetCookngTime(GearItem Gear, float Calories, out float CookingTime, out float BurningTime)
+        {
+            CookingTime = 0;
+            BurningTime = 0;
+            if (Gear)
+            {
+                GetCookngTime(Gear.m_Cookable, Gear.m_FoodItem, Gear.m_FoodWeight, Calories, out CookingTime, out BurningTime);
+            }
+        }
+
+        public static void GetCookngTime(Cookable Cookable, FoodItem FoodItem, FoodWeight FoodWeight, float Calories, out float CookingTime, out float BurningTime)
+        {
+            CookingTime = 0;
+            BurningTime = 0;
+            if (Cookable)
+            {
+                if (FoodItem && Calories > 0)
+                {
+                    float Val = FoodItem.m_CaloriesTotal;
+                    if (FoodWeight)
+                    {
+                        Val = FoodWeight.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodWeight.m_MaxWeight);
+                    }
+                    CookingTime = (Calories / Val * Cookable.m_CookTimeMinutes) / 60f;
+                }
+                else
+                {
+                    CookingTime = Cookable.m_CookTimeMinutes / 60f;
+                }
+                BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
+            }
+        }
+
+        public static void GetCookngTime(string GearName, float Calories, out float CookingTime, out float BurningTime)
+        {
+            CookingTime = 0;
+            BurningTime = 0;
+            GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
+
+            if (reference)
+            {
+                GetCookngTime(reference.GetComponent<GearItem>(), Calories, out CookingTime, out BurningTime);
+            }
+        }
+
+        public static float GetNormalizedCookingProgress(float CookingTime, float TimeBeingCooked)
+        {
+            float NormalizedCookngProgress = TimeBeingCooked / CookingTime;
+
+            return NormalizedCookngProgress;
+        }
+
+        public static float GetNormalizedCookingProgress(GearItem Gear, float TimeBeingCooked, float Caloreis = 1)
+        {
+            if (Gear)
+            {
+                if (Gear.m_Cookable)
+                {
+                    float CookingTime = 0;
+                    float BurningTime = 0;
+                    GetCookngTime(Gear, Caloreis, out CookingTime, out BurningTime);
+
+                    return GetNormalizedCookingProgress(CookingTime, TimeBeingCooked);
+                }
+            }
+
+            return 0f;
+        }
+
+        public static CookedState GetCookingState(GearItem Gear, float TimeBeingCooked, float Caloreis)
+        {
+            if (Gear)
+            {
+                float CookingTime = 0;
+                float BurningTime = 0;
+                GetCookngTime(Gear, Caloreis, out CookingTime, out BurningTime);
+
+                float NormalizedProgress = GetNormalizedCookingProgress(CookingTime, TimeBeingCooked);
+
+                if (NormalizedProgress < 1)
+                {
+                    return CookedState.Raw;
+                }
+                else if (NormalizedProgress > 1)
+                {
+                    float Overcooked = TimeBeingCooked - CookingTime;
+
+                    if (Overcooked / BurningTime < 1)
+                    {
+                        return CookedState.Cooked;
+                    }
+                    else
+                    {
+                        return CookedState.Overcooked;
+                    }
+                }
+            }
+            
+            return CookedState.Raw;
+        }
+
+        public static CookedState GetCookingState(string GearName, float TimeBeingCooked, float Caloreis)
         {
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
 
             if (reference)
             {
-                Cookable Cookable = reference.GetComponent<Cookable>();
-                if (Cookable)
-                {
-                    float CookingTime = 0;
-                    float BurningTime = 0;
-                    FoodItem Food = Cookable.gameObject.GetComponent<FoodItem>();
-
-                    if (Food && Caloreis > 0)
-                    {
-                        FoodWeight FoodW = Cookable.gameObject.GetComponent<FoodWeight>();
-
-                        float Val = Food.m_CaloriesTotal;
-                        if (FoodW)
-                        {
-                            Val = FoodW.m_CaloriesPerKG * FireHook.ConvertWeightVolume(FoodW.m_MaxWeight);
-                        }
-                        CookingTime = (Caloreis / Val * Cookable.m_CookTimeMinutes) / 60f;
-                    }
-                    else
-                    {
-                        CookingTime = Cookable.m_CookTimeMinutes / 60f;
-                    }
-                    BurningTime = Cookable.m_ReadyTimeMinutes / 60f;
-
-                    if(TimeBeingCooked >= CookingTime)
-                    {
-                        float Overcooked = TimeBeingCooked - CookingTime;
-                        float NormalizedProgress = Overcooked / BurningTime;
-                        if (NormalizedProgress < 1)
-                        {
-                            return CookedStae.Cooked;
-                        }
-                        else
-                        {
-                            return CookedStae.Overcooked;
-                        }
-                    }
-                }
+                return GetCookingState(reference.GetComponent<GearItem>(), TimeBeingCooked, Caloreis);
             }
-            return CookedStae.Raw;
+            return CookedState.Raw;
         }
 
         public static void ProcessGearPickUpQueue(GearPickedElement Data)
@@ -1177,14 +1250,7 @@ namespace SkyCoopClient
                 Explosive = true;
             }
 
-            CookedStae CookingState = CookedStae.Raw;
-
-            if (!string.IsNullOrEmpty(Data.m_CookingResult))
-            {
-                CookingState = GetCookingState(Data.m_GearName, Data.m_TimeBeingCooked, Data.m_Volume);
-            }
-
-            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueuer {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} CookingState {CookingState}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueuer {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} Volume {Data.m_Volume}");
 
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(Data.m_GearName);
             if (reference)
@@ -1198,8 +1264,48 @@ namespace SkyCoopClient
 
                 GearItem Gi = GearObject.GetComponent<GearItem>();
 
+                bool SkipWIPOverride = false;
+
+                if(Data.m_GearName.StartsWith("GEAR_Uncooked") && Data.m_TimeBeingCooked == 0)
+                {
+                    SkipWIPOverride = true; // пусть грузит из JSON данных
+
+                    if (Gi.m_InProgressCraftItem == null)
+                    {
+                        Gi.m_InProgressCraftItem = GearObject.AddComponent<InProgressCraftItem>();
+                    }
+                }
+
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
                 Gi.Deserialize(DataProxy, true);
+
+                if (Data.m_GearName.StartsWith("GEAR_Uncooked") && !SkipWIPOverride)
+                {
+                    if (Gi.m_InProgressCraftItem == null)
+                    {
+                        Gi.m_InProgressCraftItem = GearObject.AddComponent<InProgressCraftItem>();
+                    }
+
+                    if (Gi.m_InProgressCraftItem)
+                    {
+                        if (Gi)
+                        {
+                            if (Gi.m_Cookable)
+                            {
+                                float NormalizedCookingProgress = GetNormalizedCookingProgress(Gi, Data.m_TimeBeingCooked);
+
+                                if (NormalizedCookingProgress >= 1)
+                                {
+                                    Gi.m_InProgressCraftItem.m_PercentComplete = 100f;
+                                }
+                                else
+                                {
+                                    Gi.m_InProgressCraftItem.m_PercentComplete = NormalizedCookingProgress * 100f;
+                                }
+                            }
+                        }
+                    }
+                }
 
             Post_Deserialize:
 
@@ -1229,19 +1335,10 @@ namespace SkyCoopClient
                     }
                 }
 
-                if(Data.m_CookingResult == "Warming")
-                {
-                    if (Gi.m_FoodItem)
-                    {
-                        if(Data.m_TimeBeingCooked > (Gi.m_Cookable.m_CookTimeMinutes / 60f))
-                        {
-                            Gi.m_FoodItem.m_HeatPercent = 100;
-                        }
-                    }
-                }
-
                 GearManualPatch(Gi);
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "Gear deserialized!");
+
+                bool Ruined = false;
 
                 if (Gi.m_CookingPotItem)
                 {
@@ -1296,55 +1393,103 @@ namespace SkyCoopClient
                         }
                     }
                 }
-
-
-                if (CookingState == CookedStae.Cooked && Data.m_CookingResult != "Warming")
+                else
                 {
-                    GameObject DummyCookPot = UnityEngine.Object.Instantiate(AssetManager.GetAssetFromGame<GameObject>("GEAR_CookingPot"), s_LastPickedGearPosition, s_LastPickedGearRotation);
-                    if (DummyCookPot)
+                    if(Data.m_CookingResult == "Warming")
                     {
-                        CookingPotItem Pot = DummyCookPot.GetComponent<CookingPotItem>();
-
-                        if (Pot)
+                        if (Gi.m_FoodItem)
                         {
-                            GameObject CookedReference = AssetManager.GetAssetFromGame<GameObject>(Data.m_CookingResult);
-
-                            if (CookedReference)
+                            CookedState CookingState = GetCookingState(Gi, Data.m_TimeBeingCooked, Gi.m_FoodItem.m_CaloriesRemaining);
+                            if (CookingState == CookedState.Cooked)
                             {
-                                GameObject CookedInstance = UnityEngine.Object.Instantiate(CookedReference, s_LastPickedGearPosition, s_LastPickedGearRotation);
-
-                                if (CookedInstance)
+                                Gi.m_FoodItem.m_HeatPercent = 100;
+                                if (Gi.m_FoodItem.m_NumTimesHeatedUp == 0)
                                 {
-                                    Pot.SetCookedGearProperties(Gi, CookedInstance.GetComponent<GearItem>());
-
-                                    UnityEngine.Object.Destroy(Gi.gameObject);
-                                    UnityEngine.Object.Destroy(DummyCookPot);
-                                    Gi = CookedInstance.GetComponent<GearItem>();
-                                    GearObject = Gi.gameObject;
-                                    GearObject.name = Data.m_CookingResult;
-                                    CookingState = CookedStae.Raw;
-                                    goto Post_Deserialize;
+                                    GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Cooking, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
                                 }
+                                Gi.m_FoodItem.m_NumTimesHeatedUp++;
+                            }else if(CookingState == CookedState.Overcooked)
+                            {
+                                Ruined = true;
                             }
                         }
-                        UnityEngine.Object.Destroy(DummyCookPot);
-                        return;
+                    }
+                    else
+                    {
+                        if (Gi.m_Cookable && Gi.m_Cookable.m_CookedPrefab)
+                        {
+                            float Calories = 0;
+
+                            if (Gi.m_FoodItem)
+                            {
+                                Calories = Gi.m_FoodItem.m_CaloriesRemaining;
+                            }
+                            else
+                            {
+                                Calories = 0;
+                            }
+                            CookedState CookingState = GetCookingState(Gi, Data.m_TimeBeingCooked, Calories);
+                            if (CookingState == CookedState.Cooked)
+                            {
+                                GameObject DummyCookPot = UnityEngine.Object.Instantiate(AssetManager.GetAssetFromGame<GameObject>("GEAR_CookingPot"), s_LastPickedGearPosition, s_LastPickedGearRotation);
+                                if (DummyCookPot)
+                                {
+                                    CookingPotItem Pot = DummyCookPot.GetComponent<CookingPotItem>();
+
+                                    if (Pot)
+                                    {
+                                        GameObject CookedReference = AssetManager.GetAssetFromGame<GameObject>(Data.m_CookingResult);
+
+                                        if (CookedReference)
+                                        {
+                                            GameObject CookedInstance = UnityEngine.Object.Instantiate(CookedReference, s_LastPickedGearPosition, s_LastPickedGearRotation);
+
+                                            if (CookedInstance)
+                                            {
+                                                GearItem CookedGear = CookedInstance.GetComponent<GearItem>();
+
+                                                CookedGear.m_InitialDecayApplied = true;
+                                                Pot.SetCookedGearProperties(Gi, CookedGear);
+
+                                                UnityEngine.Object.Destroy(Gi.gameObject);
+                                                UnityEngine.Object.Destroy(DummyCookPot);
+                                                Gi = CookedGear;
+                                                GearObject = Gi.gameObject;
+                                                GearObject.name = Data.m_CookingResult;
+                                                GameManager.GetSkillsManager().IncrementPointsAndNotify(SkillType.Cooking, 1, SkillsManager.PointAssignmentMode.AssignOnlyInSandbox);
+
+                                                // TODO add oil
+                                                goto Post_Deserialize;
+                                            }
+                                        }
+                                    }
+                                    UnityEngine.Object.Destroy(DummyCookPot);
+                                    return;
+                                }
+                            }else if(CookingState == CookedState.Overcooked)
+                            {
+                                Ruined = true;
+                            }
+                        }
                     }
                 }
-                else if (CookingState == CookedStae.Overcooked)
+
+
+                if (Ruined)
                 {
                     GameAudioManager.Play3DSound("Play_RemoveRuined", GameManager.GetPlayerTransform().gameObject);
                     UnityEngine.Object.Destroy(GearObject);
-                    return;
-                }
-
-                if (s_PlaceModeAfterPickup)
-                {
-                    GameManager.GetPlayerManagerComponent().StartPlaceMesh(Gi.gameObject, PlaceMeshFlags.None);
                 }
                 else
                 {
-                    GameManager.GetPlayerManagerComponent().EnterInspectGearMode(Gi);
+                    if (s_PlaceModeAfterPickup)
+                    {
+                        GameManager.GetPlayerManagerComponent().StartPlaceMesh(Gi.gameObject, PlaceMeshFlags.None);
+                    }
+                    else
+                    {
+                        GameManager.GetPlayerManagerComponent().EnterInspectGearMode(Gi);
+                    }
                 }
             }
         }
