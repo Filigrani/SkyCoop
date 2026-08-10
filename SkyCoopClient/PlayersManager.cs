@@ -146,6 +146,7 @@ namespace SkyCoop
             s_SpectateID = -1;
             s_InSquad = false;
             SquadHUD.s_SquadMembers.Clear();
+            SleepHook.s_LastEveryoneIsSleeping = false;
 
             // Trying to re-use such complex objects as much as possible.
             // So in for some reason we have less or more characters already exist
@@ -872,20 +873,27 @@ namespace SkyCoop
             GameManager.GetConditionComponent().m_NeverDie = false;
             s_Spectator = false;
 
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
+            if(Position != Vector3.zero)
+            {
+                GameManager.GetPlayerManagerComponent().TeleportPlayer(Position, Rotation);
+            }
+            
             ExitVehicleForced();
 
             GameManager.GetPlayerMovementComponent().SetForceCrouch(false);
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
 
-            GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
+            if (!GameManager.GetPlayerManagerComponent().m_StartGearApplied)
+            {
+                GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
+                DoWeaponSwitch(!RespawnAnim);
+            }
 
             if (RespawnAnim)
             {
                 FullyCure();
                 GameManager.GetLifeAfterDeathManager().PlayRespawnTimeline();
             }
-            DoWeaponSwitch(!RespawnAnim);
 
             ClientSend.SendPosition(Position);
             ClientSend.SendRevived(-2);
@@ -955,6 +963,7 @@ namespace SkyCoop
                         {
                             GameManager.GetPlayerInVehicle().EnterVehicle(Door);
                         }
+                        return;
                     }
                     Container Container = s_LastTryInteractionObject.GetComponent<Container>();
                     if (Container)
@@ -965,6 +974,15 @@ namespace SkyCoop
                         }
                         MenuHook.DoPleaseWait("Please wait...", "Downloading container data...");
                         ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().Get());
+                        return;
+                    }
+                    Bed Bed = s_LastTryInteractionObject.GetComponent<Bed>();
+                    if (Bed)
+                    {
+                        if (SleepHook.DoRest())
+                        {
+                            return;
+                        }
                     }
                 }
                 else
@@ -975,7 +993,10 @@ namespace SkyCoop
             else
             {
                 HUDMessage.AddMessage("Failed, interaction object no longer exist!", true, true);
+                ClientSend.SendFinishInteract();
+                return;
             }
+            ClientSend.SendFinishInteract();
         }
 
         public static void DeactivateAllSpectatingTargets()

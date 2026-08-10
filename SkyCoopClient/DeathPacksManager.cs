@@ -167,6 +167,8 @@ namespace SkyCoopClient
 
                 Box.DestroyAllGear();
             }
+
+            GameManager.GetPlayerManagerComponent().m_StartGearApplied = false;
             ClientSend.SendDeathPack(Prefab, GUID, DataStr.CompressString(JSON), OwnerName, Position, Rotation);
         }
     }

@@ -378,6 +378,25 @@ namespace SkyCoopServer
             }
             string GUID = Reader.GetString();
 
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers)
+            {
+                if (Peer != null)
+                {
+                    DataStr.PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Peer);
+
+                    if (Player != null)
+                    {
+                        if(Player.m_InteractionGUID == GUID)
+                        {
+                            ServerSend.SendPickUpGearFailed(Client);
+                            return;
+                        }
+                    }
+                }
+            }
+
             DataStr.GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID);
 
             if(GearData == null)
@@ -407,13 +426,40 @@ namespace SkyCoopServer
         {
             string SceneName = Reader.GetString();
 
-            Logger.Log($"[ServerHandle] (ClientScene) Client {Client.Id} sent Scene {SceneName} current game mode {ServerInstance.m_Rules.m_HUDMode}");
-            ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, SceneName);
+            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Data != null)
+            {
+                string OldScene = Data.m_Scene;
+                ServerInstance.m_PlayersData.PlayerChangeScene(Client.Id, SceneName);
+
+                bool CanUnloadOldScene = ServerInstance.m_ScenesData.IsNoBodyOnThisScene(OldScene, ServerInstance);
+
+                Logger.Log($"{Data.m_PlayerName} transitions from {OldScene} to {SceneName} Should unload old scene?");
+
+                if (ServerInstance.m_Rules.m_CanUseTransitions && CanUnloadOldScene && ServerInstance.m_ScenesData.CanUnloadScene())
+                {
+                    ServerInstance.m_ScenesData.UnloadScene(ServerInstance, SceneName);
+                }
+            }
+            else
+            {
+                return;
+            }
 
             if(SceneName == "" || SceneName == "Empty" || SceneName.StartsWith("Menu"))
             {
                 ServerInstance.m_PlayersData.SetGameplayState(Client.Id, PlayerData.GamePlayState.Unassigned);
                 return;
+            }
+
+            if (ServerInstance.m_Rules.m_CanUseTransitions)
+            {
+                if (!ServerInstance.m_ScenesData.m_LoadedScenes.ContainsKey(SceneName))
+                {
+                    Logger.Log($"Loading scene {SceneName} for {Data.m_PlayerName}");
+                    ServerInstance.m_ScenesData.LoadScene(SceneName);
+                }
             }
 
             ServerInstance.m_ScenesData.SendAllGears(SceneName, Client);
@@ -434,8 +480,6 @@ namespace SkyCoopServer
 
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
-
-            PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(Client);
 
             ServerSend.SendTier(Client, Data.m_Tier);
 
@@ -951,6 +995,9 @@ namespace SkyCoopServer
                 case "skip":
                 case "skiptime":
                     ServerInstance.m_Timeline.SkipHours(1f);
+                    break;
+                case "rtsleep":
+                    ServerInstance.m_Timeline.m_RTSleepOnly = !ServerInstance.m_Timeline.m_RTSleepOnly;
                     break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");

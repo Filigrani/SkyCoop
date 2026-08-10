@@ -153,16 +153,20 @@ namespace SkyCoopClient
                     UnityEngine.Object.Destroy(Loca);
                 }
 
+                UISprite BGSprite = s_HUD.m_StartCountdownRoot.transform.GetChild(2).GetComponent<UISprite>();
+
                 Lable.text = Localization.Get(s_TimerPrefix);
 
                 if(Minutes == 0 && Seconds == 0)
                 {
                     s_HUD.m_StartCountdownLabel.text = "";
+                    BGSprite.enabled = false;
                 }
                 else
                 {
                     s_HUD.m_StartCountdownLabel.text = string.Format("{0:0}:{1:00}", Minutes, Seconds);
-                } 
+                    BGSprite.enabled = true;
+                }
             }
         }
 

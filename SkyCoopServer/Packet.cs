@@ -295,6 +295,13 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_CanUseContainers);
             Writer.Put(Rules.m_CanUseMap);
             Writer.Put(Rules.m_AdvancedSpawnPoints);
+            Writer.Put(Rules.m_Fatigue);
+            Writer.Put(Rules.m_Hunger);
+            Writer.Put(Rules.m_Thirst);
+            Writer.Put(Rules.m_Cold);
+            Writer.Put(Rules.m_CanUseBeds);
+            Writer.Put(Rules.m_CanStartFire);
+            Writer.Put(Rules.m_CanUseTransitions);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -313,6 +320,13 @@ namespace SkyCoopServer
             Rules.m_CanUseContainers = Reader.GetBool();
             Rules.m_CanUseMap = Reader.GetBool();
             Rules.m_AdvancedSpawnPoints = Reader.GetBool();
+            Rules.m_Fatigue = Reader.GetBool();
+            Rules.m_Hunger = Reader.GetBool();
+            Rules.m_Thirst = Reader.GetBool();
+            Rules.m_Cold = Reader.GetBool();
+            Rules.m_CanUseBeds = Reader.GetBool();
+            Rules.m_CanStartFire = Reader.GetBool();
+            Rules.m_CanUseTransitions = Reader.GetBool();
 
             return Rules;
         }
@@ -523,14 +537,7 @@ namespace SkyCoopServer
 
         public static void Put(this NetDataWriter Writer, DateTime Data)
         {
-            if (Data.Kind != DateTimeKind.Utc)
-            {
-                Writer.Put(Data.ToUniversalTime().Ticks);
-            }
-            else
-            {
-                Writer.Put(Data.Ticks);
-            }
+            Writer.Put(Data.ToUniversalTime().Ticks);
         }
 
         public static DateTime GetTime(this NetDataReader Reader)

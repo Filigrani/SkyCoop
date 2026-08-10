@@ -25,7 +25,7 @@ namespace SkyCoopServer
             public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "MarshRegion";
-            public string m_GameMode = "Lobby";
+            public string m_GameMode = "Sandbox";
             public bool m_CheatsAllowed = true;
         }
 
@@ -71,6 +71,14 @@ namespace SkyCoopServer
             public bool m_CanUseMap = false;
             public AirDropJson m_AirDrop = null;
             public bool m_AdvancedSpawnPoints = false;
+            public bool m_Fatigue = false;
+            public bool m_Hunger = false;
+            public bool m_Thirst = false;
+            public bool m_Cold = false;
+            public bool m_CanUseBeds = false;
+            public bool m_CanStartFire = false;
+            public bool m_CanUseTransitions = false;
+            public string m_SceneUnload = "";
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -119,6 +127,14 @@ namespace SkyCoopServer
             public bool CanUseMap { get; set; }
             public AirDropJson AirDrop { get; set; }
             public bool AdvancedSpawnPoints { get; set; }
+            public bool Fatigue { get; set; }
+            public bool Hunger { get; set; }
+            public bool Thirst { get; set; }
+            public bool Cold { get; set; }
+            public bool CanUseBeds { get; set; }
+            public bool CanStartFire { get; set; }
+            public bool CanUseTransitions { get; set; }
+            public string SceneUnload { get; set; }
 
             public GameRules Load()
             {
@@ -184,6 +200,14 @@ namespace SkyCoopServer
                 Inst.m_CanUseMap = CanUseMap;
                 Inst.m_AdvancedSpawnPoints = AdvancedSpawnPoints;
 
+                Inst.m_Fatigue = Fatigue;
+                Inst.m_Hunger = Hunger;
+                Inst.m_Thirst = Thirst;
+                Inst.m_Cold = Cold;
+                Inst.m_CanUseBeds = CanUseBeds;
+                Inst.m_CanStartFire = CanStartFire;
+                Inst.m_CanUseTransitions = CanUseTransitions;
+                Inst.m_SceneUnload = SceneUnload;
 
                 return Inst;
             }
@@ -281,6 +305,8 @@ namespace SkyCoopServer
             {
                 m_GamePlayState = State;
                 Logger.Log($"[DataStr.PlayerData] Client {m_PlayerName} new gamepaly state {m_GamePlayState}");
+                m_InteractionGUID = "";
+                m_CarSeat = "";
 
                 foreach (PlayerData OtherPlayerData in ServerInstance.m_PlayersData.GetPlayersOnScene(m_Scene))
                 {

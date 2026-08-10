@@ -1279,6 +1279,11 @@ namespace SkyCoopClient
                 //SkyCoop.Logger.Log(ConsoleColor.Green, "JSON " + JSON);
                 Gi.Deserialize(DataProxy, true);
 
+                if (Gi.m_Bed)
+                {
+                    Gi.m_Bed.SetState(BedRollState.Rolled);
+                }
+
                 if (Data.m_GearName.StartsWith("GEAR_Uncooked") && !SkipWIPOverride)
                 {
                     if (Gi.m_InProgressCraftItem == null)
@@ -1524,11 +1529,23 @@ namespace SkyCoopClient
             CanclePickingUp();
         }
 
-        public static void TryPickUp(Comps.DroppedGearVisual Visual, bool PlaceMode = false, bool ActionPicker = false)
+        public static void TryPickUp(Comps.DroppedGearVisual Visual, bool PlaceMode = false, bool IgnoreActionPicker = false)
         {
             if (Visual)
             {
-                if (!ActionPicker && Visual.m_CookingVisual && Visual.m_CookingVisual.IsCooking() && string.IsNullOrEmpty(Visual.m_CookingVisual.m_CookingResult))
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (ModMain.Client.m_Rules.m_CanUseBeds)
+                    {
+                        if (!IgnoreActionPicker && Visual.m_Bed && Visual.m_Bed.m_BedRollState == BedRollState.Placed)
+                        {
+                            Visual.m_Bed.PerformInteraction();
+                            return;
+                        }
+                    }
+                }
+                
+                if (!IgnoreActionPicker && Visual.m_CookingVisual && Visual.m_CookingVisual.IsCooking() && string.IsNullOrEmpty(Visual.m_CookingVisual.m_CookingResult))
                 {
                     Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
                     if (Panel)

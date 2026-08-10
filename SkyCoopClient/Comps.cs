@@ -134,6 +134,7 @@ namespace SkyCoop
             public string m_LocalizedName = "GearItem";
             public int m_Style = 0;
             public GearCookingVisual m_CookingVisual;
+            public Bed m_Bed = null;
 
             public SimpleInteraction m_SimpeInteraction = null;
 
@@ -149,6 +150,7 @@ namespace SkyCoop
                     m_SimpeInteraction.HoverText = m_LocalizedName;
                     m_SimpeInteraction.m_CanInteract = true;
                 }
+                m_Bed = GetComponent<Bed>();
             }
 
             void FixedUpdate()
@@ -3112,7 +3114,29 @@ namespace SkyCoop
                     {
                         if (ModMain.IsMultiplayer())
                         {
-                            s_Bar.m_SpawnedObject.SetActive(s_Bar.m_StatusBarType == StatusBar.StatusBarType.Condition || s_Bar.m_StatusBarType == StatusBar.StatusBarType.Fatigue);
+                            if(ModMain.Client != null && ModMain.Client.m_IsReady)
+                            {
+                                switch (s_Bar.m_StatusBarType)
+                                {
+                                    case StatusBar.StatusBarType.Cold:
+                                        s_Bar.m_SpawnedObject.SetActive(ModMain.Client.m_Rules.m_Cold);
+                                        break;
+                                    case StatusBar.StatusBarType.Hunger:
+                                        s_Bar.m_SpawnedObject.SetActive(ModMain.Client.m_Rules.m_Hunger);
+                                        break;
+                                    case StatusBar.StatusBarType.Thirst:
+                                        s_Bar.m_SpawnedObject.SetActive(ModMain.Client.m_Rules.m_Thirst);
+                                        break;
+                                    case StatusBar.StatusBarType.Fatigue:
+                                        s_Bar.m_SpawnedObject.SetActive(ModMain.Client.m_Rules.m_Fatigue);
+                                        break;
+                                    case StatusBar.StatusBarType.Condition:
+                                        s_Bar.m_SpawnedObject.SetActive(true);
+                                        break;
+                                    default:
+                                        break;
+                                }
+                            }
                         }
                         else
                         {

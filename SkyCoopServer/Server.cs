@@ -530,21 +530,24 @@ namespace SkyCoopServer
                 MapName = GetRandomMap(m_Rules);
             }
 
-            DataStr.MapData MapData = FilesManager.GetMapData(MapName);
-
-            if (MapData != null)
+            if (!string.IsNullOrEmpty(MapName))
             {
-                m_Config.m_SceneToSpawn = MapData.Scene;
-                m_PlayersData.ResetGameScores();
-                m_ScenesData.UnloadSceneNobodyOn(this);
-                m_ScenesData.LoadScene(MapData);
+                DataStr.MapData MapData = FilesManager.GetMapData(MapName);
 
-                ServerSend.SendConfigUpdated(this);
-                ServerSend.SendChangeMap(this);
-            }
-            else
-            {
-                Logger.Log(ConsoleColor.Red, "Server can't load map for the server!!!!!!!!!!!!!");
+                if (MapData != null)
+                {
+                    m_Config.m_SceneToSpawn = MapData.Scene;
+                    m_PlayersData.ResetGameScores();
+                    m_ScenesData.UnloadSceneNobodyOn(this);
+                    m_ScenesData.LoadScene(MapData);
+
+                    ServerSend.SendConfigUpdated(this);
+                    ServerSend.SendChangeMap(this);
+                }
+                else
+                {
+                    Logger.Log(ConsoleColor.Red, "Server can't load map for the server!!!!!!!!!!!!!");
+                }
             }
 
             if (GameMode == "Lobby")

@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Playables;
 using static SkyCoop.Comps;
+using static UnityEngine.Rendering.DebugUI;
 
 namespace SkyCoopClient
 {
@@ -395,6 +396,12 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
+                {
+                    __result = false;
+                    return;
+                }
+
                 Comps.CookingSlotVisual VisualHook = __instance.gameObject.GetComponent<Comps.CookingSlotVisual>();
 
                 if (VisualHook)
@@ -414,37 +421,31 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                //if (ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
-                //{
-                //    __instance.enabled = false;
-                //    __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
-                //}
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
+                {
+                    __instance.enabled = false;
+                    if(ModMain.Client != null && ModMain.Client.m_Config.m_GameMode == "Lobby")
+                    {
+                        __instance.gameObject.AddComponent<Comps.ForcedFire>().m_Fire = __instance.Fire;
+                    }
+                }
             }
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_RecipeBook), "Enable")]
         private static class Panel_RecipeBook_Enable
         {
-            private static void Prefix(Panel_RecipeBook __instance, bool enable)
+            private static bool Prefix(Panel_RecipeBook __instance, bool enable)
             {
-                if (!ModMain.IsMultiplayer()) { return; }
+                if (!ModMain.IsMultiplayer()) { return true; }
 
-                if(!enable)
+                if (enable)
                 {
-                    if (s_ActiveCookignClone)
+                    if(ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
                     {
-                        UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                        return false;
                     }
                 }
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_CookWater), "Enable")]
-        private static class Panel_CookWater_Enable
-        {
-            private static void Prefix(Panel_CookWater __instance, bool enable)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
 
                 if (!enable)
                 {
@@ -453,6 +454,34 @@ namespace SkyCoopClient
                         UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
                     }
                 }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_CookWater), "Enable")]
+        private static class Panel_CookWater_Enable
+        {
+            private static bool Prefix(Panel_CookWater __instance, bool enable)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (enable)
+                {
+                    if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
+                    {
+                        return false;
+                    }
+                }
+
+                if (!enable)
+                {
+                    if (s_ActiveCookignClone)
+                    {
+                        UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                    }
+                }
+
+                return true;
             }
         }
 
@@ -461,9 +490,17 @@ namespace SkyCoopClient
         {
             public static bool s_DontDestoryClone = false;
             
-            private static void Prefix(Panel_Cooking __instance, bool enable)
+            private static bool Prefix(Panel_Cooking __instance, bool enable)
             {
-                if (!ModMain.IsMultiplayer()) { return; }
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (enable)
+                {
+                    if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
+                    {
+                        return false;
+                    }
+                }
 
                 if (!enable)
                 {
@@ -475,6 +512,7 @@ namespace SkyCoopClient
                         }
                     }
                 }
+                return true;
             }
         }
 
@@ -503,6 +541,12 @@ namespace SkyCoopClient
             private static void Postfix(PlayerManager __instance, ref MeshLocationCategory __result)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
+                {
+                    __result = MeshLocationCategory.Invalid;
+                    return;
+                }
 
                 if (__instance.m_LastGearPlacePoint)
                 {

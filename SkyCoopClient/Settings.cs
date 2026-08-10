@@ -74,6 +74,10 @@ namespace SkyCoopClient
         [Description("Cycle melee weapons.")]
         public KeyCode m_MeleeButton = KeyCode.X;
 
+        [Name("Melee weapons radial menu instead of decoy")]
+        [Description("Replace mediocre 'Drop Decoy' action in radial menu with selection of melee weapons you have.")]
+        public bool m_MeleeOverDecoy = true;
+
         //[Name("Max players")]
         //[Description("How many players can connect to the server.")]
         //[Slider(2, 32)]

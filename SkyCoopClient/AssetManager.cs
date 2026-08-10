@@ -146,14 +146,7 @@ namespace SkyCoop
                     }
                     if (gi.m_Bed)
                     {
-                        if (gi.m_Bed.m_BedRollMesh)
-                        {
-                            gi.m_Bed.m_BedRollMesh.SetActive(Style == 0);
-                        }
-                        if (gi.m_Bed.m_BedRollPlacedMesh)
-                        {
-                            gi.m_Bed.m_BedRollPlacedMesh.gameObject.SetActive(Style == 1);
-                        }
+                        gi.m_Bed.SetState(Style == 0 ? BedRollState.Rolled : BedRollState.Placed);
                     }
 
                     Collider Collider = gi.gameObject.GetComponent<Collider>();
@@ -179,7 +172,8 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<MeshRenderer>().Name
                             && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
                             && ComName != Il2CppType.Of<AudioSource>().Name
-                            && ComName != Il2CppType.Of<GearCookingVisual>().Name)
+                            && ComName != Il2CppType.Of<GearCookingVisual>().Name
+                            && ComName != Il2CppType.Of<Bed>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }

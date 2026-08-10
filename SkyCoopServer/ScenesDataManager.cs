@@ -53,6 +53,33 @@ namespace SkyCoopServer
             return null;
         }
 
+        public bool CanUnloadScene()
+        {
+            if(m_ServerInstance.m_Rules.m_CanUseTransitions)
+            {
+                if (string.IsNullOrEmpty(m_ServerInstance.m_Rules.m_SceneUnload))
+                {
+                    return false;
+                }
+                else
+                {
+                    string UnloadStyle = m_ServerInstance.m_Rules.m_SceneUnload.ToLower();
+
+                    switch (UnloadStyle)
+                    {
+                        case "keep":
+                        case "false":
+                        case "off":
+                        case "no":
+                            return false;
+                        default:
+                            return true;
+                    }
+                }
+            }
+            return true;
+        }
+
         public void LoadScene(string SceneName, MapData MapData = null)
         {
             if (!m_LoadedScenes.ContainsKey(SceneName))
@@ -73,35 +100,36 @@ namespace SkyCoopServer
 
         public void UnloadScene(Server ServerInstance, string SceneName)
         {
-            if (m_LoadedScenes.ContainsKey(SceneName))
+            SceneData Data = null;
+
+            if (m_LoadedScenes.TryGetValue(SceneName, out Data))
             {
-                //TODO Тут ещё нужно будет удалять файл сохранения сцены, но пока мы не сохраняем ни чего.
-                SceneData Data = m_LoadedScenes[SceneName];
-
-                if (Data != null)
-                {
-                    Data.Unload();
-                }
-
+                Data.Unload();
+                SkyCoopServer.Logger.Log($"{SceneName} has been unloaded");
                 m_LoadedScenes.Remove(SceneName);
             }
+        }
+
+        public bool IsNoBodyOnThisScene(string SceneName, Server ServerInstance)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
         public void UnloadSceneNobodyOn(Server ServerInstance)
         {
             foreach (string LoadedSceneName in m_LoadedScenes.Keys.ToArray())
             {
-                bool CanUnload = true;
-                List<NetPeer> peers = new List<NetPeer>();
-                ServerInstance.m_Instance.GetConnectedPeers(peers);
-                foreach (NetPeer Peer in peers.ToArray())
-                {
-                    if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == LoadedSceneName)
-                    {
-                        CanUnload = false;
-                        break;
-                    }
-                }
+                bool CanUnload = IsNoBodyOnThisScene(LoadedSceneName, ServerInstance);
                 if (CanUnload)
                 {
                     UnloadScene(ServerInstance, LoadedSceneName);

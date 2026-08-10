@@ -293,6 +293,8 @@ namespace SkyCoopServer
             if (Player != null)
             {
                 Player.m_Scene = Scene;
+                Player.m_InteractionGUID = "";
+                Player.m_CarSeat = "";
 
                 if (Broadcast)
                 {

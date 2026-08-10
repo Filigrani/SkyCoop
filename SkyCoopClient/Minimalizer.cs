@@ -219,11 +219,16 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return; }
 
                 bool Clothing = ModMain.Client != null && ModMain.Client.m_Rules.m_Clothing;
+                bool CanStartFire = ModMain.Client != null && ModMain.Client.m_Rules.m_CanStartFire;
 
                 for (int i = __instance.m_ActiveElements.Count - 1; i >= 0; i--)
                 {
                     MiniTopNavButton butt = __instance.m_ActiveElements[i];
                     if (butt.name == "SpriteClothing" && Clothing)
+                    {
+                        continue;
+                    }
+                    if (butt.name == "SpriteRecipeBook" && CanStartFire)
                     {
                         continue;
                     }
@@ -236,6 +241,10 @@ namespace SkyCoopClient
                 {
                     MiniTopNavButton butt = __instance.m_NavElements[i];
                     if (butt.name == "SpriteClothing" && Clothing)
+                    {
+                        continue;
+                    }
+                    if (butt.name == "SpriteRecipeBook" && CanStartFire)
                     {
                         continue;
                     }
@@ -516,66 +525,66 @@ namespace SkyCoopClient
                 return true;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Log), "Enable")]
-        private static class Panel_Log_Enable
-        {
-            private static void Postfix(Panel_Log __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-                __instance.EnterState(PanelLogState.WhatIKnow);
+        //[HarmonyLib.HarmonyPatch(typeof(Panel_Log), "Enable")]
+        //private static class Panel_Log_Enable
+        //{
+        //    private static void Postfix(Panel_Log __instance)
+        //    {
+        //        if (!ModMain.IsMultiplayer()) { return; }
+        //        __instance.EnterState(PanelLogState.WhatIKnow);
 
-                if (__instance.m_SectionNav)
-                {
-                    __instance.m_SectionNav.SetActive(false);
-                }
-                if (__instance.m_LogSectionObject)
-                {
-                    __instance.m_LogSectionObject.SetActive(false);
-                }
-                if (__instance.m_WhatIKnowSectionObject)
-                {
-                    __instance.m_WhatIKnowSectionObject.SetActive(true);
-                }
-                if (__instance.m_SelectScreenOnly)
-                {
-                    Transform T = __instance.m_SelectScreenOnly.transform.GetChild(0);
-                    if (T)
-                    {
-                        UILocalize Loca = T.GetComponent<UILocalize>();
-                        Loca.key = "GAMEPLAY_PEOPLE";
-                        Loca.OnLocalize();
-                    }
-                }
-                //if (__instance.m_WhatIKnowScrollList)
-                //{
-                //    GameObject CloneVictim = __instance.m_WhatIKnowScrollList.m_ScrollObjects[0];
-                //    for (int i = __instance.m_WhatIKnowScrollList.transform.childCount-1; i > 0 ; i--)
-                //    {
-                //        GameObject Obj = __instance.m_WhatIKnowScrollList.transform.GetChild(i).gameObject;
-                //        UnityEngine.Object.Destroy(Obj);
-                //    }
-                //    __instance.m_WhatIKnowScrollList.m_ScrollObjects.Clear();
+        //        if (__instance.m_SectionNav)
+        //        {
+        //            __instance.m_SectionNav.SetActive(false);
+        //        }
+        //        if (__instance.m_LogSectionObject)
+        //        {
+        //            __instance.m_LogSectionObject.SetActive(false);
+        //        }
+        //        if (__instance.m_WhatIKnowSectionObject)
+        //        {
+        //            __instance.m_WhatIKnowSectionObject.SetActive(true);
+        //        }
+        //        if (__instance.m_SelectScreenOnly)
+        //        {
+        //            Transform T = __instance.m_SelectScreenOnly.transform.GetChild(0);
+        //            if (T)
+        //            {
+        //                UILocalize Loca = T.GetComponent<UILocalize>();
+        //                Loca.key = "GAMEPLAY_PEOPLE";
+        //                Loca.OnLocalize();
+        //            }
+        //        }
+        //        //if (__instance.m_WhatIKnowScrollList)
+        //        //{
+        //        //    GameObject CloneVictim = __instance.m_WhatIKnowScrollList.m_ScrollObjects[0];
+        //        //    for (int i = __instance.m_WhatIKnowScrollList.transform.childCount-1; i > 0 ; i--)
+        //        //    {
+        //        //        GameObject Obj = __instance.m_WhatIKnowScrollList.transform.GetChild(i).gameObject;
+        //        //        UnityEngine.Object.Destroy(Obj);
+        //        //    }
+        //        //    __instance.m_WhatIKnowScrollList.m_ScrollObjects.Clear();
 
-                //    // Scroll test
-                //    for (int i = 0; i < 12; i++)
-                //    {
-                //        GameObject NewElement = GameObject.Instantiate(CloneVictim, __instance.m_WhatIKnowScrollList.transform);
-                //        __instance.m_WhatIKnowScrollList.m_ScrollObjects.Add(NewElement);
-                //    }
-                //    __instance.m_WhatIKnowScrollList.RefreshPositioning();
-                //    __instance.m_WhatIKnowScrollList.RefreshVisibility();
-                //    //foreach (NetworkPlayer Player in PlayersManager.s_Players)
-                //    //{
-                //    //    if (Player)
-                //    //    {
-                //    //        GameObject NewElement = GameObject.Instantiate(CloneVictim, __instance.m_WhatIKnowScrollList.transform);
-                //    //        __instance.m_WhatIKnowScrollList.m_ScrollObjects.Add(NewElement);
-                //    //    }
-                //    //}
-                //    UnityEngine.Object.Destroy(CloneVictim);
-                //}
-            }
-        }
+        //        //    // Scroll test
+        //        //    for (int i = 0; i < 12; i++)
+        //        //    {
+        //        //        GameObject NewElement = GameObject.Instantiate(CloneVictim, __instance.m_WhatIKnowScrollList.transform);
+        //        //        __instance.m_WhatIKnowScrollList.m_ScrollObjects.Add(NewElement);
+        //        //    }
+        //        //    __instance.m_WhatIKnowScrollList.RefreshPositioning();
+        //        //    __instance.m_WhatIKnowScrollList.RefreshVisibility();
+        //        //    //foreach (NetworkPlayer Player in PlayersManager.s_Players)
+        //        //    //{
+        //        //    //    if (Player)
+        //        //    //    {
+        //        //    //        GameObject NewElement = GameObject.Instantiate(CloneVictim, __instance.m_WhatIKnowScrollList.transform);
+        //        //    //        __instance.m_WhatIKnowScrollList.m_ScrollObjects.Add(NewElement);
+        //        //    //    }
+        //        //    //}
+        //        //    UnityEngine.Object.Destroy(CloneVictim);
+        //        //}
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "Enable", new System.Type[] { typeof(bool) })]
         private static class Panel_Crafting_Enable
         {
@@ -599,51 +608,121 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "Enable", new System.Type[] { typeof(bool) })]
         private static class Panel_ActionsRadial_Update
         {
+            private static Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray s_VanilaNavigation = null;
+            private static Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray s_VanilaPlace = null;
+
             private static void Postfix(Panel_ActionsRadial __instance)
             {
-                if (!ModMain.IsMultiplayer()) { return; }
+                if(s_VanilaNavigation == null)
+                {
+                    s_VanilaNavigation = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(__instance.m_NavigationRadialOrder);
+                }
 
-                Panel_ActionsRadial.RadialInfo Empty = new Panel_ActionsRadial.RadialInfo();
-                Empty.m_RadialElement = Panel_ActionsRadial.RadialType.Empty;
-                Empty.m_SpriteName = "";
+                if (s_VanilaPlace == null)
+                {
+                    s_VanilaPlace = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(__instance.m_PlaceItemRadialOrder);
+                }
+
+                if (!ModMain.IsMultiplayer())
+                {
+                    __instance.m_NavigationRadialOrder = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(s_VanilaNavigation);
+                    __instance.m_PlaceItemRadialOrder = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(s_VanilaPlace);
+                }
+                else
+                {
+                    List<string> Navigation = new List<string>() 
+                    {
+                        "GEAR_Charcoal",
+                        "", // SprayPaint
+                        "", // RockCache
+                        "Map",
+                        "", // GEAR_HandheldShortwave
+                        "", // GEAR_Camera
+                    };
+                    
+                    __instance.m_NavigationRadialOrder = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(Navigation.ToArray());
+
+                    string BedRoll = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanUseBeds ? "GEAR_BedRoll" : "";
+                    string Campfire = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanStartFire ? "Fire" : "";
+                    string CookingPot = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanStartFire ? "GEAR_CookingPot" : "";
+                    string RecycleCan = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanStartFire ? "GEAR_RecycledCan" : "";
+
+                    List<string> PlaceItems = new List<string>() 
+                    {
+                        BedRoll,
+                        "", // SnowShelter
+                        Campfire,
+                        CookingPot,
+                        "", // PassTime
+                        "", // IceFishingHole
+                        "GEAR_Snare",
+                        RecycleCan,
+                    };
+
+                    __instance.m_PlaceItemRadialOrder = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppStringArray(PlaceItems.ToArray());
+                }
+
                 for (int i = __instance.m_PrimaryRadial.Count - 1; i >= 0; i--)
                 {
                     Panel_ActionsRadial.RadialInfo Info = __instance.m_PrimaryRadial[i];
-                    if (Info.m_RadialElement != Panel_ActionsRadial.RadialType.Weapons
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.FirstAid
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Status
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Food
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Clothing
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Tools
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.LightSources
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Drink
-                        && Info.m_RadialElement != Panel_ActionsRadial.RadialType.Inventory)
+                    if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Decoy)
                     {
-                        if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Decoy)
+                        if (Settings.m_Options.m_MeleeOverDecoy)
                         {
                             Info.m_RadialElement = Panel_ActionsRadial.RadialType.Tools;
                             Info.m_GreyOutSpriteName = "ico_Radial_tools";
                             Info.m_SpriteName = "ico_Radial_tools";
                             Info.m_SpriteNameHover = "ico_Radial_tools";
                         }
-                        else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Navigation)
+                    }
+                    else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Tools)
+                    {
+                        if (!Settings.m_Options.m_MeleeOverDecoy)
+                        {
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Decoy;
+                            Info.m_GreyOutSpriteName = "ico_Radial_decoy2";
+                            Info.m_SpriteName = "ico_Radial_decoy";
+                            Info.m_SpriteNameHover = "ico_Radial_decoy";
+                        }
+                    }
+                    else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Navigation)
+                    {
+                        if (ModMain.IsMultiplayer() && (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanUseMap))
                         {
                             Info.m_RadialElement = Panel_ActionsRadial.RadialType.Clothing;
                             Info.m_GreyOutSpriteName = "ico_inv_clothing";
                             Info.m_SpriteName = "ico_inv_clothing";
                             Info.m_SpriteNameHover = "ico_inv_clothing";
                         }
-                        else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.PlaceItem)
+                    }
+                    else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Clothing)
+                    {
+                        if (!ModMain.IsMultiplayer() || (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanUseMap))
+                        {
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Navigation;
+                            Info.m_GreyOutSpriteName = "ico_map2";
+                            Info.m_SpriteName = "ico_map";
+                            Info.m_SpriteNameHover = "ico_map";
+                        }
+                    }
+                    else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.PlaceItem)
+                    {
+                        if (ModMain.IsMultiplayer() && (ModMain.Client != null && ModMain.Client.m_IsReady && (!ModMain.Client.m_Rules.m_CanStartFire && !ModMain.Client.m_Rules.m_CanUseBeds)))
                         {
                             Info.m_RadialElement = Panel_ActionsRadial.RadialType.Inventory;
                             Info.m_GreyOutSpriteName = "ico_Radial_pack";
                             Info.m_SpriteName = "ico_Radial_pack";
                             Info.m_SpriteNameHover = "ico_Radial_pack";
                         }
-                        else
+                    }
+                    else if (Info.m_RadialElement == Panel_ActionsRadial.RadialType.Inventory)
+                    {
+                        if(!ModMain.IsMultiplayer() || (ModMain.Client != null && ModMain.Client.m_IsReady && (ModMain.Client.m_Rules.m_CanStartFire || ModMain.Client.m_Rules.m_CanUseBeds)))
                         {
-                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.Empty;
-                            Info.m_SpriteName = "";
+                            Info.m_RadialElement = Panel_ActionsRadial.RadialType.PlaceItem;
+                            Info.m_GreyOutSpriteName = "ico_Radial_campCraft2";
+                            Info.m_SpriteName = "ico_Radial_campCraft";
+                            Info.m_SpriteNameHover = "ico_Radial_campCraft";
                         }
                     }
                 }
@@ -698,11 +777,15 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_FirstAid __instance)
             {
-                if (!ModMain.IsMultiplayer()) { return; }
+                bool ShouldShowStats = true;
+                
+                if (ModMain.IsMultiplayer())
+                {
+                    ShouldShowStats = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_Cold;
+                }
 
-                __instance.transform.GetChild(2).gameObject.SetActive(false);
-                __instance.transform.GetChild(5).GetChild(11).gameObject.SetActive(false);
-
+                __instance.transform.GetChild(2).gameObject.SetActive(ShouldShowStats);
+                __instance.transform.GetChild(5).GetChild(11).gameObject.SetActive(ShouldShowStats);
             }
         }
 
@@ -757,7 +840,13 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories * 0.9f;
+                if(ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (!ModMain.Client.m_Rules.m_Hunger)
+                    {
+                        __instance.m_CurrentReserveCalories = __instance.m_MaxReserveCalories * 0.9f;
+                    }
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Thirst), "Update")]
@@ -767,7 +856,13 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.m_CurrentThirst = 15;
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (!ModMain.Client.m_Rules.m_Thirst)
+                    {
+                        __instance.m_CurrentThirst = 15;
+                    }
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(EmergencyStim), "ApplyEmergencyStimExitEffects")]
@@ -878,13 +973,16 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.enabled = false;
-                __instance.m_Active = false;
-                Collider COL = __instance.GetComponent<Collider>();
-                if (COL)
+                if(ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanUseTransitions)
                 {
-                    COL.isTrigger = false;
-                    COL.gameObject.layer = vp_Layer.TerrainObject;
+                    __instance.enabled = false;
+                    __instance.m_Active = false;
+                    Collider COL = __instance.GetComponent<Collider>();
+                    if (COL)
+                    {
+                        COL.isTrigger = false;
+                        COL.gameObject.layer = vp_Layer.TerrainObject;
+                    }
                 }
             }
         }
@@ -895,7 +993,10 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.enabled = false;
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanUseTransitions)
+                {
+                    __instance.enabled = false;
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Hypothermia), "HypothermiaStart")]
@@ -905,7 +1006,15 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                return false;
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (!ModMain.Client.m_Rules.m_Cold)
+                    {
+                        return false;
+                    }
+                }
+
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Hypothermia), "Start")]
@@ -915,7 +1024,13 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.m_SuppressHypothermia = true;
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (!ModMain.Client.m_Rules.m_Cold)
+                    {
+                        __instance.m_SuppressHypothermia = true;
+                    }
+                }
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(StartGear), "AddAllToInventory")]
@@ -1021,6 +1136,14 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (ModMain.Client.m_Rules.m_Hunger || ModMain.Client.m_Rules.m_Thirst)
+                    {
+                        return;
+                    }
+                }
+
                 if (success && !playerCancel && __instance.m_FoodItemEaten)
                 {
                     float Cal = __instance.m_FoodItemEaten.m_FoodItem.m_CaloriesTotal;
@@ -1068,7 +1191,5 @@ namespace SkyCoopClient
                 __instance.enabled = false;
             }
         }
-
-
     }
 }

@@ -872,14 +872,20 @@ namespace SkyCoop
         {
             float ElapsedInGameHours = Reader.GetFloat();
             float NormalizedTOD = Reader.GetFloat();
+            bool EveryoneIsSleeping = Reader.GetBool();
+            DateTime TimeWhenWasSent = Reader.GetTime();
 
             UniStormWeatherSystem Uni = GameManager.GetUniStorm();
 
             if (Uni)
             {
+                TimeSpan elapsedTime = DateTime.UtcNow - TimeWhenWasSent;
+                //Logger.Log($"Ping: {elapsedTime.TotalMilliseconds}ms");
+
                 Uni.m_ElapsedHours = ElapsedInGameHours;
                 Uni.SetNormalizedTime(NormalizedTOD);
             }
+            SleepHook.s_LastEveryoneIsSleeping = EveryoneIsSleeping;
         }
 
         public static void ClientStartFire(NetDataReader Reader)
