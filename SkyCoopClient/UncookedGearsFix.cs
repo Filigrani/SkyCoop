@@ -62,5 +62,28 @@ namespace SkyCoopClient
                 }
             }
         }
+
+        public static bool UncookedGearCompatible(GearItem UncookedGear, CookingPotItem Pot)
+        {
+            if(Pot == null || Pot == null)
+            {
+                return false;
+            }
+            if (UncookedGear.m_Cookable)
+            {
+                switch (Pot.m_GrubMeshType)
+                {
+                    case CookingPotItem.GrubMeshType.Pot:
+                        return UncookedGear.m_Cookable.m_MeshPotStyle || UncookedGear.m_Cookable.m_MeshRawPotStyle;
+                    case CookingPotItem.GrubMeshType.Can:
+                        return UncookedGear.m_Cookable.m_MeshCanStyle || UncookedGear.m_Cookable.m_MeshRawCanStyle;
+                    case CookingPotItem.GrubMeshType.FryingPan:
+                        return UncookedGear.m_Cookable.m_MeshFryingPanStyle || UncookedGear.m_Cookable.m_MeshRawFryingPanStyle;
+                    default:
+                        return false;
+                }
+            }
+            return false;
+        }
     }
 }

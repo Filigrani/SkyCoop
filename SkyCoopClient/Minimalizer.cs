@@ -750,17 +750,6 @@ namespace SkyCoopClient
             }
         }
 
-
-        [HarmonyLib.HarmonyPatch(typeof(Fatigue), "Update")]
-        private static class Fatigue_Update
-        {
-            private static void Postfix(Fatigue __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.m_CurrentFatigue = 0;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(Hunger), "Update")]
         private static class Hunger_Update
         {
@@ -1079,25 +1068,7 @@ namespace SkyCoopClient
                 __instance.enabled = false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Bed), "Awake")]
-        private static class Bed_Awake
-        {
-            private static void Postfix(Bed __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.enabled = false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "Enable", new System.Type[] { typeof(bool) })]
-        private static class Panel_Rest_Enable
-        {
-            private static bool Prefix(Panel_Rest __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
 
-                return false;
-            }
-        }
     }
 }

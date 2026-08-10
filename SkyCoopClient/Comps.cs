@@ -244,6 +244,7 @@ namespace SkyCoop
                             {
                                 string TimeLable = Localization.Get("GAMEPLAY_TimeUntilMelted");
                                 string DurationString = Utils.GetDurationString(Mathf.CeilToInt(m_CookingVisual.GetHours() * 60));
+                                TimeLable = TimeLable.Replace("{time-val}", DurationString);
 
                                 string Debug = "";
 
@@ -1247,6 +1248,7 @@ namespace SkyCoop
                 Igniting = 4,
                 Death = 5,
                 Knocked = 6,
+                Sleep = 7,
             }
 
             public DataStr.PlayerVisualData m_VisualData = new DataStr.PlayerVisualData();
@@ -2079,7 +2081,7 @@ namespace SkyCoop
                     m_Tilt = m_TiltLimits.y;
                 }
 
-                if (m_Action == Actions.Knocked || m_Action == Actions.Death || m_Action == Actions.Harvesting || m_Action == Actions.Igniting)
+                if (m_Action == Actions.Knocked || m_Action == Actions.Death || m_Action == Actions.Harvesting || m_Action == Actions.Igniting || m_Action == Actions.Sleep)
                 {
                     Angle.x = 0;
                 }
@@ -3095,16 +3097,27 @@ namespace SkyCoop
 
                 if (s_Bar)
                 {
-                    if (s_Bar.m_StatusBarType != StatusBar.StatusBarType.Condition)
-                    {
-                        if (s_Bar.m_SpawnedObject)
-                        {
-                            s_Bar.m_SpawnedObject.SetActive(!ModMain.IsMultiplayer());
-                        }
-                    }
-                    else
+                    if(s_Bar.m_StatusBarType == StatusBar.StatusBarType.Condition)
                     {
                         AddTeamBars();
+                    }
+                }
+            }
+
+            void Update()
+            {
+                if (s_Bar)
+                {
+                    if (s_Bar.m_SpawnedObject)
+                    {
+                        if (ModMain.IsMultiplayer())
+                        {
+                            s_Bar.m_SpawnedObject.SetActive(s_Bar.m_StatusBarType == StatusBar.StatusBarType.Condition || s_Bar.m_StatusBarType == StatusBar.StatusBarType.Fatigue);
+                        }
+                        else
+                        {
+                            s_Bar.m_SpawnedObject.SetActive(true);
+                        }
                     }
                 }
             }

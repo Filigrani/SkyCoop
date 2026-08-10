@@ -1479,6 +1479,8 @@ namespace SkyCoopClient
                 {
                     GameAudioManager.Play3DSound("Play_RemoveRuined", GameManager.GetPlayerTransform().gameObject);
                     UnityEngine.Object.Destroy(GearObject);
+                    s_LastPickedGearGUID = string.Empty;
+                    FireHook.FinishCookingAction();
                 }
                 else
                 {

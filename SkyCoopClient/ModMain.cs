@@ -112,6 +112,13 @@ namespace SkyCoop
             GearsSync.Update();
         }
 
+        public override void OnLateUpdate()
+        {
+            base.OnLateUpdate();
+
+            SleepHook.LateUpdate();
+        }
+
         public override void OnUpdate()
         {
             SetAppBackgroundMode();

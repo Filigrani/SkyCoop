@@ -182,6 +182,10 @@ namespace SkyCoop
             {
                 return Comps.NetworkPlayer.Actions.Death;
             }
+            if (GameManager.GetRestComponent().m_Bed)
+            {
+                return Comps.NetworkPlayer.Actions.Sleep;
+            }
             if (GameManager.GetBrokenBody().HasAffliction)
             {
                 return Comps.NetworkPlayer.Actions.Knocked;
@@ -275,15 +279,35 @@ namespace SkyCoop
                     if (GameManager.m_PlayerObject)
                     {
                         Transform T = GameManager.GetPlayerTransform();
-                        if (m_LocalPlayerData.m_LastSentPosition != T.position)
+
+                        if(GameManager.m_Rest && GameManager.m_Rest.m_Bed && GameManager.m_Rest.m_Bed.m_BodyPlacementTransform)
                         {
-                            m_LocalPlayerData.m_LastSentPosition = T.position;
-                            ClientSend.SendPosition(T.position);
+                            Vector3 BedPosition = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform.position;
+                            Quaternion BedRotation = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform.rotation * Quaternion.Euler(0, -180, 0);
+
+                            if (m_LocalPlayerData.m_LastSentPosition != BedPosition)
+                            {
+                                m_LocalPlayerData.m_LastSentPosition = BedPosition;
+                                ClientSend.SendPosition(BedPosition);
+                            }
+                            if (m_LocalPlayerData.m_LastSentRotation != BedRotation)
+                            {
+                                m_LocalPlayerData.m_LastSentRotation = BedRotation;
+                                ClientSend.SendRotation(BedRotation);
+                            }
                         }
-                        if (m_LocalPlayerData.m_LastSentRotation != T.rotation)
+                        else
                         {
-                            m_LocalPlayerData.m_LastSentRotation = T.rotation;
-                            ClientSend.SendRotation(T.rotation);
+                            if (m_LocalPlayerData.m_LastSentPosition != T.position)
+                            {
+                                m_LocalPlayerData.m_LastSentPosition = T.position;
+                                ClientSend.SendPosition(T.position);
+                            }
+                            if (m_LocalPlayerData.m_LastSentRotation != T.rotation)
+                            {
+                                m_LocalPlayerData.m_LastSentRotation = T.rotation;
+                                ClientSend.SendRotation(T.rotation);
+                            }
                         }
 
                         vp_FPSCamera Cam = GameManager.GetVpFPSCamera();
