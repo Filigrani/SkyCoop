@@ -2264,6 +2264,7 @@ namespace SkyCoopServer
             public float m_ElapsedOnTODSeconds = 0;
             public float m_FuelHeatIncrease = 0;
             public float m_Heat = 0;
+            public float m_MaxHeat = 0;
 
             public bool m_EmbersActive = false;
             public float m_EmberTimer = 0;
@@ -2286,6 +2287,11 @@ namespace SkyCoopServer
 
                 m_MaxOnTODSeconds += BurnTime;
                 m_FuelHeatIncrease += Heat;
+
+                if(m_FuelHeatIncrease > m_MaxHeat)
+                {
+                    m_FuelHeatIncrease = m_MaxHeat;
+                }
 
                 m_HeatInnerRadius += InnerRadius;
                 m_HeatOuterRadius += OuterRadius;
@@ -2505,7 +2511,7 @@ namespace SkyCoopServer
                 }
             }
 
-            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, int CookingSlots, bool IsDynamic, float CurrentTime, string SceneName, Server ServerInstance)
+            public static FireSyncData Create(string GUID, float Fuel, float Heat, float InnerRadius, float OuterRadius, float HeatingSpeed, bool IsForge, int CookingSlots, bool IsDynamic, float CurrentTime, string SceneName, Server ServerInstance)
             {
                 FireSyncData Fire = new FireSyncData();
 
@@ -2513,6 +2519,7 @@ namespace SkyCoopServer
                 Fire.m_IsDynamic = IsDynamic;
 
                 Fire.m_TimeToReachMaxTempInSeconds = HeatingSpeed;
+                Fire.m_MaxHeat = IsForge ? 200 : 80;
 
                 Fire.Ignite(Fuel, Heat, InnerRadius, OuterRadius, CurrentTime, SceneName, ServerInstance);
 

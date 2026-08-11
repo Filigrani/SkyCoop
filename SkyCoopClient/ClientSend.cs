@@ -544,7 +544,7 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendStartFire(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius, float HeatingSpeed, int CookingSlots, Vector3 Position, Quaternion Rotation)
+        public static void SendStartFire(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius, float HeatingSpeed, bool IsForge, int CookingSlots, Vector3 Position, Quaternion Rotation)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientStartFire);
@@ -555,6 +555,7 @@ namespace SkyCoop
             writer.Put(InnerRadius);
             writer.Put(OutterRadius);
             writer.Put(HeatingSpeed);
+            writer.Put(IsForge);
             writer.Put(CookingSlots);
             writer.Put(true); // Is Dynamic
 
@@ -563,7 +564,7 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
-        public static void SendStartFire(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius, float HeatingSpeed, int CookingSlots)
+        public static void SendStartFire(string GUID, float Fuel, float Heat, float InnerRadius, float OutterRadius, float HeatingSpeed, bool IsForge, int CookingSlots)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientStartFire);
@@ -574,6 +575,7 @@ namespace SkyCoop
             writer.Put(InnerRadius);
             writer.Put(OutterRadius);
             writer.Put(HeatingSpeed);
+            writer.Put(IsForge);
             writer.Put(CookingSlots);
             writer.Put(false); // Is Dynamic
 

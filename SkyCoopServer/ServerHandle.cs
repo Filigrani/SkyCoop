@@ -1289,6 +1289,7 @@ namespace SkyCoopServer
                 float InnerRadius = Reader.GetFloat();
                 float OutterRadius = Reader.GetFloat();
                 float HeatingSpeed = Reader.GetFloat();
+                bool IsForge = Reader.GetBool();
                 int CookingSlots = Reader.GetInt();
                 bool IsDynamic = Reader.GetBool();
 
@@ -1305,7 +1306,7 @@ namespace SkyCoopServer
 
                 if(FireData == null)
                 {
-                    FireData = FireSyncData.Create(GUID, Fuel, Heat, InnerRadius, OutterRadius, HeatingSpeed, CookingSlots, IsDynamic, ServerInstance.m_Timeline.m_ElapsedInGameHours, Player.m_Scene, ServerInstance);
+                    FireData = FireSyncData.Create(GUID, Fuel, Heat, InnerRadius, OutterRadius, HeatingSpeed, IsForge, CookingSlots, IsDynamic, ServerInstance.m_Timeline.m_ElapsedInGameHours, Player.m_Scene, ServerInstance);
 
                     if (IsDynamic)
                     {

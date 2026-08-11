@@ -76,14 +76,15 @@ namespace SkyCoopClient
                     {
                         float InnerRadius = 0;
                         float OuterRadius = 0;
-                        float HeatingSped = 0;
+                        float HeatingSpeed = 0;
+                        bool IsForge = __instance.gameObject.transform.parent && __instance.gameObject.transform.parent.GetComponentInChildren<Forge>();
                         int CookingSlots = 0;
 
                         if (__instance.m_ApplyToHeatSource && __instance.m_HeatSource)
                         {
                             InnerRadius = __instance.m_HeatSource.m_MaxTempIncreaseInnerRadius;
                             OuterRadius = __instance.m_HeatSource.m_MaxTempIncreaseOuterRadius;
-                            HeatingSped = __instance.m_HeatSource.m_TimeToReachMaxTempMinutes * 60;
+                            HeatingSpeed = __instance.m_HeatSource.m_TimeToReachMaxTempMinutes * 60;
                         }
 
                         if (__instance.m_Campfire)
@@ -117,11 +118,11 @@ namespace SkyCoopClient
 
                         if (__instance.m_Campfire == null)
                         {
-                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSped, CookingSlots);
+                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSpeed, IsForge, CookingSlots);
                         }
                         else
                         {
-                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSped, CookingSlots, __instance.gameObject.transform.position, __instance.gameObject.transform.rotation);
+                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSpeed, IsForge, CookingSlots, __instance.gameObject.transform.position, __instance.gameObject.transform.rotation);
                         }
                     }
                     else
@@ -1591,7 +1592,7 @@ namespace SkyCoopClient
                 if (Fire)
                 {
                     //SkyCoop.Logger.Log($"HandleFireSync {GUID} ElapsedBurnTime {ElapsedBurnTime} MaxBurnTime {MaxBurnTime} Heat {Heat} State {State}");
-                    Fire.m_FuelHeatIncrease = Heat;
+                    Fire.m_FuelHeatIncrease = FuelHeatIncrees;
                     Fire.m_MaxOnTODSeconds = MaxBurnTime;
                     Fire.m_ElapsedOnTODSeconds = ElapsedBurnTime;
                     Fire.m_StartedByPlayer = true;
@@ -1600,13 +1601,25 @@ namespace SkyCoopClient
                     {
                         if (Fire.m_HeatSource)
                         {
-                            Fire.m_HeatSource.m_MaxTempIncrease = Fire.m_FuelHeatIncrease;
                             Fire.m_HeatSource.m_TempIncrease = Heat;
                             Fire.m_HeatSource.m_MaxTempIncreaseInnerRadius = Mathf.Max(InnerRadius, Fire.m_HeatSource.m_MaxTempIncreaseInnerRadius);
                             Fire.m_HeatSource.m_MaxTempIncreaseOuterRadius = Mathf.Max(OutterRadius * Fire.GetFireOuterRadiusScale(), Fire.m_HeatSource.m_MaxTempIncreaseOuterRadius);
-                        }
 
-                        Fire.m_HeatSource.m_TurnedOn = State != FireState.FullBurn;
+                            if(Fire.m_FireState == FireState.FullBurn)
+                            {
+                                if (!Fire.m_HeatSource.IsTurnedOn())
+                                {
+                                    Fire.m_HeatSource.TurnOn();
+                                }
+                            }
+                            else
+                            {
+                                if (Fire.m_HeatSource.IsTurnedOn())
+                                {
+                                    Fire.m_HeatSource.TurnOff();
+                                }
+                            }
+                        }
                     }
 
                     if (Fire.m_FireState == FireState.FullBurn && State == FireState.Off)

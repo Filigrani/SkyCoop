@@ -883,15 +883,16 @@ namespace SkyCoopServer
                             }
                         }
 
+                        //Logger.Log($"Heat {FireData.m_Heat} m_FuelHeatIncrease {FireData.m_FuelHeatIncrease} MaxHeat {FireData.m_MaxHeat}");
 
-
-                        if(FireData.m_Heat < FireData.m_FuelHeatIncrease)
+                        if (FireData.m_Heat < FireData.m_FuelHeatIncrease)
                         {
-                            float heatToAdd = FireData.m_FuelHeatIncrease / FireData.m_TimeToReachMaxTempInSeconds * ElapsedSecondsFromLastUpdate;
+                            float heatToAdd = FireData.m_MaxHeat / FireData.m_TimeToReachMaxTempInSeconds * ElapsedSecondsFromLastUpdate;
 
                             FireData.m_Heat += heatToAdd;
+                            //Logger.Log($"heatToAdd {heatToAdd} new Heat {FireData.m_Heat}");
 
-                            if(FireData.m_Heat > FireData.m_FuelHeatIncrease)
+                            if (FireData.m_Heat > FireData.m_FuelHeatIncrease)
                             {
                                 FireData.m_Heat = FireData.m_FuelHeatIncrease;
                             }
