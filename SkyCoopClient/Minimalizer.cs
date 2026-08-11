@@ -90,46 +90,6 @@ namespace SkyCoopClient
             }
         }
 
-        [HarmonyLib.HarmonyPatch(typeof(GameManager), "Update")]
-        private static class GameManager_Update
-        {
-            private static void Postfix(GameManager __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                // Вычеркнул, что бы тестить синхрон времени
-                //if (GameManager.m_TimeOfDay)
-                //{
-                //    GameManager.m_TimeOfDay.m_StartTimeHour = 12;
-                //    GameManager.m_TimeOfDay.m_StartTimeMinutes = 0;
-                //    GameManager.m_TimeOfDay.SetNormalizedTime(0.5f);
-                //}
-                if (GameManager.m_Weather)
-                {
-                    GameManager.m_Weather.enabled = false;
-                }
-                if (GameManager.m_WeatherTransition)
-                {
-                    //GameManager.m_WeatherTransition.enabled = false;
-                    GameManager.m_WeatherTransition.m_DefaultStartWeather = WeatherStage.Clear;
-                    if (GameManager.m_WeatherTransition.m_CurrentWeatherSet)
-                    {
-                        GameManager.m_WeatherTransition.m_CurrentWeatherSet.SetDirty();
-                    }
-                    GameManager.m_WeatherTransition.ActivateDefaultWeatherSet();
-                    WeatherTransition.m_WeatherTransitionTimeScalar = 1;
-                }
-                if (GameManager.m_Wind)
-                {
-                    GameManager.m_Wind.enabled = false;
-                    GameManager.m_Wind.m_CurrentAngleDeg = 0;
-                    GameManager.m_Wind.m_CurrentAngleDeg_Base = 0;
-                    GameManager.m_Wind.m_CurrentMPH = 0;
-                    GameManager.m_Wind.m_CurrentMPH_Base = 0;
-                    GameManager.m_Wind.m_CurrentDirection = Vector3.zero;
-                }
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawningSupppressedByExperienceMode")]
         private static class SpawnRegion_SpawningSupppressedByExperienceMode
         {

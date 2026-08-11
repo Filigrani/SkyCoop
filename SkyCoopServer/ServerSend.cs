@@ -1047,6 +1047,26 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
+        public static void SendWeather(Server ServerInstance, DataStr.WeatherSyncData Data)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                SendWeather(Peer, Data);
+            }
+        }
+
+        public static void SendWeather(NetPeer Client, DataStr.WeatherSyncData Data)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerWeather);
+
+            writer.Put(Data);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
         public static void SendTime(Server ServerInstance, float TODNormalized, float ElapsedInGameHours, bool EveryoneIsSleeping)
         {
             List<NetPeer> peers = new List<NetPeer>();

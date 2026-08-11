@@ -544,6 +544,8 @@ namespace SkyCoopClient
 
                 if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Rules.m_CanStartFire)
                 {
+                    if(__instance.m_Gear && __instance.m_Gear.m_CookingPotItem)
+                    
                     __result = MeshLocationCategory.Invalid;
                     return;
                 }

@@ -28,6 +28,7 @@ namespace SkyCoopServer
         public PlayersDataManager m_PlayersData;
         public ScenesDataManager m_ScenesData;
         public Timeline m_Timeline;
+        public WeatherManager m_Weather;
 
         public delegate void LogEvent(Logger.LogData Data);
         public static event LogEvent? OnLogEvent;
@@ -123,6 +124,7 @@ namespace SkyCoopServer
             m_PlayersData = new PlayersDataManager(this);
             m_ScenesData = new ScenesDataManager(this);
             m_Timeline = new Timeline(this);
+            m_Weather = new WeatherManager(this);
 
             s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
             LootTableManager.Load();
@@ -217,6 +219,28 @@ namespace SkyCoopServer
                 EverySecond();
                 m_Timeline.UpdateEverySecond();
                 m_ScenesData.UpdateEverySecond();
+
+                if (m_Rules.m_Weather)
+                {
+                    if(m_Weather.m_Config == null)
+                    {
+                        Logger.Log(ConsoleColor.Yellow, $"Trying to load weather profile...");
+                        WeatherManager.WeatherSettingsConfig Data = FilesManager.GetWeatherConfig();
+                        if (Data != null)
+                        {
+                            m_Weather.LoadConfig(Data);
+                            Logger.Log(ConsoleColor.Green, $"Weather profile loaded!");
+                        }
+                        else
+                        {
+                            Logger.Log(ConsoleColor.Red, $"Weather profile not exist!!!!!!!!");
+                        }
+                    }
+                    else
+                    {
+                        m_Weather.UpdateEverySecond();
+                    }
+                }
             }
 
             s_PreviousTickTime = DateTime.UtcNow;

@@ -99,6 +99,7 @@ namespace SkyCoop
             { (int)Packet.Type.ClientGearCookingInteration, ClientHandle.ClientGearCookingInteration },
             { (int)Packet.Type.ServerGearBeingCookedProgress, ClientHandle.ServerGearBeingCookedProgress },
             { (int)Packet.Type.ServerWaterRefund, ClientHandle.ServerWaterRefund },
+            { (int)Packet.Type.ServerWeather, ClientHandle.ServerWeather },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

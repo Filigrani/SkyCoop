@@ -96,6 +96,7 @@ namespace SkyCoopServer
             ClientGearSetRecipe,
             ServerGearBeingCookedProgress,
             ServerWaterRefund,
+            ServerWeather,
         }
 
         public enum SquadResponce
@@ -302,6 +303,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_CanUseBeds);
             Writer.Put(Rules.m_CanStartFire);
             Writer.Put(Rules.m_CanUseTransitions);
+            Writer.Put(Rules.m_Weather);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -327,6 +329,7 @@ namespace SkyCoopServer
             Rules.m_CanUseBeds = Reader.GetBool();
             Rules.m_CanStartFire = Reader.GetBool();
             Rules.m_CanUseTransitions = Reader.GetBool();
+            Rules.m_Weather = Reader.GetBool();
 
             return Rules;
         }
@@ -573,6 +576,46 @@ namespace SkyCoopServer
             Data.m_NewCenter = Reader.GetVector3();
 
             return Data;
+        }
+
+        public static DataStr.WeatherSyncData GetWeather(this NetDataReader Reader)
+        {
+            DataStr.WeatherSyncData Data = new DataStr.WeatherSyncData();
+
+            Data.m_WeatherSeed = Reader.GetInt();
+            Data.m_LowTempSeed = Reader.GetInt();
+            Data.m_HighTempSeed = Reader.GetInt();
+            Data.m_WindSeed = Reader.GetInt();
+
+            Data.m_CurrentWeatherType = Reader.GetInt();
+            Data.m_PreviousWeatherType = Reader.GetInt();
+            Data.m_WindDirection = Reader.GetFloat();
+
+            Data.m_Duration = Reader.GetFloat();
+            Data.m_TransitionTime = Reader.GetFloat();
+            Data.m_NormalizedTime = Reader.GetFloat();
+            Data.m_WindDuration = Reader.GetFloat();
+            Data.m_WindElapsedHours = Reader.GetFloat();
+
+            return Data;
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.WeatherSyncData Data)
+        {
+            Writer.Put(Data.m_WeatherSeed);
+            Writer.Put(Data.m_LowTempSeed);
+            Writer.Put(Data.m_HighTempSeed);
+            Writer.Put(Data.m_WindSeed);
+
+            Writer.Put(Data.m_CurrentWeatherType);
+            Writer.Put(Data.m_PreviousWeatherType);
+            Writer.Put(Data.m_WindDirection);
+
+            Writer.Put(Data.m_Duration);
+            Writer.Put(Data.m_TransitionTime);
+            Writer.Put(Data.m_NormalizedTime);
+            Writer.Put(Data.m_WindDuration);
+            Writer.Put(Data.m_WindElapsedHours);
         }
     }
 }

@@ -5,7 +5,6 @@ using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
 using static SkyCoopServer.DataStr;
-using static System.Collections.Specialized.BitVector32;
 
 namespace SkyCoopServer
 {
@@ -18,6 +17,7 @@ namespace SkyCoopServer
         public static string s_GameModesDirectory = "GameModes";
         public static string s_LootTablesDirectory = "LootTables";
         public static string s_MapsDirectory = "Maps";
+        public static string s_WeatherDirectory = "Weather";
 
         public static void InitFolders()
         {
@@ -263,6 +263,43 @@ namespace SkyCoopServer
                 return null;
             }
             return null;
+        }
+
+        public static WeatherManager.WeatherSettingsConfig GetWeatherConfig(string Profile = "Default")
+        {
+            if (string.IsNullOrEmpty(Profile))
+            {
+                Profile = "Default";
+            }
+            
+            string Path = $"{s_DataDirectory}/{s_WeatherDirectory}/{Profile}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<WeatherManager.WeatherSettingsConfig>(JSON);
         }
     }
 }

@@ -79,6 +79,7 @@ namespace SkyCoopServer
             public bool m_CanStartFire = false;
             public bool m_CanUseTransitions = false;
             public string m_SceneUnload = "";
+            public bool m_Weather = false;
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -135,6 +136,7 @@ namespace SkyCoopServer
             public bool CanStartFire { get; set; }
             public bool CanUseTransitions { get; set; }
             public string SceneUnload { get; set; }
+            public bool Weather { get; set; }
 
             public GameRules Load()
             {
@@ -208,6 +210,7 @@ namespace SkyCoopServer
                 Inst.m_CanStartFire = CanStartFire;
                 Inst.m_CanUseTransitions = CanUseTransitions;
                 Inst.m_SceneUnload = SceneUnload;
+                Inst.m_Weather = Weather;
 
                 return Inst;
             }
@@ -2522,6 +2525,24 @@ namespace SkyCoopServer
 
                 return Fire;
             }
+        }
+
+        public class WeatherSyncData
+        {
+            public int m_WeatherSeed = 0;
+            public int m_LowTempSeed = 0;
+            public int m_HighTempSeed = 0;
+            public int m_WindSeed = 0;
+
+            public int m_CurrentWeatherType = 0;
+            public int m_PreviousWeatherType = 0;
+            public float m_WindDirection = 0;
+
+            public float m_Duration = 0;
+            public float m_TransitionTime = 0;
+            public float m_NormalizedTime = 0;
+            public float m_WindDuration = 0;
+            public float m_WindElapsedHours = 0;
         }
     }
 }

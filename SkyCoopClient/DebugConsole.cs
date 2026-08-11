@@ -113,7 +113,7 @@ namespace SkyCoopClient
         {
             private static void Prefix(uConsole __instance)
             {
-                if (ModMain.Client.m_IsReady && !ModMain.Client.m_Config.m_CheatsAllowed)
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && !ModMain.Client.m_Config.m_CheatsAllowed)
                 {
                     uConsole.m_On = false;
                 }

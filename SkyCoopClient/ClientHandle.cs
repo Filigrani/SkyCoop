@@ -1011,5 +1011,12 @@ namespace SkyCoop
                 }
             }
         }
+
+        public static void ServerWeather(NetDataReader Reader)
+        {
+            DataStr.WeatherSyncData Data = Reader.GetWeather();
+
+            WeatherHook.HandleWeatherSync(Data);
+        }
     }
 }

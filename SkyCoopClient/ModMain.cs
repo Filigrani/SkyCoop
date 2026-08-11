@@ -220,6 +220,8 @@ namespace SkyCoop
             {
                 PlayersManager.SpectatorControls();
             }
+
+            WeatherHook.Update();
         }
 
         public static string GetCurrentSceneName()

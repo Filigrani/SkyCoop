@@ -38,6 +38,41 @@ namespace SkyCoopServer
         private bool m_LastEveryoneIsSleeping = false;
         private float m_TimeBeforeLastAcceleration = 0;
 
+        public TODStatus m_CurrentTODStatus = TODStatus.MiddayToAfternoon;
+
+        public enum TODStatus
+        {
+            NightEndToDawn,
+            DawnToMorning,
+            MorningToMidday,
+            MiddayToAfternoon,
+            AfternoonToDusk,
+            DuskToNightStart,
+            NightStartToNightEnd,
+        }
+
+        public static List<TODStatusWithTime> m_TimeOfDayStatusTable = new List<TODStatusWithTime>
+        {
+            new TODStatusWithTime(TODStatus.NightEndToDawn, 5),
+            new TODStatusWithTime(TODStatus.DawnToMorning, 6),
+            new TODStatusWithTime(TODStatus.MorningToMidday, 7),
+            new TODStatusWithTime(TODStatus.MiddayToAfternoon, 12),
+            new TODStatusWithTime(TODStatus.AfternoonToDusk, 16.5f),
+            new TODStatusWithTime(TODStatus.DuskToNightStart, 18),
+            new TODStatusWithTime(TODStatus.NightStartToNightEnd, 19.5f),
+        };
+
+        public struct TODStatusWithTime
+        {
+            public TODStatus m_Status;
+            public float m_NormalizedTime;
+
+            public TODStatusWithTime(TODStatus Status, float Hour)
+            {
+                m_Status = Status;
+                m_NormalizedTime = Hour / 24f;
+            }
+        }
 
         public Timeline(Server Server)
         {
@@ -59,6 +94,13 @@ namespace SkyCoopServer
                 m_TODInHours -= 24f; // таким образом останеться остаток.
             }
             m_TODTimeNormalized = m_TODInHours / 24f;
+
+            UpdateTimeOfDayState();
+
+            if (m_ServerInstance.m_Weather.m_Config != null)
+            {
+                m_ServerInstance.m_Weather.AddTime(ElapsedInGameHours);
+            }
 
             ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleeping());
         }
@@ -114,6 +156,47 @@ namespace SkyCoopServer
             return $"Day: {days+1} Time: {hours:D2}:{minutes:D2}";
         }
 
+        public void SetNewTimeOfDayStatus(TODStatus NewStatus)
+        {
+            m_CurrentTODStatus = NewStatus;
+            Logger.Log(ConsoleColor.Green, $"New TOD status {NewStatus}");
+
+            m_ServerInstance.m_Weather.MayRerollTemperature(m_TODTimeNormalized);
+        }
+
+        public void UpdateTimeOfDayState()
+        {
+            TODStatus newStatus = GetCurrentTODStatus();
+
+            if (m_CurrentTODStatus != newStatus)
+            {
+                SetNewTimeOfDayStatus(newStatus);
+            }
+        }
+
+        private TODStatus GetCurrentTODStatus()
+        {
+            for (int i = 0; i < m_TimeOfDayStatusTable.Count - 1; i++)
+            {
+                TODStatusWithTime current = m_TimeOfDayStatusTable[i];
+                TODStatusWithTime next = m_TimeOfDayStatusTable[i + 1];
+
+                if (m_TODTimeNormalized >= current.m_NormalizedTime &&
+                    m_TODTimeNormalized < next.m_NormalizedTime)
+                {
+                    return current.m_Status;
+                }
+            }
+
+            TODStatusWithTime last = m_TimeOfDayStatusTable[m_TimeOfDayStatusTable.Count - 1];
+            if (m_TODTimeNormalized >= last.m_NormalizedTime)
+            {
+                return last.m_Status;
+            }
+
+            return m_TimeOfDayStatusTable[m_TimeOfDayStatusTable.Count - 1].m_Status;
+        }
+
         public void UpdateEverySecond()
         {
             m_Time++; // Обновляем реальное количество секунд.
@@ -153,6 +236,12 @@ namespace SkyCoopServer
                 m_TODInHours -= 24f; // таким образом останеться остаток.
             }
             m_TODTimeNormalized = m_TODInHours / 24f;
+            UpdateTimeOfDayState();
+
+            if (m_ServerInstance.m_Weather.m_Config != null)
+            {
+                m_ServerInstance.m_Weather.AddTime(ElapsedInGameHours);
+            }
 
             ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleepingRightNow);
 
