@@ -999,6 +999,13 @@ namespace SkyCoopServer
                 case "rtsleep":
                     ServerInstance.m_Timeline.m_RTSleepOnly = !ServerInstance.m_Timeline.m_RTSleepOnly;
                     break;
+                case "nextweather":
+                case "next_weather":
+                    if(ServerInstance.m_Weather != null && ServerInstance.m_Weather.m_Config != null)
+                    {
+                        ServerInstance.m_Weather.ForceNextWeather();
+                    }
+                    break;
                 default:
                     Logger.Log(ConsoleColor.Yellow, $"Unknown CMD {CMD}");
                     break;

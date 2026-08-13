@@ -37,6 +37,18 @@ namespace SkyCoopServer
         public WeatherSettingsConfig m_Config;
         public Dictionary<WeatherType, WeatherTypeSetting> m_WeatherSets = new Dictionary<WeatherType, WeatherTypeSetting>();
 
+        // Аврора
+        public bool m_NextNightAurora = false;
+        public float m_AuroraEarlyWindowProbability = 10f;
+        public float m_AuroraLateWindowProbability = 5f;
+        public float m_AuroraActivationWindowEnd = 0.16f; // 4 / 24
+        public float m_AuroraActivationWindowStart = 0.66f; // 14 / 24
+
+        // Электростатический туман
+        public float m_ElectrostaticFogProbability = 15f;
+        public float m_ElectrostaticFogActivationWindowEnd = 0.75f; // 18 / 24
+        public float m_ElectrostaticFogActivationWindowStart = 0.16f; // 4 / 24
+
         public Server m_ServerInstance;
 
         public class WeatherSettingsConfig
@@ -128,6 +140,21 @@ namespace SkyCoopServer
             m_ServerInstance = Server;
         }
 
+        public bool IsEarlyNightWindowForAuroraActivation(float NormalizedTOD)
+        {
+            return NormalizedTOD > m_AuroraActivationWindowStart;
+        }
+
+        public bool IsLateNightWindowForAuroraActivation(float NormalizedTOD)
+        {
+            return NormalizedTOD < m_AuroraActivationWindowEnd;
+        }
+
+        public bool IsWindowForElectrostaticFogActivation(float NormalizedTOD)
+        {
+            return NormalizedTOD > m_ElectrostaticFogActivationWindowStart && NormalizedTOD < m_ElectrostaticFogActivationWindowEnd;
+        }
+
         public void RerollHighTemp()
         {
             m_HighTemperatureSeed = Guid.NewGuid().GetHashCode();
@@ -214,8 +241,44 @@ namespace SkyCoopServer
             Logger.Log(ConsoleColor.Green, $"New WeatherSet {m_CurrentWeatherSetType} that will last for {m_DurationHours} hours");
         }
 
+        public void ForceNextWeather()
+        {
+            m_ElapsedHours = m_DurationHours;
+        }
+
         public WeatherType GetNextWeatherType()
         {
+            if(m_ServerInstance != null && m_ServerInstance.m_Timeline != null)
+            {
+                Random RNG = new Random(Guid.NewGuid().GetHashCode());
+                float RandomValue = RNG.Range(0f, 100f);
+                float NormalizedTime = m_ServerInstance.m_Timeline.m_TODTimeNormalized;
+
+                if (IsEarlyNightWindowForAuroraActivation(NormalizedTime))
+                {
+                    if(RandomValue < m_AuroraEarlyWindowProbability || m_NextNightAurora)
+                    {
+                        if (m_NextNightAurora)
+                        {
+                            m_NextNightAurora = false;
+                        }
+                        return WeatherType.ClearAurora;
+                    }
+                } else if (IsLateNightWindowForAuroraActivation(NormalizedTime))
+                {
+                    if (RandomValue < m_AuroraLateWindowProbability)
+                    {
+                        return WeatherType.ClearAurora;
+                    }
+                } else if (IsWindowForElectrostaticFogActivation(NormalizedTime))
+                {
+                    if (RandomValue < m_ElectrostaticFogProbability)
+                    {
+                        return WeatherType.ElectrostaticFog;
+                    }
+                }
+            }
+            
             WeatherTypeSetting CurrentSet = GetWeatherSet(m_CurrentWeatherSetType);
 
             if (CurrentSet != null)

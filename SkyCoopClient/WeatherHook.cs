@@ -120,6 +120,25 @@ namespace SkyCoopClient
                     WeatherStage NewType = (WeatherStage)Data.m_CurrentWeatherType;
                     WeatherStage PreviousType = (WeatherStage)Data.m_PreviousWeatherType;
 
+                    UniStormWeatherSystem Uni = GameManager.GetUniStorm();
+
+                    if (Uni && Uni.m_CurrentRegion)
+                    {
+                        string CurrentRegion = Uni.m_CurrentRegion.name;
+
+                        if(CurrentRegion != "MiningRegion" && CurrentRegion != "AirfieldRegion")
+                        {
+                            if(PreviousType == WeatherStage.ElectrostaticFog)
+                            {
+                                PreviousType = WeatherStage.DenseFog;
+                            }
+                            if (NewType == WeatherStage.ElectrostaticFog)
+                            {
+                                NewType = WeatherStage.DenseFog;
+                            }
+                        }
+                    }
+
                     WeatherTransition.m_PreviousWeatherSetType = PreviousType;
                     if (WeatherTransition.m_CurrentWeatherSet && WeatherTransition.m_CurrentWeatherSet.m_CharacterizingType != NewType)
                     {
