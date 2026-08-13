@@ -758,6 +758,7 @@ namespace SkyCoopClient
             CookpotHelmetPatch(__instance);
             CanLauncherPatch(__instance);
             UncookedGearsFix.UncookedGearPatch(__instance.gameObject);
+            CraftingHook.ManualPatchHarvest(__instance);
             //SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
         }
 
