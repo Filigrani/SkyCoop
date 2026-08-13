@@ -92,9 +92,20 @@ namespace SkyCoopServer
 
         public float GetBilzardScaler()
         {
-            // TODO скейлер для разных сложностей
-            
-            return 1;
+            switch (m_ServerInstance.m_Config.m_ExperienceMode)
+            {
+                case "Pilgrim":
+                    return 0.75f;
+                case "Voyageur":
+                    return 1f;
+                case "Stalker":
+                      return 1.25f;
+                case "Interloper":
+                case "Misery":
+                    return 2f;
+                default:
+                    return 1;
+            }
         }
 
         public WeatherType GetWeatherTypeFromString(string Type)

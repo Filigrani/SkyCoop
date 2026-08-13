@@ -108,6 +108,19 @@ namespace SkyCoopClient
             }
         }
 
+        // Возращяем false, что бы клиент не пытался выбрать следующую погоду сам,
+        // Ибо при сне во время ускореения он может замёрзнуть/согреться от фейковой погоды
+        [HarmonyLib.HarmonyPatch(typeof(WeatherTransition), "ChooseNextWeatherSet")]
+        private static class WeatherTransition_ChooseNextWeatherSet
+        {
+            private static bool Prefix(WeatherTransition __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                return false;
+            }
+        }
+
         public static void HandleWeatherSync(DataStr.WeatherSyncData Data)
         {
             Weather Weather = GameManager.GetWeatherComponent();
@@ -168,20 +181,68 @@ namespace SkyCoopClient
                         {
                             float FreeTimeLeft = Data.m_Duration;
                             UnityEngine.Random.InitState(Data.m_WeatherSeed);
+                            bool RerollSimplified = false;
                             foreach (WeatherSetStage Stage in WeatherTransition.m_CurrentWeatherSet.m_WeatherStages)
                             {
+                                if(FreeTimeLeft == 0)
+                                {
+                                    RerollSimplified = true;
+                                    break;
+                                }
+                                
                                 float DurationForStage = UnityEngine.Random.Range(Stage.m_DurationMinMax.x, Stage.m_DurationMinMax.y);
                                 if(DurationForStage > FreeTimeLeft)
                                 {
                                     DurationForStage = Stage.m_DurationMinMax.x;
                                     if (DurationForStage > FreeTimeLeft)
                                     {
-                                        DurationForStage = 0;
+                                        DurationForStage = FreeTimeLeft;
                                     }
                                 }
                                 FreeTimeLeft -= DurationForStage;
                                 Stage.m_CurrentDuration = DurationForStage;
                                 Stage.m_CurrentTransitionTime = Stage.m_TransitionTimeMinMax.x;
+                            }
+
+                            if(FreeTimeLeft > 0)
+                            {
+                                float ExtraTime = FreeTimeLeft / WeatherTransition.m_CurrentWeatherSet.m_WeatherStages.Count;
+
+                                foreach (WeatherSetStage Stage in WeatherTransition.m_CurrentWeatherSet.m_WeatherStages)
+                                {
+                                    Stage.m_CurrentDuration += ExtraTime;
+                                }
+                            }
+
+                            if (RerollSimplified)
+                            {
+                                FreeTimeLeft = Data.m_Duration;
+                                UnityEngine.Random.InitState(Data.m_WeatherSeed);
+                                float NewMax = FreeTimeLeft / Data.m_Duration;
+                                foreach (WeatherSetStage Stage in WeatherTransition.m_CurrentWeatherSet.m_WeatherStages)
+                                {
+                                    float NewMin = Stage.m_DurationMinMax.x;
+
+                                    if(NewMin > NewMax)
+                                    {
+                                        NewMin = NewMax/2;
+                                    }
+
+                                    float DurationForStage = UnityEngine.Random.Range(NewMin, NewMax);
+                                    Stage.m_CurrentDuration = DurationForStage;
+                                    Stage.m_CurrentTransitionTime = Stage.m_TransitionTimeMinMax.x;
+                                    FreeTimeLeft -= DurationForStage;
+                                }
+
+                                if(FreeTimeLeft > 0)
+                                {
+                                    float ExtraTime = FreeTimeLeft / WeatherTransition.m_CurrentWeatherSet.m_WeatherStages.Count;
+
+                                    foreach (WeatherSetStage Stage in WeatherTransition.m_CurrentWeatherSet.m_WeatherStages)
+                                    {
+                                        Stage.m_CurrentDuration += ExtraTime;
+                                    }
+                                }
                             }
                         }
 

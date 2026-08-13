@@ -6,8 +6,6 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
-using static Il2CppSystem.Globalization.HebrewNumber;
-using static UnityEngine.Rendering.DebugUI;
 
 namespace SkyCoopClient
 {
@@ -15,6 +13,9 @@ namespace SkyCoopClient
     {
         public static bool s_LastEveryoneIsSleeping = false;
         public static float s_DesiredTimeToSleep = 0;
+        public static bool s_PassTimeMode = false;
+        public static bool s_PassingTime = false;
+        public static float s_PassTimeStartTOD = 0;
 
         // Rest.m_SleepFadeOutSeconds это 8 секунд
         // TimeOfDay.m_DayLengthScale когда спим 12 часов 0.0083f
@@ -59,35 +60,28 @@ namespace SkyCoopClient
                 Transform Shared = ControllOffset.GetChild(1);
                 if (Shared)
                 {
-                    Transform Stats = Shared.GetChild(3);
+                    //Transform Stats = Shared.GetChild(3);
 
-                    if (Stats)
-                    {
-                        for (int i = 0; i < Stats.childCount; i++)
-                        {
-                            Transform Child = Stats.GetChild(i);
+                    //if (Stats)
+                    //{
+                    //    for (int i = 0; i < Stats.childCount; i++)
+                    //    {
+                    //        Transform Child = Stats.GetChild(i);
 
-                            if (Child)
-                            {
-                                if (i == 0 || i == 1 || i == 5 || i == 8 || i == 9)
-                                {
-                                    Child.gameObject.SetActive(!ModMain.IsMultiplayer());
-                                }
-                            }
-                        }
-                    }
+                    //        if (Child)
+                    //        {
+                    //            if (i == 0 || i == 1 || i == 5 || i == 8 || i == 9)
+                    //            {
+                    //                Child.gameObject.SetActive(!ModMain.IsMultiplayer());
+                    //            }
+                    //        }
+                    //    }
+                    //}
                 }
                 Transform RestOnly = ControllOffset.GetChild(2);
 
                 if (RestOnly)
                 {
-                    Transform Lable_RestDuration = RestOnly.GetChild(3);
-
-                    if (Lable_RestDuration)
-                    {
-                        Lable_RestDuration.gameObject.SetActive(!ModMain.IsMultiplayer());
-                    }
-
                     Transform Lable_Description = RestOnly.GetChild(2);
 
                     if (Lable_Description)
@@ -103,6 +97,29 @@ namespace SkyCoopClient
                             else
                             {
                                 Loca.key = "GAMEPLAY_RestDescription";
+                            }
+                        }
+                    }
+                }
+                Transform PassTimeOnly = ControllOffset.GetChild(3);
+
+                if (PassTimeOnly)
+                {
+                    Transform Lable_Description = PassTimeOnly.GetChild(2);
+
+                    if (Lable_Description)
+                    {
+                        UILocalize Loca = Lable_Description.gameObject.GetComponent<UILocalize>();
+
+                        if (Loca)
+                        {
+                            if (ModMain.IsMultiplayer())
+                            {
+                                Loca.key = "GAMEPLAY_PassTimeDescription_Multiplayer";
+                            }
+                            else
+                            {
+                                Loca.key = "GAMEPLAY_PassTimeDescription";
                             }
                         }
                     }
@@ -127,8 +144,6 @@ namespace SkyCoopClient
                             return false;
                         }
                     }
-
-                    __instance.SetPassTimeAllowed(false);
                 }
                 return true;
             }
@@ -151,22 +166,10 @@ namespace SkyCoopClient
                         }
                     }
 
-                    __instance.SetPassTimeAllowed(false);
                     PatchPanel(__instance);
                 }
 
                 return true;
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "SetPassTimeAllowed")]
-        private static class Panel_Rest_SetPassTimeAllowed
-        {
-            private static void Postfix(Panel_Rest __instance, bool allowed)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.m_PassTimeIsAllowed = false;
             }
         }
 
@@ -218,6 +221,11 @@ namespace SkyCoopClient
                 {
                     Panel.EnableForcedTimeOfDayScaleDisplay(false);
                 }
+                UISprite Sprite = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(0).gameObject.GetComponent<UISprite>();
+                if (Sprite)
+                {
+                    Sprite.spriteName = "ico_tab_sleep1";
+                }
                 return false;
             }
         }
@@ -229,6 +237,8 @@ namespace SkyCoopClient
             private static bool Prefix(Panel_Rest __instance)
             {
                 if (!ModMain.IsMultiplayer() || s_ByPass) { return true; }
+
+                s_PassTimeMode = false;
 
                 if (__instance.m_Bed)
                 {
@@ -255,6 +265,46 @@ namespace SkyCoopClient
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Rest), "DoPassTime")]
+        private static class Panel_Rest_DoPassTime
+        {
+            public static bool s_ByPass = false;
+            private static bool Prefix(Panel_Rest __instance, float sleepHours)
+            {
+                if (!ModMain.IsMultiplayer() || s_ByPass) { return true; }
+
+                s_PassTimeMode = true;
+
+                s_DesiredTimeToSleep = sleepHours * 60 * 60;
+
+                if (__instance.m_Bed)
+                {
+                    string GUID = "";
+
+                    ObjectGuid ObjGUID = __instance.m_Bed.gameObject.GetComponent<ObjectGuid>();
+
+                    if (ObjGUID)
+                    {
+                        GUID = ObjGUID.Get();
+                    }
+
+                    if (!string.IsNullOrEmpty(GUID))
+                    {
+                        PlayersManager.s_LastTryInteractionObject = __instance.m_Bed.gameObject;
+                        ClientSend.SendTryInteract(GUID, true);
+                    }
+                }
+                else
+                {
+                    DoPassTime();
+                }
+                
+                __instance.Enable(false);
+
+                return false;
+            }
+        }
+
         public static bool DoRest()
         {
             Panel_Rest Panel = InterfaceManager.GetPanel<Panel_Rest>();
@@ -269,6 +319,18 @@ namespace SkyCoopClient
                 {
                     return true;
                 }
+            }
+            return false;
+        }
+
+        public static bool DoPassTime()
+        {
+            Panel_Rest Panel = InterfaceManager.GetPanel<Panel_Rest>();
+
+            if (Panel)
+            {
+                OnStartPassTime(GameManager.GetPassTime(), Panel.m_Bed);
+                return true;
             }
             return false;
         }
@@ -414,11 +476,67 @@ namespace SkyCoopClient
             }
         }
 
-        public static void OnCancleSleeping()
+        public static void OnCancle()
         {
             if (GameManager.m_Rest && GameManager.m_Rest.IsSleeping())
             {
                 GameManager.m_Rest.EndSleeping(false);
+            }
+            if (GameManager.m_PassTime && s_PassingTime)
+            {
+                GameManager.m_Rest.EndSleeping(false);
+                GameManager.m_PassTime.m_Bed = null;
+                s_PassingTime = false;
+                if (GameManager.m_PassTime.m_PassTimeAudioInstance != 0U)
+                {
+                    AkSoundEngine.StopPlayingID(GameManager.m_PassTime.m_PassTimeAudioInstance, 10);
+                    GameManager.m_PassTime.m_PassTimeAudioInstance = 0U;
+                }
+                OnWakeUp();
+            }
+        }
+
+        public static void OnStartPassTime(PassTime Pass, Bed b)
+        {
+            Pass.m_Bed = b;
+            s_PassingTime = true;
+            s_PassTimeStartTOD = GameManager.GetUniStorm().m_ElapsedHours;
+            if (!Pass.m_SuppressAudio && Pass.m_PassTimeAudioInstance == 0U)
+            {
+                Pass.m_PassTimeAudioInstance = GameAudioManager.PlaySound(Pass.m_PassTimeAudio, GameManager.GetPlayerObject());
+            }
+
+            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+
+            if (Panel)
+            {
+                Panel.EnableForcedTimeOfDayScaleDisplay(true);
+
+                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
+                {
+                    Panel.m_AccelTimePopup.m_BackButtonObject.SetActive(true);
+                    Panel.m_GenericButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_Cancel", true, 0, true);
+                    Panel.m_TimePopupButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_Cancel", true, 0, true);
+                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
+                    if (RestingLable)
+                    {
+                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
+
+                        if (Localize)
+                        {
+                            Localize.key = "GAMEPLAY_PassTimeProgress_RT";
+                            Localize.OnLocalize();
+                        }
+                    }
+                    Action CancleSleep = new Action(() => OnCancle());
+                    Panel.m_AccelTimePopup.m_CancelCallback = CancleSleep;
+                    Panel.m_AccelTimePopup.m_RestingObject.SetActive(true);
+                    UISprite Sprite = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(0).gameObject.GetComponent<UISprite>();
+                    if (Sprite)
+                    {
+                        Sprite.spriteName = "ico_tab_passTime1";
+                    }
+                }
             }
         }
 
@@ -456,8 +574,13 @@ namespace SkyCoopClient
                             Localize.OnLocalize();
                         }
                     }
-                    Action CancleSleep = new Action(() => OnCancleSleeping());
+                    Action CancleSleep = new Action(() => OnCancle());
                     Panel.m_AccelTimePopup.m_CancelCallback = CancleSleep;
+                    UISprite Sprite = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(0).gameObject.GetComponent<UISprite>();
+                    if (Sprite)
+                    {
+                        Sprite.spriteName = "ico_tab_sleep1";
+                    }
                 }
             }
         }
@@ -470,6 +593,7 @@ namespace SkyCoopClient
             {
                 Camera.enabled = true;
             }
+            s_LastEveryoneIsSleeping = false;
             ClientSend.SendFinishInteract(); // Особождаем кровать
         }
 
@@ -483,6 +607,12 @@ namespace SkyCoopClient
             if (GameManager.m_Rest)
             {
                 Bed Bed = GameManager.GetRestComponent().m_Bed;
+
+                if(Bed == null)
+                {
+                    Bed = GameManager.GetPassTime().m_Bed;
+                }
+
                 if (Bed)
                 {
                     vp_FPSCamera Camera = GameManager.GetVpFPSCamera();
@@ -505,13 +635,19 @@ namespace SkyCoopClient
                     }
                 }
 
-
-
                 if (GameManager.m_Rest.IsSleeping())
                 {
                     if (InputManager.GetEscapePressed(InputManager.m_CurrentContext) || (Utils.IsGamepadActive() && InputManager.GetPutBackPressed(InputManager.m_CurrentContext)) || GameManager.m_Rest.m_NumSecondsSleeping > s_DesiredTimeToSleep)
                     {
-                        OnCancleSleeping();
+                        OnCancle();
+                    }
+                }
+                if (s_PassingTime)
+                {
+                    float PassingTimeSeconds = (GameManager.GetUniStorm().m_ElapsedHours - s_PassTimeStartTOD) * 60 * 60;
+                    if (InputManager.GetEscapePressed(InputManager.m_CurrentContext) || (Utils.IsGamepadActive() && InputManager.GetPutBackPressed(InputManager.m_CurrentContext)) || PassingTimeSeconds > s_DesiredTimeToSleep)
+                    {
+                        OnCancle();
                     }
                 }
 
@@ -543,6 +679,32 @@ namespace SkyCoopClient
                                         if (Localize)
                                         {
                                             Localize.key = "GAMEPLAY_RestingProgress_Accelerated";
+                                            Localize.OnLocalize();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }else if (s_PassingTime)
+                    {
+                        if (!GameManager.m_Rest.m_TimeAccelerated)
+                        {
+                            GameManager.m_Rest.AccelerateTimeOfDay(720, 30, false);
+
+                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+
+                            if (Panel)
+                            {
+                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
+                                {
+                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
+                                    if (RestingLable)
+                                    {
+                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
+
+                                        if (Localize)
+                                        {
+                                            Localize.key = "GAMEPLAY_PassTimeProgress_Accelerated";
                                             Localize.OnLocalize();
                                         }
                                     }

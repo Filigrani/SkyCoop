@@ -613,7 +613,7 @@ namespace SkyCoopClient
                         "", // SnowShelter
                         Campfire,
                         CookingPot,
-                        "", // PassTime
+                        "PassTime",
                         "", // IceFishingHole
                         "GEAR_Snare",
                         RecycleCan,

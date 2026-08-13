@@ -183,7 +183,11 @@ namespace SkyCoop
             {
                 return Comps.NetworkPlayer.Actions.Death;
             }
-            if (GameManager.GetRestComponent().m_Bed)
+            if (SleepHook.s_PassingTime)
+            {
+                return Comps.NetworkPlayer.Actions.Sleep;
+            }
+            if (GameManager.GetPassTime().IsPassingTime())
             {
                 return Comps.NetworkPlayer.Actions.Sleep;
             }
@@ -281,10 +285,20 @@ namespace SkyCoop
                     {
                         Transform T = GameManager.GetPlayerTransform();
 
-                        if(GameManager.m_Rest && GameManager.m_Rest.m_Bed && GameManager.m_Rest.m_Bed.m_BodyPlacementTransform)
+                        Transform BedTransfrorm = null;
+
+                        if(GameManager.m_Rest && GameManager.m_Rest.m_Bed)
                         {
-                            Vector3 BedPosition = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform.position;
-                            Quaternion BedRotation = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform.rotation * Quaternion.Euler(0, -180, 0);
+                            BedTransfrorm = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform;
+                        }else if(GameManager.m_PassTime && GameManager.m_PassTime.m_Bed)
+                        {
+                            BedTransfrorm = GameManager.m_PassTime.m_Bed.m_BodyPlacementTransform;
+                        }
+
+                        if (BedTransfrorm)
+                        {
+                            Vector3 BedPosition = BedTransfrorm.position;
+                            Quaternion BedRotation = BedTransfrorm.rotation * Quaternion.Euler(0, -180, 0);
 
                             if (m_LocalPlayerData.m_LastSentPosition != BedPosition)
                             {
@@ -979,9 +993,19 @@ namespace SkyCoop
                     Bed Bed = s_LastTryInteractionObject.GetComponent<Bed>();
                     if (Bed)
                     {
-                        if (SleepHook.DoRest())
+                        if (SleepHook.s_PassTimeMode)
                         {
-                            return;
+                            if (SleepHook.DoPassTime())
+                            {
+                                return;
+                            }
+                        }
+                        else
+                        {
+                            if (SleepHook.DoRest())
+                            {
+                                return;
+                            }
                         }
                     }
                 }
