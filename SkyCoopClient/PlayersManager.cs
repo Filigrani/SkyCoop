@@ -187,7 +187,7 @@ namespace SkyCoop
             {
                 return Comps.NetworkPlayer.Actions.Sleep;
             }
-            if (GameManager.GetPassTime().IsPassingTime())
+            if (GameManager.GetRestComponent().IsSleeping())
             {
                 return Comps.NetworkPlayer.Actions.Sleep;
             }

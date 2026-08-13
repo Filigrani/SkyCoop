@@ -180,6 +180,8 @@ namespace SkyCoopClient
 
                 bool Clothing = ModMain.Client != null && ModMain.Client.m_Rules.m_Clothing;
                 bool CanStartFire = ModMain.Client != null && ModMain.Client.m_Rules.m_CanStartFire;
+                bool CanCraft = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanCraft;
+                bool CanUseMap = ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanUseMap;
 
                 for (int i = __instance.m_ActiveElements.Count - 1; i >= 0; i--)
                 {
@@ -189,6 +191,14 @@ namespace SkyCoopClient
                         continue;
                     }
                     if (butt.name == "SpriteRecipeBook" && CanStartFire)
+                    {
+                        continue;
+                    }
+                    if (butt.name == "SpriteCrafting" && CanCraft)
+                    {
+                        continue;
+                    }
+                    if (butt.name == "SpriteMap" && CanUseMap)
                     {
                         continue;
                     }
@@ -205,6 +215,14 @@ namespace SkyCoopClient
                         continue;
                     }
                     if (butt.name == "SpriteRecipeBook" && CanStartFire)
+                    {
+                        continue;
+                    }
+                    if (butt.name == "SpriteCrafting" && CanCraft)
+                    {
+                        continue;
+                    }
+                    if (butt.name == "SpriteMap" && CanUseMap)
                     {
                         continue;
                     }
@@ -545,26 +563,7 @@ namespace SkyCoopClient
         //        //}
         //    }
         //}
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "Enable", new System.Type[] { typeof(bool) })]
-        private static class Panel_Crafting_Enable
-        {
-            private static bool Prefix(Panel_Crafting __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
 
-                return false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "Enable", new System.Type[] { typeof(bool), typeof(bool) })]
-        private static class Panel_Crafting_Enable2
-        {
-            private static bool Prefix(Panel_Crafting __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                return false;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(Panel_ActionsRadial), "Enable", new System.Type[] { typeof(bool) })]
         private static class Panel_ActionsRadial_Update
         {

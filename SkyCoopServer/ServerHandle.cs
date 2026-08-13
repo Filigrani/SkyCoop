@@ -843,6 +843,12 @@ namespace SkyCoopServer
                 case "mimic":
                     ServerInstance.m_PlayersData.m_RecursiveDebug = !ServerInstance.m_PlayersData.m_RecursiveDebug;
                     Logger.Log(ConsoleColor.Green, $"New m_RecursiveDebug flag is {ServerInstance.m_PlayersData.m_RecursiveDebug}");
+                    List<NetPeer> peers = new List<NetPeer>();
+                    ServerInstance.m_Instance.GetConnectedPeers(peers);
+                    foreach (NetPeer Peer in peers.ToArray())
+                    {
+                        ServerSend.SendPlayerSceneNotification(Peer, true, Peer.Id);
+                    }
                     break;
                 case "addtier":
                     if (Player != null)

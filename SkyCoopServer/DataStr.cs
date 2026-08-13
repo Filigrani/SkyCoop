@@ -80,6 +80,7 @@ namespace SkyCoopServer
             public bool m_CanUseTransitions = false;
             public string m_SceneUnload = "";
             public bool m_Weather = false;
+            public bool m_CanCraft = false;
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -137,6 +138,7 @@ namespace SkyCoopServer
             public bool CanUseTransitions { get; set; }
             public string SceneUnload { get; set; }
             public bool Weather { get; set; }
+            public bool CanCraft { get; set; }
 
             public GameRules Load()
             {
@@ -211,6 +213,7 @@ namespace SkyCoopServer
                 Inst.m_CanUseTransitions = CanUseTransitions;
                 Inst.m_SceneUnload = SceneUnload;
                 Inst.m_Weather = Weather;
+                Inst.m_CanCraft = CanCraft;
 
                 return Inst;
             }
@@ -2286,6 +2289,12 @@ namespace SkyCoopServer
                 }
 
                 m_MaxOnTODSeconds += BurnTime;
+
+                if(m_MaxOnTODSeconds > 43200)
+                {
+                    m_MaxOnTODSeconds = 43200;
+                }
+
                 m_FuelHeatIncrease += Heat;
 
                 if(m_FuelHeatIncrease > m_MaxHeat)

@@ -154,7 +154,7 @@ namespace SkyCoopClient
 
                     if (!string.IsNullOrEmpty(GUID))
                     {
-                        SkyCoop.Logger.Log($"Send add fuel to {GUID} Fuel {Fuel} Heat {Heat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
+                        //SkyCoop.Logger.Log($"Send add fuel to {GUID} Fuel {Fuel} Heat {Heat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
                         ClientSend.SendAddFuel(GUID, (Fuel * 60) * 60, Heat, InnerRadius, OuterRadius);
                     }
                     else
@@ -1666,7 +1666,7 @@ namespace SkyCoopClient
 
         public static void HandleAddFuel(string GUID)
         {
-            SkyCoop.Logger.Log($"HandleFireSync {GUID}");
+            //SkyCoop.Logger.Log($"HandleFireSync {GUID}");
             GameObject Obj = PdidTable.GetGameObject(GUID);
 
             if (Obj)
@@ -1682,7 +1682,7 @@ namespace SkyCoopClient
 
         public static void HandleRemoveFire(string GUID)
         {
-            SkyCoop.Logger.Log($"HandleRemoveFire {GUID}");
+            //SkyCoop.Logger.Log($"HandleRemoveFire {GUID}");
             GameObject Obj = PdidTable.GetGameObject(GUID);
 
             if (Obj)

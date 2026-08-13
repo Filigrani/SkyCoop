@@ -304,6 +304,7 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_CanStartFire);
             Writer.Put(Rules.m_CanUseTransitions);
             Writer.Put(Rules.m_Weather);
+            Writer.Put(Rules.m_CanCraft);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -330,6 +331,7 @@ namespace SkyCoopServer
             Rules.m_CanStartFire = Reader.GetBool();
             Rules.m_CanUseTransitions = Reader.GetBool();
             Rules.m_Weather = Reader.GetBool();
+            Rules.m_CanCraft = Reader.GetBool();
 
             return Rules;
         }
