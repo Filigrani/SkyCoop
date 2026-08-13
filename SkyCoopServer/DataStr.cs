@@ -2293,8 +2293,15 @@ namespace SkyCoopServer
                     m_FuelHeatIncrease = m_MaxHeat;
                 }
 
-                m_HeatInnerRadius += InnerRadius;
-                m_HeatOuterRadius += OuterRadius;
+                if(InnerRadius > m_HeatInnerRadius)
+                {
+                    m_HeatInnerRadius = InnerRadius;
+                }
+
+                if(OuterRadius > m_HeatOuterRadius)
+                {
+                    m_HeatOuterRadius = OuterRadius;
+                }
             }
 
             public float RemaningTime()

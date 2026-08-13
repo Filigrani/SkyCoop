@@ -45,6 +45,8 @@ namespace SkyCoopClient
         {
             public static float m_FireStarterFuel = 0;
             public static float m_FireStarterHeat = 0;
+            public static float m_FireStarterInnerRadius = 0;
+            public static float m_FireStarterOutterRadius = 0;
             
             private static void Prefix(Fire __instance, bool success, bool playerCancel, float progress)
             {
@@ -54,6 +56,8 @@ namespace SkyCoopClient
                 {
                     m_FireStarterFuel = (__instance.m_FuelUsedToStart.m_BurnDurationHours * 60) * 60;
                     m_FireStarterHeat = __instance.m_FuelUsedToStart.m_HeatIncrease;
+                    m_FireStarterInnerRadius = __instance.m_FuelUsedToStart.m_HeatInnerRadius;
+                    m_FireStarterOutterRadius = __instance.m_FuelUsedToStart.m_HeatOuterRadius;
 
                     if (success)
                     {
@@ -74,16 +78,12 @@ namespace SkyCoopClient
 
                     if (!string.IsNullOrEmpty(GUID))
                     {
-                        float InnerRadius = 0;
-                        float OuterRadius = 0;
                         float HeatingSpeed = 0;
                         bool IsForge = __instance.gameObject.transform.parent && __instance.gameObject.transform.parent.GetComponentInChildren<Forge>();
                         int CookingSlots = 0;
 
                         if (__instance.m_ApplyToHeatSource && __instance.m_HeatSource)
                         {
-                            InnerRadius = __instance.m_HeatSource.m_MaxTempIncreaseInnerRadius;
-                            OuterRadius = __instance.m_HeatSource.m_MaxTempIncreaseOuterRadius;
                             HeatingSpeed = __instance.m_HeatSource.m_TimeToReachMaxTempMinutes * 60;
                         }
 
@@ -109,8 +109,6 @@ namespace SkyCoopClient
                             }
                         }
 
-                        SkyCoop.Logger.Log($"Send starting fire {GUID} Fuel {m_FireStarterFuel} Heat {m_FireStarterHeat} InnerRadius {InnerRadius} OuterRadius {OuterRadius}");
-
                         if (CookingSlots == 0)
                         {
                             SkyCoop.Logger.Log($"Somehow this fire has no cooking slots!!!!!!!!!!!!");
@@ -118,11 +116,11 @@ namespace SkyCoopClient
 
                         if (__instance.m_Campfire == null)
                         {
-                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSpeed, IsForge, CookingSlots);
+                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, m_FireStarterInnerRadius, m_FireStarterOutterRadius, HeatingSpeed, IsForge, CookingSlots);
                         }
                         else
                         {
-                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, InnerRadius, OuterRadius, HeatingSpeed, IsForge, CookingSlots, __instance.gameObject.transform.position, __instance.gameObject.transform.rotation);
+                            ClientSend.SendStartFire(GUID, m_FireStarterFuel, m_FireStarterHeat, m_FireStarterInnerRadius, m_FireStarterOutterRadius, HeatingSpeed, IsForge, CookingSlots, __instance.gameObject.transform.position, __instance.gameObject.transform.rotation);
                         }
                     }
                     else
@@ -1602,8 +1600,8 @@ namespace SkyCoopClient
                         if (Fire.m_HeatSource)
                         {
                             Fire.m_HeatSource.m_TempIncrease = Heat;
-                            Fire.m_HeatSource.m_MaxTempIncreaseInnerRadius = Mathf.Max(InnerRadius, Fire.m_HeatSource.m_MaxTempIncreaseInnerRadius);
-                            Fire.m_HeatSource.m_MaxTempIncreaseOuterRadius = Mathf.Max(OutterRadius * Fire.GetFireOuterRadiusScale(), Fire.m_HeatSource.m_MaxTempIncreaseOuterRadius);
+                            Fire.m_HeatSource.m_MaxTempIncreaseInnerRadius = InnerRadius;
+                            Fire.m_HeatSource.m_MaxTempIncreaseOuterRadius = OutterRadius * Fire.GetFireOuterRadiusScale();
 
                             if(Fire.m_FireState == FireState.FullBurn)
                             {
