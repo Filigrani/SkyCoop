@@ -1,5 +1,6 @@
 ﻿using Harmony;
 using Il2Cpp;
+using Il2CppTLD.Gear;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;

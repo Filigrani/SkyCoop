@@ -1,6 +1,7 @@
 ﻿using Harmony;
 using Il2Cpp;
 using Il2CppTLD.AddressableAssets;
+using Il2CppTLD.Gear;
 using Il2CppTLD.Scenes;
 using SkyCoop;
 using SkyCoopServer;
@@ -13,7 +14,6 @@ using System.Text.Json;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
-using static Il2Cpp.Utils;
 using static SkyCoopServer.DataStr;
 using Il2CppCollection = Il2CppSystem.Collections.Generic;
 
@@ -25,13 +25,13 @@ namespace SkyCoopClient
         public static List<string> s_ScenesToSave = new List<string>();
         public static bool s_Active = false;
         public static Stopwatch s_StopWatch = null;
-        public static int m_FamesDelay = 0;
+        public static int m_FramesDelay = 0;
 
         public static void SceneLoaded()
         {
             if (s_Active)
             {
-                m_FamesDelay = 120;
+                m_FramesDelay = 120;
             }
         }
 
@@ -39,11 +39,11 @@ namespace SkyCoopClient
         {
             if (s_Active)
             {
-                if (m_FamesDelay > 0)
+                if (m_FramesDelay > 0)
                 {
-                    m_FamesDelay--;
+                    m_FramesDelay--;
 
-                    if (m_FamesDelay == 0)
+                    if (m_FramesDelay == 0)
                     {
                         SaveThisScene();
                     }
@@ -116,6 +116,7 @@ namespace SkyCoopClient
                 SceneData.LooseGearSpawns = new List<DataStr.LooseGearSpawn>();
                 SceneData.SceneName = ModMain.GetCurrentSceneName();
                 SceneData.RadialSpawns = new List<DataStr.RadialObjectSpawnerData>();
+                SceneData.SpawnGearVariants = new List<DataStr.SpawnGearVariantData>();
 
                 List<GameObject> GearsToIgnore = new List<GameObject>();
 
@@ -142,6 +143,21 @@ namespace SkyCoopClient
                     {
                         SceneData.RandomSpawnObjects.Add(Data);
                     }
+                }
+
+                if(SpawnGearVariant.s_ActiveSpawners.Count > 0)
+                {
+                    DataStr.SpawnGearVariantData VariantBase = new SpawnGearVariantData();
+                    foreach (SpawnGearVariant SGV in SpawnGearVariant.s_ActiveSpawners)
+                    {
+                        DataStr.SpawnGearVariantElementData ElementData = new SpawnGearVariantElementData();
+                        ElementData.GearName = FixName(SGV.m_SpawnedItem.name);
+                        ElementData.Position = new Vector3JSON(SGV.m_SpawnedItem.transform.position.x, SGV.m_SpawnedItem.transform.position.y, SGV.m_SpawnedItem.transform.position.z);
+                        ElementData.Rotation = new QuaternionJSON(SGV.m_SpawnedItem.transform.rotation.x, SGV.m_SpawnedItem.transform.rotation.y, SGV.m_SpawnedItem.transform.rotation.z, SGV.m_SpawnedItem.transform.rotation.w);
+
+                        VariantBase.Gears.Add(ElementData);
+                    }
+                    SceneData.SpawnGearVariants.Add(VariantBase);
                 }
 
                 foreach (GearItem Gear in UnityEngine.Object.FindObjectsOfType<GearItem>(true))

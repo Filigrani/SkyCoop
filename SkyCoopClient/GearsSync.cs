@@ -183,11 +183,6 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                if (s_NoSyncFlag)
-                {
-                    return true;
-                }
-
                 if (__instance.ActiveInteraction != null)
                 {
                     GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
@@ -206,14 +201,6 @@ namespace SkyCoopClient
                         {
                             return false;
                         }
-
-                        HarvestableInteraction harvest = OBJ.GetComponent<HarvestableInteraction>();
-
-                        if (harvest && harvest.enabled)
-                        {
-                            PlayersManager.TryInteract(harvest);
-                            return false;
-                        }
                     }
                 }
                 return true;
@@ -222,11 +209,6 @@ namespace SkyCoopClient
             internal static void Postfix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
-
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
 
                 if (__instance.ActiveInteraction != null)
                 {
@@ -295,10 +277,6 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
                 if (__instance.ActiveInteraction != null)
                 {
                     GameObject OBJ = __instance.ActiveInteraction.GetInteractiveObject();
@@ -367,6 +345,7 @@ namespace SkyCoopClient
                 {
                     SendDropItem(__result, 0, 0, false);
                 }
+                SkyCoop.Logger.Log($"InstantiateItemAtPlayersFeet numUnits {numUnits}");
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(GearItem), typeof(int), typeof(Vector3), typeof(bool) })]
@@ -411,7 +390,7 @@ namespace SkyCoopClient
                     return;
                 }
 
-                SkyCoop.Logger.Log($"InstantiateItemAtLocation {__result.name} numUnits {numUnits}");
+                SkyCoop.Logger.Log($"InstantiateItemAtLocation2 {__result.name} numUnits {numUnits}");
                 SendDropItem(__result, 0, 0, true);
             }
         }
@@ -422,20 +401,11 @@ namespace SkyCoopClient
             private static GameObject saveObj;
             internal static void Prefix(PlayerManager __instance)
             {
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
                 saveObj = __instance.m_ObjectToPlace;
             }
             internal static void Postfix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
-
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
 
                 if (saveObj)
                 {
@@ -464,10 +434,6 @@ namespace SkyCoopClient
             internal static bool Prefix(PlayerManager __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
-                if (s_NoSyncFlag)
-                {
-                    return true;
-                }
                 saveObj = __instance.m_ObjectToPlace;
 
                 if (saveObj)
@@ -521,10 +487,6 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
                 if (s_SkipPost)
                 {
                     s_SkipPost = false;
@@ -639,11 +601,11 @@ namespace SkyCoopClient
                         // значит он так и остался валяться.
 
 
-                        Comps.SendGearIfNotDestoryed Hook = Gear.gameObject.GetComponent<Comps.SendGearIfNotDestoryed>();
+                        Comps.SendGearIfNotDestoryed Hook = __instance.m_Gear.gameObject.GetComponent<Comps.SendGearIfNotDestoryed>();
                         if(Hook == null)
                         {
-                            Hook = Gear.gameObject.AddComponent<Comps.SendGearIfNotDestoryed>();
-                            Hook.m_Gear = Gear;
+                            Hook = __instance.m_Gear.gameObject.AddComponent<Comps.SendGearIfNotDestoryed>();
+                            Hook.m_Gear = __instance.m_Gear;
                         }
                     }
                     else

@@ -1180,6 +1180,16 @@ namespace SkyCoopServer
                             }
                         }
                     }
+                    foreach (SpawnGearVariantData Spawn in LootData.SpawnGearVariants)
+                    {
+                        if(Spawn.Gears.Count > 0)
+                        {
+                            int RandomIndex = RNG.Range(0, Spawn.Gears.Count);
+
+                            SpawnGearVariantElementData Element = Spawn.Gears[RandomIndex];
+                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                        }
+                    }
                 }
             }
 
@@ -2856,6 +2866,7 @@ namespace SkyCoopServer
             public List<RandomSpawnObjectData> RandomSpawnObjects { get; set; }
             public List<LooseGearSpawn> LooseGearSpawns { get; set; }
             public List<RadialObjectSpawnerData> RadialSpawns { get; set; }
+            public List<SpawnGearVariantData> SpawnGearVariants { get; set; }
         }
 
         public class PrefabSpawnData
@@ -2928,6 +2939,18 @@ namespace SkyCoopServer
 
             public List<string> DisabledForXP { get; set; }
             public List<string> EnabledForXP { get; set; }
+        }
+
+        public class SpawnGearVariantData
+        {
+            public List<SpawnGearVariantElementData> Gears { get; set; }
+        }
+
+        public class SpawnGearVariantElementData
+        {
+            public string GearName { get; set; }
+            public Vector3JSON Position { get; set; }
+            public QuaternionJSON Rotation { get; set; }
         }
     }
 }

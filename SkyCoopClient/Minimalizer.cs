@@ -166,6 +166,19 @@ namespace SkyCoopClient
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(SpawnGearVariant), "Awake")]
+        private static class SpawnGearVariant_
+        {
+            private static bool Prefix(SpawnGearVariant __instance)
+            {
+                if (GearSpawnsRipper.s_Active) { return false; }
+
+                if (!ModMain.IsMultiplayer()) { return false; }
+
+                return true;
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "LoadSceneWithLoadingScreen", new System.Type[] { typeof(string) })]
         private static class GameManager_LoadSceneWithLoadingScreen
         {
