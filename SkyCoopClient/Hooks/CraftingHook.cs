@@ -43,6 +43,7 @@ namespace SkyCoop
         public static Dictionary<string, BlueprintOverrideData> s_RepariableOverrides = new Dictionary<string, BlueprintOverrideData>();
         public static Dictionary<string, BlueprintOverrideDataMinMax> s_SharpingOverrides = new Dictionary<string, BlueprintOverrideDataMinMax>();
         public static Dictionary<string, BlueprintOverrideDataMinMax> s_ClenableOverrides = new Dictionary<string, BlueprintOverrideDataMinMax>();
+        public static Dictionary<string, BlueprintOverrideData> s_ResearchItemOverrides = new Dictionary<string, BlueprintOverrideData>();
 
         public static void MayOverrideBlueprint(BlueprintData Blueprint)
         {
@@ -165,6 +166,52 @@ namespace SkyCoop
             }
         }
 
+        public static void MayOverrideBlueprint(ResearchItem Blueprint)
+        {
+            BlueprintOverrideData OverrideData;
+            if (s_ResearchItemOverrides.TryGetValue(Blueprint.name, out OverrideData))
+            {
+                if (ModMain.IsMultiplayer())
+                {
+                    Blueprint.m_TimeRequirementHours = OverrideData.m_ModifiedDuration;
+                }
+                else
+                {
+                    Blueprint.m_TimeRequirementHours = OverrideData.m_UnmodifiedDuration;
+                }
+            }
+            else
+            {
+                int ToResearch = Blueprint.m_TimeRequirementHours;
+                int ModifiedToSearch = ToResearch;
+                switch (ToResearch)
+                {
+                    case 4:
+                        ModifiedToSearch = 2;
+                        break;
+                    case 5:
+                        ModifiedToSearch = 3;
+                        break;
+                    case 10:
+                        ModifiedToSearch = 5;
+                        break;
+                    case 15:
+                        ModifiedToSearch = 7;
+                        break;
+                    case 25:
+                        ModifiedToSearch = 8;
+                        break;
+                    default:
+                        break;
+                }
+                OverrideData = new BlueprintOverrideData(ToResearch, ModifiedToSearch);
+                s_ResearchItemOverrides.Add(Blueprint.name, OverrideData);
+
+                MayOverrideBlueprint(Blueprint);
+            }
+        }
+
+
         [HarmonyLib.HarmonyPatch(typeof(Panel_Crafting), "ApplyFilter")]
         private static class Panel_Crafting_ApplyFilter
         {
@@ -258,6 +305,233 @@ namespace SkyCoop
                 __instance.m_TimeAccelerated = true;
                 Logger.Log(ConsoleColor.Red, "Panel_Inventory_Examine.AccelerateTimeOfDay");
                 return false;
+            }
+        }
+
+        public static void PatchPanel(Panel_Inventory_Examine Panel)
+        {
+            if(Panel && Panel.m_ReadPanel)
+            {
+                Transform GameObject = Panel.m_ReadPanel.transform.GetChild(1);
+
+                if (GameObject)
+                {
+                    Transform TimeLables = GameObject.GetChild(6);
+
+                    if (TimeLables)
+                    {
+                        Transform Header = TimeLables.GetChild(3);
+
+                        if (Header)
+                        {
+                            UILocalize Loca = Header.gameObject.GetComponent<UILocalize>();
+
+                            if (Loca)
+                            {
+                                if (ModMain.IsMultiplayer())
+                                {
+                                    Loca.key = "GAMEPLAY_minutes";
+                                }
+                                else
+                                {
+                                    Loca.key = "GAMEPLAY_hours";
+                                }
+                                Loca.OnLocalize();
+                            }
+                        }
+                    }
+                }
+            }
+            if (ModMain.IsMultiplayer())
+            {
+                Panel.m_HoursToRead = 10;
+            }
+            else
+            {
+                Panel.m_HoursToRead = 1;
+            }
+            Panel.RefreshReadPanel();
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "Enable", new System.Type[] { typeof(bool) })]
+        private static class Panel_Inventory_Examine_Enable
+        {
+            private static void Postfix(Panel_Inventory_Examine __instance)
+            {
+                PatchPanel(__instance);
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "Enable", new System.Type[] { typeof(bool), typeof(ComingFromScreenCategory) })]
+        private static class Panel_Inventory_Examine_Enable2
+        {
+            private static void Postfix(Panel_Inventory_Examine __instance)
+            {
+                PatchPanel(__instance);
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "OnReadHoursIncrease")]
+        private static class Panel_Inventory_Examine_OnReadHoursIncrease
+        {
+            private static bool Prefix(Panel_Inventory_Examine __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if(__instance.m_GearItem && __instance.m_GearItem.m_ResearchItem)
+                {
+                    float ElapsedMinutes = __instance.m_GearItem.m_ResearchItem.m_ElapsedHours * 60;
+                    float LeftToReadMinutes = (__instance.m_GearItem.m_ResearchItem.m_TimeRequirementHours * 60) - ElapsedMinutes;
+
+                    int SelectedMinutes = __instance.m_HoursToRead;
+
+                    if (SelectedMinutes >= LeftToReadMinutes)
+                    {
+                        __instance.m_HoursToRead = (int)Math.Round(ElapsedMinutes);
+                        GameAudioManager.PlayGUIError();
+                    }
+                    __instance.m_HoursToRead += 10;
+                    GameAudioManager.PlayGUIScroll();
+                    __instance.RefreshHoursToRead();
+                }
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "OnReadHoursDecrease")]
+        private static class Panel_Inventory_Examine_OnReadHoursDecrease
+        {
+            private static bool Prefix(Panel_Inventory_Examine __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                float ElapsedMinutes = __instance.m_GearItem.m_ResearchItem.m_ElapsedHours * 60;
+                float LeftToReadMinutes = (__instance.m_GearItem.m_ResearchItem.m_TimeRequirementHours * 60) - ElapsedMinutes;
+
+                int SelectedMinutes = __instance.m_HoursToRead;
+
+                if (SelectedMinutes < 20)
+                {
+                    GameAudioManager.PlayGUIError();
+                    return false;
+                }
+                __instance.m_HoursToRead -= 10;
+                GameAudioManager.PlayGUIScroll();
+                __instance.RefreshHoursToRead();
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "RefreshHoursToRead")]
+        private static class Panel_Inventory_Examine_RefreshHoursToRead
+        {
+            private static bool Prefix(Panel_Inventory_Examine __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                float ElapsedMinutes = __instance.m_GearItem.m_ResearchItem.m_ElapsedHours * 60;
+                float LeftToReadMinutes = (__instance.m_GearItem.m_ResearchItem.m_TimeRequirementHours * 60) - ElapsedMinutes;
+
+                int SelectedMinutes = __instance.m_HoursToRead;
+
+                __instance.m_TimeToReadLabel.text = __instance.m_HoursToRead.ToString();
+                __instance.m_ReadHoursDecrease.gameObject.SetActive(SelectedMinutes >= 20);
+                __instance.m_ReadHoursIncrease.gameObject.SetActive(SelectedMinutes != LeftToReadMinutes);
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "StartRead")]
+        private static class Panel_Inventory_Examine_StartRead
+        {
+            private static bool Prefix(Panel_Inventory_Examine __instance, int durationMinutes, string readAudio)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                __instance.SelectWindow(__instance.m_ActionInProgressWindow);
+                __instance.SetReadInProgress(true);
+                __instance.m_Slider_ActionProgress.value = 0f;
+                __instance.m_ElapsedProgressBarSeconds = 0f;
+                TimeOfDay timeOfDayComponent = GameManager.GetTimeOfDayComponent();
+                __instance.m_DayLengthScaleBeforeRepair = timeOfDayComponent.GetDayLengthScale();
+
+                float RealTimeSeconds = (__instance.m_HoursToRead * 60) / 12;
+
+                __instance.m_ProgressBarTimeSeconds = RealTimeSeconds;
+
+                //timeOfDayComponent.Accelerate(RealTimeSeconds * 1.003f, (float)__instance.m_HoursToRead / 60f, true);
+
+                //__instance.m_TimeAccelerated = true;
+                __instance.m_ProgressBarAudio = GameAudioManager.PlaySound(readAudio, InterfaceManager.GetSoundEmitter());
+
+                Panel_Inventory Panel = InterfaceManager.GetPanel<Panel_Inventory>();
+
+                if (Panel)
+                {
+                    Panel.GetComponent<UIPanel>().alpha = 0f;
+                }
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "UpdateActionProgressBar")]
+        private static class Panel_Inventory_Examine_UpdateActionProgressBar
+        {
+            private static void Postfix(Panel_Inventory_Examine __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (__instance.IsReading())
+                {
+                    float RealTimeSeconds = (__instance.m_HoursToRead * 60) / 12;
+
+                    __instance.m_ProgressBarTimeSeconds = RealTimeSeconds;
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "ReadComplete")]
+        private static class Panel_Inventory_Examine_ReadComplete
+        {
+            private static bool Prefix(Panel_Inventory_Examine __instance, float normalizedProgress)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (__instance.m_GearItem == null || __instance.m_GearItem.m_ResearchItem == null)
+                {
+                    return false;
+                }
+                __instance.m_GearItem.m_ResearchItem.Read((normalizedProgress * __instance.m_HoursToRead) / 60);
+                __instance.SetReadInProgress(false);
+                if (__instance.m_GearItem.m_ResearchItem.IsResearchComplete())
+                {
+                    __instance.OnBack();
+                    return false;
+                }
+                __instance.SelectWindow(__instance.m_MainWindow);
+                __instance.RefreshReadPanel();
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "RefreshReadPanel")]
+        private static class Panel_Inventory_Examine_RefreshReadPanel
+        {
+            private static void Postfix(Panel_Inventory_Examine __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if(__instance.m_GearItem && __instance.m_GearItem.m_ResearchItem)
+                {
+                    float ElapsedMinutes = __instance.m_GearItem.m_ResearchItem.m_ElapsedHours * 60;
+                    float LeftToReadMinutes = (__instance.m_GearItem.m_ResearchItem.m_TimeRequirementHours * 60) - ElapsedMinutes;
+                    float TotalMinutes = (__instance.m_GearItem.m_ResearchItem.m_TimeRequirementHours * 60);
+
+                    int SelectedMinutes = __instance.m_HoursToRead;
+
+                    string Research = Localization.Get("GAMEPLAY_ResearchAlreadyCompleted");
+                    string Minutes = Localization.Get("GAMEPLAY_minutes");
+
+                    string text = $"{ElapsedMinutes.ToString("F0")} / {TotalMinutes.ToString()} {Minutes} {Research}";
+                    __instance.m_TimeToReadRemainingLabel.text = text;
+                }
             }
         }
     }
