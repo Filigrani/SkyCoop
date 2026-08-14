@@ -301,5 +301,38 @@ namespace SkyCoopServer
             }
             return JsonSerializer.Deserialize<WeatherManager.WeatherSettingsConfig>(JSON);
         }
+
+        public static DataStr.ScenesLootSpawns GetGearsSpawnsData()
+        {
+
+            string Path = $"{s_DataDirectory}/GearSpawns";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<DataStr.ScenesLootSpawns>(JSON);
+        }
     }
 }

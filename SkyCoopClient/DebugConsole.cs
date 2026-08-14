@@ -47,6 +47,8 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("campfire", new Action(GiveCampfireKit));
             uConsole.RegisterCommand("liquidboildebug", new Action(LiquiadBoilDebug));
             uConsole.RegisterCommand("removepleasewait", new Action(RemovePleaseWait));
+            uConsole.RegisterCommand("rip", new Action(RIP));
+            uConsole.RegisterCommand("ripstop", new Action(RIPSTOP));
         }
 
         public static void GiveIlegalGear()
@@ -100,6 +102,21 @@ namespace SkyCoopClient
         public static void LiquiadBoilDebug()
         {
             GearsSync.s_LiquidCookingDebug = !GearsSync.s_LiquidCookingDebug;
+        }
+
+        public static void RIP()
+        {
+            if(!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
+            {
+                GearSpawnsRipper.Start();
+            }
+        }
+        public static void RIPSTOP()
+        {
+            if (!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
+            {
+                GearSpawnsRipper.s_ScenesToSave.Clear();
+            }
         }
 
         public static void RemovePleaseWait()

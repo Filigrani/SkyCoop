@@ -222,6 +222,8 @@ namespace SkyCoop
             }
 
             WeatherHook.Update();
+
+            GearSpawnsRipper.Update();
         }
 
         public static string GetCurrentSceneName()

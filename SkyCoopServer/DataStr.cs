@@ -10,6 +10,9 @@ using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Channels;
+using System.Xml.Linq;
+using static SkyCoopServer.WeatherManager;
 using static System.Net.WebRequestMethods;
 
 namespace SkyCoopServer
@@ -911,6 +914,271 @@ namespace SkyCoopServer
                     if (MapData.VictoryPoint != null)
                     {
                         m_VictoryPoint = new V3Quat(MapData.VictoryPoint.position, MapData.VictoryPoint.rotation);
+                    }
+                }
+            }
+
+            public void SpawnVanilaLoot(Server ServerInstance)
+            {
+                DataStr.SceneLootSpawns LootData = ServerInstance.m_ScenesData.GetSceneLoot(m_SceneName);
+                if(LootData != null)
+                {
+                    Random RNG = new Random(Guid.NewGuid().GetHashCode());
+
+                    float LootSpawnChanceScaler = 1f;
+
+                    switch (ServerInstance.m_Config.m_ExperienceMode)
+                    {
+                        case "Pilgrim":
+                            LootSpawnChanceScaler = 1f;
+                            break;
+                        case "Voyageur":
+                            LootSpawnChanceScaler = 0.9f;
+                            break;
+                        case "Stalker":
+                            LootSpawnChanceScaler = 0.6f;
+                            break;
+                        case "Interloper":
+                        case "Misery":
+                            LootSpawnChanceScaler = 0.1f;
+                            break;
+                        default:
+                            LootSpawnChanceScaler = 0.6f;
+                            break;
+                    }
+
+                    foreach (PrefabSpawnData Spawner in LootData.PrefabSpawns)
+                    {
+                        if(Spawner.EnabledForXP != null)
+                        {
+                            if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                            {
+                                continue;
+                            }
+                        }
+                        if (Spawner.DisabledForXP != null)
+                        {
+                            if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                            {
+                                continue;
+                            }
+                        }
+
+                        if(Spawner.m_ChanceOfNoSpawn > 0)
+                        {
+                            if(RNG.Range(0, 100) < Spawner.m_ChanceOfNoSpawn)
+                            {
+                                continue;
+                            }
+                        }
+
+                        int NumToSpawn = RNG.Range(Spawner.m_NumToSpawnMin, Spawner.m_NumToSpawnMax);
+                        List<GearSpawnElementData> Gears = new List<GearSpawnElementData>(Spawner.Gears);
+                        if (NumToSpawn > 0)
+                        {
+                            for (int i = 1; i <= NumToSpawn; i++)
+                            {
+                                float TotalWeight = 0;
+
+                                foreach (GearSpawnElementData Element in Gears)
+                                {
+                                    TotalWeight += Element.SpawnWeight;
+                                }
+                                float RandomValue = (float)RNG.NextDouble() * TotalWeight;
+                                float CumulativeWeight = 0;
+                                int IndexToRemove = -1;
+
+                                for (int i2 = 0; i < Gears.Count; i2++)
+                                {
+                                    GearSpawnElementData Gear = Gears[i2];
+                                    CumulativeWeight += Gear.SpawnWeight;
+                                    if (RandomValue <= CumulativeWeight)
+                                    {
+                                        IndexToRemove = i2;
+
+                                        bool Spawn = true;
+
+                                        if (Gear.Chance < 99f)
+                                        {
+                                            Spawn = RNG.Range(0f, 100) < Gear.Chance * LootSpawnChanceScaler;
+                                        }
+
+                                        if (Spawn)
+                                        {
+
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                                        }
+                                        break;
+                                    }
+                                }
+                                if (IndexToRemove != -1)
+                                {
+                                    Gears.RemoveAt(IndexToRemove);
+                                }
+                            }
+                        }
+                    }
+                    foreach (RandomSpawnObjectData Spawner in LootData.RandomSpawnObjects)
+                    {
+                        if (Spawner.EnabledForXP != null)
+                        {
+                            if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                            {
+                                continue;
+                            }
+                        }
+                        if (Spawner.DisabledForXP != null)
+                        {
+                            if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                            {
+                                continue;
+                            }
+                        }
+                        int NumToSpawn = 0;
+
+                        switch (ServerInstance.m_Config.m_ExperienceMode)
+                        {
+                            case "Pilgrim":
+                                NumToSpawn = Spawner.NumObjectsToSpawnPilgrim;
+                                break;
+                            case "Voyageur":
+                                NumToSpawn = Spawner.NumObjectsToSpawnVoyageur;
+                                break;
+                            case "Stalker":
+                                NumToSpawn = Spawner.NumObjectsToSpawnStalker;
+                                break;
+                            case "Interloper":
+                            case "Misery":
+                                NumToSpawn = Spawner.NumObjectsToSpawnInterloper;
+                                break;
+                            default:
+                                NumToSpawn = Spawner.NumObjectsToSpawnStalker;
+                                break;
+                        }
+
+
+                        List<GearSpawnElementData> Gears = new List<GearSpawnElementData>(Spawner.Gears);
+                        if (NumToSpawn > 0)
+                        {
+                            for (int i = 1; i <= NumToSpawn; i++)
+                            {
+                                float TotalWeight = 0;
+
+                                foreach (GearSpawnElementData Element in Gears)
+                                {
+                                    TotalWeight += Element.SpawnWeight;
+                                }
+                                float RandomValue = (float)RNG.NextDouble() * TotalWeight;
+                                float CumulativeWeight = 0;
+                                int IndexToRemove = -1;
+
+                                for (int i2 = 0; i < Gears.Count; i2++)
+                                {
+                                    GearSpawnElementData Gear = Gears[i2];
+                                    CumulativeWeight += Gear.SpawnWeight;
+                                    if (RandomValue <= CumulativeWeight)
+                                    {
+                                        IndexToRemove = i2;
+                                        bool Spawn = true;
+
+                                        if(Gear.Chance < 99f)
+                                        {
+                                            Spawn = RNG.Range(0f, 100) < Gear.Chance * LootSpawnChanceScaler;
+                                        }
+
+                                        if (Spawn)
+                                        {
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                                        }
+                                        break;
+                                    }
+                                }
+                                if (IndexToRemove != -1)
+                                {
+                                    Gears.RemoveAt(IndexToRemove);
+                                }
+                            }
+                        }
+                    }
+                    foreach (LooseGearSpawn Spawner in LootData.LooseGearSpawns)
+                    {
+                        bool Spawn = true;
+                        if (Spawner.Chance < 99f)
+                        {
+                            Spawn = RNG.Range(0f, 100) < Spawner.Chance * LootSpawnChanceScaler;
+                        }
+
+                        if (Spawn)
+                        {
+                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                        }
+                    }
+                    foreach (RadialObjectSpawnerData Spawner in LootData.RadialSpawns)
+                    {
+                        if (Spawner.EnabledForXP != null)
+                        {
+                            if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                            {
+                                continue;
+                            }
+                        }
+                        if (Spawner.DisabledForXP != null)
+                        {
+                            if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                            {
+                                continue;
+                            }
+                        }
+                        int NumToSpawn = RNG.Range(Spawner.MinToSpawn, Spawner.MaxToSpawn);
+
+                        List<RadialObjectSpawnerElementData> Gears = new List<RadialObjectSpawnerElementData>(Spawner.Gears);
+                        List<Vector3JSON> PossiblePoints = new List<Vector3JSON>(Spawner.PossiblePoints);
+                        if (NumToSpawn > 0)
+                        {
+                            for (int i = 1; i <= NumToSpawn; i++)
+                            {
+                                float TotalWeight = 0;
+
+                                foreach (RadialObjectSpawnerElementData Element in Gears)
+                                {
+                                    TotalWeight += Element.SpawnWeight;
+                                }
+                                float RandomValue = (float)RNG.NextDouble() * TotalWeight;
+                                float CumulativeWeight = 0;
+                                int IndexToRemove = -1;
+
+                                for (int i2 = 0; i < Gears.Count; i2++)
+                                {
+                                    RadialObjectSpawnerElementData Gear = Gears[i2];
+                                    CumulativeWeight += Gear.SpawnWeight;
+                                    if (RandomValue <= CumulativeWeight)
+                                    {
+                                        IndexToRemove = i2;
+                                        bool Spawn = true;
+
+                                        if (Gear.Chance < 99f)
+                                        {
+                                            Spawn = RNG.Range(0f, 100) < Gear.Chance * LootSpawnChanceScaler;
+                                        }
+                                        if (Spawn)
+                                        {
+                                            if(PossiblePoints.Count > 0)
+                                            {
+                                                int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
+                                                Vector3JSON Point = PossiblePoints[RandomPointIndex];
+                                                PossiblePoints.RemoveAt(RandomPointIndex);
+                                                ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0);
+                                            }
+                                        }
+                                        break;
+                                    }
+                                }
+                                if (IndexToRemove != -1)
+                                {
+                                    Gears.RemoveAt(IndexToRemove);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2574,6 +2842,92 @@ namespace SkyCoopServer
             public float m_NormalizedTime = 0;
             public float m_WindDuration = 0;
             public float m_WindElapsedHours = 0;
+        }
+
+        public class ScenesLootSpawns
+        {
+            public List<SceneLootSpawns> Scenes { get; set; }
+        }
+
+        public class SceneLootSpawns
+        {
+            public string SceneName { get; set; }
+            public List<PrefabSpawnData> PrefabSpawns { get; set; }
+            public List<RandomSpawnObjectData> RandomSpawnObjects { get; set; }
+            public List<LooseGearSpawn> LooseGearSpawns { get; set; }
+            public List<RadialObjectSpawnerData> RadialSpawns { get; set; }
+        }
+
+        public class PrefabSpawnData
+        {
+            public List<GearSpawnElementData> Gears { get; set; }
+            public int m_NumToSpawnMin { get; set; }
+            public int m_NumToSpawnMax { get; set; }
+            public int m_ChanceOfNoSpawn { get; set; }
+            public bool IsDLC { get; set; }
+            public List<string> DisabledForXP { get; set; }
+            public List<string> EnabledForXP { get; set; }
+        }
+
+        public class GearSpawnElementData
+        {
+            public string GearName { get; set; }
+            public Vector3JSON Position { get; set; }
+            public QuaternionJSON Rotation { get; set; }
+            public int SpawnWeight { get; set; }
+            public float Chance { get; set; }
+
+            public List<string> DisabledForXP { get; set; }
+            public List<string> EnabledForXP { get; set; }
+        }
+
+        public class RandomSpawnObjectData
+        {
+            public List<GearSpawnElementData> Gears { get; set; }
+            public int NumObjectsToSpawnPilgrim { get; set; }
+            public int NumObjectsToSpawnVoyageur { get; set; }
+            public int NumObjectsToSpawnStalker { get; set; }
+            public int NumObjectsToSpawnInterloper { get; set; }
+            public float RerollAfterGameHours { get; set; }
+
+            public bool IsDLC { get; set; }
+
+            public List<string> DisabledForXP { get; set; }
+            public List<string> EnabledForXP { get; set; }
+        }
+
+        public class LooseGearSpawn
+        {
+            public string GearName { get; set; }
+            public Vector3JSON Position { get; set; }
+            public QuaternionJSON Rotation { get; set; }
+            public float Chance { get; set; }
+            public bool IsDLC { get; set; }
+
+            public List<string> DisabledForXP { get; set; }
+            public List<string> EnabledForXP { get; set; }
+        }
+
+        public class RadialObjectSpawnerElementData
+        {
+            public string GearName { get; set; }
+            public int SpawnWeight { get; set; }
+            public float Chance { get; set; }
+        }
+
+        public class RadialObjectSpawnerData
+        {
+            public List<RadialObjectSpawnerElementData> Gears { get; set; }
+            public int MinToSpawn { get; set; }
+            public int MaxToSpawn { get; set; }
+            public float MinRespawnTimeGameHours { get; set; }
+            public float MaxRespawnTimeGameHours { get; set; }
+            public bool IsDLC { get; set; }
+
+            public List<Vector3JSON> PossiblePoints { get; set; }
+
+            public List<string> DisabledForXP { get; set; }
+            public List<string> EnabledForXP { get; set; }
         }
     }
 }

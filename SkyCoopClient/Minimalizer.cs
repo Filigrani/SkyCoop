@@ -21,7 +21,7 @@ namespace SkyCoopClient
         {
             s_LoadingFlag = true;
             SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Start loading scenes...");
-            if (ModMain.Client.m_IsReady)
+            if (ModMain.IsMultiplayer())
             {
                 ClientSend.SendNewScene("Empty");
             }
@@ -33,8 +33,6 @@ namespace SkyCoopClient
         {
             private static void Postfix(Panel_Loading __instance)
             {
-                if (!ModMain.IsMultiplayer()) { return; }
-
                 bool IsLoading = !__instance.HasFinishedLoading();
 
                 if (IsLoading && !s_LoadingFlag)
@@ -52,10 +50,10 @@ namespace SkyCoopClient
         public static void OnFinishedLoading()
         {
             SkyCoop.Logger.Log(ConsoleColor.DarkMagenta, "Scenes loaded");
+            GearSpawnsRipper.SceneLoaded();
 
-            if (ModMain.Client.m_IsReady)
+            if (ModMain.IsMultiplayer())
             {
-
                 for (int i = GearManager.m_Gear.Count - 1; i >= 0; i--)
                 {
                     GearItem item = GearManager.m_Gear[i];
@@ -115,16 +113,43 @@ namespace SkyCoopClient
         {
             private static bool Prefix(PrefabSpawn __instance)
             {
+                if (GearSpawnsRipper.s_Active){ return false; }
+                
                 if (!ModMain.IsMultiplayer()) { return true; }
 
                 return false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(RadialObjectSpawner), "SpawnAtPosition")]
-        private static class RadialObjectSpawner_SpawnAtPosition
+        [HarmonyLib.HarmonyPatch(typeof(RandomSpawnObject), "ActivateRandomObject")]
+        private static class RandomSpawnObjectActivateRandomObject
         {
+            private static bool Prefix(RandomSpawnObject __instance)
+            {
+                if (GearSpawnsRipper.s_Active) { return false; }
+
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "RollSpawnChance")]
+        private static class GearItem_RollSpawnChance
+        {
+            private static bool Prefix(GearItem __instance)
+            {
+                if (GearSpawnsRipper.s_Active) { return false; }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(RadialObjectSpawner), "SpawnObjectAttempt")]
+        public static class RadialObjectSpawner_SpawnObjectAttempt
+        {
+            public static bool s_ByPass = false;
+            
             private static bool Prefix(RadialObjectSpawner __instance)
             {
+                if (s_ByPass) { return true; }
+
+                if (GearSpawnsRipper.s_Active) { return false; }
+
                 if (!ModMain.IsMultiplayer()) { return true; }
 
                 return false;
