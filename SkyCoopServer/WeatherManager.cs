@@ -226,7 +226,7 @@ namespace SkyCoopServer
                     break;
             }
 
-            Logger.Log(ConsoleColor.Green, $"New Wind seed {m_CurrentWeatherSetType} and direction {m_WindDirection} will last for {m_WindDurationHours} hours");
+            Logger.Log(ConsoleColor.Green, $"New Wind seed {m_WindSeed} and direction {m_WindDirection} will last for {m_WindDurationHours} hours");
         }
 
         public void SetNewWeatherSet(WeatherType NewWeatherSetType, float ElapsedHours = 0)

@@ -636,5 +636,27 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+
+        public static void SendHarvest(string GUID, float RespawnMin, float RespawnMax)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientHarvest);
+
+            writer.Put(GUID);
+            writer.Put(RespawnMin);
+            writer.Put(RespawnMax);
+
+            SendToHost(writer);
+        }
+
+        public static void SendBreakDown(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientBreakDown);
+
+            writer.Put(GUID);
+
+            SendToHost(writer);
+        }
     }
 }

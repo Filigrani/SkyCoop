@@ -469,7 +469,8 @@ namespace SkyCoopServer
             ServerInstance.m_ScenesData.SendAllContainerStates(SceneName, Client);
             ServerInstance.m_ScenesData.SendAllProps(SceneName, Client);
             ServerInstance.m_PlayersData.SendAllPlayersOnScene(Client, SceneName);
-
+            ServerInstance.m_ScenesData.SendAllHarvested(SceneName, Client);
+            ServerInstance.m_ScenesData.SendAllBreakDown(SceneName, Client);
 
             SceneData SceneData = ServerInstance.m_ScenesData.GetSceneData(SceneName);
 
@@ -1445,6 +1446,32 @@ namespace SkyCoopServer
                         }
                     }
                 }
+            }
+        }
+
+        public static void ClientHarvest(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                float RespawnMin = Reader.GetFloat();
+                float RespawnMax = Reader.GetFloat();
+
+                ServerInstance.m_ScenesData.AddHarvested(Player.m_Scene, GUID, RespawnMin, RespawnMax);
+            }
+        }
+
+        public static void ClientBreakDown(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+
+                ServerInstance.m_ScenesData.AddBreakDown(Player.m_Scene, GUID);
             }
         }
     }

@@ -24,7 +24,7 @@ namespace SkyCoop
         public static LocalPlayerData m_LocalPlayerData = new LocalPlayerData();
         public static DataStr.DamageType m_LastDamageType = DataStr.DamageType.Unknown;
         public static Comps.PlayerDamageColider.DamageZone m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
-        public static GameObject s_LastTryInteractionObject = null;
+        public static MonoBehaviour s_LastTryInteractionComponent = null;
         public static bool s_ForceUpdateClothing = false;
         public static bool s_Spectator = false;
         public static int s_SpectateID = -1;
@@ -140,7 +140,7 @@ namespace SkyCoop
             m_LocalPlayerData = new LocalPlayerData();
             m_LastDamageType = DataStr.DamageType.Unknown;
             m_LastDamageZone = Comps.PlayerDamageColider.DamageZone.Chest;
-            s_LastTryInteractionObject = null;
+            s_LastTryInteractionComponent = null;
             s_ForceUpdateClothing = false;
             s_Spectator = false;
             s_SpectateID = -1;
@@ -962,56 +962,83 @@ namespace SkyCoop
 
         public static void HandleTryInteract(bool Result)
         {
-            if (s_LastTryInteractionObject)
+            if (s_LastTryInteractionComponent)
             {
                 if (Result)
                 {
-                    VehicleDoor Door = s_LastTryInteractionObject.GetComponent<VehicleDoor>();
-                    if (Door)
+                    if(s_LastTryInteractionComponent is VehicleDoor)
                     {
-                        if (GameManager.GetPlayerInVehicle().IsInside())
+                        VehicleDoor Door = s_LastTryInteractionComponent as VehicleDoor;
+                        if (Door)
                         {
-                            GameManager.GetPlayerInVehicle().ExitVehicle(Door);
-                        }
-                        else
-                        {
-                            GameManager.GetPlayerInVehicle().EnterVehicle(Door);
-                        }
-                        return;
-                    }
-                    Container Container = s_LastTryInteractionObject.GetComponent<Container>();
-                    if (Container)
-                    {
-                        if (!Container.m_OpenInProgress)
-                        {
-                            Container.BeginContainerOpen();
-                        }
-                        MenuHook.DoPleaseWait("Please wait...", "Downloading container data...");
-                        ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().Get());
-                        return;
-                    }
-                    Bed Bed = s_LastTryInteractionObject.GetComponent<Bed>();
-                    if (Bed)
-                    {
-                        if (SleepHook.s_PassTimeMode)
-                        {
-                            if (SleepHook.DoPassTime())
+                            if (GameManager.GetPlayerInVehicle().IsInside())
                             {
-                                return;
+                                GameManager.GetPlayerInVehicle().ExitVehicle(Door);
+                            }
+                            else
+                            {
+                                GameManager.GetPlayerInVehicle().EnterVehicle(Door);
+                            }
+                            return;
+                        }
+                    }
+                    if(s_LastTryInteractionComponent is Container)
+                    {
+                        Container Container = s_LastTryInteractionComponent as Container;
+                        if (Container)
+                        {
+                            if (!Container.m_OpenInProgress)
+                            {
+                                Container.BeginContainerOpen();
+                            }
+                            MenuHook.DoPleaseWait("Please wait...", "Downloading container data...");
+                            ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().Get());
+                            return;
+                        }
+                    }
+                    if (s_LastTryInteractionComponent is Bed)
+                    {
+                        Bed Bed = s_LastTryInteractionComponent as Bed;
+                        if (Bed)
+                        {
+                            if (SleepHook.s_PassTimeMode)
+                            {
+                                if (SleepHook.DoPassTime())
+                                {
+                                    return;
+                                }
+                            }
+                            else
+                            {
+                                if (SleepHook.DoRest())
+                                {
+                                    return;
+                                }
                             }
                         }
-                        else
+                    }
+                    if(s_LastTryInteractionComponent is BreakDown)
+                    {
+                        BreakDown BreakDown = s_LastTryInteractionComponent as BreakDown;
+                        if (BreakDown)
                         {
-                            if (SleepHook.DoRest())
-                            {
-                                return;
-                            }
+                            BreakDownHook.DoBreak(BreakDown);
+                            return;
                         }
                     }
                 }
                 else
                 {
                     HUDMessage.AddMessage("Failed, interaction blocked by other player!", true, true);
+
+                    if (s_LastTryInteractionComponent)
+                    {
+                        Harvestable Harvestable = s_LastTryInteractionComponent.GetComponent<Harvestable>();
+                        if (Harvestable)
+                        {
+                            HarvestHook.CancleHarvest(Harvestable);
+                        }
+                    }
                 }
             }
             else
@@ -1315,7 +1342,7 @@ namespace SkyCoop
             {
                 DoorGUID = ObjGUID.Get();
             }
-            s_LastTryInteractionObject = Door.gameObject;
+            s_LastTryInteractionComponent = Door;
             SkyCoop.Logger.Log($"VehicleDoor PerformHold {DoorGUID}");
 
             ClientSend.SendTryInteract(DoorGUID);
@@ -1332,13 +1359,47 @@ namespace SkyCoop
                 {
                     ContainerGUID = ObjGUID.Get();
                 }
-                s_LastTryInteractionObject = container.gameObject;
+                s_LastTryInteractionComponent = container;
                 SkyCoop.Logger.Log($"Container PerformHold {ContainerGUID}");
 
                 ClientSend.SendTryInteract(ContainerGUID, true);
                 return true;
             }
             return false;
+        }
+
+        public static bool TryInteract(HarvestableInteraction Harvest)
+        {
+            if (Harvest)
+            {
+                string GUID = "";
+                ObjectGuid ObjGUID = Harvest.GetComponent<ObjectGuid>();
+                if (ObjGUID)
+                {
+                    GUID = ObjGUID.Get();
+                }
+                s_LastTryInteractionComponent = Harvest;
+                SkyCoop.Logger.Log($"Harvest {GUID}");
+
+                ClientSend.SendTryInteract(GUID, true);
+                return true;
+            }
+            return false;
+        }
+
+        public static bool TryInteract(BreakDown Breakdown)
+        {
+            string GUID = "";
+            ObjectGuid ObjGUID = Breakdown.GetComponent<ObjectGuid>();
+            if (ObjGUID)
+            {
+                GUID = ObjGUID.Get();
+            }
+            s_LastTryInteractionComponent = Breakdown;
+            SkyCoop.Logger.Log($"BreakDown {GUID}");
+
+            ClientSend.SendTryInteract(GUID);
+            return true;
         }
 
         public static bool GiveoutStartingGear(int Tier = 0)

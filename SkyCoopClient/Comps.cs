@@ -2340,7 +2340,7 @@ namespace SkyCoop
 
             public void TryUse()
             {
-                PlayersManager.s_LastTryInteractionObject = gameObject;
+                PlayersManager.s_LastTryInteractionComponent = this;
                 ClientSend.SendTryInteract(m_GUID);
             }
         }

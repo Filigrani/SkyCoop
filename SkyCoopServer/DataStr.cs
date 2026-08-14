@@ -778,6 +778,12 @@ namespace SkyCoopServer
             public GearData m_Data = new GearData();
         }
 
+        public class HarvestableData
+        {
+            public float m_HarvestTime = 0;
+            public float m_RespawnIn = 0;
+        }
+
         public class SceneData
         {
             public string m_SceneName = "";
@@ -793,6 +799,8 @@ namespace SkyCoopServer
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
             public Dictionary<string, FallingProp> m_FallingProps = new Dictionary<string, FallingProp>();
+            public Dictionary<string, HarvestableData> m_Harvestables = new Dictionary<string, HarvestableData>();
+            public Dictionary<string, bool> m_BreakDowns = new Dictionary<string, bool>();
 
             public DangerCircleConfig m_ZoneConfig = null;
             public DangerCircleData m_ActiveZone = null;

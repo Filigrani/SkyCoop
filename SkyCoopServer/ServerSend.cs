@@ -1172,5 +1172,67 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendHarvest(NetPeer Client, string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientHarvest);
+
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendHarvest(Server ServerInstance, string GUID, string SceneName)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if(Peer != null)
+                {
+                    DataStr.PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Peer);
+
+                    if(Player != null)
+                    {
+                        if(Player.m_Scene ==  SceneName)
+                        {
+                            SendHarvest(Peer, GUID);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void SendBreakDown(NetPeer Client, string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientBreakDown);
+
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+
+        public static void SendBreakDown(Server ServerInstance, string GUID, string SceneName)
+        {
+            List<NetPeer> peers = new List<NetPeer>();
+            ServerInstance.m_Instance.GetConnectedPeers(peers);
+            foreach (NetPeer Peer in peers.ToArray())
+            {
+                if (Peer != null)
+                {
+                    DataStr.PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Peer);
+
+                    if (Player != null)
+                    {
+                        if (Player.m_Scene == SceneName)
+                        {
+                            SendBreakDown(Peer, GUID);
+                        }
+                    }
+                }
+            }
+        }
     }
 }

@@ -97,6 +97,8 @@ namespace SkyCoopServer
             ServerGearBeingCookedProgress,
             ServerWaterRefund,
             ServerWeather,
+            ClientHarvest,
+            ClientBreakDown,
         }
 
         public enum SquadResponce

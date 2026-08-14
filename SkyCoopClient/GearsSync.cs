@@ -202,8 +202,16 @@ namespace SkyCoopClient
 
                         Container container = OBJ.GetComponent<Container>();
 
-                        if (container && PlayersManager.TryInteract(container))
+                        if (container && container.enabled && PlayersManager.TryInteract(container))
                         {
+                            return false;
+                        }
+
+                        HarvestableInteraction harvest = OBJ.GetComponent<HarvestableInteraction>();
+
+                        if (harvest && harvest.enabled)
+                        {
+                            PlayersManager.TryInteract(harvest);
                             return false;
                         }
                     }

@@ -703,6 +703,36 @@ namespace SkyCoopServer
             }
         }
 
+        public void SendAllHarvested(string SceneName, NetPeer Client)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[SendAllHarvested] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+            foreach (string GUID in SceneData.m_Harvestables.Keys.ToList())
+            {
+                ServerSend.SendHarvest(Client, GUID);
+            }
+        }
+
+        public void SendAllBreakDown(string SceneName, NetPeer Client)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[SendAllHarvested] called by Client {Client.Id} on scene {SceneName} that not exist!");
+                return;
+            }
+            foreach (string GUID in SceneData.m_BreakDowns.Keys.ToList())
+            {
+                ServerSend.SendBreakDown(Client, GUID);
+            }
+        }
+
         public void RemoveProp(string SceneName, string GUID)
         {
             SceneData SceneData = GetSceneData(SceneName);
@@ -1291,6 +1321,44 @@ namespace SkyCoopServer
                 }
             }
             return false;
+        }
+
+        public void AddHarvested(string SceneName, string GUID, float RespawnTimeMin = 0, float RespawnTimeMax = 0)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[AddHarvested] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (!SceneData.m_Harvestables.ContainsKey(GUID))
+            {
+                DataStr.HarvestableData Harvestable = new HarvestableData();
+                Harvestable.m_HarvestTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+                if(RespawnTimeMin != 0 && RespawnTimeMax != 0)
+                {
+                    Random RNG = new Random(System.Guid.NewGuid().GetHashCode());
+                    Harvestable.m_RespawnIn = RNG.Range(RespawnTimeMin, RespawnTimeMax);
+                }
+                SceneData.m_Harvestables.Add(GUID, Harvestable);
+                ServerSend.SendHarvest(m_ServerInstance, SceneName, GUID);
+            }
+        }
+        public void AddBreakDown(string SceneName, string GUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[AddBreakDown] called on scene {SceneName} that not exist!");
+                return;
+            }
+
+            if (!SceneData.m_BreakDowns.ContainsKey(GUID))
+            {
+                SceneData.m_BreakDowns.Add(GUID, true);
+                ServerSend.SendBreakDown(m_ServerInstance, SceneName, GUID);
+            }
         }
     }
 }

@@ -284,6 +284,10 @@ namespace SkyCoop
             {
                 MayOverrideBlueprint(gi.m_Cleanable);
             }
+            if (gi.m_ResearchItem)
+            {
+                MayOverrideBlueprint(gi.m_ResearchItem);
+            }
         }
 
         [HarmonyLib.HarmonyPatch(typeof(Panel_Inventory_Examine), "AccelerateTimeOfDay")]

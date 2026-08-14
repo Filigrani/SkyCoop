@@ -101,6 +101,8 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientCharcoalCollect, ServerHandle.ClientCharcoalCollect },
             { (int)Packet.Type.ClientRequestFreeCookingSlot, ServerHandle.ClientRequestFreeCookingSlot },
             { (int)Packet.Type.ClientGearSetRecipe, ServerHandle.ClientGearSetRecipe },
+            { (int)Packet.Type.ClientHarvest, ServerHandle.ClientHarvest },
+            { (int)Packet.Type.ClientBreakDown, ServerHandle.ClientBreakDown },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

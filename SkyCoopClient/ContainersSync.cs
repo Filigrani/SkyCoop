@@ -21,15 +21,15 @@ namespace SkyCoopClient
         public static void HandleContainerOpen(string CompressedJSON)
         {
             Container Container = null;
-            if (PlayersManager.s_LastTryInteractionObject)
+            if (PlayersManager.s_LastTryInteractionComponent)
             {
                 string GUID = "";
-                ObjectGuid GUIDOBJ = PlayersManager.s_LastTryInteractionObject.GetComponent<ObjectGuid>();
+                ObjectGuid GUIDOBJ = PlayersManager.s_LastTryInteractionComponent.GetComponent<ObjectGuid>();
                 if (GUIDOBJ)
                 {
                     GUID = GUIDOBJ.Get();
                 }
-                Container = PlayersManager.s_LastTryInteractionObject.GetComponent<Container>();
+                Container = PlayersManager.s_LastTryInteractionComponent.GetComponent<Container>();
 
                 if (Container)
                 {
@@ -115,7 +115,7 @@ namespace SkyCoopClient
                     Panel.m_Container.BeginContainerClose();
                     ClientSend.SendFinishInteract();
                     string GUID = "";
-                    ObjectGuid GUIDOBJ = PlayersManager.s_LastTryInteractionObject.GetComponent<ObjectGuid>();
+                    ObjectGuid GUIDOBJ = PlayersManager.s_LastTryInteractionComponent.GetComponent<ObjectGuid>();
                     if (GUIDOBJ)
                     {
                         GUID = GUIDOBJ.Get();

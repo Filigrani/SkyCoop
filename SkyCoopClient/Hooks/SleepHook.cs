@@ -253,7 +253,7 @@ namespace SkyCoopClient
 
                     if (!string.IsNullOrEmpty(GUID))
                     {
-                        PlayersManager.s_LastTryInteractionObject = __instance.m_Bed.gameObject;
+                        PlayersManager.s_LastTryInteractionComponent = __instance.m_Bed;
                         ClientSend.SendTryInteract(GUID, true);
                     }
                 }
@@ -290,7 +290,7 @@ namespace SkyCoopClient
 
                     if (!string.IsNullOrEmpty(GUID))
                     {
-                        PlayersManager.s_LastTryInteractionObject = __instance.m_Bed.gameObject;
+                        PlayersManager.s_LastTryInteractionComponent = __instance.m_Bed;
                         ClientSend.SendTryInteract(GUID, true);
                     }
                 }

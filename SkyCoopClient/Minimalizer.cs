@@ -747,27 +747,6 @@ namespace SkyCoopClient
                 __instance.transform.GetChild(5).GetChild(11).gameObject.SetActive(ShouldShowStats);
             }
         }
-
-        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "Awake")]
-        private static class BreakDown_Start
-        {
-            private static void Postfix(BreakDown __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.enabled = false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(HarvestableInteraction), "Awake")]
-        private static class HarvestableInteraction_Start
-        {
-            private static void Postfix(HarvestableInteraction __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.enabled = false;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(IceFishingHole), "Awake")]
         private static class IceFishingHole_Start
         {

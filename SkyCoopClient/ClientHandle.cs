@@ -1018,5 +1018,19 @@ namespace SkyCoop
 
             WeatherHook.HandleWeatherSync(Data);
         }
+
+        public static void ClientHarvest(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+
+            HarvestHook.HandleRemove(GUID);
+        }
+
+        public static void ClientBreakDown(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+
+            BreakDownHook.HandleRemove(GUID);
+        }
     }
 }
