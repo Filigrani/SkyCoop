@@ -12,6 +12,7 @@ namespace SkyCoopClient
     public static class SleepHook
     {
         public static bool s_LastEveryoneIsSleeping = false;
+        public static int s_LastPlayersReadyForAccelerate = 0;
         public static float s_DesiredTimeToSleep = 0;
         public static bool s_PassTimeMode = false;
         public static bool s_PassingTime = false;
@@ -711,6 +712,11 @@ namespace SkyCoopClient
                                 }
                             }
                         }
+                    }
+
+                    if (PlayersManager.m_LocalPlayerData.m_LastSentWorking)
+                    {
+
                     }
                 }
             }

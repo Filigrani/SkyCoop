@@ -1080,3 +1080,25 @@ MonoBehaviour:
       Italian: 
       Polish: 
       Ukrainian: 
+  - localizationKey: GAMEPLAY_PlayersReady_Accelerate
+    languages:
+      English: Players ready to accelerated time
+      German: 
+      Russian: "\u0418\u0433\u0440\u043E\u043A\u043E\u0432 \u0433\u043E\u0442\u043E\u0432\u044B
+        \u0443\u0441\u043A\u043E\u0440\u0438\u0442\u044C \u0432\u0440\u0435\u043C\u044F"
+      French: 
+      Japanese: 
+      Korean: 
+      SimplifiedChinese: 
+      Swedish: 
+      TraditionalChinese: 
+      Turkish: 
+      Norwegian: 
+      Spanish: 
+      PortuguesePortugal: 
+      PortugueseBrazil: 
+      Dutch: 
+      Finnish: 
+      Italian: 
+      Polish: 
+      Ukrainian: 

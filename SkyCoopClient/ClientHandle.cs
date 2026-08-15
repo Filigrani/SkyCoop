@@ -873,19 +873,30 @@ namespace SkyCoop
             float ElapsedInGameHours = Reader.GetFloat();
             float NormalizedTOD = Reader.GetFloat();
             bool EveryoneIsSleeping = Reader.GetBool();
-            DateTime TimeWhenWasSent = Reader.GetTime();
+            int PlayersReady = Reader.GetInt();
+            int TotalPlayers = Reader.GetInt();
 
             UniStormWeatherSystem Uni = GameManager.GetUniStorm();
 
             if (Uni)
             {
-                TimeSpan elapsedTime = DateTime.UtcNow - TimeWhenWasSent;
-                //Logger.Log($"Ping: {elapsedTime.TotalMilliseconds}ms");
-
                 Uni.m_ElapsedHours = ElapsedInGameHours;
                 Uni.SetNormalizedTime(NormalizedTOD);
             }
             SleepHook.s_LastEveryoneIsSleeping = EveryoneIsSleeping;
+
+            if(SleepHook.s_LastPlayersReadyForAccelerate != PlayersReady)
+            {
+                SleepHook.s_LastPlayersReadyForAccelerate = PlayersReady;
+
+                Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+                if (Panel)
+                {
+                    HUDMessage.HUDMessageInfo msg = new HUDMessage.HUDMessageInfo();
+                    msg.m_Text = $"{PlayersReady} / {TotalPlayers} {Localization.Get("GAMEPLAY_PlayersReady_Accelerate")}";
+                    HUDMessage.ShowMessage(Panel, msg);
+                }
+            }
         }
 
         public static void ClientStartFire(NetDataReader Reader)

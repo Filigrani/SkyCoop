@@ -1034,7 +1034,7 @@ namespace SkyCoopServer
             }
         }
 
-        public static void SendTime(NetPeer Client, float TODNormalized, float ElapsedInGameHours, bool EveryoneIsSleeping)
+        public static void SendTime(NetPeer Client, float TODNormalized, float ElapsedInGameHours, bool EveryoneIsSleeping, int PlayersReady, int TotalPlayers)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerUpdateInGameTime);
@@ -1042,7 +1042,8 @@ namespace SkyCoopServer
             writer.Put(ElapsedInGameHours);
             writer.Put(TODNormalized);
             writer.Put(EveryoneIsSleeping);
-            writer.Put(DateTime.UtcNow);
+            writer.Put(PlayersReady);
+            writer.Put(TotalPlayers);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -1067,13 +1068,13 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendTime(Server ServerInstance, float TODNormalized, float ElapsedInGameHours, bool EveryoneIsSleeping)
+        public static void SendTime(Server ServerInstance, float TODNormalized, float ElapsedInGameHours, bool EveryoneIsSleeping, int PlayersReady, int PlayersTotal)
         {
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
             foreach (NetPeer Peer in peers.ToArray())
             {
-                SendTime(Peer, TODNormalized, ElapsedInGameHours, EveryoneIsSleeping);
+                SendTime(Peer, TODNormalized, ElapsedInGameHours, EveryoneIsSleeping, PlayersReady, PlayersTotal);
             }
         }
 

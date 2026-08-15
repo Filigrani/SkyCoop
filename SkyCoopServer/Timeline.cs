@@ -102,11 +102,18 @@ namespace SkyCoopServer
                 m_ServerInstance.m_Weather.AddTime(ElapsedInGameHours);
             }
 
-            ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleeping());
+            int PlayersExist = 0;
+            int PlayersSleep = 0;
+            bool EveryoneIsSleep = EveryoneIsSleeping(out PlayersExist, out PlayersSleep);
+
+            ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleep, PlayersSleep, PlayersExist);
         }
 
-        public bool EveryoneIsSleeping()
+        public bool EveryoneIsSleeping(out int PlayersExist, out int PlayersSleep)
         {
+            PlayersExist = 0;
+            PlayersSleep = 0;
+
             if (m_RTSleepOnly)
             {
                 return false;
@@ -114,8 +121,6 @@ namespace SkyCoopServer
             
             if (m_ServerInstance != null)
             {
-                int PlayersExist = 0;
-                int PlayersSleep = 0;
                 List<NetPeer> peers = new List<NetPeer>();
                 m_ServerInstance.m_Instance.GetConnectedPeers(peers);
                 foreach (NetPeer Peer in peers.ToArray())
@@ -128,7 +133,8 @@ namespace SkyCoopServer
                             if(Player.m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
                             {
                                 PlayersExist++;
-                                if(Player.m_VisualData.m_LastAction == 7) // Sleeping
+                                //if(Player.m_VisualData.m_LastAction == 7 || Player.m_IsWorking) // 7 - Sleeping
+                                if (Player.m_VisualData.m_LastAction == 7) // 7 - Sleeping
                                 {
                                     PlayersSleep++;
                                 }
@@ -205,7 +211,10 @@ namespace SkyCoopServer
 
             float TimeScale = 1;
 
-            bool EveryoneIsSleepingRightNow = EveryoneIsSleeping();
+            int PlayersExist = 0;
+            int PlayersSleep = 0;
+
+            bool EveryoneIsSleepingRightNow = EveryoneIsSleeping(out PlayersExist, out PlayersSleep);
 
             if (m_LastEveryoneIsSleeping != EveryoneIsSleepingRightNow)
             {
@@ -243,7 +252,7 @@ namespace SkyCoopServer
                 m_ServerInstance.m_Weather.AddTime(ElapsedInGameHours);
             }
 
-            ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleepingRightNow);
+            ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleepingRightNow, PlayersSleep, PlayersExist);
 
             string TimeToLog = FormatGameTime(m_StartingTime + m_ElapsedInGameHours);
 

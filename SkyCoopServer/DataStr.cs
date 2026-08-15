@@ -297,6 +297,8 @@ namespace SkyCoopServer
 
             public GamePlayState m_GamePlayState = GamePlayState.Unassigned;
 
+            public bool m_IsWorking = false;
+
             public enum GamePlayState
             {
                 Unassigned,

@@ -103,6 +103,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientGearSetRecipe, ServerHandle.ClientGearSetRecipe },
             { (int)Packet.Type.ClientHarvest, ServerHandle.ClientHarvest },
             { (int)Packet.Type.ClientBreakDown, ServerHandle.ClientBreakDown },
+            { (int)Packet.Type.ClientIsWorking, ServerHandle.ClientIsWorking },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)
@@ -414,6 +415,7 @@ namespace SkyCoopServer
 
                                 PlayerData.SetGameplayState(GamePlayState.Unassigned, this);
 
+                                PlayerData.m_IsWorking = false;
                                 m_PlayersData.PlayerChangeScene(Peer.Id, "");
                                 m_PlayersData.SetPlayerCarSeatGUID(Peer.Id, "");
                                 m_PlayersData.SetPlayerInteractionGUID(Peer.Id, "");
@@ -451,7 +453,7 @@ namespace SkyCoopServer
                                 {
                                     ServerSend.SendLeaders(Peer, Leaders, SceneData.m_VictoryPoint.m_Position, SceneData.m_VictoryPoint.m_Rotation, SquadName, this);
                                 }
-
+                                PlayerData.m_IsWorking = false;
                                 m_PlayersData.PlayerChangeScene(Peer.Id, "");
                                 m_PlayersData.SetPlayerCarSeatGUID(Peer.Id, "");
                                 m_PlayersData.SetPlayerInteractionGUID(Peer.Id, "");

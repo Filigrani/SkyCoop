@@ -658,5 +658,15 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+
+        public static void SendIsWorking(bool IsWorking)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientIsWorking);
+
+            writer.Put(IsWorking);
+
+            SendToHost(writer);
+        }
     }
 }

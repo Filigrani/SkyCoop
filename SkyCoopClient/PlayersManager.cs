@@ -53,6 +53,8 @@ namespace SkyCoop
             public DataStr.ClothingData m_ClothingData = new DataStr.ClothingData();
 
             public int m_BloodLosses = 0;
+
+            public bool m_LastSentWorking = false;
         }
 
         public static Comps.NetworkPlayer ApplyPlayer(GameObject PlayerObj, int PlayerID)
@@ -175,6 +177,36 @@ namespace SkyCoop
                     s_Players.Add(Player);
                 }
             }
+        }
+
+        public static bool IsCurrentWorking()
+        {
+            Panel_Inventory_Examine Panel_Inventory_Examine = InterfaceManager.GetPanel<Panel_Inventory_Examine>();
+            if (Panel_Inventory_Examine)
+            {
+                if(Panel_Inventory_Examine.m_ActionInProgressWindow.activeSelf)
+                {
+                    return true;
+                }
+            }
+            Panel_BreakDown Panel_BreakDown = InterfaceManager.GetPanel<Panel_BreakDown>();
+            if (Panel_BreakDown)
+            {
+                if (Panel_BreakDown.IsAcceleratingTime())
+                {
+                    return true;
+                }
+            }
+            Panel_Crafting Panel_Crafting = InterfaceManager.GetPanel<Panel_Crafting>();
+            if (Panel_Crafting)
+            {
+                if (Panel_Crafting.IsAcceleratingTime())
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         public static Comps.NetworkPlayer.Actions GetCurrentAction()
@@ -384,6 +416,20 @@ namespace SkyCoop
                             {
                                 m_LocalPlayerData.m_BloodLosses = GameManager.GetBloodLossComponent().m_CausesLocIDs.Count;
                                 ClientSend.SendBloodLosses(m_LocalPlayerData.m_BloodLosses);
+                            }
+                            bool CurrentlyWorking = IsCurrentWorking();
+                            if(m_LocalPlayerData.m_LastSentWorking != CurrentlyWorking)
+                            {
+                                m_LocalPlayerData.m_LastSentWorking = CurrentlyWorking;
+                                ClientSend.SendIsWorking(CurrentlyWorking);
+
+                                if (!CurrentlyWorking)
+                                {
+                                    if (GameManager.m_Rest && !GameManager.m_Rest.IsSleeping())
+                                    {
+                                        SleepHook.s_LastEveryoneIsSleeping = false;
+                                    }
+                                }
                             }
                         }
                     }

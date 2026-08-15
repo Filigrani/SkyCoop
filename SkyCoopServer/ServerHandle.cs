@@ -1474,5 +1474,17 @@ namespace SkyCoopServer
                 ServerInstance.m_ScenesData.AddBreakDown(Player.m_Scene, GUID);
             }
         }
+
+        public static void ClientIsWorking(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                bool IsWorking = Reader.GetBool();
+
+                Player.m_IsWorking = IsWorking;
+            }
+        }
     }
 }

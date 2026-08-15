@@ -99,6 +99,7 @@ namespace SkyCoopServer
             ServerWeather,
             ClientHarvest,
             ClientBreakDown,
+            ClientIsWorking,
         }
 
         public enum SquadResponce
