@@ -24,13 +24,6 @@ namespace SkyCoopClient
         [HarmonyLib.HarmonyPatch(typeof(Harvestable), "Harvest")]
         private static class Harvestable_Harvest
         {
-            private static void Prefix(Harvestable __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                GearsSync.s_NoSyncFlag = true;
-            }
-
             private static void Postfix(Harvestable __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
@@ -42,6 +35,22 @@ namespace SkyCoopClient
                 {
                     ClientSend.SendHarvest(ObjGUID.Get(), __instance.m_RefreshHoursMin, __instance.m_RefreshHoursMax);
                 }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Harvestable), "EnterInspectMode")]
+        private static class Harvestable_EnterInspectMode
+        {
+            private static void Prefix(Harvestable __instance, GearItem gearPrefab)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                GearsSync.s_NoSyncFlag = true;
+            }
+
+            private static void Postfix(Harvestable __instance, GearItem gearPrefab)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
 
                 GearsSync.s_NoSyncFlag = false;
             }
