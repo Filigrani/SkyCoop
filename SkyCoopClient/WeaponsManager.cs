@@ -127,6 +127,22 @@ namespace SkyCoopClient
             Zone.m_DamageType = DataStr.DamageType.Unknown;
             Zone.m_IgnoreArmor = true;
             AddDescriptor("ZONE", Zone);
+
+
+            WeaponDescripter Flare = new WeaponDescripter();
+            Flare.m_PlayerDamage = 5;
+            Flare.m_Pain = true;
+            Flare.m_DamageType = DataStr.DamageType.Stone;
+            Flare.m_Burn = true;
+            AddDescriptor("GEAR_FlareA", Flare);
+            AddDescriptor("GEAR_BlueFlare", Flare);
+
+            WeaponDescripter Torch = new WeaponDescripter();
+            Torch.m_PlayerDamage = 10;
+            Torch.m_Pain = true;
+            Torch.m_DamageType = DataStr.DamageType.Stone;
+            Torch.m_Burn = true;
+            AddDescriptor("GEAR_Torch", Torch);
         }
 
         public static void AddDescriptor(string WeaponName, WeaponDescripter Descriptor)
@@ -350,9 +366,9 @@ namespace SkyCoopClient
                         }
                     }
                 }
-            }else if(ProjectileName == "GEAR_Stone")
+            }else if(ProjectileName == "GEAR_Stone" || ProjectileName == "GEAR_FlareA" || ProjectileName == "GEAR_BlueFlare")
             {
-                GameObject Stone = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>("GEAR_Stone"), Position, Rotation);
+                GameObject Stone = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(ProjectileName), Position, Rotation);
                 NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
                 if (Player)
                 {
@@ -370,8 +386,23 @@ namespace SkyCoopClient
                 }
                 GearItem component = Stone.GetComponent<GearItem>();
                 Stone.AddComponent<Comps.OtherPlayerBullet>();
-                component.m_StoneItem.PrepareForThrow();
-                component.m_StoneItem.SetThrown(true);
+
+                if (component.m_StoneItem)
+                {
+                    component.m_StoneItem.PrepareForThrow();
+                    component.m_StoneItem.SetThrown(true);
+                }
+                if (component.m_FlareItem)
+                {
+                    component.m_FlareItem.PrepareForThrow();
+                    component.m_FlareItem.m_Thrown = true;
+                }
+                if (component.m_TorchItem)
+                {
+                    component.m_TorchItem.PrepareForThrow();
+                    component.m_TorchItem.m_Thrown = true;
+                }
+                component.enabled = false;
 
                 Rigidbody rigidbody = Stone.GetComponent<Rigidbody>();
                 Utils.SetIsKinematic(rigidbody, false);
@@ -379,7 +410,12 @@ namespace SkyCoopClient
                 rigidbody.angularVelocity = AngularVelocity;
                 rigidbody.angularDrag = 0.0f;
                 rigidbody.drag = 0.0f;
-            }else if(ProjectileName == "Melee" || ProjectileName == "Fish")
+
+                Comps.GearThrownVisual Visual = Stone.AddComponent<Comps.GearThrownVisual>();
+                Visual.m_SendThrown = false;
+                Visual.m_Rigidbody = rigidbody;
+            }
+            else if(ProjectileName == "Melee" || ProjectileName == "Fish")
             {
                 if(ProjectileName == "Fish")
                 {
@@ -666,11 +702,15 @@ namespace SkyCoopClient
                     GearItem Gi = __result.GetComponent<GearItem>();
                     if (Gi)
                     {
-                        if (Gi.m_StoneItem)
+                        if (Gi.m_StoneItem || Gi.m_FlareItem || Gi.m_TorchItem)
                         {
-                            Comps.StoneThrowHook Hook = __result.AddComponent<Comps.StoneThrowHook>();
+                            Comps.GearThrownVisual Hook = __result.AddComponent<Comps.GearThrownVisual>();
                             Hook.m_StoneItem = Gi.m_StoneItem;
-                        }else if (Gi.m_NoiseMakerItem)
+                            Hook.m_FlareItem = Gi.m_FlareItem;
+                            Hook.m_TorchItem = Gi.m_TorchItem;
+                            Hook.m_Rigidbody = Gi.GetComponent<Rigidbody>();
+                        }
+                        else if (Gi.m_NoiseMakerItem)
                         {
                             Comps.NoiseMakerThrowHook Hook = __result.AddComponent<Comps.NoiseMakerThrowHook>();
                             Hook.m_NoiseMaker = Gi.m_NoiseMakerItem;

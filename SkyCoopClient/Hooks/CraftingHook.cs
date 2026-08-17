@@ -1,19 +1,24 @@
-﻿using System;
+﻿using Il2Cpp;
+using Il2CppSteamworks;
+using Il2CppTLD.Gear;
+using Il2CppTLD.UI;
+using MelonLoader;
+using SkyCoopClient;
+using SkyCoopServer;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using Il2Cpp;
-using Il2CppSteamworks;
-using Il2CppTLD.Gear;
-using MelonLoader;
-using SkyCoopClient;
 using UnityEngine;
 
 namespace SkyCoop
 {
     public static class CraftingHook
     {
+        public static float s_LastInventoryActionDurationSeconds = 0;
+        public static float s_LastCraftActionDurationSeconds = 0;
+        
         public struct BlueprintOverrideData
         {
             public int m_UnmodifiedDuration;
@@ -22,6 +27,12 @@ namespace SkyCoop
             public BlueprintOverrideData(int unmodifiedDuration, int modifiedDuration)
             {
                 m_UnmodifiedDuration = unmodifiedDuration;
+
+                if(modifiedDuration <= 0)
+                {
+                    modifiedDuration = 1;
+                }
+
                 m_ModifiedDuration = modifiedDuration;
             }
         }
@@ -34,6 +45,16 @@ namespace SkyCoop
             public BlueprintOverrideDataMinMax(Vector2Int unmodifiedDuration, Vector2Int modifiedDuration)
             {
                 m_UnmodifiedDuration = unmodifiedDuration;
+
+                if (modifiedDuration.x <= 0)
+                {
+                    modifiedDuration.x = 1;
+                }
+                if (modifiedDuration.y <= 0)
+                {
+                    modifiedDuration.y = 1;
+                }
+
                 m_ModifiedDuration = modifiedDuration;
             }
         }
@@ -260,6 +281,8 @@ namespace SkyCoop
                     InGameMinutes = __instance.m_RequirementContainer.m_TimeSelect.m_DisplayedCraftingTime;
                 }
 
+                s_LastCraftActionDurationSeconds = InGameMinutes * 60;
+
                 float RealTimeSeconds = (InGameMinutes * 60) / 12;
 
                 __instance.m_CraftingDisplayTimeSeconds = RealTimeSeconds * 1.003f;
@@ -299,6 +322,8 @@ namespace SkyCoop
 
                 TimeOfDay timeOfDayComponent = GameManager.GetTimeOfDayComponent();
                 __instance.m_DayLengthScaleBeforeRepair = timeOfDayComponent.GetDayLengthScale();
+
+                s_LastInventoryActionDurationSeconds = minutes * 60;
 
                 float RealTimeSeconds = (minutes * 60) / 12;
 
@@ -487,6 +512,11 @@ namespace SkyCoop
                 {
                     float RealTimeSeconds = (__instance.m_HoursToRead * 60) / 12;
 
+                    //if (SleepHook.s_LastEveryoneIsSleeping)
+                    //{
+                    //    RealTimeSeconds = RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale;
+                    //}
+
                     __instance.m_ProgressBarTimeSeconds = RealTimeSeconds;
                 }
             }
@@ -535,6 +565,160 @@ namespace SkyCoop
 
                     string text = $"{ElapsedMinutes.ToString("F0")} / {TotalMinutes.ToString()} {Minutes} {Research}";
                     __instance.m_TimeToReadRemainingLabel.text = text;
+                }
+            }
+        }
+
+        public static void SpeedUp()
+        {
+            Panel_Inventory_Examine Panel = InterfaceManager.GetPanel<Panel_Inventory_Examine>();
+            if (Panel && Panel.m_ActionInProgressWindow.activeSelf)
+            {
+                Panel_HUD HUD = InterfaceManager.GetPanel<Panel_HUD>();
+
+                if (HUD)
+                {
+                    if (HUD.m_AccelTimePopup)
+                    {
+                        if (HUD.m_AccelTimePopup.m_Slider)
+                        {
+                            if (!Panel.IsReading())
+                            {
+                                float RealTimeSeconds = s_LastInventoryActionDurationSeconds / 12;
+                                if (Panel.m_ProgressBarTimeSeconds != RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale)
+                                {
+                                    float CurrentProgress = HUD.m_AccelTimePopup.m_Slider.value;
+
+                                    GameManager.GetTimeOfDayComponent().Accelerate(DataStr.c_SpeedUpRealSecondsDuration, DataStr.c_SpeedUpHours);
+                                    Panel.m_ProgressBarTimeSeconds = RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale;
+                                    Panel.m_ElapsedProgressBarSeconds = Panel.m_ProgressBarTimeSeconds * CurrentProgress;
+                                    SkyCoop.Logger.Log($"Panel_Inventory_Examine speedup");
+                                }
+                            }
+                            else
+                            {
+                                //float ReadingMinutes = Panel.m_HoursToRead;
+                                //float RealTimeSeconds = (ReadingMinutes * 60) / 12;
+                                //if (Panel.m_ProgressBarTimeSeconds != RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale)
+                                //{
+                                //    float CurrentProgress = HUD.m_AccelTimePopup.m_Slider.value;
+
+                                //    GameManager.GetTimeOfDayComponent().Accelerate(DataStr.c_SpeedUpRealSecondsDuration, DataStr.c_SpeedUpHours);
+                                //    Panel.m_ProgressBarTimeSeconds = RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale;
+                                //    Panel.m_ElapsedProgressBarSeconds = Panel.m_ProgressBarTimeSeconds * CurrentProgress;
+                                //    SkyCoop.Logger.Log($"Reading speedup");
+                                //}
+                            }
+                        }
+                    }
+                }
+            }
+            Panel_Crafting Panel_Craft = InterfaceManager.GetPanel<Panel_Crafting>();
+
+            if (Panel_Craft && Panel_Craft.IsAcceleratingTime())
+            {
+                Panel_HUD HUD = InterfaceManager.GetPanel<Panel_HUD>();
+
+                if (HUD)
+                {
+                    if (HUD.m_AccelTimePopup)
+                    {
+                        if (HUD.m_AccelTimePopup.m_Slider)
+                        {
+                            float RealTimeSeconds = s_LastCraftActionDurationSeconds / 12;
+
+                            if (Panel_Craft.m_CraftingOperation.m_RealTimeDuration != RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale)
+                            {
+                                float CurrentProgress = HUD.m_AccelTimePopup.m_Slider.value;
+
+                                Panel_Craft.m_CraftingOperation.m_RealTimeDuration = RealTimeSeconds / (float)DataStr.c_SpeedUpTimeScale;
+                                Panel_Craft.m_CraftingOperation.m_RealTimeElapsed = Panel_Craft.m_CraftingOperation.m_RealTimeDuration * CurrentProgress;
+                                GameManager.GetTimeOfDayComponent().Accelerate(DataStr.c_SpeedUpRealSecondsDuration, DataStr.c_SpeedUpHours, false);
+                                SkyCoop.Logger.Log($"Crafting speedup");
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void SlowDown()
+        {
+            if(GameManager.m_TimeOfDay && GameManager.m_TimeOfDay.m_DayLengthScale >= 1)
+            {
+                return;
+            }
+            
+            Panel_Inventory_Examine Panel = InterfaceManager.GetPanel<Panel_Inventory_Examine>();
+            if (Panel && Panel.m_ActionInProgressWindow.activeSelf)
+            {
+                Panel_HUD HUD = InterfaceManager.GetPanel<Panel_HUD>();
+
+                if (HUD)
+                {
+                    if (HUD.m_AccelTimePopup)
+                    {
+                        if (HUD.m_AccelTimePopup.m_Slider)
+                        {
+                            if (!Panel.IsReading())
+                            {
+                                float RealTimeSeconds = (s_LastInventoryActionDurationSeconds / 12) * 1.003f;
+
+                                if (Panel.m_ProgressBarTimeSeconds != RealTimeSeconds)
+                                {
+                                    float CurrentProgress = HUD.m_AccelTimePopup.m_Slider.value;
+
+                                    Panel.m_ProgressBarTimeSeconds = RealTimeSeconds;
+
+                                    GameManager.GetTimeOfDayComponent().Accelerate(Panel.m_ProgressBarTimeSeconds, s_LastInventoryActionDurationSeconds / 60 / 60, false);
+                                    Panel.m_ElapsedProgressBarSeconds = Panel.m_ProgressBarTimeSeconds * CurrentProgress;
+                                    SkyCoop.Logger.Log($"Panel_Inventory_Examine slowdown");
+                                }
+                            }
+                            else
+                            {
+                                //float ReadingMinutes = Panel.m_HoursToRead;
+                                //float RealTimeSeconds = ((ReadingMinutes * 60) / 12) * 1.003f;
+                                //if (Panel.m_ProgressBarTimeSeconds != RealTimeSeconds)
+                                //{
+                                //    float CurrentProgress = HUD.m_AccelTimePopup.m_Slider.value;
+
+                                //    Panel.m_ProgressBarTimeSeconds = RealTimeSeconds;
+                                //    Panel.m_ElapsedProgressBarSeconds = Panel.m_ProgressBarTimeSeconds * CurrentProgress;
+                                //    GameManager.GetTimeOfDayComponent().SetDayLengthScale(1f);
+                                //    SkyCoop.Logger.Log($"Reading slowdown");
+                                //}
+                            }
+                        }
+                    }
+                }
+            }
+            Panel_Crafting Panel_Craft = InterfaceManager.GetPanel<Panel_Crafting>();
+
+            if (Panel_Craft && Panel_Craft.IsAcceleratingTime())
+            {
+                Panel_HUD HUD = InterfaceManager.GetPanel<Panel_HUD>();
+
+                if (HUD)
+                {
+                    if (HUD.m_AccelTimePopup)
+                    {
+                        if (HUD.m_AccelTimePopup.m_Slider)
+                        {
+                            float RealTimeSeconds = (s_LastCraftActionDurationSeconds / 12) * 1.003f;
+
+                            if (Panel_Craft.m_CraftingOperation.m_RealTimeDuration != RealTimeSeconds)
+                            {
+                                float CurrentProgress = HUD.m_AccelTimePopup.m_Slider.value;
+
+                                Panel_Craft.m_CraftingOperation.m_RealTimeDuration = RealTimeSeconds;
+                                Panel_Craft.m_CraftingOperation.m_RealTimeElapsed = Panel_Craft.m_CraftingOperation.m_RealTimeDuration * CurrentProgress;
+
+                                GameManager.GetTimeOfDayComponent().Accelerate(RealTimeSeconds, s_LastCraftActionDurationSeconds / 60 / 60, false);
+                                SkyCoop.Logger.Log($"Crafting slowdown");
+                            }
+                        }
+                    }
                 }
             }
         }

@@ -133,8 +133,8 @@ namespace SkyCoopServer
                             if(Player.m_GamePlayState == DataStr.PlayerData.GamePlayState.Alive)
                             {
                                 PlayersExist++;
-                                //if(Player.m_VisualData.m_LastAction == 7 || Player.m_IsWorking) // 7 - Sleeping
-                                if (Player.m_VisualData.m_LastAction == 7) // 7 - Sleeping
+                                if(Player.m_VisualData.m_LastAction == 7 || Player.m_IsWorking) // 7 - Sleeping
+                                //if (Player.m_VisualData.m_LastAction == 7) // 7 - Sleeping
                                 {
                                     PlayersSleep++;
                                 }
@@ -232,7 +232,7 @@ namespace SkyCoopServer
             
             if (EveryoneIsSleepingRightNow)
             {
-                TimeScale = 100;
+                TimeScale = DataStr.c_SpeedUpTimeScale;
             }
 
             ElapsedInGameHours = ElapsedInGameHours * TimeScale;

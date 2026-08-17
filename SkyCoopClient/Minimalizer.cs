@@ -887,6 +887,8 @@ namespace SkyCoopClient
                 DamageType = PlayersManager.m_LastDamageType;
                 SkyCoop.Logger.Log("PlayerDeath DamageType " + DamageType);
 
+                SleepHook.OnCancle();
+
 
                 if (ModMain.Client != null && ModMain.Client.m_Rules.m_PlayerCanBeKnocked)
                 {

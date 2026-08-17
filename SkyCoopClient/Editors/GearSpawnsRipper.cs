@@ -25,30 +25,31 @@ namespace SkyCoopClient
         public static List<string> s_ScenesToSave = new List<string>();
         public static bool s_Active = false;
         public static Stopwatch s_StopWatch = null;
-        public static int m_FramesDelay = 0;
+        //public static int m_FramesDelay = 0;
 
         public static void SceneLoaded()
         {
             if (s_Active)
             {
-                m_FramesDelay = 120;
+                //m_FramesDelay = 120;
+                SaveThisScene();
             }
         }
 
         public static void Update()
         {
-            if (s_Active)
-            {
-                if (m_FramesDelay > 0)
-                {
-                    m_FramesDelay--;
+            //if (s_Active)
+            //{
+            //    if (m_FramesDelay > 0)
+            //    {
+            //        m_FramesDelay--;
 
-                    if (m_FramesDelay == 0)
-                    {
-                        SaveThisScene();
-                    }
-                }
-            }
+            //        if (m_FramesDelay == 0)
+            //        {
+            //            SaveThisScene();
+            //        }
+            //    }
+            //}
         }
 
         public static void Start()
@@ -155,6 +156,7 @@ namespace SkyCoopClient
                         ElementData.Position = new Vector3JSON(SGV.m_SpawnedItem.transform.position.x, SGV.m_SpawnedItem.transform.position.y, SGV.m_SpawnedItem.transform.position.z);
                         ElementData.Rotation = new QuaternionJSON(SGV.m_SpawnedItem.transform.rotation.x, SGV.m_SpawnedItem.transform.rotation.y, SGV.m_SpawnedItem.transform.rotation.z, SGV.m_SpawnedItem.transform.rotation.w);
 
+                        GearsToIgnore.Add(SGV.m_SpawnedItem.gameObject);
                         VariantBase.Gears.Add(ElementData);
                     }
                     SceneData.SpawnGearVariants.Add(VariantBase);

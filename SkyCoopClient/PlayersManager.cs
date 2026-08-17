@@ -148,7 +148,7 @@ namespace SkyCoop
             s_SpectateID = -1;
             s_InSquad = false;
             SquadHUD.s_SquadMembers.Clear();
-            SleepHook.s_LastEveryoneIsSleeping = false;
+            SleepHook.SetEveryoneIsSleeping(false);
 
             // Trying to re-use such complex objects as much as possible.
             // So in for some reason we have less or more characters already exist
@@ -184,7 +184,7 @@ namespace SkyCoop
             Panel_Inventory_Examine Panel_Inventory_Examine = InterfaceManager.GetPanel<Panel_Inventory_Examine>();
             if (Panel_Inventory_Examine)
             {
-                if(Panel_Inventory_Examine.m_ActionInProgressWindow.activeSelf)
+                if(Panel_Inventory_Examine.m_ActionInProgressWindow.activeSelf && !Panel_Inventory_Examine.IsReading())
                 {
                     return true;
                 }
@@ -427,7 +427,7 @@ namespace SkyCoop
                                 {
                                     if (GameManager.m_Rest && !GameManager.m_Rest.IsSleeping())
                                     {
-                                        SleepHook.s_LastEveryoneIsSleeping = false;
+                                        SleepHook.SetEveryoneIsSleeping(false);
                                     }
                                 }
                             }
@@ -1444,7 +1444,7 @@ namespace SkyCoop
             s_LastTryInteractionComponent = Breakdown;
             SkyCoop.Logger.Log($"BreakDown {GUID}");
 
-            ClientSend.SendTryInteract(GUID);
+            ClientSend.SendTryInteract(GUID, true);
             return true;
         }
 

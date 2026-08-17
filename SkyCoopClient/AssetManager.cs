@@ -149,6 +149,54 @@ namespace SkyCoop
                         gi.m_Bed.SetState(Style == 0 ? BedRollState.Rolled : BedRollState.Placed);
                     }
 
+                    if (gi.m_FlareItem)
+                    {
+                        switch (Style)
+                        {
+                            case 0:
+                                gi.m_FlareItem.SetState(FlareState.Fresh);
+                                break;
+                            case 1:
+                                gi.m_FlareItem.SetState(FlareState.Burning);
+                                break;
+                            case 2:
+                                gi.m_FlareItem.SetState(FlareState.BurnedOut);
+                                break;
+                            default:
+                                break;
+                        }
+                        if (gi.m_FlareItem.m_FXGameObject)
+                        {
+                            gi.m_FlareItem.m_FXGameObject.SetActive(Style == 1);
+                        }
+                    }
+                    if (gi.m_TorchItem)
+                    {
+                        switch (Style)
+                        {
+                            case 0:
+                                gi.m_TorchItem.SetState(TorchState.Fresh);
+                                break;
+                            case 1:
+                                gi.m_TorchItem.SetState(TorchState.Burning);
+                                break;
+                            case 2:
+                                gi.m_TorchItem.SetState(TorchState.BurnedOut);
+                                break;
+                            default:
+                                break;
+                        }
+                        if (gi.m_TorchItem.m_FXGameObject)
+                        {
+                            gi.m_TorchItem.m_FXGameObject.SetActive(Style == 1);
+                        }
+                        Transform Gradient = gi.transform.FindChild("RadialGradient");
+                        if (Gradient)
+                        {
+                            Gradient.gameObject.SetActive(Style == 1);
+                        }
+                    }
+
                     Collider Collider = gi.gameObject.GetComponent<Collider>();
 
                     if(Collider == null)
@@ -173,7 +221,9 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
                             && ComName != Il2CppType.Of<AudioSource>().Name
                             && ComName != Il2CppType.Of<GearCookingVisual>().Name
-                            && ComName != Il2CppType.Of<Bed>().Name)
+                            && ComName != Il2CppType.Of<Bed>().Name
+                            && ComName != Il2CppType.Of<FlareItem>().Name
+                            && ComName != Il2CppType.Of<TorchItem>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }
@@ -212,7 +262,9 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<Transform>().Name
                             && ComName != Il2CppType.Of<Rigidbody>().Name
                             && ComName != Il2CppType.Of<MeshRenderer>().Name
-                            && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
+                            && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
+                            && ComName != Il2CppType.Of<FlareItem>().Name
+                            && ComName != Il2CppType.Of<TorchItem>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }

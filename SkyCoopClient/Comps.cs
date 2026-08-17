@@ -25,7 +25,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerGear>();
             ClassInjector.RegisterTypeInIl2Cpp<PlayerDamageColider>();
             ClassInjector.RegisterTypeInIl2Cpp<OtherPlayerBullet>();
-            ClassInjector.RegisterTypeInIl2Cpp<StoneThrowHook>();
+            ClassInjector.RegisterTypeInIl2Cpp<GearThrownVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerThrowHook>();
             ClassInjector.RegisterTypeInIl2Cpp<NoiseMakerKillFeedHandle>();
             ClassInjector.RegisterTypeInIl2Cpp<MeleeBulletHandler>();
@@ -965,38 +965,56 @@ namespace SkyCoop
             public DroppedGearVisual m_Gear;
         }
 
-        public class StoneThrowHook : MonoBehaviour
+        public class GearThrownVisual : MonoBehaviour
         {
-            public StoneThrowHook(IntPtr ptr) : base(ptr) { }
+            public GearThrownVisual(IntPtr ptr) : base(ptr) { }
             public StoneItem m_StoneItem;
+            public FlareItem m_FlareItem;
+            public TorchItem m_TorchItem;
+            public Rigidbody m_Rigidbody;
             public bool m_CanDamage = true;
             public bool m_SendThrown = false;
-            void Update()
-            {
-                if(m_StoneItem == null)
-                {
-                    m_StoneItem = GetComponent<StoneItem>();
-                }
 
+
+            public bool IsThrown()
+            {
                 if (m_StoneItem)
                 {
-                    if (m_StoneItem.m_Thrown && !m_SendThrown)
+                    return m_StoneItem.m_Thrown;
+                }
+                if (m_FlareItem)
+                {
+                    return m_FlareItem.m_Thrown;
+                }
+                if (m_TorchItem)
+                {
+                    return m_TorchItem.m_Thrown;
+                }
+                return false;
+            }
+
+            void Update()
+            {
+                if (IsThrown() && !m_SendThrown)
+                {
+                    m_SendThrown = true;
+                    GearItem Gi = gameObject.GetComponent<GearItem>();
+                    if (Gi)
                     {
-                        m_SendThrown = true;
-                        Rigidbody Body = GetComponent<Rigidbody>();
-                        ClientSend.SendProjectileThrow(m_StoneItem.transform.position, m_StoneItem.transform.rotation, "GEAR_Stone", Body.velocity, Body.angularVelocity, 0);
+                        Gi.enabled = false;
                     }
-                    if (m_StoneItem.m_RigidBody && m_StoneItem.m_RigidBody.isKinematic)
+                    ClientSend.SendProjectileThrow(transform.position, transform.rotation, gameObject.name, m_Rigidbody.velocity, m_Rigidbody.angularVelocity, 0);
+                }
+                if (m_Rigidbody && (m_Rigidbody.isKinematic || m_Rigidbody.velocity.magnitude < 0.09f))
+                {
+                    if (m_SendThrown && GetComponent<OtherPlayerBullet>() == null)
                     {
-                        if(m_SendThrown && GetComponent<OtherPlayerBullet>() == null)
+                        if (ModMain.Client != null && ModMain.Client.m_Rules.m_CanDropItems)
                         {
-                            if(ModMain.Client != null && ModMain.Client.m_Rules.m_CanDropItems)
-                            {
-                                GearsSync.SendDropItem(GetComponent<GearItem>(), 0, 0, true);
-                            }
+                            GearsSync.SendDropItem(GetComponent<GearItem>(), 0, 0, true);
                         }
-                        UnityEngine.Object.Destroy(gameObject);
                     }
+                    UnityEngine.Object.Destroy(gameObject);
                 }
             }
         }
@@ -1125,13 +1143,13 @@ namespace SkyCoop
                     WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_NoiseMaker");
                     ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage * m_DamageScaler, m_Player.m_PlayerID, m_DamageZone, "GEAR_NoiseMaker", Descriptor.m_DamageType);
                 }
-                if (col.gameObject.GetComponent<StoneItem>() != null && col.gameObject.GetComponent<Comps.OtherPlayerBullet>() == null)
+                if (col.gameObject.GetComponent<Comps.GearThrownVisual>() != null && col.gameObject.GetComponent<Comps.OtherPlayerBullet>() == null)
                 {
-                    Comps.StoneThrowHook StoneHook = col.gameObject.GetComponent<Comps.StoneThrowHook>();
+                    Comps.GearThrownVisual StoneHook = col.gameObject.GetComponent<Comps.GearThrownVisual>();
                     if (StoneHook.m_CanDamage)
                     {
-                        WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor("GEAR_Stone");
-                        ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage * m_DamageScaler, m_Player.m_PlayerID, m_DamageZone, "GEAR_Stone", Descriptor.m_DamageType);
+                        WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor(col.gameObject.name);
+                        ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage * m_DamageScaler, m_Player.m_PlayerID, m_DamageZone, col.gameObject.name, Descriptor.m_DamageType);
                         StoneHook.m_CanDamage = false;
                     }
                 }

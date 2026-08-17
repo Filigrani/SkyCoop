@@ -883,9 +883,10 @@ namespace SkyCoop
                 Uni.m_ElapsedHours = ElapsedInGameHours;
                 Uni.SetNormalizedTime(NormalizedTOD);
             }
-            SleepHook.s_LastEveryoneIsSleeping = EveryoneIsSleeping;
 
-            if(SleepHook.s_LastPlayersReadyForAccelerate != PlayersReady)
+            SleepHook.SetEveryoneIsSleeping(EveryoneIsSleeping);
+
+            if (SleepHook.s_LastPlayersReadyForAccelerate != PlayersReady)
             {
                 SleepHook.s_LastPlayersReadyForAccelerate = PlayersReady;
 

@@ -1599,6 +1599,7 @@ namespace SkyCoopClient
                     {
                         if (Fire.m_HeatSource)
                         {
+                            Fire.m_HeatSource.m_MaxTempIncrease = Fire.m_FuelHeatIncrease;
                             Fire.m_HeatSource.m_TempIncrease = Heat;
                             Fire.m_HeatSource.m_MaxTempIncreaseInnerRadius = InnerRadius;
                             Fire.m_HeatSource.m_MaxTempIncreaseOuterRadius = OutterRadius * Fire.GetFireOuterRadiusScale();
@@ -1624,8 +1625,9 @@ namespace SkyCoopClient
                     {
                         Fire.TurnOffImmediate();
                     }
+                    HeatSourceManager Manager = GameManager.GetHeatSourceManagerComponent();
 
-                    if(State == FireState.FullBurn)
+                    if (State == FireState.FullBurn)
                     {
                         if(Fire.m_ElapsedOnTODSeconds > Fire.m_MaxOnTODSeconds)
                         {
@@ -1635,10 +1637,25 @@ namespace SkyCoopClient
                         {
                             Fire.m_EmberTimer = 0;
                         }
+                        if (Fire.m_ApplyToHeatSource)
+                        {
+                            
+                            if (Manager)
+                            {
+                                Manager.AddHeatSource(Fire.m_HeatSource);
+                            }
+                        }
                     }
                     else
                     {
                         Fire.m_EmberTimer = 0;
+                        if (Fire.m_ApplyToHeatSource)
+                        {
+                            if (Manager)
+                            {
+                                Manager.RemoveHeatSource(Fire.m_HeatSource);
+                            }
+                        }
                     }
                     Fire.FireStateSet(State);
 

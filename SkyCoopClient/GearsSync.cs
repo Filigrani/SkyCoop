@@ -17,8 +17,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
-using static Il2Cpp.CookingPotItem;
-using static Il2CppSystem.Linq.Expressions.Interpreter.InitializeLocalInstruction;
 
 namespace SkyCoopClient
 {
@@ -843,6 +841,44 @@ namespace SkyCoopClient
                 if (gear.m_Bed && gear.m_Bed.m_BedRollState == BedRollState.Placed)
                 {
                     Style = 1;
+                }
+                if (gear.m_FlareItem)
+                {
+                    switch (gear.m_FlareItem.m_State)
+                    {
+                        case FlareState.Fresh:
+                            Style = 0;
+                            break;
+                        case FlareState.Burning:
+                            Style = 1;
+                            break;
+                        case FlareState.Paused:
+                        case FlareState.BurnedOut:
+                        case FlareState.Wet:
+                            Style = 2;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+                if (gear.m_TorchItem)
+                {
+                    switch (gear.m_TorchItem.m_State)
+                    {
+                        case TorchState.Fresh:
+                            Style = 0;
+                            break;
+                        case TorchState.Burning:
+                            Style = 1;
+                            break;
+                        case TorchState.Paused:
+                        case TorchState.BurnedOut:
+                        case TorchState.Wet:
+                            Style = 2;
+                            break;
+                        default:
+                            break;
+                    }
                 }
 
                 Vector3 v3 = gear.gameObject.transform.position;

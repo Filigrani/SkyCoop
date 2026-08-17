@@ -1,5 +1,6 @@
 ﻿using Il2Cpp;
 using SkyCoop;
+using SkyCoopServer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -594,8 +595,22 @@ namespace SkyCoopClient
             {
                 Camera.enabled = true;
             }
-            s_LastEveryoneIsSleeping = false;
+            SetEveryoneIsSleeping(false);
             ClientSend.SendFinishInteract(); // Особождаем кровать
+        }
+
+        public static void OnEveryoneSleepingChanged()
+        {
+
+        }
+
+        public static void SetEveryoneIsSleeping(bool State)
+        {
+            if(s_LastEveryoneIsSleeping != State)
+            {
+                s_LastEveryoneIsSleeping = State;
+                OnEveryoneSleepingChanged();
+            }
         }
 
         public static void LateUpdate()
@@ -658,6 +673,11 @@ namespace SkyCoopClient
                     {
                         GameManager.m_Rest.RestoreTimeOfDay();
                     }
+                    if (PlayersManager.m_LocalPlayerData.m_LastSentWorking)
+                    {
+                        BreakDownHook.SlowDown();
+                        CraftingHook.SlowDown();
+                    }
                 }
                 else
                 {
@@ -665,7 +685,7 @@ namespace SkyCoopClient
                     {
                         if (!GameManager.m_Rest.m_TimeAccelerated)
                         {
-                            GameManager.m_Rest.AccelerateTimeOfDay(720, 30, false);
+                            GameManager.m_Rest.AccelerateTimeOfDay(DataStr.c_SpeedUpHoursMinutes, DataStr.c_SpeedUpRealSecondsDuration, false);
                             Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
 
                             if (Panel)
@@ -690,7 +710,7 @@ namespace SkyCoopClient
                     {
                         if (!GameManager.m_Rest.m_TimeAccelerated)
                         {
-                            GameManager.m_Rest.AccelerateTimeOfDay(720, 30, false);
+                            GameManager.m_Rest.AccelerateTimeOfDay(DataStr.c_SpeedUpHoursMinutes, DataStr.c_SpeedUpRealSecondsDuration, false);
 
                             Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
 
@@ -716,7 +736,8 @@ namespace SkyCoopClient
 
                     if (PlayersManager.m_LocalPlayerData.m_LastSentWorking)
                     {
-
+                        BreakDownHook.SpeedUp();
+                        CraftingHook.SpeedUp();
                     }
                 }
             }

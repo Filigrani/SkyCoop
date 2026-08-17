@@ -201,7 +201,7 @@ namespace SkyCoopClient
                                 }
                                 FreeTimeLeft -= DurationForStage;
                                 Stage.m_CurrentDuration = DurationForStage;
-                                Stage.m_CurrentTransitionTime = Stage.m_TransitionTimeMinMax.x;
+                                Stage.m_CurrentTransitionTime = Data.m_TransitionTime / WeatherTransition.m_CurrentWeatherSet.m_WeatherStages.Count;
                             }
 
                             if(FreeTimeLeft > 0)
@@ -230,7 +230,7 @@ namespace SkyCoopClient
 
                                     float DurationForStage = UnityEngine.Random.Range(NewMin, NewMax);
                                     Stage.m_CurrentDuration = DurationForStage;
-                                    Stage.m_CurrentTransitionTime = Stage.m_TransitionTimeMinMax.x;
+                                    Stage.m_CurrentTransitionTime = Data.m_TransitionTime / WeatherTransition.m_CurrentWeatherSet.m_WeatherStages.Count;
                                     FreeTimeLeft -= DurationForStage;
                                 }
 
@@ -263,6 +263,19 @@ namespace SkyCoopClient
                                 }
                                 WeatherTransition.m_CurrentWeatherSet.m_WeatherStages[i].m_ElapsedTime = WeatherTransition.m_CurrentWeatherSet.m_WeatherStages[i].m_CurrentDuration;
                                 num2 = num3;
+                            }
+                        }
+                        for (int i = 0; i < WeatherTransition.m_CurrentWeatherSet.m_WeatherStages.Count; i++)
+                        {
+                            WeatherSetStage Stage = WeatherTransition.m_CurrentWeatherSet.m_WeatherStages[i];
+                            if (i == 0)
+                            {
+                                Stage.m_PreviousType = PreviousType;
+                            }
+                            else
+                            {
+                                WeatherSetStage PreviousStage = WeatherTransition.m_CurrentWeatherSet.m_WeatherStages[i - 1];
+                                Stage.m_PreviousType = PreviousStage.m_WeatherType;
                             }
                         }
                         WeatherTransition.m_CurrentWeatherSet.ActivateStage(Data.m_NormalizedTime, PreviousType);

@@ -1367,7 +1367,7 @@ namespace SkyCoopServer
                     Harvestable.m_RespawnIn = RNG.Range(RespawnTimeMin, RespawnTimeMax);
                 }
                 SceneData.m_Harvestables.Add(GUID, Harvestable);
-                ServerSend.SendHarvest(m_ServerInstance, SceneName, GUID);
+                ServerSend.SendHarvest(m_ServerInstance, GUID, SceneName);
             }
         }
         public void AddBreakDown(string SceneName, string GUID)
@@ -1382,7 +1382,7 @@ namespace SkyCoopServer
             if (!SceneData.m_BreakDowns.ContainsKey(GUID))
             {
                 SceneData.m_BreakDowns.Add(GUID, true);
-                ServerSend.SendBreakDown(m_ServerInstance, SceneName, GUID);
+                ServerSend.SendBreakDown(m_ServerInstance, GUID, SceneName);
             }
         }
     }

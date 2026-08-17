@@ -12,8 +12,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
-using static SkyCoopServer.WeatherManager;
-using static System.Net.WebRequestMethods;
 
 namespace SkyCoopServer
 {
@@ -31,6 +29,11 @@ namespace SkyCoopServer
             public string m_GameMode = "Sandbox";
             public bool m_CheatsAllowed = true;
         }
+
+        public const int c_SpeedUpHours = 12;
+        public const int c_SpeedUpHoursMinutes = 720;
+        public const int c_SpeedUpRealSecondsDuration = 30;
+        public const int c_SpeedUpTimeScale = 100;
 
         public class MapData
         {
@@ -68,22 +71,22 @@ namespace SkyCoopServer
             public string m_HUDMode = "";
             public bool m_DeathPacks = false;
             public bool m_Respawns = false;
-            public bool m_Clothing = false;
+            public bool m_Clothing = true;
             public bool m_CanDropItems = true;
             public bool m_CanUseContainers = true;
-            public bool m_CanUseMap = false;
+            public bool m_CanUseMap = true;
             public AirDropJson m_AirDrop = null;
             public bool m_AdvancedSpawnPoints = false;
-            public bool m_Fatigue = false;
-            public bool m_Hunger = false;
-            public bool m_Thirst = false;
-            public bool m_Cold = false;
-            public bool m_CanUseBeds = false;
-            public bool m_CanStartFire = false;
-            public bool m_CanUseTransitions = false;
-            public string m_SceneUnload = "";
-            public bool m_Weather = false;
-            public bool m_CanCraft = false;
+            public bool m_Fatigue = true;
+            public bool m_Hunger = true;
+            public bool m_Thirst = true;
+            public bool m_Cold = true;
+            public bool m_CanUseBeds = true;
+            public bool m_CanStartFire = true;
+            public bool m_CanUseTransitions = true;
+            public string m_SceneUnload = "keep";
+            public bool m_Weather = true;
+            public bool m_CanCraft = true;
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -1132,8 +1135,6 @@ namespace SkyCoopServer
                             }
                         }
                         int NumToSpawn = RNG.Range(Spawner.MinToSpawn, Spawner.MaxToSpawn);
-
-                        List<RadialObjectSpawnerElementData> Gears = new List<RadialObjectSpawnerElementData>(Spawner.Gears);
                         List<Vector3JSON> PossiblePoints = new List<Vector3JSON>(Spawner.PossiblePoints);
                         if (NumToSpawn > 0)
                         {
@@ -1141,43 +1142,49 @@ namespace SkyCoopServer
                             {
                                 float TotalWeight = 0;
 
-                                foreach (RadialObjectSpawnerElementData Element in Gears)
+                                foreach (RadialObjectSpawnerElementData Element in Spawner.Gears)
                                 {
                                     TotalWeight += Element.SpawnWeight;
                                 }
                                 float RandomValue = (float)RNG.NextDouble() * TotalWeight;
                                 float CumulativeWeight = 0;
-                                int IndexToRemove = -1;
 
-                                for (int i2 = 0; i < Gears.Count; i2++)
+                                RadialObjectSpawnerElementData GearToSpawn = null;
+
+                                for (int i2 = 0; i < Spawner.Gears.Count; i2++)
                                 {
-                                    RadialObjectSpawnerElementData Gear = Gears[i2];
+                                    RadialObjectSpawnerElementData Gear = Spawner.Gears[i2];
                                     CumulativeWeight += Gear.SpawnWeight;
                                     if (RandomValue <= CumulativeWeight)
                                     {
-                                        IndexToRemove = i2;
-                                        bool Spawn = true;
-
-                                        if (Gear.Chance < 99f)
-                                        {
-                                            Spawn = RNG.Range(0f, 100) < Gear.Chance * LootSpawnChanceScaler;
-                                        }
-                                        if (Spawn)
-                                        {
-                                            if(PossiblePoints.Count > 0)
-                                            {
-                                                int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
-                                                Vector3JSON Point = PossiblePoints[RandomPointIndex];
-                                                PossiblePoints.RemoveAt(RandomPointIndex);
-                                                ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0);
-                                            }
-                                        }
+                                        GearToSpawn = Gear;
                                         break;
                                     }
                                 }
-                                if (IndexToRemove != -1)
+
+                                if(GearToSpawn == null)
                                 {
-                                    Gears.RemoveAt(IndexToRemove);
+                                    GearToSpawn = Spawner.Gears[0];
+                                }
+
+                                if (GearToSpawn != null)
+                                {
+                                    bool Spawn = true;
+
+                                    if (GearToSpawn.Chance < 99f)
+                                    {
+                                        Spawn = RNG.Range(0f, 100) < GearToSpawn.Chance * LootSpawnChanceScaler;
+                                    }
+                                    if (Spawn)
+                                    {
+                                        if (PossiblePoints.Count > 0)
+                                        {
+                                            int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
+                                            Vector3JSON Point = PossiblePoints[RandomPointIndex];
+                                            PossiblePoints.RemoveAt(RandomPointIndex);
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0);
+                                        }
+                                    }
                                 }
                             }
                         }

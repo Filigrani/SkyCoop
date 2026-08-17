@@ -69,6 +69,11 @@ namespace SkyCoopClient
                 {
                     Harvest.m_Harvested = true;
                     Harvest.gameObject.SetActive(false);
+
+                    if (Harvest.m_ActivateObjectPostHarvest)
+                    {
+                        Harvest.m_ActivateObjectPostHarvest.SetActive(true);
+                    }
                 }
             }
         }

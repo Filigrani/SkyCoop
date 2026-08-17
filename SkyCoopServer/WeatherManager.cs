@@ -70,7 +70,6 @@ namespace SkyCoopServer
 
             public float TransitionMin { get; set; }
             public float TransitionMax { get; set; }
-            public float StageTransitions { get; set; }
 
             public List<WeatherTypeTransitionsWeights> Weights { get; set; }
         }
@@ -241,27 +240,24 @@ namespace SkyCoopServer
                 m_DurationHours = RNG.Range(SetSetting.DurationMin, SetSetting.DurationMax);
                 m_TransitionTime = RNG.Range(SetSetting.TransitionMin, SetSetting.TransitionMax);
 
-                m_DurationHours += m_TransitionTime;
-                m_DurationHours += SetSetting.StageTransitions;
-
                 m_PreviousWeatherSetType = m_CurrentWeatherSetType;
                 m_CurrentWeatherSetType = NewWeatherSetType;
                 RerollLowTemp();
                 RerollHighTemp();
             }
-            Logger.Log(ConsoleColor.Green, $"New WeatherSet {m_CurrentWeatherSetType} that will last for {m_DurationHours} hours");
+            Logger.Log(ConsoleColor.Green, $"New WeatherSet {m_CurrentWeatherSetType} that will last for {m_DurationHours+m_TransitionTime} hours");
         }
 
         public void ForceNextWeather()
         {
-            m_ElapsedHours = m_DurationHours;
+            m_ElapsedHours = m_DurationHours + m_TransitionTime;
         }
 
         public WeatherType GetNextWeatherType()
         {
-            if(m_ServerInstance != null && m_ServerInstance.m_Timeline != null)
+            Random RNG = new Random(Guid.NewGuid().GetHashCode());
+            if (m_ServerInstance != null && m_ServerInstance.m_Timeline != null)
             {
-                Random RNG = new Random(Guid.NewGuid().GetHashCode());
                 float RandomValue = RNG.Range(0f, 100f);
                 float NormalizedTime = m_ServerInstance.m_Timeline.m_TODTimeNormalized;
 
@@ -328,8 +324,6 @@ namespace SkyCoopServer
                 {
                     return WeatherType.Clear;
                 }
-
-                Random RNG = new Random(Guid.NewGuid().GetHashCode());
                 float RandomValue = (float)RNG.NextDouble() * TotalWeight;
                 float CumulativeWeight = 0;
 
@@ -360,9 +354,9 @@ namespace SkyCoopServer
             m_ElapsedHours += ElapsedHours;
             m_ElapsedWindHours += ElapsedHours;
 
-            if(m_ElapsedHours > m_DurationHours)
+            if(m_ElapsedHours > m_DurationHours+m_TransitionTime)
             {
-                float Overstock = m_DurationHours - m_ElapsedHours;
+                float Overstock = (m_DurationHours + m_TransitionTime) - m_ElapsedHours;
                 SetNewWeatherSet(GetNextWeatherType(), Overstock);
             }
             if(m_ElapsedWindHours > m_WindDurationHours)
@@ -380,7 +374,7 @@ namespace SkyCoopServer
             Data.m_HighTempSeed = m_HighTemperatureSeed;
             Data.m_Duration = m_DurationHours;
             Data.m_TransitionTime = m_TransitionTime;
-            Data.m_NormalizedTime = m_ElapsedHours / m_DurationHours;
+            Data.m_NormalizedTime = m_ElapsedHours / (m_DurationHours+m_TransitionTime);
             Data.m_CurrentWeatherType = (int)m_CurrentWeatherSetType;
             Data.m_PreviousWeatherType = (int)m_PreviousWeatherSetType;
 
