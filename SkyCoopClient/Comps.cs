@@ -48,7 +48,6 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<TeammateBar>();
             ClassInjector.RegisterTypeInIl2Cpp<TeammateMapIcon>();
             ClassInjector.RegisterTypeInIl2Cpp<ZoneMapIcon>();
-            ClassInjector.RegisterTypeInIl2Cpp<SendGearIfNotDestoryed>();
             ClassInjector.RegisterTypeInIl2Cpp<PropMovemenetPredict>();
             ClassInjector.RegisterTypeInIl2Cpp<ChatMessage>();
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingTarget>();
@@ -3164,50 +3163,7 @@ namespace SkyCoop
                 }
             }
         }
-        public class SendGearIfNotDestoryed : MonoBehaviour
-        {
-            public SendGearIfNotDestoryed(IntPtr ptr) : base(ptr) { }
-            public GearItem m_Gear = null;
-            public bool m_SkipThisFrame = true;
-            public bool m_CancleSending = false;
-            void Update()
-            {
-                if (m_CancleSending)
-                {
-                    return;
-                }
-                
-                if (m_SkipThisFrame)
-                {
-                    m_SkipThisFrame = false;
-                    return;
-                }
-                
-                if (m_Gear)
-                {
-                    m_CancleSending = true;
-                    SkyCoop.Logger.Log($"Gear {m_Gear.name} refused");
 
-                    if (GearsSync.s_LastCookingSlotGearPickedFrom)
-                    {
-                        CookingSlotVisual CookingSlot = GearsSync.s_LastCookingSlotGearPickedFrom.GetComponent<CookingSlotVisual>();
-                        if (CookingSlot && CookingSlot.m_Gear == null)
-                        {
-                            FireHook.DoCookingAction("DoFirePickerAction", m_Gear, GearsSync.s_LastCookingSlotGearPickedFrom.gameObject, GearsSync.s_LastGearTimeBeingCooked);
-                        }
-                        else
-                        {
-                            GearsSync.SendDropItem(m_Gear, 0, 0, false);
-                        }
-                    }
-                    else
-                    {
-                        GearsSync.SendDropItem(m_Gear, 0, 0, true);
-                    }
-                    GearsSync.s_LastPickedGearGUID = string.Empty;
-                }
-            }
-        }
         public class PropMovemenetPredict : MonoBehaviour
         {
             public PropMovemenetPredict(IntPtr ptr) : base(ptr) { }

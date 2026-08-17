@@ -17,6 +17,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using static SkyCoop.Comps;
 
 namespace SkyCoopClient
 {
@@ -506,6 +507,75 @@ namespace SkyCoopClient
             }
         }
 
+        public static void OnRefuseFromGear(GearItem Gear, Vector3 Position, Quaternion Rotation)
+        {
+            if(PlayerManager_EnterInspectGearMode.s_PutBackAction != null)
+            {
+                PlayerManager_EnterInspectGearMode.s_PutBackAction.Invoke();
+            }
+
+            if(Gear != null)
+            {
+                Gear.transform.position = Position;
+                Gear.transform.rotation = Rotation;
+
+                if (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_Container)
+                {
+                    GameManager.m_PlayerManager.m_Container.RemoveGear(Gear);
+                    SkyCoop.Logger.Log($"Gear {Gear.name} refused and dropped near container");
+                    SendDropItem(Gear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
+                    s_LastPickedGearGUID = string.Empty;
+                    return;
+                }
+                else
+                {
+                    SkyCoop.Logger.Log($"Gear {Gear.name} refused");
+                }
+
+                if (s_LastCookingSlotGearPickedFrom)
+                {
+                    CookingSlotVisual CookingSlot = s_LastCookingSlotGearPickedFrom.GetComponent<CookingSlotVisual>();
+                    if (CookingSlot && CookingSlot.m_Gear == null)
+                    {
+                        FireHook.DoCookingAction("DoFirePickerAction", Gear, GearsSync.s_LastCookingSlotGearPickedFrom.gameObject, GearsSync.s_LastGearTimeBeingCooked);
+                    }
+                    else
+                    {
+                        SendDropItem(Gear, 0, 0, false);
+                    }
+                }
+                else
+                {
+                    SendDropItem(Gear, 0, 0, true);
+                }
+            }
+            s_LastPickedGearGUID = string.Empty;
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "EnterInspectGearMode", new System.Type[] { typeof(GearItem), typeof(Container), typeof(IceFishingHole), typeof(Harvestable), typeof(CookingPotItem) })]
+        private static class PlayerManager_EnterInspectGearMode
+        {
+            public static Il2CppSystem.Action s_PutBackAction = null;
+            
+            internal static void Postfix(PlayerManager __instance, GearItem gear, Container c, IceFishingHole hole, Harvestable h, CookingPotItem pot)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                SkyCoop.Logger.Log($"EnterInspectGearMode {gear.name}");
+
+                if (__instance.m_PutBackAction != null)
+                {
+                    s_PutBackAction = __instance.m_PutBackAction;
+                }
+                else
+                {
+                    s_PutBackAction = null;
+                }
+
+                __instance.m_PutBackAction = new Action(() => OnRefuseFromGear(gear, __instance.m_RestorePos, __instance.m_RestoreRot));
+            }
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "ExitInspectGearMode")]
         private static class PlayerManager_ExitInspectGearMode
         {
@@ -587,26 +657,7 @@ namespace SkyCoopClient
                     }
 
 
-                    if (!__instance.m_Gear.m_InPlayerInventory)
-                    {
-                        __instance.m_Gear.transform.position = __instance.m_RestorePos;
-                        __instance.m_Gear.transform.rotation = __instance.m_RestoreRot;
-
-                        // Проблема в том что если этот предмет состакан - то __instance.m_Gear будет помечен для уничтожения.
-                        // по факту он не попал в инвентарь, потому что вместо него самого, просто прибавилось цифра в стаке.
-                        // Так как Unity удаляет помеченные предметы только в следующем Update цикле (да блин даже если мы создали компонент
-                        // в текущем цикле его Update всё ещё вызовиться в этом цикле), лепив на него компонент, если он сможет вызвать Update
-                        // значит он так и остался валяться.
-
-
-                        Comps.SendGearIfNotDestoryed Hook = __instance.m_Gear.gameObject.GetComponent<Comps.SendGearIfNotDestoryed>();
-                        if(Hook == null)
-                        {
-                            Hook = __instance.m_Gear.gameObject.AddComponent<Comps.SendGearIfNotDestoryed>();
-                            Hook.m_Gear = __instance.m_Gear;
-                        }
-                    }
-                    else
+                    if (__instance.m_Gear.m_InPlayerInventory)
                     {
                         s_LastPickedGearGUID = string.Empty;
                     }
@@ -758,28 +809,6 @@ namespace SkyCoopClient
                         SkyCoop.Logger.Log(ConsoleColor.Magenta, $"Gear {__instance.name} triggered s_ForceUpdateClothing");
                     }
                 }
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "TransferGearFromInspectToContainer")]
-        private static class PlayerManager_TransferGearFromInspectToContainer
-        {
-            private static bool Prefix(PlayerManager __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                if (__instance.m_Gear)
-                {
-                    SkyCoop.Logger.Log($"Gear {__instance.m_Gear.name} refused and dropped near container");
-
-                    if (__instance.m_Container)
-                    {
-                        __instance.m_Container.RemoveGear(__instance.m_Gear);
-                    }
-                    SendDropItem(__instance.m_Gear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
-                    return false;    
-                }
-                return true;
             }
         }
 
