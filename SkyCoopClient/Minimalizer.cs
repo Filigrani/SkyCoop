@@ -918,7 +918,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                if (GameManager.GetBrokenBody().HasAffliction)
+                if (GameManager.GetBrokenBody().HasAffliction && ModMain.Client != null && ModMain.Client.m_Rules.m_PlayerCanBeKnocked)
                 {
                     HUDMessage.AddMessage("You can't do this while knocked down", true, true);
                     GameAudioManager.PlayGUIError();
@@ -934,7 +934,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                if (GameManager.GetBrokenBody().HasAffliction)
+                if (GameManager.GetBrokenBody().HasAffliction && ModMain.Client != null && ModMain.Client.m_Rules.m_PlayerCanBeKnocked)
                 {
                     HUDMessage.AddMessage("You can't do this while knocked down", true, true);
                     GameAudioManager.PlayGUIError();
@@ -1029,23 +1029,24 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.m_CampfireGrid.gameObject.SetActive(false);
                 UILocalize RespawnButton = __instance.m_CheatDeathButtonWidget.transform.GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
 
-                if (ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns)
+                if (ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns == 2)
                 {
                     RespawnButton.key = "Respawn";
+                    __instance.m_CampfireGrid.gameObject.SetActive(false);
+                }
+                else if(ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns == 0)
+                {
+                    RespawnButton.key = "Spectate";
+                    __instance.m_CampfireGrid.gameObject.SetActive(false);
                 }
                 else
                 {
-                    RespawnButton.key = "Spectate";
+                    RespawnButton.key = "GAMEPLAY_CheatDeath";
+                    __instance.m_CampfireGrid.gameObject.SetActive(true);
                 }
-
                 RespawnButton.OnLocalize();
-
-                UILocalize QuitButton = __instance.m_CheatDeathButtonWidget.transform.parent.GetChild(1).GetChild(1).GetChild(0).GetChild(0).GetComponent<UILocalize>();
-                QuitButton.key = "Rage Quit!";
-                QuitButton.OnLocalize();
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Panel_LifeAfterDeath), "HandleOnLeftButtonPressed")]
@@ -1055,11 +1056,21 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                GameManager.GetConditionComponent().ResetAudio();
-                ClientSend.SendRespawnRequest();
-                MenuHook.RemovePleaseWait();
-                MenuHook.DoPleaseWait("Взламываем твой камютэр, жди...", "Грузим шпингалеты...");
-                return false;
+                if (__instance.m_CurrentStage == Panel_LifeAfterDeath.LifeAfterDeathStage.Revive)
+                {
+                    if (ModMain.Client != null && ModMain.Client.m_Rules.m_Respawns == 1)
+                    {
+                        return true;
+                    }
+
+                    GameManager.GetConditionComponent().ResetAudio();
+                    ClientSend.SendRespawnRequest();
+                    MenuHook.RemovePleaseWait();
+                    MenuHook.DoPleaseWait("Взламываем твой камютэр, жди...", "Грузим шпингалеты...");
+                    return false;
+                }
+
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(Condition), "PlayDeathMusic")]
@@ -1079,12 +1090,13 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                if (ModMain.Client != null)
+                if (__instance.m_CurrentStage == Panel_LifeAfterDeath.LifeAfterDeathStage.Revive)
                 {
-                    ModMain.Client.m_Instance.Stop();
-                    Application.Quit();
+                    MenuHook.OnDisconnectConfirmed();
+                    return false;
                 }
-                return false;
+
+                return true;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(SafehouseManager), "MaybeToggleCustomizing")]
@@ -1167,6 +1179,26 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return; }
 
                 __instance.enabled = false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(LifeAfterDeathManager), "DeserializeRecoveryCampsite")]
+        private static class LifeAfterDeathManager_DeserializeRecoveryCampsite
+        {
+            private static bool Prefix(LifeAfterDeathManager __instance, string currentScene)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(LifeAfterDeathManager), "PerformRespawn")]
+        private static class LifeAfterDeathManager_PerformRespawn
+        {
+            private static void Prefix(LifeAfterDeathManager __instance, LifeAfterDeathSpawnPointType spawnPointType, bool permanentAffliction)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                ClientSend.SendRevived(-2);
             }
         }
     }

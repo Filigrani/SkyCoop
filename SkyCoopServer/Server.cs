@@ -325,7 +325,7 @@ namespace SkyCoopServer
 
         public bool CanRespawn()
         {
-            return m_Rules != null && m_Rules.m_Respawns;
+            return m_Rules != null && m_Rules.m_Respawns != 0;
         }
 
         public void ForceToOver()

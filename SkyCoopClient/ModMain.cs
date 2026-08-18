@@ -268,7 +268,7 @@ namespace SkyCoop
             SceneManager.LoadEmptyScene();
         }
 
-        public static void SetupSurvivalSettings(string ExperienceMode, int Seed, string Region, string SceneToSpawn = "")
+        public static void SetupSurvivalSettings(string ExperienceMode, int Seed, string Region = "", string SceneToSpawn = "")
         {
             ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
             GameModeConfig SelectedMode = null;
@@ -283,30 +283,47 @@ namespace SkyCoop
                     break;
                 }
             }
-
-            Panel_SelectRegion_Map Panel_Regions = null;
-
-            if(InterfaceManager.TryGetPanel<Panel_SelectRegion_Map>(out Panel_Regions))
-            {
-                foreach (SelectRegionItem R in Panel_Regions.m_Items)
-                {
-                    if (R.name == Region)
-                    {
-                        SelectedRegion = R.m_RegionSpec;
-                        break;
-                    }
-                }
-                GameManager.m_StartRegion = SelectedRegion;
-            }
-
             EMM.SetGameModeConfig(SelectedMode);
-            Minimalizer.s_SceneSpawnOverride = SceneToSpawn;
-            GameManager.m_Instance.LaunchSandbox();
-            GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
-            Panel_Loading Panel = null;
-            if(InterfaceManager.TryGetPanel<Panel_Loading>(out Panel))
+            MenuHook.s_LastMultiplayerWorldSeed = Seed;
+            MenuHook.s_LastMultiplayerGameMode = SelectedMode;
+            SkyCoop.Logger.Log($"SelectedMode {SelectedMode.name}");
+
+            if (!string.IsNullOrEmpty(Region) && !string.IsNullOrEmpty(SceneToSpawn))
             {
-                Panel.m_ShowQuoteAfterLoad = false;
+                Panel_SelectRegion_Map Panel_Regions = null;
+
+                if (InterfaceManager.TryGetPanel<Panel_SelectRegion_Map>(out Panel_Regions))
+                {
+                    foreach (SelectRegionItem R in Panel_Regions.m_Items)
+                    {
+                        if (R.name == Region)
+                        {
+                            SelectedRegion = R.m_RegionSpec;
+                            break;
+                        }
+                    }
+                    GameManager.m_StartRegion = SelectedRegion;
+                }
+                Minimalizer.s_SceneSpawnOverride = SceneToSpawn;
+                GameManager.m_Instance.LaunchSandbox();
+                GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
+            }
+            else
+            {
+                Panel_Sandbox Panel = InterfaceManager.GetPanel<Panel_Sandbox>();
+                if (Panel)
+                {
+                    Panel.OnClickNew();
+                }
+                Panel_SelectExperience Panel2 = InterfaceManager.GetPanel<Panel_SelectExperience>();
+                if (Panel2)
+                {
+                    Panel2.OnExperienceClicked();
+                }
+                InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(true);
+                InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(false);
+                InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
+                GameManager.GetExperienceModeManagerComponent().SetGameModeConfig(SelectedMode);
             }
         }
 

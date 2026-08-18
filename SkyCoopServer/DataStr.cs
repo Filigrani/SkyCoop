@@ -20,12 +20,12 @@ namespace SkyCoopServer
         public class ServerConfig
         {
             public int m_MaxPlayers = 32;
-            public string m_StartingRegion = "MarshRegion";
+            public string m_StartingRegion = "";
             public int m_Seed = 777777;
             //public int m_VoicePort = 37850;
             public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
-            public string m_SceneToSpawn = "MarshRegion";
+            public string m_SceneToSpawn = "";
             public string m_GameMode = "Sandbox";
             public bool m_CheatsAllowed = true;
         }
@@ -69,8 +69,8 @@ namespace SkyCoopServer
             public int m_Time = 0;
             public int m_LootPerRadialSpawn = 5;
             public string m_HUDMode = "";
-            public bool m_DeathPacks = false;
-            public bool m_Respawns = false;
+            public bool m_DeathPacks = true;
+            public int m_Respawns = 1;
             public bool m_Clothing = true;
             public bool m_CanDropItems = true;
             public bool m_CanUseContainers = true;
@@ -128,7 +128,7 @@ namespace SkyCoopServer
             public int LootPerRadialSpawn { get; set; }
             public string HUDMode { get; set; }
             public bool DeathPacks { get; set; }
-            public bool Respawns { get; set; }
+            public int Respawns { get; set; }
             public bool Clothing { get; set; }
             public bool CanDropItems { get; set; }
             public bool CanUseContainers { get; set; }
@@ -401,7 +401,7 @@ namespace SkyCoopServer
                 if (!Knocked)
                 {
                     
-                    if (ServerInstance.m_Rules.m_Respawns)
+                    if (ServerInstance.m_Rules.m_Respawns != 0)
                     {
                         SetGameplayState(GamePlayState.Dead, ServerInstance);
                     }

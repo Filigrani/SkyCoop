@@ -317,7 +317,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag || (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_InspectingFromHarvestable))
+                if (s_NoSyncFlag)
                 {
                     return;
                 }
@@ -335,7 +335,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag || (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_InspectingFromHarvestable))
+                if (s_NoSyncFlag)
                 {
                     return;
                 }
@@ -354,7 +354,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag || (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_InspectingFromHarvestable))
+                if (s_NoSyncFlag)
                 {
                     return;
                 }
@@ -377,7 +377,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag || (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_InspectingFromHarvestable))
+                if (s_NoSyncFlag)
                 {
                     return;
                 }

@@ -320,7 +320,7 @@ namespace SkyCoopServer
             Rules.m_StartingItemsByTier = Reader.GetStartingGearListOfLists();
             Rules.m_HUDMode = Reader.GetString();
             Rules.m_DeathPacks = Reader.GetBool();
-            Rules.m_Respawns = Reader.GetBool();
+            Rules.m_Respawns = Reader.GetInt();
             Rules.m_Clothing = Reader.GetBool();
             Rules.m_CanDropItems = Reader.GetBool();
             Rules.m_CanUseContainers = Reader.GetBool();

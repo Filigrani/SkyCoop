@@ -1,9 +1,12 @@
 ﻿using Il2Cpp;
 using Il2CppSteamworks;
+using Il2CppTLD.Gameplay;
+using Il2CppTLD.Scenes;
 using MelonLoader;
 using SkyCoopClient;
 using System.Text;
 using UnityEngine;
+using static Il2CppSystem.Xml.Schema.NamespaceList;
 
 namespace SkyCoop
 {
@@ -12,6 +15,8 @@ namespace SkyCoop
         public static string s_CurrenetMenuOverride = "Original";
         public static bool s_SkyCoopSettingsForced = false;
         public static string s_PendingSquadInvite = "";
+        public static int s_LastMultiplayerWorldSeed = 0;
+        public static GameModeConfig s_LastMultiplayerGameMode = null;
 
         public static Comps.TexasHoldEmPlay s_RaisBetHook;
 
@@ -592,6 +597,94 @@ namespace SkyCoop
                 {
                     __result = Vector2.zero;
                 }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectWorldMap), "OnClickBack", null)]
+        public class Panel_SelectWorldMap_OnClickBack
+        {
+            public static bool Prefix(Panel_SelectWorldMap __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if(ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    __instance.Enable(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(true);
+                    InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(false);
+                    InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
+                    OnDisconnectConfirmed();
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectRegion_Map), "OnClickBack", null)]
+        public class Panel_SelectRegion_Map_OnClickBack
+        {
+            public static bool Prefix(Panel_SelectRegion_Map __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    string CurrentScene = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+
+                    bool HaveDLCMap = CurrentScene.Contains("DLC");
+
+                    if (!HaveDLCMap && __instance.m_PreviousSelectedItem == null)
+                    {
+                        __instance.Enable(false);
+                        InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(true);
+                        InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(false);
+                        InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
+                        OnDisconnectConfirmed();
+                        return false;
+                    }
+                }
+
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_SelectSurvivor), "OnSelectSurvivor")]
+        public class Panel_SelectSurvivor_OnSelectSurvivor
+        {
+            public static void Postfix(Panel_SelectSurvivor __instance, VoicePersona voicePersona)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    SkyCoop.Logger.Log($"OnSelectSurvivor {voicePersona}");
+
+                    Panel_MainMenu Panel = InterfaceManager.GetPanel<Panel_MainMenu>();
+
+                    if(Panel && Panel.GetNumUnlockedFeats() == 0)
+                    {
+                        GameManager.m_Instance.LaunchSandbox();
+                        GameManager.m_SceneTransitionData.m_GameRandomSeed = s_LastMultiplayerWorldSeed;
+                    }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_MainMenu), "OnSelectFeatsContinue")]
+        public class Panel_MainMenu_OnSelectFeatsContinue
+        {
+            public static bool Prefix(Panel_MainMenu __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    GameManager.m_Instance.LaunchSandbox();
+                    GameManager.m_SceneTransitionData.m_GameRandomSeed = s_LastMultiplayerWorldSeed;
+                    return false;
+                }
+
+                return true;
             }
         }
     }
