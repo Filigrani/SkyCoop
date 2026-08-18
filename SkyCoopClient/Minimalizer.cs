@@ -1093,7 +1093,7 @@ namespace SkyCoopClient
                 if (__instance.m_CurrentStage == Panel_LifeAfterDeath.LifeAfterDeathStage.Revive)
                 {
                     MenuHook.OnDisconnectConfirmed();
-                    return false;
+                    return true;
                 }
 
                 return true;

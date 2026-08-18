@@ -227,7 +227,7 @@ namespace SkyCoop
         public static void OnJoinPressed()
         {
             GameAudioManager.PlayGUIButtonClick();
-            if (ModMain.Client.m_IsReady)
+            if (ModMain.Client != null && ModMain.Client.m_IsReady)
             {
                 RemovePleaseWait();
                 DoOKMessage("", "GAMEPLAY_AlreadyConnected");

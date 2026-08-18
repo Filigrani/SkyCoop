@@ -1,5 +1,6 @@
 ﻿using Il2Cpp;
 using Il2CppTLD.PDID;
+using Il2CppTLD.Placement;
 using MelonLoader;
 using SkyCoop;
 using SkyCoopServer;
@@ -18,21 +19,21 @@ namespace SkyCoopClient
     {
         public static Container HandleDeathPack(string BackpackPrefab, Vector3 Position, Quaternion Rotation, string GUID, string OwnerName, bool IsBogus = false)
         {
-            if (PdidTable.GetGameObject(GUID))
+            GameObject Obj = PdidTable.GetGameObject(GUID);
+
+            if(Obj == null)
             {
-                return null;
+                if (!IsBogus)
+                {
+                    GameObject Reference = AssetManager.GetAssetFromGame<GameObject>(BackpackPrefab);
+                    Obj = UnityEngine.Object.Instantiate(Reference);
+                }
+                else
+                {
+                    Obj = AssetManager.CreateBogusGear(BackpackPrefab);
+                }
             }
-            
-            GameObject Obj = null;
-            if (!IsBogus)
-            {
-                GameObject Reference = AssetManager.GetAssetFromGame<GameObject>(BackpackPrefab);
-                Obj = UnityEngine.Object.Instantiate(Reference);
-            }
-            else
-            {
-                Obj = AssetManager.CreateBogusGear(BackpackPrefab);
-            }
+
             if (Obj)
             {
                 Obj.transform.position = Position;
@@ -64,6 +65,18 @@ namespace SkyCoopClient
                 Box.MarkAsInspected();
                 DeathPackComp Comp = Box.gameObject.AddComponent<DeathPackComp>();
                 Comp.m_OwnerName = OwnerName;
+
+                DecorationItem Deco = Box.gameObject.GetComponent<DecorationItem>();
+                if (Deco)
+                {
+                    UnityEngine.Object.Destroy(Deco);
+                }
+
+                Placeable Placeable = Box.gameObject.GetComponent<Placeable>();
+                if (Placeable)
+                {
+                    UnityEngine.Object.Destroy(Placeable);
+                }
                 return Box;
             }
             return null;
