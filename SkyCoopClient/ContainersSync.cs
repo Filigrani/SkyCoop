@@ -1,5 +1,6 @@
 ﻿using Il2Cpp;
 using Il2CppNodeCanvas.Tasks.Actions;
+using Il2CppTLD.Gear;
 using Il2CppTLD.Interactions;
 using Il2CppTLD.PDID;
 using MelonLoader;
@@ -78,6 +79,22 @@ namespace SkyCoopClient
                 string JSON = Container.Serialize();
 
                 bool IsDeathContainer = Container.GetComponent<Comps.DeathPackComp>();
+
+                for (int i = Container.m_Items.Count-1; i >= 0; i--)
+                {
+                    GearItemObject Item = Container.m_Items[i];
+                    if (Item.m_GearItem == null)
+                    {
+                        Container.RemoveGear(Item);
+                    }
+                    else
+                    {
+                        if(Item.m_GearItem.m_WaterSupply && Item.m_GearItem.m_WaterSupply.m_VolumeInLiters.m_Units == 0)
+                        {
+                            Container.RemoveGear(Item);
+                        }
+                    }
+                }
 
                 s_SendRemoveOnClosed = Container.IsEmpty() && IsDeathContainer;
 
