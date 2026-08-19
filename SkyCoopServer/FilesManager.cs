@@ -13,6 +13,9 @@ namespace SkyCoopServer
         // Main Data folder
         public static string s_DataDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData";
 
+        // Save Data folder
+        public static string s_SaveDirectory = "";
+
         // Sub folders
         public static string s_GameModesDirectory = "GameModes";
         public static string s_LootTablesDirectory = "LootTables";
@@ -37,6 +40,17 @@ namespace SkyCoopServer
             {
                 Directory.CreateDirectory($"{s_DataDirectory}/{s_LootTablesDirectory}");
             }
+            s_SaveDirectory = $"{s_DataDirectory}/ServerSaves";
+            if (!Directory.Exists(s_SaveDirectory))
+            {
+                Directory.CreateDirectory(s_SaveDirectory);
+            }
+        }
+
+        public static void SetSavesFolder(string Path)
+        {
+            s_SaveDirectory = $"{Path}/ServerSaves";
+            Logger.Log($"[FilesManager] Saves folder set to {Path}");
         }
 
         public static List<DataStr.MinimalPlayersAndGameMode> GetGameModesList()

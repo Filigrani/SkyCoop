@@ -29,12 +29,13 @@ namespace SkyCoop
         {
             Server = new Server();
             Client = new Client();
+            Server.OnLogEvent += Logger.HandleServerLog;
+
             DebugConsole.RegisterCommands();
             Settings.Init();
             FilesManager.InitFolders();
-            AudioHook.Init();
 
-            Server.OnLogEvent += Logger.HandleServerLog;
+            AudioHook.Init();
         }
 
         public static void SetAppBackgroundMode()
@@ -98,6 +99,7 @@ namespace SkyCoop
                 MaterialsContainer.PreloadMaterials();
                 MaterialsContainer.s_Intilized = true;
             }
+            FilesManager.SetSavesFolder(PersistentDataPath.m_Path);
         }
 
         public override void OnGUI()

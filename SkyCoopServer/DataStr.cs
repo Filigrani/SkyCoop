@@ -954,14 +954,14 @@ namespace SkyCoopServer
 
                     foreach (PrefabSpawnData Spawner in LootData.PrefabSpawns)
                     {
-                        if(Spawner.EnabledForXP != null)
+                        if(Spawner.EnabledForXP != null && Spawner.EnabledForXP.Count > 0)
                         {
                             if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
                             {
                                 continue;
                             }
                         }
-                        if (Spawner.DisabledForXP != null)
+                        if (Spawner.DisabledForXP != null && Spawner.DisabledForXP.Count > 0)
                         {
                             if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
                             {
@@ -1025,14 +1025,14 @@ namespace SkyCoopServer
                     }
                     foreach (RandomSpawnObjectData Spawner in LootData.RandomSpawnObjects)
                     {
-                        if (Spawner.EnabledForXP != null)
+                        if (Spawner.EnabledForXP != null && Spawner.EnabledForXP.Count > 0)
                         {
                             if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
                             {
                                 continue;
                             }
                         }
-                        if (Spawner.DisabledForXP != null)
+                        if (Spawner.DisabledForXP != null && Spawner.DisabledForXP.Count > 0)
                         {
                             if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
                             {
@@ -1118,16 +1118,18 @@ namespace SkyCoopServer
                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, 0);
                         }
                     }
+                    int IndexForLog = -1;
                     foreach (RadialObjectSpawnerData Spawner in LootData.RadialSpawns)
                     {
-                        if (Spawner.EnabledForXP != null)
+                        IndexForLog++;
+                        if (Spawner.EnabledForXP != null && Spawner.EnabledForXP.Count > 0)
                         {
                             if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
                             {
                                 continue;
                             }
                         }
-                        if (Spawner.DisabledForXP != null)
+                        if (Spawner.DisabledForXP != null && Spawner.DisabledForXP.Count > 0)
                         {
                             if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
                             {
