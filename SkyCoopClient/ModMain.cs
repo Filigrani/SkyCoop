@@ -27,13 +27,12 @@ namespace SkyCoop
 
         public override void OnInitializeMelon()
         {
-            Server = new Server();
             Client = new Client();
             Server.OnLogEvent += Logger.HandleServerLog;
 
             DebugConsole.RegisterCommands();
             Settings.Init();
-            FilesManager.InitFolders();
+            FilesManager.InitFolders(true);
 
             AudioHook.Init();
         }
@@ -77,6 +76,7 @@ namespace SkyCoop
         {
             if(Server != null && Server.m_IsReady)
             {
+                Server.SaveToFile();
                 Server.DisconnectAllPlayers("Server shutdown", true);
             }
             base.OnApplicationQuit();

@@ -22,7 +22,7 @@ namespace SkyCoopServer
         public static string s_MapsDirectory = "Maps";
         public static string s_WeatherDirectory = "Weather";
 
-        public static void InitFolders()
+        public static void InitFolders(bool SkipDefaultSaveFolder = false)
         {
             if (!Directory.Exists(s_DataDirectory))
             {
@@ -40,17 +40,29 @@ namespace SkyCoopServer
             {
                 Directory.CreateDirectory($"{s_DataDirectory}/{s_LootTablesDirectory}");
             }
-            s_SaveDirectory = $"{s_DataDirectory}/ServerSaves";
-            if (!Directory.Exists(s_SaveDirectory))
+
+            if (!SkipDefaultSaveFolder)
             {
-                Directory.CreateDirectory(s_SaveDirectory);
+                if (string.IsNullOrEmpty(s_SaveDirectory))
+                {
+                    s_SaveDirectory = $"{s_DataDirectory}/ServerSaves";
+                }
+
+                if (!Directory.Exists(s_SaveDirectory))
+                {
+                    Directory.CreateDirectory(s_SaveDirectory);
+                }
             }
         }
 
         public static void SetSavesFolder(string Path)
         {
             s_SaveDirectory = $"{Path}/ServerSaves";
-            Logger.Log($"[FilesManager] Saves folder set to {Path}");
+            Logger.Log($"[FilesManager] Saves folder set to {s_SaveDirectory}");
+            if (!Directory.Exists(s_SaveDirectory))
+            {
+                Directory.CreateDirectory(s_SaveDirectory);
+            }
         }
 
         public static List<DataStr.MinimalPlayersAndGameMode> GetGameModesList()
@@ -346,7 +358,121 @@ namespace SkyCoopServer
                 Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
-            return JsonSerializer.Deserialize<DataStr.ScenesLootSpawns>(JSON);
+            return JsonSerializer.Deserialize<ScenesLootSpawns>(JSON);
+        }
+
+        public static void SaveSceneToFile(SceneData.SaveData SaveData, Server ServerInstance)
+        {
+            JsonSerializerOptions Options = new JsonSerializerOptions();
+            Options.WriteIndented = true;
+            string JSON = JsonSerializer.Serialize<SceneData.SaveData>(SaveData, Options);
+            try
+            {
+                string SeedName = ServerInstance.m_Config.m_Seed.ToString();
+
+                if (!Directory.Exists($"{s_SaveDirectory}/{SeedName}"))
+                {
+                    Directory.CreateDirectory($"{s_SaveDirectory}/{SeedName}");
+                }
+                if (!Directory.Exists($"{s_SaveDirectory}/{SeedName}/Scenes"))
+                {
+                    Directory.CreateDirectory($"{s_SaveDirectory}/{SeedName}/Scenes");
+                }
+                
+                File.WriteAllText($"{s_SaveDirectory}/{SeedName}/Scenes/{SaveData.SceneName}", JSON);
+                return;
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"[FilesManager] Failed to save scene {SaveData.SceneName}: {e.Message}");
+            }
+        }
+
+        public static SceneData.SaveData LoadSceneFromFile(string SceneName, Server ServerInstance)
+        {
+            string Path = $"{s_SaveDirectory}/{ServerInstance.m_Config.m_Seed.ToString()}/Scenes/{SceneName}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<SceneData.SaveData>(JSON);
+        }
+
+        public static void SaveServerToFile(Server.SaveData SaveData, Server ServerInstance)
+        {
+            JsonSerializerOptions Options = new JsonSerializerOptions();
+            Options.WriteIndented = true;
+            string JSON = JsonSerializer.Serialize<Server.SaveData>(SaveData, Options);
+            try
+            {
+                string SeedName = ServerInstance.m_Config.m_Seed.ToString();
+
+                if (!Directory.Exists($"{s_SaveDirectory}/{SeedName}"))
+                {
+                    Directory.CreateDirectory($"{s_SaveDirectory}/{SeedName}");
+                }
+
+                File.WriteAllText($"{s_SaveDirectory}/{SeedName}/ServerData", JSON);
+                return;
+            }
+            catch (Exception e)
+            {
+                Logger.Log($"[FilesManager] Failed to save server data: {e.Message}");
+            }
+        }
+
+        public static Server.SaveData LoadServerFromFile(Server ServerInstance)
+        {
+            string Path = $"{s_SaveDirectory}/{ServerInstance.m_Config.m_Seed.ToString()}/ServerData";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<Server.SaveData>(JSON);
         }
     }
 }

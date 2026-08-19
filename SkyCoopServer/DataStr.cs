@@ -84,7 +84,7 @@ namespace SkyCoopServer
             public bool m_CanUseBeds = true;
             public bool m_CanStartFire = true;
             public bool m_CanUseTransitions = true;
-            public string m_SceneUnload = "keep";
+            public string m_SceneUnload = "";
             public bool m_Weather = true;
             public bool m_CanCraft = true;
 
@@ -784,12 +784,113 @@ namespace SkyCoopServer
         {
             public GearDataVisual m_Visual = new GearDataVisual();
             public GearData m_Data = new GearData();
+
+            public GearDataContainer() { }
+            public GearDataContainer(SaveData Data)
+            {
+                Load(Data);
+            }
+
+            public class SaveData
+            {
+                public string GUID { get; set; }
+                public string JSON { get; set; }
+                public string GearName { get; set; }
+                public Vector3JSON Position { get; set; }
+                public QuaternionJSON Rotation { get; set; }
+                public float Condition { get; set; }
+                public int Style { get; set; }
+                public string FireGUID { get; set; }
+                public int CookingSlot { get; set; }
+                public string CookingResult { get; set; }
+                public float Volume { get; set; }
+                public float BeingCookingTime { get; set; }
+                public string CookingPotGUID { get; set; }
+                public string ProductGUID { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+
+                data.GUID = m_Data.m_GUID;
+                data.JSON = m_Data.m_JSON;
+                data.GearName = m_Visual.m_GearName;
+                data.Position = new Vector3JSON(m_Visual.m_Position.X, m_Visual.m_Position.Y, m_Visual.m_Position.Z);
+                data.Rotation = new QuaternionJSON(m_Visual.m_Rotation.X, m_Visual.m_Rotation.Y, m_Visual.m_Rotation.Z, m_Visual.m_Rotation.W);
+                data.Condition = m_Visual.m_ConditionNormalized;
+                data.Style = m_Visual.m_Style;
+                data.FireGUID = m_Visual.m_FireGUID;
+                data.CookingSlot = m_Visual.m_CookingSlot;
+                data.CookingResult = m_Visual.m_CookingResult;
+                data.Volume = m_Visual.m_Volume;
+                data.BeingCookingTime = m_Visual.m_BeingCookedTime;
+                data.CookingPotGUID = m_Visual.m_CookpotGUID;
+                data.ProductGUID = m_Visual.m_ProductGUID;
+
+                return data;
+            }
+
+            public void Load(SaveData data)
+            {
+                m_Data.m_GUID = data.GUID; m_Visual.m_GUID = data.GUID;
+                m_Data.m_JSON = data.JSON;
+                m_Visual.m_GearName = data.GearName;
+                m_Visual.m_Position = data.Position.ToVector();
+                m_Visual.m_Rotation = data.Rotation.ToQuaternion();
+                m_Visual.m_ConditionNormalized = data.Condition;
+                m_Visual.m_Style = data.Style;
+
+                m_Visual.SetCookingSlot(data.FireGUID, data.CookingSlot);
+                m_Visual.SetRecipe(data.CookingResult, data.Volume, data.BeingCookingTime);
+
+                m_Visual.m_CookpotGUID = data.CookingPotGUID;
+                m_Visual.m_ProductGUID = data.ProductGUID;
+            }
         }
 
         public class HarvestableData
         {
+            public string m_GUID = "";
             public float m_HarvestTime = 0;
             public float m_RespawnIn = 0;
+
+            public HarvestableData() { }
+            public HarvestableData(string GUID, float HarvestTime, float RespawnIn)
+            {
+                m_GUID = GUID;
+                m_HarvestTime = HarvestTime;
+                m_RespawnIn = RespawnIn;
+            }
+            public HarvestableData(SaveData data)
+            {
+                Load(data);
+            }
+
+            public void Load(SaveData data)
+            {
+                m_GUID = data.GUID;
+                m_HarvestTime = data.HarvestTime;
+                m_RespawnIn = data.RespawnIn;
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+
+                data.GUID = m_GUID;
+                data.HarvestTime = m_HarvestTime;
+                data.RespawnIn = m_RespawnIn;
+
+                return data;
+            }
+
+            public class SaveData
+            {
+                public string GUID { get; set; }
+                public float HarvestTime { get; set; }
+                public float RespawnIn { get; set; }
+            }
         }
 
         public class SceneData
@@ -800,27 +901,155 @@ namespace SkyCoopServer
             public Dictionary<string, DeathPack> m_DeathPacks = new Dictionary<string, DeathPack>();
             public Dictionary<string, string> m_Containers = new Dictionary<string, string>();
             public Dictionary<string, int> m_ContainerStats = new Dictionary<string, int>();
-
             public Dictionary<string, FireSyncData> m_Fires = new Dictionary<string, FireSyncData>();
+            public Dictionary<string, bool> m_BreakDowns = new Dictionary<string, bool>();
+            public Dictionary<string, HarvestableData> m_Harvestables = new Dictionary<string, HarvestableData>();
 
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
             public Dictionary<string, FallingProp> m_FallingProps = new Dictionary<string, FallingProp>();
-            public Dictionary<string, HarvestableData> m_Harvestables = new Dictionary<string, HarvestableData>();
-            public Dictionary<string, bool> m_BreakDowns = new Dictionary<string, bool>();
 
             public DangerCircleConfig m_ZoneConfig = null;
             public DangerCircleData m_ActiveZone = null;
             public V3Quat m_VictoryPoint = new V3Quat();
 
-            public void Unload()
+            public SceneData() { }
+            public SceneData(SaveData data)
             {
-                if (m_ActiveZone != null)
+                Load(data);
+            }
+
+            public class SaveData
+            {
+                public string SceneName { get; set; }
+                public List<GearDataContainer.SaveData> Gears { get; set; }
+                public Dictionary<string, bool> Openables { get; set; }
+                public List<DeathPack.SaveData> DeathPacks { get; set; }
+                public Dictionary<string, string> Containers { get; set; }
+                public Dictionary<string, int> ContainersStats { get; set; }
+                public List<FireSyncData.SaveData> Fires { get; set; }
+                public Dictionary<string, bool> BreakDowns { get; set; }
+                public List<HarvestableData.SaveData> Harvestables { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+                data.SceneName = m_SceneName;
+                data.Gears = new List<GearDataContainer.SaveData>();
+                foreach (GearDataContainer Gear in m_Gears.Values.ToList())
                 {
-                    // TO DO Диспоснуть текущую зону, ибо следующая карта может не иметь зоны.
-                    // Нужно ещё отправить клиенту сигнла что бы он снёс зону у себя тоже.
+                    data.Gears.Add(Gear.Save());
                 }
+                data.Openables = new Dictionary<string, bool>();
+                foreach (var openable in m_Openables.ToList())
+                {
+                    data.Openables.Add(openable.Key, openable.Value);
+                }
+                data.DeathPacks = new List<DeathPack.SaveData>();
+                foreach (var pack in m_DeathPacks.ToList())
+                {
+                    data.DeathPacks.Add(pack.Value.Save());
+                }
+                data.Containers = new Dictionary<string, string>();
+                foreach (var box in m_Containers.ToList())
+                {
+                    data.Containers.Add(box.Key, box.Value);
+                }
+                data.ContainersStats = new Dictionary<string, int>();
+                foreach (var box in m_ContainerStats.ToList())
+                {
+                    data.ContainersStats.Add(box.Key, box.Value);
+                }
+                data.Fires = new List<FireSyncData.SaveData>();
+                foreach (FireSyncData fire in m_Fires.Values.ToList())
+                {
+                    data.Fires.Add(fire.Save());
+                }
+                data.BreakDowns = new Dictionary<string, bool>();
+                foreach (var breakdown in m_BreakDowns.ToList())
+                {
+                    data.BreakDowns.Add(breakdown.Key, breakdown.Value);
+                }
+                data.Harvestables = new List<HarvestableData.SaveData>();
+                foreach (HarvestableData harvestable in m_Harvestables.Values.ToList())
+                {
+                    data.Harvestables.Add(harvestable.Save());
+                }
+                return data;
+            }
+
+            public void Load(SaveData data)
+            {
+                m_SceneName = data.SceneName;
+                if(data.Gears != null)
+                {
+                    foreach (GearDataContainer.SaveData saveData in data.Gears)
+                    {
+                        GearDataContainer Gear = new GearDataContainer(saveData);
+                        m_Gears.Add(Gear.m_Data.m_GUID, Gear);
+                    }
+                }
+                if (data.Openables != null)
+                {
+                    foreach (var saveData in data.Openables)
+                    {
+                        m_Openables.Add(saveData.Key, saveData.Value);
+                    }
+                }
+                if (data.DeathPacks != null)
+                {
+                    foreach (DeathPack.SaveData saveData in data.DeathPacks)
+                    {
+                        DeathPack Pack = new DeathPack(saveData);
+                        m_DeathPacks.Add(Pack.m_GUID, Pack);
+                    }
+                }
+                if (data.Containers != null)
+                {
+                    foreach (var saveData in data.Containers)
+                    {
+                        m_Containers.Add(saveData.Key, saveData.Value);
+                    }
+                }
+                if (data.ContainersStats != null)
+                {
+                    foreach (var saveData in data.ContainersStats)
+                    {
+                        m_ContainerStats.Add(saveData.Key, saveData.Value);
+                    }
+                }
+                if (data.Fires != null)
+                {
+                    foreach (FireSyncData.SaveData saveData in data.Fires)
+                    {
+                        FireSyncData Fire = new FireSyncData(saveData);
+                        m_Fires.Add(Fire.m_GUID, Fire);
+                    }
+                }
+                if (data.BreakDowns != null)
+                {
+                    foreach (var saveData in data.BreakDowns)
+                    {
+                        m_BreakDowns.Add(saveData.Key, saveData.Value);
+                    }
+                }
+                if (data.Harvestables != null)
+                {
+                    foreach (HarvestableData.SaveData saveData in data.Harvestables)
+                    {
+                        HarvestableData Harvestable = new HarvestableData(saveData);
+                        m_Harvestables.Add(Harvestable.m_GUID, Harvestable);
+                    }
+                }
+            }
+
+            public void SaveToFile(Server ServerInstance)
+            {
+                SaveData Data = Save();
+
+                FilesManager.SaveSceneToFile(Data, ServerInstance);
             }
 
             public List<Vector3> GetGearSpawnersMarkers()
@@ -1881,6 +2110,43 @@ namespace SkyCoopServer
             public string m_Owner = "";
             public Vector3 m_Position;
             public Quaternion m_Rotation;
+
+            public DeathPack() { }
+            public DeathPack(SaveData data) 
+            {
+                Load(data);
+            }
+
+            public class SaveData
+            {
+                public string Prefab { get; set; }
+                public string GUID { get; set; }
+                public string Owner { get; set; }
+                public Vector3JSON Position { get; set; }
+                public QuaternionJSON Rotation { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+
+                data.Prefab = m_Prefab;
+                data.GUID = m_GUID;
+                data.Owner = m_Owner;
+                data.Position = new Vector3JSON(m_Position.X, m_Position.Y, m_Position.Z);
+                data.Rotation = new QuaternionJSON(m_Rotation.X, m_Rotation.Y, m_Rotation.Z, m_Rotation.W);
+
+                return data;
+            }
+
+            public void Load(SaveData data)
+            {
+                m_Prefab = data.Prefab;
+                m_GUID = data.GUID;
+                m_Owner = data.Owner;
+                m_Position = data.Position.ToVector();
+                m_Rotation = data.Rotation.ToQuaternion();
+            }
         }
 
         public enum PlayerHearing
@@ -2568,7 +2834,6 @@ namespace SkyCoopServer
 
             public bool m_EmbersActive = false;
             public float m_EmberTimer = 0;
-            public bool m_FullBurnTriggered = false;
             public int m_NumGeneratedCharcoalPieces = 0;
             public float m_HeatInnerRadius = 0;
             public float m_HeatOuterRadius = 0;
@@ -2577,6 +2842,89 @@ namespace SkyCoopServer
             public const float c_EmbersDuration = 300;
 
             public List<CookingSlotData> m_CookingSlots = new List<CookingSlotData>();
+
+            public FireSyncData() { }
+            public FireSyncData(SaveData data)
+            {
+                Load(data);
+            }
+
+            public class SaveData
+            {
+                public string GUID { get; set; }
+                public bool IsDynamic { get; set; }
+                public Vector3JSON Position { get; set; }
+                public QuaternionJSON Rotation { get; set; }
+                public int FireState { get; set; }
+                public bool IsFroge { get; set; }
+                public float LastUpdateTime { get; set; }
+                public float MaxOnTODSeconds { get; set; }
+                public float ElapsedOnTODSeconds { get; set; }
+                public float FuelHeatIncrease { get; set; }
+                public float Heat { get; set; }
+                public float MaxHeat { get; set; }
+                public bool EmbersActive { get; set; }
+                public float EmbersTimer { get; set; }
+                public int Coals { get; set; }
+                public float HeatInner { get; set; }
+                public float HeatOuter { get; set; }
+                public float TimeToReachMaxTempSeconds { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+
+                data.GUID = m_GUID;
+                data.IsDynamic = m_IsDynamic;
+
+                if (m_IsDynamic)
+                {
+                    data.Position = new Vector3JSON(m_Position.X, m_Position.Y, m_Position.Z);
+                    data.Rotation = new QuaternionJSON(m_Rotation.X, m_Rotation.Y, m_Rotation.Z, m_Rotation.W);
+                }
+                data.FireState = m_FireState;
+                data.IsFroge = m_IsForge;
+                data.LastUpdateTime = m_LastUpdateTime;
+                data.MaxOnTODSeconds = m_MaxOnTODSeconds;
+                data.ElapsedOnTODSeconds = m_ElapsedOnTODSeconds;
+                data.FuelHeatIncrease = m_FuelHeatIncrease;
+                data.Heat = m_Heat;
+                data.MaxHeat = m_MaxHeat;
+                data.EmbersActive = m_EmbersActive;
+                data.EmbersTimer = m_EmberTimer;
+                data.Coals = m_NumGeneratedCharcoalPieces;
+                data.HeatInner = m_HeatInnerRadius;
+                data.HeatOuter = m_HeatOuterRadius;
+                data.TimeToReachMaxTempSeconds = m_TimeToReachMaxTempInSeconds;
+                return data;
+            }
+
+            public void Load(SaveData data)
+            {
+                m_GUID = data.GUID;
+                m_IsDynamic = data.IsDynamic;
+                if (m_IsDynamic)
+                {
+                    m_Position = data.Position.ToVector();
+                    m_Rotation = data.Rotation.ToQuaternion();
+                }
+                m_FireState = data.FireState;
+                m_IsForge = data.IsFroge;
+                m_LastUpdateTime = data.LastUpdateTime;
+                m_MaxOnTODSeconds = data.MaxOnTODSeconds;
+                m_ElapsedOnTODSeconds = data.ElapsedOnTODSeconds;
+                m_FuelHeatIncrease = data.FuelHeatIncrease;
+                m_Heat = data.Heat;
+                m_MaxHeat = data.MaxHeat;
+                m_EmbersActive = data.EmbersActive;
+                m_EmberTimer = data.EmbersTimer;
+                m_NumGeneratedCharcoalPieces = data.Coals;
+                m_HeatInnerRadius = data.HeatInner;
+                m_HeatOuterRadius = data.HeatOuter;
+                m_TimeToReachMaxTempInSeconds = data.TimeToReachMaxTempSeconds;
+
+            }
 
             public void AddFuel(float BurnTime, float Heat, float InnerRadius, float OuterRadius)
             {

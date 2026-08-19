@@ -6,7 +6,6 @@ using MelonLoader;
 using SkyCoopClient;
 using System.Text;
 using UnityEngine;
-using static Il2CppSystem.Xml.Schema.NamespaceList;
 
 namespace SkyCoop
 {
@@ -120,7 +119,7 @@ namespace SkyCoop
 
         public static void OnHostPressed()
         {            
-            if (ModMain.Server.m_IsReady)
+            if (ModMain.Server != null && ModMain.Server.m_IsReady)
             {
                 OnShutdownPressed();
             }
@@ -131,7 +130,7 @@ namespace SkyCoop
                     DoOKMessage("Stop it!", "No, you can't host yourself in this build.\nWait when we host.");
                     return;
                 }
-
+                ModMain.Server = new SkyCoopServer.Server();
                 ModMain.Server.StartServer();
                 Thread.Sleep(15);
                 ModMain.Client.ConnectToServer("localhost");
@@ -144,14 +143,19 @@ namespace SkyCoop
         {
             RemovePleaseWait();
 
-            ModMain.Server.DisconnectAllPlayers("Server shutdown", true);
-            ModMain.Server = new SkyCoopServer.Server();
+            if(ModMain.Server != null)
+            {
+                ModMain.Server.SaveToFile();
+                ModMain.Server.DisconnectAllPlayers("Server shutdown", true);
+                ModMain.Server.Dispose();
+                ModMain.Server = null;
 
-            DoOKMessage("", "GAMEPLAY_ShutdownServerDone");
+                DoOKMessage("", "GAMEPLAY_ShutdownServerDone");
 
-            InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
-            InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
-            UpdateSandboxMainWindow();
+                InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
+                InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
+                UpdateSandboxMainWindow();
+            }
         }
 
         public static void OnShutdownPressed()
@@ -192,7 +196,7 @@ namespace SkyCoop
 
             if (ModMain.Client.m_IsReady)
             {
-                if (ModMain.Server.m_IsReady)
+                if (ModMain.Server != null && ModMain.Server.m_IsReady)
                 {
                     TextLocID = "GAMEPLAY_DisconnectConfirmationHost";
                 }

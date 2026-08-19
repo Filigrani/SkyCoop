@@ -40,6 +40,38 @@ namespace SkyCoopServer
 
         public TODStatus m_CurrentTODStatus = TODStatus.MiddayToAfternoon;
 
+        public class SaveData
+        {
+            public ulong Time { get; set; }
+            public float StartingTime { get; set; }
+            public float ElapsedInGameHours { get; set; }
+            public float TODInHours { get; set; }
+        }
+
+        public SaveData Save()
+        {
+            SaveData data = new SaveData();
+
+            data.Time = m_Time;
+            data.StartingTime = m_StartingTime;
+            data.ElapsedInGameHours = m_ElapsedInGameHours;
+            data.TODInHours = m_TODInHours;
+
+            return data;
+        }
+
+        public void Load(SaveData data)
+        {
+            m_Time = data.Time;
+            m_StartingTime = data.StartingTime;
+            m_ElapsedInGameHours = data.ElapsedInGameHours;
+            m_TODInHours = data.TODInHours;
+
+            m_TODTimeNormalized = m_TODInHours / 24f;
+
+            m_CurrentTODStatus = GetCurrentTODStatus();
+        }
+
         public enum TODStatus
         {
             NightEndToDawn,
@@ -74,12 +106,19 @@ namespace SkyCoopServer
             }
         }
 
-        public Timeline(Server Server)
+        public Timeline(Server Server, SaveData saveData = null)
         {
             m_ServerInstance = Server;
 
-            m_TODInHours = m_StartingTime;
-            m_TODTimeNormalized = m_TODInHours / 24f;
+            if(saveData != null)
+            {
+                Load(saveData);
+            }
+            else
+            {
+                m_TODInHours = m_StartingTime;
+                m_TODTimeNormalized = m_TODInHours / 24f;
+            }
         }
 
         public void SkipHours(float Hours)

@@ -145,9 +145,66 @@ namespace SkyCoopServer
         }
 
 
-        public WeatherManager(Server Server)
+        public WeatherManager(Server Server, SaveData saveData = null)
         {
             m_ServerInstance = Server;
+
+            if(saveData != null)
+            {
+                Load(saveData);
+            }
+        }
+
+        public class SaveData
+        {
+            public int WeatherSeed { get; set; }
+            public int LowTemperatureSeed { get; set; }
+            public int HighTemperatureSeed { get; set; }
+            public int WindSeed { get; set; }
+            public int CurrentWeatherSetType { get; set; }
+            public int PreviousWeatherSetType { get; set; }
+            public float WindDirection { get; set; }
+            public float DurationHours { get; set; }
+            public float ElapsedHours { get; set; }
+            public float TransitionTime { get; set; }
+            public float ElapsedWindHours { get; set; }
+            public float WindDurationHours { get; set; }
+        }
+
+        public SaveData Save()
+        {
+            SaveData data = new SaveData();
+
+            data.WeatherSeed = m_Seed;
+            data.LowTemperatureSeed = m_LowTemperatureSeed;
+            data.HighTemperatureSeed = m_HighTemperatureSeed;
+            data.WindSeed = m_WindSeed;
+            data.CurrentWeatherSetType = (int)m_CurrentWeatherSetType;
+            data.PreviousWeatherSetType = (int)m_PreviousWeatherSetType;
+            data.WindDirection = m_WindDirection;
+            data.DurationHours = m_DurationHours;
+            data.ElapsedHours = m_ElapsedHours;
+            data.TransitionTime = m_TransitionTime;
+            data.ElapsedWindHours = m_ElapsedWindHours;
+            data.WindDurationHours = m_WindDurationHours;
+
+            return data;
+        }
+
+        public void Load(SaveData data)
+        {
+            m_Seed = data.WeatherSeed;
+            m_LowTemperatureSeed = data.LowTemperatureSeed;
+            m_HighTemperatureSeed = data.HighTemperatureSeed;
+            m_WindSeed = data.WindSeed;
+            m_CurrentWeatherSetType = (WeatherType)data.CurrentWeatherSetType;
+            m_PreviousWeatherSetType = (WeatherType)data.PreviousWeatherSetType;
+            m_WindDirection = data.WindDirection;
+            m_DurationHours = data.DurationHours;
+            m_ElapsedHours = data.ElapsedHours;
+            m_TransitionTime = data.TransitionTime;
+            m_ElapsedWindHours = data.ElapsedWindHours;
+            m_WindDirection = data.WindDirection;
         }
 
         public bool IsEarlyNightWindowForAuroraActivation(float NormalizedTOD)

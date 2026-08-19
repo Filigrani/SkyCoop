@@ -109,17 +109,30 @@ namespace SkyCoopServer
             if (!m_LoadedScenes.ContainsKey(SceneName))
             {
                 SkyCoopServer.Logger.Log($"Trying to load Scene {SceneName}");
-                //TODO load from file.
-                SceneData sceneData = new SceneData();
-                sceneData.m_SceneName = SceneName;
 
-                m_LoadedScenes.Add(SceneName, sceneData);
+                DataStr.SceneData.SaveData SaveData = FilesManager.LoadSceneFromFile(SceneName, m_ServerInstance);
+                SceneData sceneData;
 
-                if (MapData != null)
+                if(SaveData == null)
                 {
-                    sceneData.LoadMapData(m_ServerInstance, MapData);
+                    sceneData = new SceneData();
+                    sceneData.m_SceneName = SceneName;
+
+                    m_LoadedScenes.Add(SceneName, sceneData);
+
+                    if (MapData != null)
+                    {
+                        sceneData.LoadMapData(m_ServerInstance, MapData);
+                    }
+                    sceneData.SpawnVanilaLoot(m_ServerInstance);
                 }
-                sceneData.SpawnVanilaLoot(m_ServerInstance);
+                else
+                {
+                    sceneData = new SceneData(SaveData);
+
+                    m_LoadedScenes.Add(SceneName, sceneData);
+                    SkyCoopServer.Logger.Log($"{SceneName} has been restored from file");
+                }
             }
         }
 
@@ -129,7 +142,7 @@ namespace SkyCoopServer
 
             if (m_LoadedScenes.TryGetValue(SceneName, out Data))
             {
-                Data.Unload();
+                Data.SaveToFile(ServerInstance);
                 SkyCoopServer.Logger.Log($"{SceneName} has been unloaded");
                 m_LoadedScenes.Remove(SceneName);
             }
@@ -150,16 +163,19 @@ namespace SkyCoopServer
             return true;
         }
 
-        public void UnloadSceneNobodyOn(Server ServerInstance)
+        public void UnloadAllScenes()
         {
-            foreach (string LoadedSceneName in m_LoadedScenes.Keys.ToArray())
+            foreach (string SceneName in m_LoadedScenes.Keys.ToList())
             {
-                bool CanUnload = IsNoBodyOnThisScene(LoadedSceneName, ServerInstance);
-                if (CanUnload)
-                {
-                    UnloadScene(ServerInstance, LoadedSceneName);
-                    SkyCoopServer.Logger.Log($"Scene unloaded because no body on there {LoadedSceneName}");
-                }
+                UnloadScene(m_ServerInstance, SceneName);
+            }
+        }
+
+        public void SaveAllToFile()
+        {
+            foreach (SceneData SceneData in m_LoadedScenes.Values.ToList())
+            {
+                SceneData.SaveToFile(m_ServerInstance);
             }
         }
 
@@ -1360,6 +1376,7 @@ namespace SkyCoopServer
             if (!SceneData.m_Harvestables.ContainsKey(GUID))
             {
                 DataStr.HarvestableData Harvestable = new HarvestableData();
+                Harvestable.m_GUID = GUID;
                 Harvestable.m_HarvestTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
                 if(RespawnTimeMin != 0 && RespawnTimeMax != 0)
                 {

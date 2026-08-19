@@ -39,9 +39,13 @@ namespace SkyCoopServer
         }
 
         // Time
+        public const int c_AutoSavePeriod = 300;
+
+
         private DateTime s_NextSecondCall;
         private DateTime s_PreviousTickTime;
         private float s_DeltaTime = 0;
+        private int s_AutoSaveSeconds = c_AutoSavePeriod;
 
 
         public delegate void PacketHandler(NetPeer Client, NetDataReader Reader, Server ServerInstance);
@@ -123,15 +127,56 @@ namespace SkyCoopServer
             //TODO: Loading Config
             m_Config = new DataStr.ServerConfig();
 
+            SaveData saveData = FilesManager.LoadServerFromFile(this);
+
             // Data Sync Instances
             m_PlayersData = new PlayersDataManager(this);
             m_ScenesData = new ScenesDataManager(this);
-            m_Timeline = new Timeline(this);
-            m_Weather = new WeatherManager(this);
+
+
+            if(saveData != null)
+            {
+                m_Timeline = new Timeline(this, saveData.Timeline);
+                m_Weather = new WeatherManager(this, saveData.Weather);
+            }
+            else
+            {
+                m_Timeline = new Timeline(this);
+                m_Weather = new WeatherManager(this);
+            }
 
             s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
             LootTableManager.Load();
             m_AvailableGameModes = FilesManager.GetGameModesList();
+        }
+
+        public class SaveData
+        {
+            public Timeline.SaveData Timeline { get; set; }
+            public WeatherManager.SaveData Weather { get; set; }
+        }
+
+        public SaveData Save()
+        {
+            SaveData data = new SaveData();
+
+            data.Timeline = m_Timeline.Save();
+
+            if(m_Weather != null && m_Weather.m_Config != null)
+            {
+                data.Weather = m_Weather.Save();
+            }
+
+            return data;
+        }
+
+        public void SaveToFile()
+        {
+            SaveData data = Save();
+
+            FilesManager.SaveServerToFile(data, this);
+
+            m_ScenesData.SaveAllToFile();
         }
 
         public string GetGameModeForPlayersCount(string CurrentGameModeName, int PlayersCount)
@@ -242,6 +287,19 @@ namespace SkyCoopServer
                     else
                     {
                         m_Weather.UpdateEverySecond();
+                    }
+                }
+
+                if(s_AutoSaveSeconds > 0)
+                {
+                    s_AutoSaveSeconds--;
+
+                    if(s_AutoSaveSeconds == 0)
+                    {
+                        s_AutoSaveSeconds = c_AutoSavePeriod;
+                        Logger.Log(ConsoleColor.Green, $"Doing auto save...");
+                        SaveToFile();
+                        Logger.Log(ConsoleColor.Green, $"Next auto-save in {s_AutoSaveSeconds} seconds");
                     }
                 }
             }
@@ -459,7 +517,7 @@ namespace SkyCoopServer
                                 m_PlayersData.SetPlayerInteractionGUID(Peer.Id, "");
                             }
                         }
-                        m_ScenesData.UnloadSceneNobodyOn(this);
+                        m_ScenesData.UnloadAllScenes();
                     }
                 }
             }
@@ -566,7 +624,7 @@ namespace SkyCoopServer
                 {
                     m_Config.m_SceneToSpawn = MapData.Scene;
                     m_PlayersData.ResetGameScores();
-                    m_ScenesData.UnloadSceneNobodyOn(this);
+                    m_ScenesData.UnloadAllScenes();
                     m_ScenesData.LoadScene(MapData);
 
                     ServerSend.SendConfigUpdated(this);
