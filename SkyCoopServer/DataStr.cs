@@ -21,7 +21,7 @@ namespace SkyCoopServer
         {
             public int m_MaxPlayers = 32;
             public string m_StartingRegion = "";
-            public int m_Seed = 777777;
+            public int m_Seed = 0;
             //public int m_VoicePort = 37850;
             public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";

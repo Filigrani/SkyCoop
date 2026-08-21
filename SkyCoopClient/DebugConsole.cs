@@ -49,6 +49,7 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("removepleasewait", new Action(RemovePleaseWait));
             uConsole.RegisterCommand("rip", new Action(RIP));
             uConsole.RegisterCommand("ripstop", new Action(RIPSTOP));
+            uConsole.RegisterCommand("checksave", new Action(CheckSave));
         }
 
         public static void GiveIlegalGear()
@@ -117,6 +118,12 @@ namespace SkyCoopClient
             {
                 GearSpawnsRipper.s_ScenesToSave.Clear();
             }
+        }
+
+        public static void CheckSave()
+        {
+            int Seed = uConsole.GetInt();
+            MenuHook.FindSaveForSeed(Seed);
         }
 
         public static void RemovePleaseWait()

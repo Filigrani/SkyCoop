@@ -56,7 +56,7 @@ namespace SkyCoop
 
         public static bool IsMultiplayer()
         {
-            if(MenuHook.s_CurrenetMenuOverride == "Multiplayer" || (Client != null && Client.m_IsReady) || s_MapEditor)
+            if(MenuHook.s_CurrenetMenuOverride != "Original" || (Client != null && Client.m_IsReady) || s_MapEditor)
             {
                 return true;
             }
@@ -288,7 +288,22 @@ namespace SkyCoop
             EMM.SetGameModeConfig(SelectedMode);
             MenuHook.s_LastMultiplayerWorldSeed = Seed;
             MenuHook.s_LastMultiplayerGameMode = SelectedMode;
-            SkyCoop.Logger.Log($"SelectedMode {SelectedMode.name}");
+
+            int SaveIndex = MenuHook.FindSaveForSeed(Seed);
+
+            if(SaveIndex != -1)
+            {
+                Panel_MainMenu Panel = InterfaceManager.GetPanel<Panel_MainMenu>();
+
+                if (Panel)
+                {
+                    SaveSlotInfo saveSlotInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, SaveIndex);
+                    SaveGameSystem.SetCurrentSaveInfo(Episode.One, SaveSlotType.SANDBOX, saveSlotInfo.m_GameId, saveSlotInfo.m_SaveSlotName);
+                    Panel.OnLoadGame(SaveSlotType.SANDBOX, SaveIndex);
+                    MenuHook.SetMenuOverrideMode("Original");
+                    return;
+                }
+            }
 
             if (!string.IsNullOrEmpty(Region) && !string.IsNullOrEmpty(SceneToSpawn))
             {
@@ -312,20 +327,38 @@ namespace SkyCoop
             }
             else
             {
+                MenuHook.SetMenuOverrideMode("Original");
                 Panel_Sandbox Panel = InterfaceManager.GetPanel<Panel_Sandbox>();
                 if (Panel)
                 {
                     Panel.OnClickNew();
                 }
-                Panel_SelectExperience Panel2 = InterfaceManager.GetPanel<Panel_SelectExperience>();
-                if (Panel2)
-                {
-                    Panel2.OnExperienceClicked();
-                }
                 InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(true);
                 InterfaceManager.TrySetPanelEnabled<Panel_SelectExperience>(false);
                 InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
                 GameManager.GetExperienceModeManagerComponent().SetGameModeConfig(SelectedMode);
+
+                Panel_SelectWorldMap Panel2 = InterfaceManager.GetPanel<Panel_SelectWorldMap>();
+
+                if (SelectedMode.m_StartRegionSelectionBlocked)
+                {
+                    InterfaceManager.TrySetPanelEnabled<Panel_SelectSurvivor>(true);
+                }
+                else
+                {
+                    if (Panel2)
+                    {
+                        if (Panel2.ShouldBePartOfFlow())
+                        {
+                            InterfaceManager.TrySetPanelEnabled<Panel_SelectWorldMap>(true);
+                        }
+                        else
+                        {
+                            InterfaceManager.TrySetPanelEnabled<Panel_SelectRegion_Map>(true);
+                        }
+                    }
+                }
+                MenuHook.SetMenuOverrideMode("Multiplayer");
             }
         }
 

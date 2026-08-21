@@ -443,9 +443,9 @@ namespace SkyCoopServer
             }
         }
 
-        public static Server.SaveData LoadServerFromFile(Server ServerInstance)
+        public static Server.SaveData LoadServerFromFile(Server ServerInstance, int Seed)
         {
-            string Path = $"{s_SaveDirectory}/{ServerInstance.m_Config.m_Seed.ToString()}/ServerData";
+            string Path = $"{s_SaveDirectory}/{Seed.ToString()}/ServerData";
             string JSON = "";
 
             Logger.Log($"[FilesManager] Loading file {Path}");
@@ -473,6 +473,29 @@ namespace SkyCoopServer
                 return null;
             }
             return JsonSerializer.Deserialize<Server.SaveData>(JSON);
+        }
+
+        public static List<string> GetServerSavesNames()
+        {
+            if (Directory.Exists(s_SaveDirectory))
+            {
+                List<string> FileNames = new List<string>(Directory.GetDirectories(s_SaveDirectory));
+                for (int i = 0; i < FileNames.Count; i++)
+                {
+                    FileNames[i] = Path.GetFileName(FileNames[i]);
+                }
+                return FileNames;
+            }
+            return new List<string>();
+        }
+
+        public static void DeleteSave(string SaveName)
+        {
+            Logger.Log($"[FilesManager] Delete save {$"{s_SaveDirectory}/{SaveName}"}");
+            if (Directory.Exists($"{s_SaveDirectory}/{SaveName}"))
+            {
+                Directory.Delete($"{s_SaveDirectory}/{SaveName}", true);
+            }
         }
     }
 }

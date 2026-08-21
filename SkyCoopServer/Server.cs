@@ -119,31 +119,37 @@ namespace SkyCoopServer
             }
         }
 
-        public Server()
+        public Server(int Seed = 0, string ExperienceMode = "")
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
 
-            //TODO: Loading Config
+            if(Seed == 0)
+            {
+                Seed = Guid.NewGuid().GetHashCode();
+            }
+
+            SaveData saveData = FilesManager.LoadServerFromFile(this, Seed);
+
             m_Config = new DataStr.ServerConfig();
+            m_Config.m_Seed = Seed;
+            m_Config.m_ExperienceMode = ExperienceMode;
 
-            SaveData saveData = FilesManager.LoadServerFromFile(this);
-
-            // Data Sync Instances
-            m_PlayersData = new PlayersDataManager(this);
-            m_ScenesData = new ScenesDataManager(this);
-
-
-            if(saveData != null)
+            if (saveData != null)
             {
                 m_Timeline = new Timeline(this, saveData.Timeline);
                 m_Weather = new WeatherManager(this, saveData.Weather);
+                m_Config.m_ExperienceMode = saveData.ExperienceMode;
             }
             else
             {
                 m_Timeline = new Timeline(this);
                 m_Weather = new WeatherManager(this);
             }
+
+            // Data Sync Instances
+            m_PlayersData = new PlayersDataManager(this);
+            m_ScenesData = new ScenesDataManager(this);
 
             s_NextSecondCall = DateTime.UtcNow.AddSeconds(1);
             LootTableManager.Load();
@@ -154,6 +160,7 @@ namespace SkyCoopServer
         {
             public Timeline.SaveData Timeline { get; set; }
             public WeatherManager.SaveData Weather { get; set; }
+            public string ExperienceMode { get; set; }
         }
 
         public SaveData Save()
@@ -166,6 +173,8 @@ namespace SkyCoopServer
             {
                 data.Weather = m_Weather.Save();
             }
+
+            data.ExperienceMode = m_Config.m_ExperienceMode;
 
             return data;
         }
