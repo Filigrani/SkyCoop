@@ -678,6 +678,54 @@ namespace SkyCoopClient
                         BreakDownHook.SlowDown();
                         CraftingHook.SlowDown();
                     }
+
+                    if (GameManager.m_Rest.IsSleeping())
+                    {
+                        if (s_PassingTime)
+                        {
+                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+
+                            if (Panel)
+                            {
+                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
+                                {
+                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
+                                    if (RestingLable)
+                                    {
+                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
+
+                                        if (Localize)
+                                        {
+                                            Localize.key = "GAMEPLAY_PassTimeProgress_RT";
+                                            Localize.OnLocalize();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        else
+                        {
+                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+
+                            if (Panel)
+                            {
+                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
+                                {
+                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
+                                    if (RestingLable)
+                                    {
+                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
+
+                                        if (Localize)
+                                        {
+                                            Localize.key = "GAMEPLAY_RestingProgress_RT";
+                                            Localize.OnLocalize();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 else
                 {

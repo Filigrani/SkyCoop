@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
+using static System.Net.WebRequestMethods;
 
 namespace SkyCoopServer
 {
@@ -320,7 +321,7 @@ namespace SkyCoopServer
                 m_GamePlayState = State;
                 Logger.Log($"[DataStr.PlayerData] Client {m_PlayerName} new gamepaly state {m_GamePlayState}");
                 m_InteractionGUID = "";
-                m_CarSeat = "";
+                ServerInstance.m_PlayersData.SetPlayerCarSeatGUID(this, "");
 
                 foreach (PlayerData OtherPlayerData in ServerInstance.m_PlayersData.GetPlayersOnScene(m_Scene))
                 {
@@ -2809,9 +2810,33 @@ namespace SkyCoopServer
         {
             public string m_GearGUID = string.Empty;
 
+            public CookingSlotData() { }
+            public CookingSlotData(SaveData data)
+            {
+                Load(data);
+            }
+
             public bool IsEmpty()
             {
                 return string.IsNullOrEmpty(m_GearGUID);
+            }
+
+            public class SaveData
+            {
+                public string GearGUID { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+                data.GearGUID = m_GearGUID;
+
+                return data;
+            }
+
+            public void Load(SaveData data)
+            {
+                m_GearGUID = data.GearGUID;
             }
         }
 
@@ -2869,6 +2894,8 @@ namespace SkyCoopServer
                 public float HeatInner { get; set; }
                 public float HeatOuter { get; set; }
                 public float TimeToReachMaxTempSeconds { get; set; }
+                public int CookingSlotsNum { get; set; }
+                public List<CookingSlotData.SaveData> CookingSlots { get; set; }
             }
 
             public SaveData Save()
@@ -2897,6 +2924,13 @@ namespace SkyCoopServer
                 data.HeatInner = m_HeatInnerRadius;
                 data.HeatOuter = m_HeatOuterRadius;
                 data.TimeToReachMaxTempSeconds = m_TimeToReachMaxTempInSeconds;
+                data.CookingSlotsNum = m_CookingSlots.Count;
+                data.CookingSlots = new List<CookingSlotData.SaveData>();
+                foreach (CookingSlotData Slot in m_CookingSlots)
+                {
+                    data.CookingSlots.Add(Slot.Save());
+                }
+
                 return data;
             }
 
@@ -2923,7 +2957,24 @@ namespace SkyCoopServer
                 m_HeatInnerRadius = data.HeatInner;
                 m_HeatOuterRadius = data.HeatOuter;
                 m_TimeToReachMaxTempInSeconds = data.TimeToReachMaxTempSeconds;
-
+                for (int i = 0; i < data.CookingSlotsNum; i++)
+                {
+                    if(data.CookingSlots != null)
+                    {
+                        if(data.CookingSlots.Count-1 >= i)
+                        {
+                            m_CookingSlots.Add(new CookingSlotData(data.CookingSlots[i]));
+                        }
+                        else
+                        {
+                            m_CookingSlots.Add(new CookingSlotData());
+                        }
+                    }
+                    else
+                    {
+                        m_CookingSlots.Add(new CookingSlotData());
+                    }  
+                }
             }
 
             public void AddFuel(float BurnTime, float Heat, float InnerRadius, float OuterRadius)
@@ -3181,6 +3232,7 @@ namespace SkyCoopServer
 
                 Fire.m_TimeToReachMaxTempInSeconds = HeatingSpeed;
                 Fire.m_MaxHeat = IsForge ? 200 : 80;
+                Fire.m_IsForge = IsForge;
 
                 Fire.Ignite(Fuel, Heat, InnerRadius, OuterRadius, CurrentTime, SceneName, ServerInstance);
 

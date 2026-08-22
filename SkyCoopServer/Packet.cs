@@ -118,7 +118,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "key2";
+        public const string c_Key = "key3";
 
         public enum TypeVoice
         {

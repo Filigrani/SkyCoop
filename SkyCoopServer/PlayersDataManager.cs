@@ -294,7 +294,7 @@ namespace SkyCoopServer
             {
                 Player.m_Scene = Scene;
                 Player.m_InteractionGUID = "";
-                Player.m_CarSeat = "";
+                SetPlayerCarSeatGUID(Player, "");
                 Player.m_IsWorking = false;
 
                 if (Broadcast)
@@ -763,6 +763,7 @@ namespace SkyCoopServer
             if (Player != null)
             {
                 Player.m_CarSeat = GUID;
+                PlayerChangeVehicleState(Player.m_PlayerID, !string.IsNullOrEmpty(Player.m_CarSeat));
             }
         }
 

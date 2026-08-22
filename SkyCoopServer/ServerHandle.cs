@@ -435,11 +435,11 @@ namespace SkyCoopServer
 
                 bool CanUnloadOldScene = ServerInstance.m_ScenesData.IsNoBodyOnThisScene(OldScene, ServerInstance);
 
-                Logger.Log($"{Data.m_PlayerName} transitions from {OldScene} to {SceneName} Should unload old scene? {CanUnloadOldScene}");
+                Logger.Log($"{Data.m_PlayerName} transitions from {OldScene} to {SceneName} Should unload {OldScene} ? {CanUnloadOldScene}");
 
                 if (ServerInstance.m_Rules.m_CanUseTransitions && CanUnloadOldScene && ServerInstance.m_ScenesData.CanUnloadScene())
                 {
-                    ServerInstance.m_ScenesData.UnloadScene(ServerInstance, SceneName);
+                    ServerInstance.m_ScenesData.UnloadScene(ServerInstance, OldScene);
                 }
             }
             else
