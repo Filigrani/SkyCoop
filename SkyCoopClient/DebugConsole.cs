@@ -48,6 +48,7 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("liquidboildebug", new Action(LiquiadBoilDebug));
             uConsole.RegisterCommand("removepleasewait", new Action(RemovePleaseWait));
             uConsole.RegisterCommand("rip", new Action(RIP));
+            uConsole.RegisterCommand("ripmodded", new Action(RIPModded));
             uConsole.RegisterCommand("ripstop", new Action(RIPSTOP));
             uConsole.RegisterCommand("checksave", new Action(CheckSave));
         }
@@ -110,6 +111,13 @@ namespace SkyCoopClient
             if(!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
             {
                 GearSpawnsRipper.Start();
+            }
+        }
+        public static void RIPModded()
+        {
+            if (!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
+            {
+                GearSpawnsRipper.Start(true);
             }
         }
         public static void RIPSTOP()

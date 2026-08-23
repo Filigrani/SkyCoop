@@ -43,6 +43,17 @@ namespace SkyCoopServer
                     }
                 }
             }
+            ScenesLootSpawns LootDataModded = FilesManager.GetGearsSpawnsDataModded();
+            if (LootDataModded != null)
+            {
+                foreach (SceneLootSpawns SceneData in LootDataModded.Scenes)
+                {
+                    if (!m_SceneLootSpawns.ContainsKey(SceneData.SceneName))
+                    {
+                        m_SceneLootSpawns.Add(SceneData.SceneName, SceneData);
+                    }
+                }
+            }
         }
 
         public void LoadScene(MapData MapData)

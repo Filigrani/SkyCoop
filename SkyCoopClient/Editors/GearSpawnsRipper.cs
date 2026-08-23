@@ -26,6 +26,7 @@ namespace SkyCoopClient
         public static bool s_Active = false;
         public static Stopwatch s_StopWatch = null;
         //public static int m_FramesDelay = 0;
+        public static string s_NameForGearsFiles = "GearSpawns";
 
         public static void SceneLoaded()
         {
@@ -52,7 +53,7 @@ namespace SkyCoopClient
             //}
         }
 
-        public static void Start()
+        public static void Start(bool ModdedOnly = false)
         {
             s_ScenesLootSpawns = new DataStr.ScenesLootSpawns();
             s_ScenesLootSpawns.Scenes = new List<DataStr.SceneLootSpawns>();
@@ -65,9 +66,14 @@ namespace SkyCoopClient
 
             foreach (IResourceLocation sceneResource in Scenes)
             {
+                if(ModdedOnly && !sceneResource.PrimaryKey.ToLower().StartsWith("mod"))
+                {
+                    continue;
+                }
                 s_ScenesToSave.Add(sceneResource.PrimaryKey);
                 SkyCoop.Logger.Log($"[GearSpawnsRipper] Scene added to queue {sceneResource.PrimaryKey}");
             }
+            s_NameForGearsFiles = !ModdedOnly ? "GearSpawns" : "GearSpawnsModded";
             s_Active = true;
             Next();
         }
@@ -272,7 +278,7 @@ namespace SkyCoopClient
             string JSON = JsonSerializer.Serialize<DataStr.ScenesLootSpawns>(s_ScenesLootSpawns, Options);
             try
             {
-                File.WriteAllText($"{FilesManager.s_DataDirectory}/GearSpawns", JSON);
+                File.WriteAllText($"{FilesManager.s_DataDirectory}/{s_NameForGearsFiles}", JSON);
                 return;
             }
             catch (Exception e)
