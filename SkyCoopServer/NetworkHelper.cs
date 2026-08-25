@@ -32,10 +32,14 @@ namespace SkyCoopServer
                     await m_Device.CreatePortMapAsync(m_MappingPort);
                     Logger.Log(ConsoleColor.DarkGreen, $"[NetworkHelper] Create upnp port: {m_MappingPort.Protocol}:{m_MappingPort.PublicPort}");
                 }
-                else
+                else if(m_Device == null)
                 {
                     Logger.Log(ConsoleColor.DarkRed, "[NetworkHelper] Upnp unsupported on this device");
                 }
+            }
+            catch(Exception ex)
+            {
+                Logger.Log(ConsoleColor.DarkRed, $"[NetworkHelper] {ex}");
             }
             finally
             {
