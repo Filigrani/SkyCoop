@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
+using static SkyCoopServer.Logger;
 using static System.Net.WebRequestMethods;
 
 namespace SkyCoopServer
@@ -20,15 +21,91 @@ namespace SkyCoopServer
     {
         public class ServerConfig
         {
+            public string m_ServerName = "Nameless";
             public int m_MaxPlayers = 32;
-            public string m_StartingRegion = "";
             public int m_Seed = 0;
+            public int m_Port = 37855;
             //public int m_VoicePort = 37850;
             public int m_VoicePort = 0;
             public string m_ExperienceMode = "Stalker";
             public string m_SceneToSpawn = "";
             public string m_GameMode = "Sandbox";
             public bool m_CheatsAllowed = true;
+        }
+
+        public class ServerConfigJSON
+        {
+            public string ServerName { get; set; }
+            public int MaxPlayers { get; set; }
+            public int Seed { get; set; }
+            public int Port { get; set; }
+            public int VoicePort { get; set; }
+            public string ExperienceMode { get; set; }
+            public bool Cheats { get; set; }
+
+            public ServerConfig Load()
+            {
+                ServerConfig CFG = new ServerConfig();
+                if (!string.IsNullOrEmpty(ServerName))
+                {
+                    CFG.m_ServerName = ServerName;
+                }
+                else
+                {
+                    List<string> RandomNames = PlayersDataManager.GetPossibleSquadNames();
+                    CFG.m_ServerName = RandomNames[new System.Random(Guid.NewGuid().GetHashCode()).Range(0, RandomNames.Count)];
+                }
+
+                if(MaxPlayers > 0)
+                {
+                    CFG.m_MaxPlayers = MaxPlayers;
+                }
+                else
+                {
+                    CFG.m_MaxPlayers = 10;
+                }
+
+                if(Seed != 0)
+                {
+                    CFG.m_Seed = Seed;
+                    
+                }
+                else
+                {
+                    CFG.m_Seed = Guid.NewGuid().GetHashCode();
+                }
+
+                if(Port > 0)
+                {
+                    CFG.m_Port = Port;
+                }
+                else
+                {
+                    CFG.m_Port = Server.c_DefaultPort;
+                }
+
+                if(VoicePort > 0)
+                {
+                    CFG.m_VoicePort = VoicePort;
+                }
+                else
+                {
+                    CFG.m_VoicePort = 0;
+                }
+
+                if (!string.IsNullOrEmpty(ExperienceMode))
+                {
+                    CFG.m_ExperienceMode = ExperienceMode;
+                }
+                else
+                {
+                    CFG.m_ExperienceMode = "Stalker";
+                }
+
+                CFG.m_CheatsAllowed = Cheats;
+
+                return CFG;
+            }
         }
 
         public const int c_SpeedUpHours = 12;
@@ -61,6 +138,8 @@ namespace SkyCoopServer
 
         public class GameRules
         {
+            public string m_GameMode = "";
+            public string m_LocalizationID = "";
             public List<string> m_Maps = new List<string>();
             public int m_MinimalPlayersToPlay = 0;
             public bool m_PlayerCanBeKnocked = false;
@@ -88,6 +167,7 @@ namespace SkyCoopServer
             public string m_SceneUnload = "";
             public bool m_Weather = true;
             public bool m_CanCraft = true;
+            public Dictionary<string, SceneLootSpawns> m_GearSpawns = new Dictionary<string, SceneLootSpawns>();
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -119,6 +199,7 @@ namespace SkyCoopServer
 
         public class GameRulesJson
         {
+            public string LocalizationID { get; set; }
             public List<string> Maps { get; set; }
             public int MinimalPlayers;
             public bool Knockdowns { get; set; }
@@ -146,11 +227,13 @@ namespace SkyCoopServer
             public string SceneUnload { get; set; }
             public bool Weather { get; set; }
             public bool CanCraft { get; set; }
+            public List<string> GearSpawns { get; set; }
 
-            public GameRules Load()
+            public GameRules Load(string FileName)
             {
                 GameRules Inst = new GameRules();
-
+                Inst.m_GameMode = FileName;
+                Inst.m_LocalizationID = FileName;
 
                 if (Maps != null)
                 {
@@ -221,6 +304,43 @@ namespace SkyCoopServer
                 Inst.m_SceneUnload = SceneUnload;
                 Inst.m_Weather = Weather;
                 Inst.m_CanCraft = CanCraft;
+
+                if(GearSpawns != null)
+                {
+                    foreach (string Path in GearSpawns)
+                    {
+                        ScenesLootSpawns GearsSpawnsData = FilesManager.GetGearsSpawnsData(Path);
+                        if(GearsSpawnsData != null)
+                        {
+                            foreach (SceneLootSpawns LootData in GearsSpawnsData.Scenes)
+                            {
+                                if(LootData != null)
+                                {
+                                    SceneLootSpawns Combined = null;
+                                    if (Inst.m_GearSpawns.TryGetValue(LootData.SceneName, out Combined))
+                                    {
+                                        Combined.Join(LootData);
+                                    }
+                                    else
+                                    {
+                                        SceneLootSpawns New = new SceneLootSpawns();
+                                        New.PrefabSpawns = new List<PrefabSpawnData>();
+                                        New.RandomSpawnObjects = new List<RandomSpawnObjectData>();
+                                        New.LooseGearSpawns = new List<LooseGearSpawn>();
+                                        New.RadialSpawns = new List<RadialObjectSpawnerData>();
+                                        New.SpawnGearVariants = new List<SpawnGearVariantData>();
+                                        New.Clone(LootData);
+                                        Inst.m_GearSpawns.Add(LootData.SceneName, New);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!string.IsNullOrEmpty(LocalizationID))
+                {
+                    Inst.m_LocalizationID = LocalizationID;
+                }
 
                 return Inst;
             }
@@ -1153,10 +1273,28 @@ namespace SkyCoopServer
                 }
             }
 
-            public void SpawnVanilaLoot(Server ServerInstance)
+            public void SpawnGears(Server ServerInstance)
             {
-                DataStr.SceneLootSpawns LootData = ServerInstance.m_ScenesData.GetSceneLoot(m_SceneName);
-                if(LootData != null)
+                string SceneFileName = m_SceneName;
+
+                if (SceneFileName.Contains('_'))
+                {
+                    SceneFileName = m_SceneName.Split('_')[0];
+                }
+
+                if (ServerInstance.m_Rules.m_GearSpawns != null)
+                {
+                    DataStr.SceneLootSpawns LootData = null;
+                    if(ServerInstance.m_Rules.m_GearSpawns.TryGetValue(SceneFileName, out LootData))
+                    {
+                        SpawnGears(ServerInstance, LootData);
+                    }
+                }
+            }
+
+            public void SpawnGears(Server ServerInstance, DataStr.SceneLootSpawns LootData)
+            {
+                if (LootData != null)
                 {
                     Random RNG = new Random(Guid.NewGuid().GetHashCode());
 
@@ -3278,6 +3416,38 @@ namespace SkyCoopServer
             public List<LooseGearSpawn> LooseGearSpawns { get; set; }
             public List<RadialObjectSpawnerData> RadialSpawns { get; set; }
             public List<SpawnGearVariantData> SpawnGearVariants { get; set; }
+
+            public void Clone(SceneLootSpawns CloneFrom)
+            {
+                if (CloneFrom.PrefabSpawns != null)
+                {
+                    PrefabSpawns.AddRange(new List<PrefabSpawnData>(CloneFrom.PrefabSpawns));
+                }
+                if (CloneFrom.RandomSpawnObjects != null)
+                {
+                    RandomSpawnObjects.AddRange(new List<RandomSpawnObjectData>(CloneFrom.RandomSpawnObjects));
+                }
+                if (CloneFrom.LooseGearSpawns != null)
+                {
+                    LooseGearSpawns.AddRange(new List<LooseGearSpawn>(CloneFrom.LooseGearSpawns));
+                }
+                if (CloneFrom.RadialSpawns != null)
+                {
+                    RadialSpawns.AddRange(new List<RadialObjectSpawnerData>(CloneFrom.RadialSpawns));
+                }
+                if (CloneFrom.SpawnGearVariants != null)
+                {
+                    SpawnGearVariants.AddRange(new List<SpawnGearVariantData>(CloneFrom.SpawnGearVariants));
+                }
+            }
+
+            public void Join(SceneLootSpawns Other)
+            {
+                if(Other != null)
+                {
+                    Clone(Other);
+                }
+            }
         }
 
         public class PrefabSpawnData

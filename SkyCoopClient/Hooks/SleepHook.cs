@@ -601,7 +601,10 @@ namespace SkyCoopClient
 
         public static void OnEveryoneSleepingChanged()
         {
-
+            if (!s_LastEveryoneIsSleeping)
+            {
+                CameraFade.FinishFade();
+            }
         }
 
         public static void SetEveryoneIsSleeping(bool State)

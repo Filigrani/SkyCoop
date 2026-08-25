@@ -14,7 +14,6 @@ namespace SkyCoopServer
     {
         public Server m_ServerInstance;
         public Dictionary<string, SceneData> m_LoadedScenes = new Dictionary<string, SceneData>();
-        public Dictionary<string, SceneLootSpawns> m_SceneLootSpawns = new Dictionary<string, SceneLootSpawns>();
 
         public struct AddedGearData
         {
@@ -31,29 +30,6 @@ namespace SkyCoopServer
         public ScenesDataManager(Server Server)
         {
             m_ServerInstance = Server;
-
-            ScenesLootSpawns LootData = FilesManager.GetGearsSpawnsData();
-            if(LootData != null)
-            {
-                foreach (SceneLootSpawns SceneData in LootData.Scenes)
-                {
-                    if (!m_SceneLootSpawns.ContainsKey(SceneData.SceneName))
-                    {
-                        m_SceneLootSpawns.Add(SceneData.SceneName, SceneData);
-                    }
-                }
-            }
-            ScenesLootSpawns LootDataModded = FilesManager.GetGearsSpawnsDataModded();
-            if (LootDataModded != null)
-            {
-                foreach (SceneLootSpawns SceneData in LootDataModded.Scenes)
-                {
-                    if (!m_SceneLootSpawns.ContainsKey(SceneData.SceneName))
-                    {
-                        m_SceneLootSpawns.Add(SceneData.SceneName, SceneData);
-                    }
-                }
-            }
         }
 
         public void LoadScene(MapData MapData)
@@ -74,17 +50,6 @@ namespace SkyCoopServer
                 return sceneData;
             }
             
-            return null;
-        }
-
-        public SceneLootSpawns GetSceneLoot(string SceneName)
-        {
-            SceneLootSpawns sceneData = null;
-            if (m_SceneLootSpawns.TryGetValue(SceneName, out sceneData))
-            {
-                return sceneData;
-            }
-
             return null;
         }
 
@@ -135,7 +100,7 @@ namespace SkyCoopServer
                     {
                         sceneData.LoadMapData(m_ServerInstance, MapData);
                     }
-                    sceneData.SpawnVanilaLoot(m_ServerInstance);
+                    sceneData.SpawnGears(m_ServerInstance);
                 }
                 else
                 {

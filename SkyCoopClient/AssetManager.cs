@@ -94,7 +94,7 @@ namespace SkyCoop
 
         public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, float Volume = 0, float ConditionNormalized = 1, int Style = 0, Transform parent = null)
         {
-            string LN = "Invalid";
+            LocalizedName = "Invalid";
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
             if (Prefab)
             {
@@ -106,7 +106,11 @@ namespace SkyCoop
                     GearItem gi = GearObject.GetComponent<GearItem>();
                     if (gi)
                     {
-                        LN = gi.DisplayName;
+                        LocalizedName = gi.DisplayName;
+                    }
+                    else
+                    {
+                        return null;
                     }
 
                     if (gi.m_CookingPotItem)
@@ -228,7 +232,6 @@ namespace SkyCoop
                             UnityEngine.Object.Destroy(Com);
                         }
                     }
-                    LocalizedName = LN;
                     return GearObject;
                 }
                 else
@@ -236,7 +239,6 @@ namespace SkyCoop
                     Logger.Log(ConsoleColor.Red, "Can't instantiate " + Prefab.name);
                 }
             }
-            LocalizedName = LN;
             return null;
         }
 

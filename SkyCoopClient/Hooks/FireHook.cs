@@ -1753,6 +1753,10 @@ namespace SkyCoopClient
 
         public static void HandleCookFromPicker(DroppedGearVisual Visual)
         {
+            if (Visual == null)
+            {
+                return;
+            }
             SkyCoop.Logger.Log($"HandleCookFromPicker");
             s_ActiveCookignClone = GetCookingClone(Visual.m_PrefabName, "", Visual.m_GUID);
 
@@ -1797,6 +1801,11 @@ namespace SkyCoopClient
 
         public static void HandleBoilFromPicker(DroppedGearVisual Visual)
         {
+            if(Visual == null)
+            {
+                return;
+            }
+            
             s_ActiveCookignClone = GetCookingClone(Visual.m_PrefabName, "", Visual.m_GUID);
 
             if (s_ActiveCookignClone)
@@ -1822,6 +1831,24 @@ namespace SkyCoopClient
                 else
                 {
                     UnityEngine.Object.Destroy(s_ActiveCookignClone.gameObject);
+                }
+            }
+        }
+
+        public static void HandlePassTime(DroppedGearVisual Visual)
+        {
+            if (Visual == null)
+            {
+                return;
+            }
+
+            if (Visual.m_CookingVisual)
+            {
+                float PassTimeSeconds = Visual.m_CookingVisual.GetPassTimeSeconds();
+                if(PassTimeSeconds > 0)
+                {
+                    SleepHook.s_DesiredTimeToSleep = PassTimeSeconds;
+                    SleepHook.DoPassTime();
                 }
             }
         }

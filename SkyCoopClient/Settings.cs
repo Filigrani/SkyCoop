@@ -10,6 +10,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using Unity.Services.Analytics.Internal;
 using UnityEngine;
 
 namespace SkyCoopClient
@@ -24,14 +25,14 @@ namespace SkyCoopClient
         //[Description("Nickname other players will see. Leave empty to use your name from Steam.")]
         //public string m_UserName = "";
 
-        [Section("Voice Chat")]
+        [Section("SC_Settings_VoiceChatSection", Localize = true)]
 
-        [Name("Microphone")]
-        [Description("Microphone that will be used for voice chat.")]
+        [Name("SC_Settings_Microphone", Localize = true)]
+        [Description("SC_Settings_MicrophoneDescription")]
         [Choice(
-            "MODINTERNAL_Microphone0", 
-            "MODINTERNAL_Microphone1", 
-            "MODINTERNAL_Microphone2", 
+            "MODINTERNAL_Microphone0",
+            "MODINTERNAL_Microphone1",
+            "MODINTERNAL_Microphone2",
             "MODINTERNAL_Microphone3",
             "MODINTERNAL_Microphone4",
             "MODINTERNAL_Microphone5",
@@ -42,41 +43,45 @@ namespace SkyCoopClient
             , Localize = true)]
         public int m_MicrophoneDeviceNumber = 0;
 
-        [Name("Push To Talk")]
-        [Description("If enabled, your voice will be sent only when defined button is held.")]
+        [Name("SC_Settings_PushToTalk", Localize = true)]
+        [Description("SC_Settings_PushToTalkDescription")]
         public bool m_PushToTalk = false;
 
-        [Name("Push To Talk Key")]
-        [Description("Configure key, that will be used to send your voice when it's held.\n(only used if Push to talk is enabled!)")]
+        [Name("SC_Settings_PushToTalkKey", Localize = true)]
+        [Description("SC_Settings_PushToTalkKeyDescription")]
         public KeyCode m_VoiceButton = KeyCode.V;
 
-        [Name("Received Volume")]
-        [Description("Volume of recived voice.")]
+        [Name("SC_Settings_ReceivedVoice", Localize = true)]
+        [Description("SC_Settings_ReceivedVoiceDescription")]
         [Slider(0, 5)]
         public float m_ReceivedVoiceVolume = 1;
 
-        [Name("Microphone Volume")]
-        [Description("Volume of your voice that going to be sent.")]
+        [Name("SC_Settings_MicrophoneVolume", Localize = true)]
+        [Description("SC_Settings_MicrophoneVolumeDescription")]
         [Slider(0, 5)]
         public float m_MicrophoneVoice = 1;
 
-        [Name("Use Noise Suppression")]
-        [Description("If enabled, your voice will be filtered from noise.")]
+        [Name("SC_Settings_NoiseSuppression", Localize = true)]
+        [Description("SC_Settings_NoiseSuppressionDescription")]
         public bool m_NoiseSuppression = true;
 
-        [Name("Speaking Indicator")]
-        [Description("Show icon when you sending voice.")]
+        [Name("SC_Settings_SpeakingIndicator", Localize = true)]
+        [Description("SC_Settings_SpeakingIndicatorDescription")]
         public bool m_DisplayMicrophoneIcon = true;
 
-        [Section("General Settings")]
+        [Section("SC_Settings_GeneralSettingsSection", Localize = true)]
 
-        [Name("Melee Weapon Key")]
-        [Description("Cycle melee weapons.")]
+        [Name("SC_Settings_MeleeWeaponKey", Localize = true)]
+        [Description("SC_Settings_MeleeWeaponKeyDescription")]
         public KeyCode m_MeleeButton = KeyCode.X;
 
-        [Name("Melee weapons radial menu instead of decoy")]
-        [Description("Replace mediocre 'Drop Decoy' action in radial menu with selection of melee weapons you have.")]
+        [Name("SC_Settings_MeleeOverDecoy", Localize = true)]
+        [Description("SC_Settings_MeleeOverDecoyDescription")]
         public bool m_MeleeOverDecoy = true;
+
+        [Name("SC_Settings_CookingPassTime", Localize = true)]
+        [Description("SC_Settings_CookingPassTimeDescription")]
+        public bool m_CookingPassTime = true;
 
         //[Name("Max players")]
         //[Description("How many players can connect to the server.")]

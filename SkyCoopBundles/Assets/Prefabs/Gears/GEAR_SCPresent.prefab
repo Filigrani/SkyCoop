@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3862851835927971407}
   - component: {fileID: 6590934043071806651}
-  - component: {fileID: -8196938689506602319}
+  - component: {fileID: -2764191762797096526}
   m_Layer: 0
   m_Name: GEAR_SCPresent
   m_TagString: Untagged
@@ -55,7 +55,7 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.45940304, y: 0.46415305, z: 0.46415293}
   m_Center: {x: 0.0038232803, y: 0.22447646, z: 0.015930615}
---- !u!114 &-8196938689506602319
+--- !u!114 &-2764191762797096526
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}

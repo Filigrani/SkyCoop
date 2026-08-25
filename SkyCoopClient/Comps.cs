@@ -753,6 +753,22 @@ namespace SkyCoop
                 }
             }
 
+            public float GetPassTimeSeconds()
+            {
+                GearsSync.CookedState State = GetState();
+
+                switch (State)
+                {
+                    case GearsSync.CookedState.Raw:
+                        return (m_CookingTime - m_BeingCookedTime) * 60 * 60;
+                    case GearsSync.CookedState.Cooked:
+                    case GearsSync.CookedState.Overcooked:
+                        return 0;
+                    default:
+                        return 0;
+                }
+            }
+
             public float GetHours()
             {
                 GearsSync.CookedState State = GetState();

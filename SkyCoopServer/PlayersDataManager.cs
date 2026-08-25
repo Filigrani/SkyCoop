@@ -986,11 +986,9 @@ namespace SkyCoopServer
             }
         }
 
-        public string GetRandomSquadName()
+        public static List<string> GetPossibleSquadNames()
         {
-            int MaxAttempts = 5;
-            int CurrentAttempt = 1;
-            List<string> PossibleNames = new List<string>()
+            return new List<string>()
             {
                 "Alpha",
                 "Bravo",
@@ -1025,6 +1023,13 @@ namespace SkyCoopServer
                 "Sintarians",
                 "UwU",
             };
+        }
+
+        public string GetRandomSquadName()
+        {
+            int MaxAttempts = 5;
+            int CurrentAttempt = 1;
+            List<string> PossibleNames = GetPossibleSquadNames();
             System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
             while (CurrentAttempt <= MaxAttempts)
             {

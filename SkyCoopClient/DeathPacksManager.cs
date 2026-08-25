@@ -108,6 +108,13 @@ namespace SkyCoopClient
             string GUID = Guid.NewGuid().ToString();
             string OwnerName = ModMain.GetNickName();
             Vector3 Position = GameManager.GetPlayerTransform().position;
+
+            if (GameManager.m_PlayerInVehicle && GameManager.m_PlayerInVehicle.IsInside())
+            {
+                Position = GameManager.m_PlayerInVehicle.GetDropItemLocationForLastDoor();
+            }
+
+
             Quaternion Rotation = GameManager.GetPlayerTransform().rotation;
             string JSON = "";
 

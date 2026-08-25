@@ -70,6 +70,10 @@ namespace SkyCoopClient
                 {
                     continue;
                 }
+                else if(!ModdedOnly && sceneResource.PrimaryKey.ToLower().StartsWith("mod"))
+                {
+                    continue;
+                }
                 s_ScenesToSave.Add(sceneResource.PrimaryKey);
                 SkyCoop.Logger.Log($"[GearSpawnsRipper] Scene added to queue {sceneResource.PrimaryKey}");
             }
@@ -186,6 +190,10 @@ namespace SkyCoopClient
                             bool isDLC = false;
 
                             if (Gear.name.StartsWith("GEAR_Placeholder")) // Да-да не удивляйтесь, есть и такая хрень.
+                            {
+                                continue;
+                            }
+                            if (Gear.name.StartsWith("GEAR_NULL")) // Да-да-даааааа и такое.
                             {
                                 continue;
                             }

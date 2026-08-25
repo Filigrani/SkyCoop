@@ -118,7 +118,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "key3";
+        public const string c_Key = "key4";
 
         public enum TypeVoice
         {
@@ -260,13 +260,13 @@ namespace SkyCoopServer
         public static void Put(this NetDataWriter Writer, DataStr.ServerConfig CFG)
         {
             Writer.Put(CFG.m_MaxPlayers);
-            Writer.Put(CFG.m_StartingRegion);
             Writer.Put(CFG.m_Seed);
             Writer.Put(CFG.m_VoicePort);
             Writer.Put(CFG.m_ExperienceMode);
             Writer.Put(CFG.m_SceneToSpawn);
             Writer.Put(CFG.m_GameMode);
             Writer.Put(CFG.m_CheatsAllowed);
+            Writer.Put(CFG.m_ServerName);
         }
 
         public static DataStr.ServerConfig GetConfig(this NetDataReader Reader)
@@ -274,13 +274,13 @@ namespace SkyCoopServer
             DataStr.ServerConfig CFG = new DataStr.ServerConfig();
 
             CFG.m_MaxPlayers = Reader.GetInt();
-            CFG.m_StartingRegion = Reader.GetString();
             CFG.m_Seed = Reader.GetInt();
             CFG.m_VoicePort = Reader.GetInt();
             CFG.m_ExperienceMode = Reader.GetString();
             CFG.m_SceneToSpawn = Reader.GetString();
             CFG.m_GameMode = Reader.GetString();
             CFG.m_CheatsAllowed = Reader.GetBool();
+            CFG.m_ServerName = Reader.GetString();
 
             return CFG;
         }

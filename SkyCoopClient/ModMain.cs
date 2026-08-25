@@ -56,7 +56,7 @@ namespace SkyCoop
 
         public static bool IsMultiplayer()
         {
-            if(MenuHook.s_CurrenetMenuOverride != "Original" || (Client != null && Client.m_IsReady) || s_MapEditor)
+            if(MenuHook.s_CurrenetMenuOverride != MenuHook.SandboxMenuOverride.Original || (Client != null && Client.m_IsReady) || s_MapEditor)
             {
                 return true;
             }
@@ -74,11 +74,23 @@ namespace SkyCoop
         [Obsolete]
         public override void OnApplicationQuit()
         {
+            //if(Client != null && Client.m_IsReady)
+            //{
+            //    if (IsGameplayScene())
+            //    {
+            //        SaveGameSystem.SetAsyncEnabled(false);
+            //        MenuHook.OnDisconnectConfirmed(MenuHook.SavingFlag.Quit);
+            //        Application.CancelQuit();
+            //    }
+            //}
+            
+            
             if(Server != null && Server.m_IsReady)
             {
                 Server.SaveToFile();
                 Server.DisconnectAllPlayers("Server shutdown", true);
             }
+
             base.OnApplicationQuit();
         }
 
@@ -94,11 +106,11 @@ namespace SkyCoop
         {
             DebugConsole.ReimplementConsole();
             //AssetManager.DumpAddressablesContent();
-            if (!MaterialsContainer.s_Intilized)
-            {
-                MaterialsContainer.PreloadMaterials();
-                MaterialsContainer.s_Intilized = true;
-            }
+            //if (!MaterialsContainer.s_Intilized)
+            //{
+            //    MaterialsContainer.PreloadMaterials();
+            //    MaterialsContainer.s_Intilized = true;
+            //}
             FilesManager.SetSavesFolder(PersistentDataPath.m_Path);
         }
 
@@ -139,93 +151,103 @@ namespace SkyCoop
                 Server.Update();
             }
 
-            if (!InputManager.m_InteractedWithItemThisFrame && InputManager.GetFirePressed(InputManager.m_CurrentContext))
-            {
-                if (GameManager.m_NewPlayerAnimation)
-                {
-                    
-                    if (GameManager.m_PlayerManager)
-                    {
-                        IInteraction Inter = GameManager.m_PlayerManager.ActiveInteraction;
-
-                        bool CanHit = true;
-
-                        if(Inter == null)
-                        {
-                            CanHit = true;
-                        }
-                        else
-                        {
-                            GameObject Obj = Inter.GetInteractiveObject();
-                            if (Obj)
-                            {
-                                Comps.NetworkPlayer Player = Obj.GetComponent<Comps.NetworkPlayer>();
-                                if (Player)
-                                {
-                                    CanHit = true;
-                                }
-                                else
-                                {
-                                    CanHit = false;
-                                }
-                            }
-                        }
-
-                        if (CanHit && GameManager.m_NewPlayerAnimation.CanTransitionToState(PlayerAnimation.State.Throwing))
-                        {
-                            MeleeManager.TryToAttack();
-                        }
-                    }
-                }
-            }
-            if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
-            {
-                if (GameManager.m_PlayerManager)
-                {
-                    IInteraction Inter = GameManager.m_PlayerManager.ActiveInteraction;
-
-                    if (Inter != null)
-                    {
-                        GameObject Obj = Inter.GetInteractiveObject();
-                        if (Obj)
-                        {
-                            Comps.DroppedGearVisual Gear = Obj.GetComponent<Comps.DroppedGearVisual>();
-                            if (Gear)
-                            {
-                                if(Gear.m_CookingVisual == null || Gear.m_CookingVisual.m_CookingSlot == null)
-                                {
-                                    GameManager.GetPlayerManagerComponent().InteractiveObjectsProcessAltFire();
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-
-            MeleeManager.Update();
-
-            if (CanvasUI.s_SpeakingIndicator)
-            {
-                ClientVoice.IsSpeaking();
-            }
-
             CanvasUI.Update();
-
-            //MeleeManager.FishTalkRollChane();
-
-            if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
-            {
-                MeleeManager.OnFishStartTalking();
-            }
 
             if (IsGameplayScene() && !GameManager.s_IsGameplaySuspended)
             {
                 PlayersManager.SpectatorControls();
+
+                if (!InputManager.m_InteractedWithItemThisFrame && InputManager.GetFirePressed(InputManager.m_CurrentContext))
+                {
+                    if (GameManager.m_NewPlayerAnimation)
+                    {
+
+                        if (GameManager.m_PlayerManager)
+                        {
+                            IInteraction Inter = GameManager.m_PlayerManager.ActiveInteraction;
+
+                            bool CanHit = true;
+
+                            if (Inter == null)
+                            {
+                                CanHit = true;
+                            }
+                            else
+                            {
+                                GameObject Obj = Inter.GetInteractiveObject();
+                                if (Obj)
+                                {
+                                    Comps.NetworkPlayer Player = Obj.GetComponent<Comps.NetworkPlayer>();
+                                    if (Player)
+                                    {
+                                        CanHit = true;
+                                    }
+                                    else
+                                    {
+                                        CanHit = false;
+                                    }
+                                }
+                            }
+
+                            if (CanHit && GameManager.m_NewPlayerAnimation.CanTransitionToState(PlayerAnimation.State.Throwing))
+                            {
+                                MeleeManager.TryToAttack();
+                            }
+                        }
+                    }
+                }
+                if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
+                {
+                    if (GameManager.m_PlayerManager)
+                    {
+                        IInteraction Inter = GameManager.m_PlayerManager.ActiveInteraction;
+
+                        if (Inter != null)
+                        {
+                            GameObject Obj = Inter.GetInteractiveObject();
+                            if (Obj)
+                            {
+                                Comps.DroppedGearVisual Gear = Obj.GetComponent<Comps.DroppedGearVisual>();
+                                if (Gear)
+                                {
+                                    if (Gear.m_CookingVisual == null || Gear.m_CookingVisual.m_CookingSlot == null)
+                                    {
+                                        GameManager.GetPlayerManagerComponent().InteractiveObjectsProcessAltFire();
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                if (InputManager.GetReloadPressed(InputManager.m_CurrentContext))
+                {
+                    MeleeManager.OnFishStartTalking();
+                }
+
+                MeleeManager.Update();
+
+                if (CanvasUI.s_SpeakingIndicator)
+                {
+                    ClientVoice.IsSpeaking();
+                }
             }
 
             WeatherHook.Update();
 
             GearSpawnsRipper.Update();
+
+            if(Minimalizer.s_FramesDelayBeforeSendNewScene > 0)
+            {
+                Minimalizer.s_FramesDelayBeforeSendNewScene--;
+                if(Minimalizer.s_FramesDelayBeforeSendNewScene == 0)
+                {
+                    if(Client != null && Client.m_IsReady)
+                    {
+                        ClientSend.SendNewScene(GetCurrentSceneName());
+                    }
+                }
+            }
         }
 
         public static string GetCurrentSceneName()
@@ -270,11 +292,10 @@ namespace SkyCoop
             SceneManager.LoadEmptyScene();
         }
 
-        public static void SetupSurvivalSettings(string ExperienceMode, int Seed, string Region = "", string SceneToSpawn = "")
+        public static void SetupSurvivalSettings(string ExperienceMode, int Seed, string SceneToSpawn = "")
         {
             ExperienceModeManager EMM = GameManager.GetExperienceModeManagerComponent();
             GameModeConfig SelectedMode = null;
-            RegionSpecification SelectedRegion = null;
 
             Il2CppSystem.Collections.Generic.IList<GameModeConfig> GameMods = EMM.GetAvailableGameModes();
             for (int i = 0; GameMods[i] != null; i++)
@@ -300,34 +321,20 @@ namespace SkyCoop
                     SaveSlotInfo saveSlotInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, SaveIndex);
                     SaveGameSystem.SetCurrentSaveInfo(Episode.One, SaveSlotType.SANDBOX, saveSlotInfo.m_GameId, saveSlotInfo.m_SaveSlotName);
                     Panel.OnLoadGame(SaveSlotType.SANDBOX, SaveIndex);
-                    MenuHook.SetMenuOverrideMode("Original");
+                    MenuHook.SetMenuOverrideMode(MenuHook.SandboxMenuOverride.Original);
                     return;
                 }
             }
 
-            if (!string.IsNullOrEmpty(Region) && !string.IsNullOrEmpty(SceneToSpawn))
+            if (!string.IsNullOrEmpty(SceneToSpawn))
             {
-                Panel_SelectRegion_Map Panel_Regions = null;
-
-                if (InterfaceManager.TryGetPanel<Panel_SelectRegion_Map>(out Panel_Regions))
-                {
-                    foreach (SelectRegionItem R in Panel_Regions.m_Items)
-                    {
-                        if (R.name == Region)
-                        {
-                            SelectedRegion = R.m_RegionSpec;
-                            break;
-                        }
-                    }
-                    GameManager.m_StartRegion = SelectedRegion;
-                }
                 Minimalizer.s_SceneSpawnOverride = SceneToSpawn;
                 GameManager.m_Instance.LaunchSandbox();
                 GameManager.m_SceneTransitionData.m_GameRandomSeed = Seed;
             }
             else
             {
-                MenuHook.SetMenuOverrideMode("Original");
+                MenuHook.SetMenuOverrideMode(MenuHook.SandboxMenuOverride.Original);
                 Panel_Sandbox Panel = InterfaceManager.GetPanel<Panel_Sandbox>();
                 if (Panel)
                 {
@@ -358,7 +365,7 @@ namespace SkyCoop
                         }
                     }
                 }
-                MenuHook.SetMenuOverrideMode("Multiplayer");
+                MenuHook.SetMenuOverrideMode(MenuHook.SandboxMenuOverride.Multiplayer);
             }
         }
 

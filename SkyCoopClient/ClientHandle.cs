@@ -25,9 +25,9 @@ namespace SkyCoop
         {
             ModMain.Client.m_Config = CFG;
             Logger.Log(ConsoleColor.Cyan, "Server config");
+            Logger.Log(ConsoleColor.Cyan, "ServerName: " + CFG.m_ServerName);
             Logger.Log(ConsoleColor.Cyan, "PlayersMax: " + CFG.m_MaxPlayers);
             Logger.Log(ConsoleColor.Cyan, "Seed: " + CFG.m_Seed);
-            Logger.Log(ConsoleColor.Cyan, "StartingRegion: " + CFG.m_StartingRegion);
             Logger.Log(ConsoleColor.Cyan, "ExperienceMode: " + CFG.m_ExperienceMode);
             Logger.Log(ConsoleColor.Cyan, "VoicePort: " + CFG.m_VoicePort);
             Logger.Log(ConsoleColor.Cyan, "SceneToSpawn: " + CFG.m_SceneToSpawn);
@@ -62,7 +62,7 @@ namespace SkyCoop
             ModMain.Client.m_IsReady = true;
             ModMain.Client.ProcessAllDelayedPackages();
             MenuHook.RemovePleaseWait();
-            ModMain.SetupSurvivalSettings(CFG.m_ExperienceMode, CFG.m_Seed, CFG.m_StartingRegion, CFG.m_SceneToSpawn);
+            ModMain.SetupSurvivalSettings(CFG.m_ExperienceMode, CFG.m_Seed, CFG.m_SceneToSpawn);
             PlayersManager.DeactivateAllSpectatingTargets();
 
             if (CFG.m_VoicePort != 0)

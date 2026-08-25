@@ -22,6 +22,8 @@ namespace SkyCoopServer
         public static string s_MapsDirectory = "Maps";
         public static string s_WeatherDirectory = "Weather";
 
+        public static string s_ServerConfigLocation = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/Server.json";
+
         public static void InitFolders(bool SkipDefaultSaveFolder = false)
         {
             if (!Directory.Exists(s_DataDirectory))
@@ -87,6 +89,22 @@ namespace SkyCoopServer
             return GameModes;
         }
 
+        public static List<GameRules> GetGameRulesList()
+        {
+            List<GameRules> Rules = new List<GameRules>();
+            string _Path = $"{s_DataDirectory}/{s_GameModesDirectory}";
+
+            if (Directory.Exists(_Path))
+            {
+                foreach (string FilePath in Directory.GetFiles(_Path))
+                {
+                    string FileName = Path.GetFileName(FilePath);
+                    Rules.Add(GetRules(FileName));
+                }
+            }
+            return Rules;
+        }
+
         public static GameRules GetRules(string GameMode)
         {
             string Path = $"{s_DataDirectory}/{s_GameModesDirectory}/{GameMode}";
@@ -116,7 +134,7 @@ namespace SkyCoopServer
                 return new GameRules();
             }
             GameRulesJson JsonData = JsonSerializer.Deserialize<GameRulesJson>(JSON);
-            return JsonData == null ? new GameRules() : JsonData.Load();
+            return JsonData == null ? new GameRules() : JsonData.Load(GameMode);
         }
 
 
@@ -328,67 +346,34 @@ namespace SkyCoopServer
             return JsonSerializer.Deserialize<WeatherManager.WeatherSettingsConfig>(JSON);
         }
 
-        public static DataStr.ScenesLootSpawns GetGearsSpawnsData()
+        public static DataStr.ScenesLootSpawns GetGearsSpawnsData(string Path)
         {
 
-            string Path = $"{s_DataDirectory}/GearSpawns";
+            string _Path = $"{s_DataDirectory}/{Path}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
+            Logger.Log($"[FilesManager] Loading file {_Path}");
+            if (File.Exists(_Path))
             {
                 try
                 {
-                    JSON = File.ReadAllText(Path);
+                    JSON = File.ReadAllText(_Path);
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {_Path}: {e.Message}");
                     return null;
                 }
             }
             else
             {
-                Logger.Log($"[FilesManager] File {Path} not exist");
+                Logger.Log($"[FilesManager] File {_Path} not exist");
                 return null;
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {Path} is empty");
-                return null;
-            }
-            return JsonSerializer.Deserialize<ScenesLootSpawns>(JSON);
-        }
-
-        public static DataStr.ScenesLootSpawns GetGearsSpawnsDataModded()
-        {
-
-            string Path = $"{s_DataDirectory}/GearSpawnsModded";
-            string JSON = "";
-
-            Logger.Log($"[FilesManager] Loading file {Path}");
-            if (File.Exists(Path))
-            {
-                try
-                {
-                    JSON = File.ReadAllText(Path);
-                }
-                catch (Exception e)
-                {
-                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
-                    return null;
-                }
-            }
-            else
-            {
-                Logger.Log($"[FilesManager] File {Path} not exist");
-                return null;
-            }
-
-            if (string.IsNullOrEmpty(JSON))
-            {
-                Logger.Log($"[FilesManager] File {Path} is empty");
+                Logger.Log($"[FilesManager] File {_Path} is empty");
                 return null;
             }
             return JsonSerializer.Deserialize<ScenesLootSpawns>(JSON);
@@ -476,7 +461,7 @@ namespace SkyCoopServer
             }
         }
 
-        public static Server.SaveData LoadServerFromFile(Server ServerInstance, int Seed)
+        public static Server.SaveData LoadServerFromFile(int Seed)
         {
             string Path = $"{s_SaveDirectory}/{Seed.ToString()}/ServerData";
             string JSON = "";
@@ -508,18 +493,36 @@ namespace SkyCoopServer
             return JsonSerializer.Deserialize<Server.SaveData>(JSON);
         }
 
-        public static List<string> GetServerSavesNames()
+        public class SaveDataAndSeed
         {
+            public int Seed;
+            public Server.SaveData Save;
+
+            public SaveDataAndSeed(int seed, Server.SaveData save)
+            {
+                Seed = seed;
+                Save = save;
+            }
+        }
+
+        public static List<SaveDataAndSeed> GetServerSavesList()
+        {
+            List<SaveDataAndSeed> Saves = new List<SaveDataAndSeed>();
             if (Directory.Exists(s_SaveDirectory))
             {
-                List<string> FileNames = new List<string>(Directory.GetDirectories(s_SaveDirectory));
-                for (int i = 0; i < FileNames.Count; i++)
+                List<string> FilesPaths = new List<string>(Directory.GetDirectories(s_SaveDirectory));
+                for (int i = 0; i < FilesPaths.Count; i++)
                 {
-                    FileNames[i] = Path.GetFileName(FileNames[i]);
+                    string FileName = Path.GetFileName(FilesPaths[i]);
+                    int Seed = int.Parse(FileName);
+                    Server.SaveData ServerSaveData = LoadServerFromFile(Seed);
+                    if(ServerSaveData != null)
+                    {
+                        Saves.Add(new SaveDataAndSeed(Seed, ServerSaveData));
+                    }
                 }
-                return FileNames;
             }
-            return new List<string>();
+            return Saves;
         }
 
         public static void DeleteSave(string SaveName)
@@ -529,6 +532,41 @@ namespace SkyCoopServer
             {
                 Directory.Delete($"{s_SaveDirectory}/{SaveName}", true);
             }
+        }
+
+        public static DataStr.ServerConfig LoadServerCFG()
+        {
+            string Path = s_ServerConfigLocation;
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {Path} is empty");
+                return null;
+            }
+
+            ServerConfigJSON Proxy = JsonSerializer.Deserialize<DataStr.ServerConfigJSON>(JSON);
+
+            return Proxy.Load();
         }
     }
 }

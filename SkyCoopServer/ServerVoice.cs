@@ -5,7 +5,7 @@ namespace SkyCoopServer
 {
     public class ServerVoice : IDisposable
     {
-        public int m_Port = 37850;
+        public const int c_DefaultPort = 37850;
         public NetworkHelper m_NetworkHelper;
 
         public EventBasedNetListener m_Listener;
@@ -60,11 +60,6 @@ namespace SkyCoopServer
             {
                 m_Instance.PollEvents();
             }
-        }
-
-        public void StartServer()
-        {
-            StartServer(m_Port, m_GameServer.m_Config.m_MaxPlayers);
         }
 
         public void ExecuteVoice(NetPeer Peer, NetDataReader Reader)
@@ -191,7 +186,7 @@ namespace SkyCoopServer
 
             m_IsReady = true;
             Logger.Log($"[ServerVoice] Voice server is started port={port}");
-            m_NetworkHelper = new NetworkHelper(m_Port, "SkyCoopServerVoice");
+            m_NetworkHelper = new NetworkHelper(port, "SkyCoopServerVoice");
 
             Task.Run(() => {
                 while (m_GameServer.m_IsReady) 

@@ -16,6 +16,7 @@ namespace SkyCoopClient
     {
         public static string s_SceneSpawnOverride = "";
         public static bool s_LoadingFlag = false;
+        public static int s_FramesDelayBeforeSendNewScene = 0;
 
         public static void OnStartedLoading()
         {
@@ -84,7 +85,7 @@ namespace SkyCoopClient
                         }
                     }
                 }
-                ClientSend.SendNewScene(ModMain.GetCurrentSceneName());
+                s_FramesDelayBeforeSendNewScene = 2;
             }
         }
 
@@ -1199,6 +1200,24 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer()) { return; }
 
                 ClientSend.SendRevived(-2);
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GameManager), "GetRandomSeed")]
+        private static class GameManagerr_GetRandomSeed
+        {
+            private static void Postfix(GameManager __instance, int seed, ref int __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (!GameManager.IsOutDoorsScene(UnityEngine.SceneManagement.SceneManager.GetActiveScene().name))
+                {
+                    if (GameManager.m_SceneTransitionData != null)
+                    {
+                        int num = (GameManager.m_SceneTransitionData.m_GameRandomSeed ^ GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent.GetHashCode());
+                        __result = num ^ seed;
+                    }
+                }
             }
         }
     }

@@ -7,18 +7,40 @@ using SkyCoopClient;
 using SkyCoopServer;
 using System.Text;
 using UnityEngine;
-using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoop
 {
     public class MenuHook
     {
-        public static string s_CurrenetMenuOverride = "Original";
+        public static SandboxMenuOverride s_CurrenetMenuOverride = SandboxMenuOverride.Original;
+        public static SavesMenuOverride s_CurrenetSavesOverride = SavesMenuOverride.Original;
         public static bool s_SkyCoopSettingsForced = false;
         public static string s_PendingSquadInvite = "";
         public static int s_LastMultiplayerWorldSeed = 0;
         public static GameModeConfig s_LastMultiplayerGameMode = null;
         public static string s_ExperienceModeToHost = "Stalker";
+        public static string s_GameModeModeToHost = "Sandbox";
+        public static string s_ServerNameToHost = "Nameless";
+        public static SavingFlag s_SavingFlag = SavingFlag.None;
+
+        public enum SandboxMenuOverride
+        {
+            Original,
+            Multiplayer,
+            Multiplayer_Host,
+        }
+        public enum SavesMenuOverride
+        {
+            Original,
+            MultiplayerSaves,
+            GameModes,
+        }
+        public enum SavingFlag
+        {
+            None,
+            ToMenu,
+            Quit,
+        }
 
         public static Comps.TexasHoldEmPlay s_RaisBetHook;
 
@@ -49,10 +71,16 @@ namespace SkyCoop
             Settings.ForceToShow(true);
         }
 
-        public static void SetMenuOverrideMode(string mode)
+        public static void SetMenuOverrideMode(SandboxMenuOverride mode)
         {
             s_CurrenetMenuOverride = mode;
-            //Logger.Log("[UI] ChangeMenuItems s_CurrenetMenuOverride " + s_CurrenetMenuOverride);
+            Logger.Log("[UI] ChangeMenuItems s_CurrenetMenuOverride " + s_CurrenetMenuOverride);
+        }
+
+        public static void SetSavesOverrideMode(SavesMenuOverride mode)
+        {
+            s_CurrenetSavesOverride = mode;
+            Logger.Log("[UI] ChangeMenuItems s_CurrenetSavesOverride " + s_CurrenetSavesOverride);
         }
 
         public static void UpdateSandboxMainWindow(GameObject Obj)
@@ -63,7 +91,7 @@ namespace SkyCoop
                 Transform T = Obj.transform.GetChild(i);
                 if (T)
                 {
-                    if(s_CurrenetMenuOverride != "Original")
+                    if(s_CurrenetMenuOverride != SandboxMenuOverride.Original)
                     {
                         if (T.name.EndsWith("Title_Texture") || T.name.EndsWith("Update_Title_Texture") || T.name.EndsWith("_Update_Title"))
                         {
@@ -74,7 +102,7 @@ namespace SkyCoop
                     if(T.name == "SkyCoopRebornTitle_Texture")
                     {
                         FoundReborn = true;
-                        T.gameObject.SetActive(s_CurrenetMenuOverride != "Original");
+                        T.gameObject.SetActive(s_CurrenetMenuOverride != SandboxMenuOverride.Original);
                     }
                 }
             }
@@ -86,14 +114,14 @@ namespace SkyCoop
                     GameObject Clone = UnityEngine.Object.Instantiate(VictimForClone.gameObject, VictimForClone.parent);
                     Clone.name = "SkyCoopRebornTitle_Texture";
                     Clone.GetComponent<UITexture>().mainTexture = AssetManager.GetAssetFromGame<Texture2D>("Titles_SkyCoopReborn_Texture");
-                    Clone.SetActive(s_CurrenetMenuOverride != "Original");
+                    Clone.SetActive(s_CurrenetMenuOverride != SandboxMenuOverride.Original);
                 }
             }
         }
 
         public static void OnMultiplayerPressed()
         {
-            SetMenuOverrideMode("Multiplayer");
+            SetMenuOverrideMode(SandboxMenuOverride.Multiplayer);
             InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
 
@@ -102,7 +130,7 @@ namespace SkyCoop
 
         public static void OnMuliplayerBackPressed()
         {
-            SetMenuOverrideMode("Original");
+            SetMenuOverrideMode(SandboxMenuOverride.Original);
             InterfaceManager.TrySetPanelEnabled<Panel_MainMenu>(true);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
             Transform T = InterfaceManager.GetPanel<Panel_Sandbox>().m_MainWindow.transform.FindChild("SkyCoopRebornTitle_Texture");
@@ -115,7 +143,7 @@ namespace SkyCoop
 
         public static void OnMuliplayerHostBackPressed()
         {
-            SetMenuOverrideMode("Multiplayer");
+            SetMenuOverrideMode(SandboxMenuOverride.Multiplayer);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
             GameAudioManager.PlayGUIButtonClick();
@@ -123,8 +151,8 @@ namespace SkyCoop
 
         public static void OnMultiplayerLoadPressed()
         {
+            SetSavesOverrideMode(SavesMenuOverride.MultiplayerSaves);
             Panel_Sandbox Panel = InterfaceManager.GetPanel<Panel_Sandbox>();
-
             if (Panel)
             {
                 Panel.OnClickLoad();
@@ -135,20 +163,27 @@ namespace SkyCoop
 
         public static void OnHostPressed()
         {
-            OnHostPressed(0, s_ExperienceModeToHost);
-        }
-
-        public static void OnHostPressed(int Seed = 0, string Expereince = "")
-        {
             if(ModMain.Server == null || !ModMain.Server.m_IsReady)
             {
-                ModMain.Server = new SkyCoopServer.Server(Seed, Expereince);
+                DataStr.ServerConfigJSON CFG = new DataStr.ServerConfigJSON();
+                CFG.Cheats = true;
+                CFG.Seed = s_LastMultiplayerWorldSeed;
+                CFG.ExperienceMode = s_ExperienceModeToHost;
+                CFG.ServerName = s_ServerNameToHost;
+
+                ModMain.Server = new SkyCoopServer.Server(CFG.Load());
                 ModMain.Server.StartServer();
                 Thread.Sleep(15);
                 ModMain.Client.ConnectToServer("localhost");
-                SetMenuOverrideMode("Original");
+                SetMenuOverrideMode(SandboxMenuOverride.Multiplayer);
                 //OpenSandbox();
             }
+        }
+
+        public static void OnServerNameConfirmed()
+        {
+            s_ServerNameToHost = InterfaceManager.GetPanel<Panel_Confirmation>().m_CurrentGroup.m_InputField.GetText();
+            OnHostPressed();
         }
 
         public static void OnShutdownConfirmed()
@@ -180,8 +215,15 @@ namespace SkyCoop
             InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Localization.Get("GAMEPLAY_ShutdownServerConfirmation"), Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_ShutdownServer", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnShutdownConfirmed), null);
         }
 
+        // Делегаты не умеют работать с методами с опциональными аргументами по этому дубликат без аргументов существует!
         public static void OnDisconnectConfirmed()
         {
+            OnDisconnectConfirmed(SavingFlag.ToMenu);
+        }
+
+        public static void OnDisconnectConfirmed(SavingFlag Flag)
+        {
+            s_SavingFlag = Flag;
             ModMain.s_MapEditor = false;
             DebugGUI.s_Open = false;
             PlayersManager.DestoryPlayers();
@@ -200,8 +242,19 @@ namespace SkyCoop
                 ModMain.ClientVoice = new ClientVoice();
             }
 
-            InterfaceManager.GetPanel<Panel_PauseMenu>().DoQuitGame();
-            SetMenuOverrideMode("Original");
+            if (ModMain.IsGameplayScene())
+            {
+                if (Flag != SavingFlag.Quit)
+                {
+                    RemovePleaseWait();
+                    DoPleaseWait(Localization.Get("GAMEPLAY_Autosave"), Localization.Get("GAMEPLAY_Saving"));
+                }
+                GameManager.ForceSaveGame();
+            }
+            else
+            {
+                InterfaceManager.GetPanel<Panel_PauseMenu>().DoQuitGame();
+            }
         }
 
         public static void OnDisconnectPressed()
@@ -348,9 +401,22 @@ namespace SkyCoop
             }
         }
 
+        public static void SelectGameModeForHost()
+        {
+            if (ModMain.Server == null || !ModMain.Server.m_IsReady)
+            {
+                SetSavesOverrideMode(SavesMenuOverride.GameModes);
+                Panel_Sandbox Panel = InterfaceManager.GetPanel<Panel_Sandbox>();
+                if (Panel)
+                {
+                    Panel.OnClickLoad();
+                }
+            }
+        }
+
         public static void OnToHostMenu()
         {
-            SetMenuOverrideMode("Multiplayer_Host");
+            SetMenuOverrideMode(SandboxMenuOverride.Multiplayer_Host);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
         }
@@ -360,7 +426,7 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_Sandbox __instance)
             {
-                if (s_CurrenetMenuOverride == "Multiplayer")
+                if (s_CurrenetMenuOverride == SandboxMenuOverride.Multiplayer)
                 {
                     __instance.m_BasicMenu.Reset();
                     __instance.m_BasicMenu.UpdateTitle("", "", Vector3.zero);
@@ -379,12 +445,12 @@ namespace SkyCoop
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Options", "GAMEPLAY_OptionsMultiplayerDescription", 2, new Action(OnSettingsPressed));
 
                     __instance.m_BasicMenu.SetBackAction(new Action(OnMuliplayerBackPressed));
-                } else if(s_CurrenetMenuOverride == "Multiplayer_Host")
+                } else if(s_CurrenetMenuOverride == SandboxMenuOverride.Multiplayer_Host)
                 {
                     __instance.m_BasicMenu.Reset();
                     __instance.m_BasicMenu.UpdateTitle("", "", Vector3.zero);
 
-                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_NewGame", "GAMEPLAY_DescriptionNewSurvival", 0, new Action(SelectExpForHost));
+                    AddButton(__instance.m_BasicMenu, "GAMEPLAY_NewGame", "GAMEPLAY_DescriptionNewSurvival", 0, new Action(SelectGameModeForHost));
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_LoadGame", "GAMEPLAY_DescriptionLoadSurvival", 1, new Action(OnMultiplayerLoadPressed));
 
                     __instance.m_BasicMenu.SetBackAction(new Action(OnMuliplayerHostBackPressed));
@@ -477,7 +543,7 @@ namespace SkyCoop
 
         public static void OpenSandbox()
         {
-            SetMenuOverrideMode("Original");
+            SetMenuOverrideMode(SandboxMenuOverride.Original);
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
         }
 
@@ -724,7 +790,7 @@ namespace SkyCoop
                     {
                         GameManager.m_Instance.LaunchSandbox();
                         GameManager.m_SceneTransitionData.m_GameRandomSeed = s_LastMultiplayerWorldSeed;
-                        SetMenuOverrideMode("Original");
+                        SetMenuOverrideMode(SandboxMenuOverride.Original);
                     }
                 }
             }
@@ -765,7 +831,7 @@ namespace SkyCoop
                 {
                     GameManager.m_Instance.LaunchSandbox();
                     GameManager.m_SceneTransitionData.m_GameRandomSeed = s_LastMultiplayerWorldSeed;
-                    SetMenuOverrideMode("Original");
+                    SetMenuOverrideMode(SandboxMenuOverride.Original);
                     return false;
                 }
 
@@ -779,7 +845,7 @@ namespace SkyCoop
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                if(s_CurrenetMenuOverride == "Original")
+                if(s_CurrenetMenuOverride == SandboxMenuOverride.Original)
                 {
                     return true;
                 }
@@ -800,9 +866,14 @@ namespace SkyCoop
                 else
                 {
                     s_ExperienceModeToHost = selectedMenuItem.m_SandboxConfig.name;
+                    s_LastMultiplayerWorldSeed = 0;
                     __instance.Enable(false);
                     InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
-                    OnHostPressed();
+
+                    List<string> RandomNames = PlayersDataManager.GetPossibleSquadNames();
+                    string SelectedName = RandomNames[UnityEngine.Random.Range(0, RandomNames.Count)];
+
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, Localization.Get("GAMEPLAY_NameForServer"), SelectedName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Confirm", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnServerNameConfirmed), null);
 
                     return false;
                 }
@@ -837,10 +908,14 @@ namespace SkyCoop
             {
                 if (enable)
                 {
-                    if(s_CurrenetMenuOverride != "Original")
+                    if(s_CurrenetMenuOverride != SandboxMenuOverride.Original)
                     {
                         __instance.m_BasicMenu.EnableConfirm(true, "GAMEPLAY_Select");
                     }
+                }
+                else
+                {
+                    SetSavesOverrideMode(SavesMenuOverride.Original);
                 }
             }
         }
@@ -850,18 +925,37 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_ChooseSandbox __instance)
             {
-                if (s_CurrenetMenuOverride != "Original")
+                if (s_CurrenetSavesOverride == SavesMenuOverride.MultiplayerSaves)
                 {
                     __instance.m_DetailObjects.m_Details.SetActive(false);
-                    List<string> ServerSaves = FilesManager.GetServerSavesNames();
+                    List<FilesManager.SaveDataAndSeed> ServerSaves = FilesManager.GetServerSavesList();
 
                     for (int i = 0; i < ServerSaves.Count; i++)
                     {
-                        __instance.m_BasicMenu.AddItem(ServerSaves[i], i, i, ServerSaves[i], Localization.Get("GAMEPLAY_DescriptionLoadSurvival"), null, new Action(__instance.OnSlotClicked), Color.clear, Color.clear);
+                        string SaveName = ServerSaves[i].Save.ServerName;
+                        if (string.IsNullOrEmpty(SaveName))
+                        {
+                            SaveName = ServerSaves[i].Seed.ToString();
+                        }
+
+                        __instance.m_BasicMenu.AddItem(SaveName, i, i, SaveName, Localization.Get("GAMEPLAY_DescriptionLoadSurvival"), null, new Action(__instance.OnSlotClicked), Color.clear, Color.clear);
                     }
 
                     __instance.m_SaveSpaceInfo.gameObject.SetActive(false);
 
+                    return false;
+                }
+                else if(s_CurrenetSavesOverride == SavesMenuOverride.GameModes)
+                {
+                    __instance.m_DetailObjects.m_Details.SetActive(false);
+                    List<DataStr.GameRules> GameModes = FilesManager.GetGameRulesList();
+
+                    for (int i = 0; i < GameModes.Count; i++)
+                    {
+                        __instance.m_BasicMenu.AddItem(GameModes[i].m_LocalizationID, i, i, Localization.Get(GameModes[i].m_LocalizationID), "", null, new Action(__instance.OnSlotClicked), Color.clear, Color.clear);
+                    }
+
+                    __instance.m_SaveSpaceInfo.gameObject.SetActive(false);
                     return false;
                 }
                 return true;
@@ -873,13 +967,23 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_ChooseSandbox __instance, int index)
             {
-                if (s_CurrenetMenuOverride != "Original")
+                if (s_CurrenetSavesOverride == SavesMenuOverride.MultiplayerSaves)
                 {
-                    List<string> ServerSaves = FilesManager.GetServerSavesNames();
-
-                    int Seed = int.Parse(ServerSaves[index]);
+                    List<FilesManager.SaveDataAndSeed> ServerSaves = FilesManager.GetServerSavesList();
                     __instance.Enable(false);
-                    OnHostPressed(Seed);
+                    s_LastMultiplayerWorldSeed = ServerSaves[index].Seed;
+                    OnHostPressed();
+
+                    return false;
+                }
+                if (s_CurrenetSavesOverride == SavesMenuOverride.GameModes)
+                {
+                    List<DataStr.GameRules> GameModes = FilesManager.GetGameRulesList();
+
+                    s_GameModeModeToHost = GameModes[index].m_GameMode;
+
+                    __instance.Enable(false);
+                    SelectExpForHost();
 
                     return false;
                 }
@@ -891,11 +995,23 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_ChooseSandbox __instance, string name, int value, int itemIndex)
             {
-                if (s_CurrenetMenuOverride != "Original")
+                if (s_CurrenetSavesOverride != SavesMenuOverride.Original)
                 {
                     return false;
                 }
                 return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(Panel_ChooseSandbox), "ConfigureMenu")]
+        public class Panel_ChooseSandbox_ConfigureMenu
+        {
+            public static void Postfix(Panel_ChooseSandbox __instance)
+            {
+                if (s_CurrenetSavesOverride == SavesMenuOverride.GameModes)
+                {
+                    __instance.m_BasicMenu.UpdateTitle(Localization.Get("GAMEPLAY_GameMode"), "GAMEPLAY_ChooseYour", __instance.m_TitleHeaderOffset);
+                }
             }
         }
 
@@ -904,7 +1020,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_ChooseSandbox __instance)
             {
-                if (s_CurrenetMenuOverride != "Original")
+                if (s_CurrenetSavesOverride == SavesMenuOverride.MultiplayerSaves)
                 {
                     InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Localization.Get("GAMEPLAY_DeleteSaveSlotMessage"), Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Delete", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(__instance.DeleteSaveSlot), null);
                     return false;
@@ -918,7 +1034,7 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_ChooseSandbox __instance)
             {
-                if (s_CurrenetMenuOverride != "Original")
+                if (s_CurrenetSavesOverride == SavesMenuOverride.MultiplayerSaves)
                 {
                     string selectedItemIndexNextId = __instance.m_BasicMenu.GetSelectedItemIndexNextId();
                     FilesManager.DeleteSave(__instance.m_BasicMenu.GetSelectedItemId());
@@ -937,10 +1053,16 @@ namespace SkyCoop
         {
             public static bool Prefix(Panel_ChooseSandbox __instance)
             {
-                if (s_CurrenetMenuOverride != "Original")
+                if (s_CurrenetSavesOverride == SavesMenuOverride.MultiplayerSaves)
                 {
                     string selectedItemId = __instance.m_BasicMenu.GetSelectedItemId();
                     UtilsPanelChoose.ProcessMenu(__instance.m_BasicMenu, false, true, new Action(__instance.BackWithouSFX), __instance.m_MouseButtonRename, null, __instance.m_MouseButtonDelete, new Action(__instance.OnDelete));
+                    return false;
+                }
+                if (s_CurrenetSavesOverride == SavesMenuOverride.GameModes)
+                {
+                    string selectedItemId = __instance.m_BasicMenu.GetSelectedItemId();
+                    UtilsPanelChoose.ProcessMenu(__instance.m_BasicMenu, false, false, new Action(__instance.BackWithouSFX), __instance.m_MouseButtonRename, null, __instance.m_MouseButtonDelete, null);
                     return false;
                 }
                 return true;
@@ -956,10 +1078,36 @@ namespace SkyCoop
                 {
                     if(GameManager.m_SceneTransitionData != null)
                     {
-                        string NewName = GameManager.m_SceneTransitionData.m_GameRandomSeed.ToString();
-                        SkyCoop.Logger.Log($"SaveGame name {name} Seed {NewName} ");
-                        SaveGameSlots.SetUserDefinedSlotName(name, NewName);
+                        string Seed = GameManager.m_SceneTransitionData.m_GameRandomSeed.ToString();
+                        string ServerName = ModMain.Client.m_Config.m_ServerName;
+                        SkyCoop.Logger.Log($"SaveGame name {name} Seed {Seed} ServerName {ServerName}");
+                        SaveGameSlots.SetUserDefinedSlotName(name, $"{ServerName}_{Seed}");
                     }
+                }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(SaveGameSystem), "SaveCompletedInternal")]
+        public class SaveGameSystem_SaveCompletedInternal
+        {
+            public static void Postfix()
+            {
+                switch (s_SavingFlag)
+                {
+                    case SavingFlag.None:
+                        break;
+                    case SavingFlag.ToMenu:
+                        s_SavingFlag = SavingFlag.None;
+                        RemovePleaseWait();
+                        InterfaceManager.GetPanel<Panel_PauseMenu>().DoQuitGame();
+                        SetMenuOverrideMode(SandboxMenuOverride.Original);
+                        break;
+                    case SavingFlag.Quit:
+                        s_SavingFlag = SavingFlag.None;
+                        Application.Quit();
+                        break;
+                    default:
+                        break;
                 }
             }
         }
@@ -974,14 +1122,12 @@ namespace SkyCoop
                 SaveSlotInfo saveSlotInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, i);
                 if(saveSlotInfo != null)
                 {
-                    if(saveSlotInfo.m_UserDefinedName == Seed.ToString())
+                    if(saveSlotInfo.m_UserDefinedName.EndsWith(Seed.ToString()))
                     {
                         return i;
                     }
                 }
             }
-
-
             return -1;
         }
     }

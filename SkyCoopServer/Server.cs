@@ -9,7 +9,7 @@ namespace SkyCoopServer
 {
     public class Server : IDisposable
     {
-        public int m_Port = 37855;
+        public const int c_DefaultPort = 37855;
         public NetworkHelper m_NetworkHelper;
 
         public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
@@ -119,27 +119,39 @@ namespace SkyCoopServer
             }
         }
 
-        public Server(int Seed = 0, string ExperienceMode = "")
+        public Server(DataStr.ServerConfig Config = null)
         {
             m_Listener = new EventBasedNetListener();
             m_Instance = new NetManager(m_Listener);
 
-            if(Seed == 0)
+            if(Config == null)
             {
-                Seed = Guid.NewGuid().GetHashCode();
+                Config = new DataStr.ServerConfigJSON().Load();
             }
 
-            SaveData saveData = FilesManager.LoadServerFromFile(this, Seed);
+            m_Config = Config;
 
-            m_Config = new DataStr.ServerConfig();
-            m_Config.m_Seed = Seed;
-            m_Config.m_ExperienceMode = ExperienceMode;
+            SaveData saveData = FilesManager.LoadServerFromFile(m_Config.m_Seed);
+
+            if (string.IsNullOrEmpty(m_Config.m_ServerName))
+            {
+                m_Config.m_ServerName = "Nameless";
+            }
 
             if (saveData != null)
             {
                 m_Timeline = new Timeline(this, saveData.Timeline);
                 m_Weather = new WeatherManager(this, saveData.Weather);
                 m_Config.m_ExperienceMode = saveData.ExperienceMode;
+
+                if(!string.IsNullOrEmpty(saveData.GameMode))
+                {
+                    m_Config.m_GameMode = saveData.GameMode;
+                }
+                if (!string.IsNullOrEmpty(saveData.ServerName))
+                {
+                    m_Config.m_ServerName = saveData.ServerName;
+                }
             }
             else
             {
@@ -158,9 +170,11 @@ namespace SkyCoopServer
 
         public class SaveData
         {
+            public string ServerName { get; set; }
             public Timeline.SaveData Timeline { get; set; }
             public WeatherManager.SaveData Weather { get; set; }
             public string ExperienceMode { get; set; }
+            public string GameMode { get; set; }
         }
 
         public SaveData Save()
@@ -175,6 +189,8 @@ namespace SkyCoopServer
             }
 
             data.ExperienceMode = m_Config.m_ExperienceMode;
+            data.ServerName = m_Config.m_ServerName;
+            data.GameMode = m_Config.m_GameMode;
 
             return data;
         }
@@ -655,17 +671,13 @@ namespace SkyCoopServer
             }
         }
 
-        public void StartServer()
+        public void StartServer(int port = c_DefaultPort, int maxPlayers = 10, string key = Packet.c_Key)
         {
-            StartServer(m_Port, m_Config.m_MaxPlayers);
-
             ChangeGameMode(m_Config.m_GameMode);
 
-            m_NetworkHelper = new NetworkHelper(m_Port, "SkyCoopServer");
-        }
+            m_NetworkHelper = new NetworkHelper(port, "SkyCoopServer");
 
-        public void StartServer(int port, int maxPlayers, string key = Packet.c_Key)
-        {
+
             m_PlayersData.InitilizePlayers(maxPlayers);
             Logger.Log(ConsoleColor.Green, "[Server] Starting server");
             m_Instance.Start(port);
@@ -717,8 +729,7 @@ namespace SkyCoopServer
         public void StartServerVoice()
         {
             m_VoiceServer = new ServerVoice(this);
-            m_VoiceServer.m_Port = m_Config.m_VoicePort;
-            m_VoiceServer.StartServer();
+            m_VoiceServer.StartServer(m_Config.m_VoicePort, m_Config.m_MaxPlayers);
         }
 
         public bool SetVoiceIDForPlayer(int ClientID, int VoiceID)

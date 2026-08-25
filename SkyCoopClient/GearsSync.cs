@@ -309,44 +309,6 @@ namespace SkyCoopClient
                 }
             }
         }
-
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(GearItem), typeof(int) })] // Once
-        internal static class PlayerManager_InstantiateItemAtPlayersFeet
-        {
-            private static void Postfix(GearItem gearItemPrefab, int numUnits, GearItem __result)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
-
-                if (__result)
-                {
-                    SendDropItem(__result, 0, 0, false);
-                }
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtPlayersFeet", new System.Type[] { typeof(AssetReferenceGearItem), typeof(int) })]
-        internal static class PlayerManager_InstantiateItemAtPlayersFeet2
-        {
-            private static void Postfix(AssetReferenceGearItem assetReference, int numUnits, GearItem __result)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
-
-                if (__result && __result.name.Contains("GEAR_RevolverAmmoCasing"))
-                {
-                    SendDropItem(__result, 0, 0, false);
-                }
-                SkyCoop.Logger.Log($"InstantiateItemAtPlayersFeet numUnits {numUnits}");
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(GearItem), typeof(int), typeof(Vector3), typeof(bool) })]
         internal static class PlayerManager_InstantiateItemAtLocation
         {
@@ -523,7 +485,16 @@ namespace SkyCoopClient
                 {
                     GameManager.m_PlayerManager.m_Container.RemoveGear(Gear);
                     SkyCoop.Logger.Log($"Gear {Gear.name} refused and dropped near container");
-                    SendDropItem(Gear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
+
+                    if(GameManager.m_PlayerInVehicle && GameManager.m_PlayerInVehicle.IsInside())
+                    {
+                        Gear.transform.position = GameManager.m_PlayerInVehicle.GetDropItemLocationForLastDoor();
+                        SendDropItem(Gear, 0, 0, false, 0);
+                    }
+                    else
+                    {
+                        SendDropItem(Gear, 0, 0, false, 0, GameManager.GetPlayerTransform().gameObject);
+                    }
                     s_LastPickedGearGUID = string.Empty;
                     return;
                 }
@@ -1581,21 +1552,31 @@ namespace SkyCoopClient
                     }
                 }
                 
-                if (!IgnoreActionPicker && Visual.m_CookingVisual && Visual.m_CookingVisual.IsCooking() && string.IsNullOrEmpty(Visual.m_CookingVisual.m_CookingResult))
+                if (!IgnoreActionPicker && Visual.m_CookingVisual && Visual.m_CookingVisual.IsCooking() && (string.IsNullOrEmpty(Visual.m_CookingVisual.m_CookingResult) || (Visual.m_CookingVisual.GetState() == CookedState.Raw && Settings.m_Options.m_CookingPassTime)))
                 {
                     Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
                     if (Panel)
                     {
                         Panel.Enable(true);
                         Panel.m_ActionPickerItemDataList.Clear();
+
                         Action PickupDelegate = new Action(() => TryPickUp(Visual, PlaceMode, true));
                         Action CookDelegate = new Action(() => FireHook.HandleCookFromPicker(Visual));
                         Action BoilDeleagte = new Action(() => FireHook.HandleBoilFromPicker(Visual));
+                        Action PassTimeDeleagte = new Action(() => FireHook.HandlePassTime(Visual));
 
-                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "GAMEPLAY_PickUp", PickupDelegate));
-                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_cooking_pot", "GAMEPLAY_Cook", CookDelegate));
-                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_water_prep", "GAMEPLAY_Water", BoilDeleagte));
-
+                        if (string.IsNullOrEmpty(Visual.m_CookingVisual.m_CookingResult))
+                        {
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "GAMEPLAY_PickUp", PickupDelegate));
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_cooking_pot", "GAMEPLAY_Cook", CookDelegate));
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_water_prep", "GAMEPLAY_Water", BoilDeleagte));
+                        }
+                        else
+                        {
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "GAMEPLAY_PickUp", PickupDelegate));
+                            Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_tab_passTime1", "GAMEPLAY_PassTime", PassTimeDeleagte));
+                        }
+                        
                         Panel.m_ObjectInteractedWith = null;
                         Panel.EnableWithCurrentList();
                     }

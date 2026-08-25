@@ -77,25 +77,24 @@ namespace SkyCoopClient
         }
 
 
-        //[HarmonyLib.HarmonyPatch(typeof(BreakDown), "Deserialize")]
-        //private static class HarvestableManagern_Deserialize
-        //{
-        //    private static bool Prefix(BreakDown __instance)
-        //    {
-        //        if (!ModMain.IsMultiplayer()) { return true; }
-
-        //        return false;
-        //    }
-        //}
-
-        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "Serialize")]
-        private static class HarvestableManagern_Serialize
+        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "DeserializeAll")]
+        private static class HarvestableManagern_DeserializeAll
         {
-            private static void Postfix(BreakDown __instance, ref string __result)
+            private static bool Prefix()
             {
-                if (!ModMain.IsMultiplayer()) { return; }
+                if (!ModMain.IsMultiplayer()) { return true; }
 
-                __result = "";
+                return false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(BreakDown), "SerializeAll")]
+        private static class HarvestableManagern_SerializeAll
+        {
+            private static bool Prefix()
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+                return false;
             }
         }
 
