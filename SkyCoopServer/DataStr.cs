@@ -12,8 +12,6 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
-using static SkyCoopServer.Logger;
-using static System.Net.WebRequestMethods;
 
 namespace SkyCoopServer
 {
@@ -1025,6 +1023,7 @@ namespace SkyCoopServer
             public Dictionary<string, FireSyncData> m_Fires = new Dictionary<string, FireSyncData>();
             public Dictionary<string, bool> m_BreakDowns = new Dictionary<string, bool>();
             public Dictionary<string, HarvestableData> m_Harvestables = new Dictionary<string, HarvestableData>();
+            public Dictionary<string, WaterSourceData> m_WaterSources = new Dictionary<string, WaterSourceData>();
 
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
@@ -1052,6 +1051,7 @@ namespace SkyCoopServer
                 public List<FireSyncData.SaveData> Fires { get; set; }
                 public Dictionary<string, bool> BreakDowns { get; set; }
                 public List<HarvestableData.SaveData> Harvestables { get; set; }
+                public List<WaterSourceData.SaveData> WaterSources { get; set; }
             }
 
             public SaveData Save()
@@ -1097,6 +1097,11 @@ namespace SkyCoopServer
                 foreach (HarvestableData harvestable in m_Harvestables.Values.ToList())
                 {
                     data.Harvestables.Add(harvestable.Save());
+                }
+                data.WaterSources = new List<WaterSourceData.SaveData>();
+                foreach (WaterSourceData source in m_WaterSources.Values.ToList())
+                {
+                    data.WaterSources.Add(source.Save());
                 }
                 return data;
             }
@@ -1162,6 +1167,14 @@ namespace SkyCoopServer
                     {
                         HarvestableData Harvestable = new HarvestableData(saveData);
                         m_Harvestables.Add(Harvestable.m_GUID, Harvestable);
+                    }
+                }
+                if(data.WaterSources != null)
+                {
+                    foreach (WaterSourceData.SaveData saveData in data.WaterSources)
+                    {
+                        WaterSourceData Source = new WaterSourceData(saveData);
+                        m_WaterSources.Add(Source.m_GUID, Source);
                     }
                 }
             }
@@ -3532,6 +3545,75 @@ namespace SkyCoopServer
             public string GearName { get; set; }
             public Vector3JSON Position { get; set; }
             public QuaternionJSON Rotation { get; set; }
+        }
+
+        public class WaterSourceData
+        {
+            public float m_Min = 0;
+            public float m_Max = 0;
+            public float m_Current = 0;
+            public bool m_IsGood = true;
+            public float m_ChanceToBeBad = 0;
+            public string m_GUID = string.Empty;
+
+            public void RollChanges()
+            {
+                System.Random RNG = new System.Random(Guid.NewGuid().GetHashCode());
+
+                m_IsGood = true;
+                if(RNG.Range(0, 100) < m_ChanceToBeBad)
+                {
+                    m_IsGood = false;
+                }
+                m_Current = RNG.Range(m_Min, m_Max);
+            }
+
+            public WaterSourceData(string GUID, float min, float max, float chance)
+            {
+                m_GUID = GUID;
+                m_Min = min;
+                m_Max = max;
+                m_ChanceToBeBad = chance;
+
+                RollChanges();
+            }
+
+            public WaterSourceData(SaveData data)
+            {
+                Load(data);
+            }
+
+            public class SaveData
+            {
+                public float Min { get; set; }
+                public float Max { get; set; }
+                public float Current { get; set; }
+                public bool IsGood { get; set; }
+                public float ChanceToBeBad { get; set; }
+                public string GUID { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData data = new SaveData();
+                data.Min = m_Min;
+                data.Max = m_Max;
+                data.Current = m_Current;
+                data.IsGood = m_IsGood;
+                data.ChanceToBeBad = m_ChanceToBeBad;
+                data.GUID = m_GUID;
+                return data;
+            }
+
+            public void Load(SaveData data)
+            {
+                m_Min = data.Min;
+                m_Max = data.Max;
+                m_Current = data.Current;
+                m_IsGood = data.IsGood;
+                m_ChanceToBeBad = data.ChanceToBeBad;
+                m_GUID = data.GUID;
+            }
         }
     }
 }

@@ -102,6 +102,7 @@ namespace SkyCoop
             { (int)Packet.Type.ServerWeather, ClientHandle.ServerWeather },
             { (int)Packet.Type.ClientHarvest, ClientHandle.ClientHarvest },
             { (int)Packet.Type.ClientBreakDown, ClientHandle.ClientBreakDown },
+            { (int)Packet.Type.ClientWaterSourceInteraction, ClientHandle.ClientWaterSourceInteraction },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)
@@ -122,6 +123,7 @@ namespace SkyCoop
         public List<DelayedPackage> m_DelayedPackage = new List<DelayedPackage> { };
         public DataStr.ServerConfig m_Config = new DataStr.ServerConfig();
         public DataStr.GameRules m_Rules = new DataStr.GameRules();
+        public float m_LastServerTime = 0;
 
         public bool m_IsReady = false;
         public int GetMyId()

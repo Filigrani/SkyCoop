@@ -11,6 +11,7 @@ using Il2CppTMPro;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
+using UnityEngine.UIElements;
 using static Il2Cpp.UIAtlas;
 using static Il2CppMono.Security.X509.X520;
 using static SkyCoopServer.DataStr;
@@ -1172,7 +1173,7 @@ namespace SkyCoop
 
             public void InjectItem(string GearName, Vector3 Position, Quaternion Rotation)
             {
-                GameObject Reference = AssetManager.CreateBogusGear(GearName);
+                GameObject Reference = AssetManager.CreateBogusGear(GearName, null, true);
                 if (Reference)
                 {
                     GameObject Item = Instantiate<GameObject>(Reference, transform);
@@ -1501,7 +1502,17 @@ namespace SkyCoop
                         {
                             DamageFloat = Data.m_BootsDamage;
                         }
-                        Mesh.GetComponent<Renderer>().material.SetFloat("_blend_amt", DamageFloat);
+                        Renderer Rend = Mesh.GetComponent<Renderer>();
+
+                        if (Rend == null)
+                        {
+                            Rend = Mesh.GetComponentInChildren<Renderer>();
+                        }
+
+                        if (Rend)
+                        {
+                            Rend.GetComponent<Renderer>().material.SetFloat("_blend_amt", DamageFloat);
+                        }
                     }
                 }
             }
@@ -1644,15 +1655,21 @@ namespace SkyCoop
 
 
                 // Hats
-                AddClothingMesh("GEAR_Balaclava"); // No UV.
+                AddClothingMesh("GEAR_Balaclava");
                 AddClothingMesh("GEAR_BaseballCap");
-                AddClothingMesh("GEAR_BasicWoolHat"); // No UV.
+                AddClothingMesh("GEAR_BasicWoolHat");
                 AddClothingMesh("GEAR_Toque");
-                AddClothingMesh("GEAR_ImprovisedHat"); // No UV.
+                AddClothingMesh("GEAR_ImprovisedHat");
                 AddClothingMesh("GEAR_CottonScarf"); // No UV.
                 AddClothingMesh("GEAR_WoolWrap"); // No UV.
                 AddClothingMesh("GEAR_WoolWrapCap"); // No UV.
-                AddClothingMesh("GEAR_RabbitskinHat"); // No UV.
+                AddClothingMesh("GEAR_RabbitskinHat");
+
+                AddGearAsClothingMesh("GEAR_HatLeatherAviatorA", new Vector3(0, 0.08f, 0), new Vector3(0, 0, 0), new Vector3(1.14f, 1, 1)); // DLC
+                AddGearAsClothingMesh("GEAR_MinersHelmet", new Vector3(0, 0.118f, 0), new Vector3(0, 0, 0), new Vector3(1.2f, 1, 1)); // DLC
+                AddGearAsClothingMesh("GEAR_CougarWrap", new Vector3(0, -0.07f, -0.03f), new Vector3(0, 0, 0), new Vector3(1, 1, 1)); // DLC
+                AddGearAsClothingMesh("GEAR_WolfSkinHat", new Vector3(0, 0.06f, 0), new Vector3(0, 0, 0), new Vector3(1, 1, 1)); // DLC
+                AddGearAsClothingMesh("GEAR_DeerSkinHat", new Vector3(0, 0.1f, 0), new Vector3(0, 0, 0), new Vector3(0.4f, 0.4f, 0.4f)); // DLC
 
                 //Torso
                 AddClothingMesh("GEAR_CottonHoodie");
@@ -1664,6 +1681,14 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_FishermanSweater");
                 AddClothingMesh("GEAR_WoolSweater");
                 AddClothingMesh("GEAR_SweaterChristmasA");
+                AddClothingMesh("GEAR_PlaidShirt");
+                AddClothingMesh("GEAR_FleeceSweater");
+                AddClothingMesh("GEAR_JerseyHockeyA"); // DLC
+                AddClothingMesh("GEAR_WoolShirt");
+                AddClothingMesh("GEAR_TeeShirt");
+                AddClothingMesh("GEAR_TShirtGBI"); // DLC
+                AddClothingMesh("GEAR_TShirtSnappy"); // DLC
+                AddClothingMesh("GEAR_TShirtCM"); // DLC
 
                 //Pants
                 AddClothingMesh("GEAR_CargoPants");
@@ -1672,20 +1697,23 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_Jeans");
                 AddClothingMesh("GEAR_InsulatedPants");
                 AddClothingMesh("GEAR_WorkPants");
-                AddClothingMesh("GEAR_LongUnderwear"); // No UV.
-                AddClothingMesh("GEAR_LongUnderwearWool"); // No UV.
+                AddClothingMesh("GEAR_LongUnderwear");
+                AddClothingMesh("GEAR_LongUnderwearWool");
 
                 //Socks
                 AddClothingMesh("GEAR_CottonSocks");
                 AddClothingMesh("GEAR_ClimbingSocks");
                 AddClothingMesh("GEAR_WoolSocks");
+                AddClothingMesh("GEAR_SockDots"); // DLC
+                AddClothingMesh("GEAR_SockMoose"); // DLC
+                AddClothingMesh("GEAR_SockPlaid"); // DLC
 
                 //Boots
                 AddClothingMesh("GEAR_BasicShoes");
 
 
                 // Gloves
-                AddClothingMesh("GEAR_BasicGloves"); // No UV.
+                AddClothingMesh("GEAR_BasicGloves");
 
 
                 foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
@@ -1758,7 +1786,7 @@ namespace SkyCoop
                     GameObject Gear;
                     if (Bogus)
                     {
-                        Gear = AssetManager.CreateBogusGear(GearName);
+                        Gear = AssetManager.CreateBogusGear(GearName, null, true);
                         if (Gear)
                         {
                             Gear.transform.SetParent(RightHand);
@@ -1809,7 +1837,7 @@ namespace SkyCoop
             public GameObject AddCookpot(Vector3 Position, Vector3 Rotation, float Scale)
             {
                 Transform Head = GetBone(m_Animator, HumanBodyBones.LeftEye);
-                GameObject Gear = AssetManager.CreateBogusGear("GEAR_CookingPot");
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_CookingPot", null, true);
                 if (Gear)
                 {
                     Gear.transform.SetParent(Head);
@@ -1824,7 +1852,7 @@ namespace SkyCoop
             public GameObject AddSatchel(Vector3 Position, Vector3 Rotation, float Scale)
             {
                 Transform Head = GetBone(m_Animator, HumanBodyBones.LeftShoulder);
-                GameObject Gear = AssetManager.CreateBogusGear("GEAR_MooseHideBag");
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_MooseHideBag", null, true);
                 if (Gear)
                 {
                     Gear.transform.SetParent(Head);
@@ -1839,7 +1867,7 @@ namespace SkyCoop
             public GameObject AddTechPack(Vector3 Position, Vector3 Rotation, float Scale)
             {
                 Transform Head = GetBone(m_Animator, HumanBodyBones.UpperChest);
-                GameObject Gear = AssetManager.CreateBogusGear("GEAR_TechnicalBackpack");
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_TechnicalBackpack", null, true);
                 if (Gear)
                 {
                     Gear.transform.SetParent(Head);
@@ -1854,7 +1882,7 @@ namespace SkyCoop
             public GameObject AddVest(Vector3 Position, Vector3 Rotation, Vector3 Scale)
             {
                 Transform Chest = GetBone(m_Animator, HumanBodyBones.Chest);
-                GameObject Gear = AssetManager.CreateBogusGear("GEAR_BallisticVest");
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_BallisticVest", null, true);
                 if (Gear)
                 {
                     Rigidbody B = Gear.GetComponent<Rigidbody>();
@@ -1889,14 +1917,24 @@ namespace SkyCoop
                 Transform T = transform.FindChild(GearName);
                 if (T)
                 {
-                    m_ClothingMeshes.Add(T.gameObject);
                     Renderer Mesh = T.GetComponent<Renderer>();
 
                     GameObject GearReference = AssetManager.GetAssetFromGame<GameObject>(GearName);
-                    Material ReferenceMaterial = null;
                     if(GearReference)
                     {
-                        Renderer GearMesh = GearReference.GetComponent<Renderer>();
+                        Renderer GearMesh = null;
+
+                        if (GearName != "GEAR_DeerSkinPants") // У этого объекта остался MeshRenderer (без MeshFilter, по этому мы её не видем) от старой модели из альфы. Текстура там не та.
+                        {
+                            GearMesh = GearReference.GetComponent<Renderer>();
+                        }
+                        else
+                        {
+                            GearMesh = GearReference.transform.GetChild(0).GetComponent<Renderer>();
+                        }
+
+                        Material ReferenceMaterial = null;
+
                         if (GearMesh)
                         {
                             ReferenceMaterial = GearMesh.material;
@@ -1905,14 +1943,48 @@ namespace SkyCoop
                         {
                             ReferenceMaterial = GearReference.GetComponentInChildren<Renderer>().material;
                         }
-                    }
 
-                    Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
-                    for (int i = 0; i < NewMatsArr.Length; i++)
-                    {
-                        NewMatsArr[i] = ReferenceMaterial;
+                        Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material> NewMatsArr = new Il2CppInterop.Runtime.InteropTypes.Arrays.Il2CppReferenceArray<Material>(Mesh.materials.Length);
+                        for (int i = 0; i < NewMatsArr.Length; i++)
+                        {
+                            NewMatsArr[i] = ReferenceMaterial;
+                        }
+                        Mesh.SetMaterialArray(NewMatsArr);
+                        m_ClothingMeshes.Add(T.gameObject);
                     }
-                    Mesh.SetMaterialArray(NewMatsArr);
+                }
+            }
+
+            public void AddGearAsClothingMesh(string GearName, Vector3 LocalPosition, Vector3 LocalRotation, Vector3 LocalScale, HumanBodyBones Bone = HumanBodyBones.LeftEye)
+            {
+                Transform BoneT = GetBone(m_Animator, Bone);
+                if (BoneT)
+                {
+                    GameObject Gear = AssetManager.CreateBogusGear(GearName, null, true);
+                    if (Gear)
+                    {
+                        Gear.transform.SetParent(BoneT);
+                        Gear.transform.localPosition = LocalPosition;
+                        Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
+                        Gear.transform.localScale = LocalScale;
+                        m_ClothingMeshes.Add(Gear);
+
+                        switch (GearName)
+                        {
+                            case "GEAR_HatLeatherAviatorA":
+                                Gear.transform.GetChild(0).gameObject.SetActive(true);
+                                Gear.transform.GetChild(1).gameObject.SetActive(false);
+                                break;
+                            case "GEAR_WolfSkinHat":
+                            case "GEAR_CougarWrap":
+                            case "GEAR_DeerSkinHat":
+                                Gear.transform.GetChild(0).gameObject.SetActive(false);
+                                Gear.transform.GetChild(1).gameObject.SetActive(true);
+                                break;
+                            default:
+                                break;
+                        }
+                    }
                 }
             }
 

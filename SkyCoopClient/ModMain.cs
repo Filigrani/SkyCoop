@@ -245,6 +245,7 @@ namespace SkyCoop
                     if(Client != null && Client.m_IsReady)
                     {
                         ClientSend.SendNewScene(GetCurrentSceneName());
+                        PlayersManager.s_ForceUpdateClothing = true; // Фикс отправки одежды после загрузки сохранения
                     }
                 }
             }

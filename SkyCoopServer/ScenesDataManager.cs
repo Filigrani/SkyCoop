@@ -1378,5 +1378,42 @@ namespace SkyCoopServer
                 ServerSend.SendBreakDown(m_ServerInstance, GUID, SceneName);
             }
         }
+
+        public WaterSourceData GetWaterSourceData(string SceneName, string GUID, float Min, float Max, float ChanceToBeBad)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[GetWaterSourceData] called on scene {SceneName} that not exist!");
+                return null;
+            }
+
+            WaterSourceData Result = null;
+
+            if(!SceneData.m_WaterSources.TryGetValue(GUID, out Result))
+            {
+                Result = new WaterSourceData(GUID, Min, Max, ChanceToBeBad);
+                SceneData.m_WaterSources.Add(GUID, Result);
+            }
+
+            return Result;
+        }
+        public WaterSourceData GetWaterSourceData(string SceneName, string GUID)
+        {
+            SceneData SceneData = GetSceneData(SceneName);
+            if (SceneData == null)
+            {
+                Logger.Log(ConsoleColor.Red, $"[GetWaterSourceData] called on scene {SceneName} that not exist!");
+                return null;
+            }
+
+            WaterSourceData Result = null;
+
+            if (SceneData.m_WaterSources.TryGetValue(GUID, out Result))
+            {
+                return Result;
+            }
+            return null;
+        }
     }
 }

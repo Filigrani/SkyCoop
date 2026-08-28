@@ -1486,5 +1486,68 @@ namespace SkyCoopServer
                 Player.m_IsWorking = IsWorking;
             }
         }
+
+        public static void ClientWaterSourceInteraction(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                float Min = Reader.GetFloat();
+                float Max = Reader.GetFloat();
+                float ChanceToBeBad = Reader.GetFloat();
+
+                
+                List<NetPeer> peers = new List<NetPeer>();
+                ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer Peer in peers)
+                {
+                    if (Peer != null)
+                    {
+                        DataStr.PlayerData OtherPlayer = ServerInstance.GetPlayerDataByNetPeer(Peer);
+
+                        if (OtherPlayer != null)
+                        {
+                            if (OtherPlayer.m_InteractionGUID == GUID && Player != OtherPlayer)
+                            {
+                                ServerSend.SendWaterSource(Client, GUID, false);
+                                return;
+                            }
+                        }
+                    }
+                }
+                WaterSourceData Source = ServerInstance.m_ScenesData.GetWaterSourceData(Player.m_Scene, GUID, Min, Max, ChanceToBeBad);
+                if(Source != null)
+                {
+                    Player.m_InteractionGUID = GUID;
+                    ServerSend.SendWaterSource(Client, GUID, true, Source.m_Current, Source.m_IsGood);
+                }
+                else
+                {
+                    ServerSend.SendWaterSource(Client, GUID, false);
+                }
+            }
+        }
+        public static void ClientWaterSourceTakeWater(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                float TookWater = Reader.GetFloat();
+
+                WaterSourceData Source = ServerInstance.m_ScenesData.GetWaterSourceData(Player.m_Scene, GUID);
+                if (Source != null)
+                {
+                    Source.m_Current -= TookWater;
+                    if(Source.m_Current < 0)
+                    {
+                        Source.m_Current = 0;
+                    }
+                }
+            }
+        }
     }
 }

@@ -884,6 +884,11 @@ namespace SkyCoop
                 Uni.SetNormalizedTime(NormalizedTOD);
             }
 
+            if(ModMain.Client != null && ModMain.Client.m_IsReady)
+            {
+                ModMain.Client.m_LastServerTime = ElapsedInGameHours;
+            }
+
             SleepHook.SetEveryoneIsSleeping(EveryoneIsSleeping);
 
             if (SleepHook.s_LastPlayersReadyForAccelerate != PlayersReady)
@@ -1043,6 +1048,24 @@ namespace SkyCoop
             string GUID = Reader.GetString();
 
             BreakDownHook.HandleRemove(GUID);
+        }
+
+        public static void ClientWaterSourceInteraction(NetDataReader Reader)
+        {
+            bool Result = Reader.GetBool();
+            string GUID = Reader.GetString();
+            float Current = Reader.GetFloat();
+            bool IsGood = Reader.GetBool();
+
+            if (Result)
+            {
+                WaterSourceSync.HandleWaterSource(GUID, Current, IsGood);
+            }
+            else
+            {
+                HUDMessage.AddMessage("Interaction blocked by other player!", true, true);
+                GameAudioManager.PlayGUIError();
+            }
         }
     }
 }

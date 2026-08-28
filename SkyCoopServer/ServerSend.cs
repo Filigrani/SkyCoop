@@ -1235,5 +1235,18 @@ namespace SkyCoopServer
                 }
             }
         }
+
+        public static void SendWaterSource(NetPeer Client, string GUID, bool Result, float Current = 0, bool Good = false)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientWaterSourceInteraction);
+
+            writer.Put(Result);
+            writer.Put(GUID);
+            writer.Put(Current);
+            writer.Put(Good);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

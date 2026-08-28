@@ -3,6 +3,7 @@ using Il2CppRewired;
 using Il2CppTLD.Gameplay;
 using Il2CppTLD.Gear;
 using Il2CppTLD.ModularElectrolizer;
+using Il2CppTLD.PDID;
 using Il2CppTLD.Scenes;
 using Il2CppTLD.UI;
 using SkyCoop;
@@ -1172,16 +1173,6 @@ namespace SkyCoopClient
                 __instance.enabled = false;
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(WaterSource), "Awake")]
-        private static class WaterSource_Awake
-        {
-            private static void Postfix(WaterSource __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __instance.enabled = false;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(LifeAfterDeathManager), "DeserializeRecoveryCampsite")]
         private static class LifeAfterDeathManager_DeserializeRecoveryCampsite
         {
@@ -1214,10 +1205,66 @@ namespace SkyCoopClient
                 {
                     if (GameManager.m_SceneTransitionData != null)
                     {
-                        int num = (GameManager.m_SceneTransitionData.m_GameRandomSeed ^ GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent.GetHashCode());
-                        __result = num ^ seed;
+                        __result = GameManager.m_SceneTransitionData.m_GameRandomSeed + GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent.GetHashCode();
                     }
                 }
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(LoadScene), "Start")]
+        private static class LoadScene_Start
+        {
+            private static bool Prefix(LoadScene __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (!__instance.m_Active || __instance.m_StartHasBeenCalled)
+                    return false;
+                __instance.m_StartHasBeenCalled = true;
+                __instance.m_FadeOutStarted = false;
+                if (__instance.m_LoadSceneParent != null)
+                {
+                    __instance.m_LoadSceneParent.Start();
+                    __instance.m_GUID = __instance.m_LoadSceneParent.m_GUID;
+                }
+                else
+                {
+                    __instance.m_GUID = ModMain.GenerateSeededGUID(GameManager.m_SceneTransitionData.m_GameRandomSeed, __instance.gameObject.transform.position);
+                }
+                if (__instance.m_TransitionOnContact)
+                {
+                    __instance.GetComponent<Collider>().isTrigger = true;
+                    vp_Layer.Set(__instance.gameObject, 21);
+                }
+                else if (__instance.gameObject.layer != 21)
+                {
+                    vp_Layer.Set(__instance.gameObject, 19);
+                }
+                if (__instance.m_LoadSceneParent != null)
+                {
+                    __instance.m_LoadSceneParent.Register(__instance);
+                }
+                __instance.Lock = __instance.gameObject.GetComponent<Lock>();
+                if (!__instance.Lock)
+                    return false;
+                __instance.Lock.RollLockedState();
+
+                return false;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(LoadSceneParent), "Start")]
+        private static class LoadSceneParent_Start
+        {
+            private static bool Prefix(LoadSceneParent __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (__instance.m_StartHasBeenCalled)
+                    return false;
+                __instance.m_StartHasBeenCalled = true;
+
+                __instance.m_GUID = ModMain.GenerateSeededGUID(GameManager.m_SceneTransitionData.m_GameRandomSeed, __instance.gameObject.transform.position);
+                return false;
             }
         }
     }

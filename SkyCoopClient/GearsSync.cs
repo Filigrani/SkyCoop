@@ -1609,5 +1609,50 @@ namespace SkyCoopClient
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(Inventory), "Deserialize")]
+        private static class Inventory_Deserialize
+        {
+            internal static void Prefix(Inventory __instance, string text)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+                GearItem_DecayOverTODHours.s_SkipDecay = true;
+            }
+            internal static void Postfix(Inventory __instance, string text)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+                GearItem_DecayOverTODHours.s_SkipDecay = false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(GearItem), "DecayOverTODHours")]
+        private static class GearItem_DecayOverTODHours
+        {
+            public static bool s_SkipDecay = false;
+            internal static bool Prefix(GearItem __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                if (s_SkipDecay)
+                {
+                    if(ModMain.Client != null && ModMain.Client.m_IsReady)
+                    {
+                        if(ModMain.Client.m_LastServerTime != 0)
+                        {
+                            __instance.m_LastUpdatedTODHours = ModMain.Client.m_LastServerTime;
+                        }
+                        else // Небезопастно потому что не факт что время засинхроненно, а не из клиенского сейва, делаем так только если почему то время хост не дал.
+                        {
+                            __instance.m_LastUpdatedTODHours = GameManager.GetTimeOfDayComponent().GetHoursPlayedNotPaused();
+                        }
+                        __instance.m_LastUpdatedTODHoursInitialized = true;
+                    }
+                    
+                    
+                    return false;
+                }
+                return true;
+            }
+        }
     }
 }

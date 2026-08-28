@@ -668,5 +668,28 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+
+        public static void SendWaterSource(string GUID, float Min, float Max, float ChanceToBeBad)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientWaterSourceInteraction);
+
+            writer.Put(GUID);
+            writer.Put(Min);
+            writer.Put(Max);
+            writer.Put(ChanceToBeBad);
+
+            SendToHost(writer);
+        }
+        public static void SendTookWaterFromWaterSource(string GUID, float TookWater)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientWaterSourceTakeWater);
+
+            writer.Put(GUID);
+            writer.Put(TookWater);
+
+            SendToHost(writer);
+        }
     }
 }

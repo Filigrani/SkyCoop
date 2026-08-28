@@ -100,6 +100,8 @@ namespace SkyCoopServer
             ClientHarvest,
             ClientBreakDown,
             ClientIsWorking,
+            ClientWaterSourceInteraction,
+            ClientWaterSourceTakeWater,
         }
 
         public enum SquadResponce

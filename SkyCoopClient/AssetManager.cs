@@ -242,7 +242,7 @@ namespace SkyCoop
             return null;
         }
 
-        public static GameObject CreateBogusGear(string GearName, Transform parent = null)
+        public static GameObject CreateBogusGear(string GearName, Transform parent = null, bool RemoveColiders = false)
         {
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
             if (Prefab)
@@ -254,11 +254,14 @@ namespace SkyCoop
                     foreach (Component Com in GearObject.GetComponents<Component>())
                     {
                         string ComName = Com.GetIl2CppType().Name;
-                        if (ComName != Il2CppType.Of<BoxCollider>().Name
-                            && ComName != Il2CppType.Of<SphereCollider>().Name
-                            && ComName != Il2CppType.Of<CapsuleCollider>().Name
-                            && ComName != Il2CppType.Of<MeshCollider>().Name
-                            && ComName != "PhysicMaterial"
+
+                        if(RemoveColiders && Com is Collider)
+                        {
+                            UnityEngine.Object.Destroy(Com);
+                            continue;
+                        }
+
+                        if (ComName != "PhysicMaterial"
                             && ComName != Il2CppType.Of<MeshFilter>().Name
                             && ComName != Il2CppType.Of<LODGroup>().Name
                             && ComName != Il2CppType.Of<Transform>().Name
