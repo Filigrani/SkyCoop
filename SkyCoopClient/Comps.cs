@@ -12,8 +12,6 @@ using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.UIElements;
-using static Il2Cpp.UIAtlas;
-using static Il2CppMono.Security.X509.X520;
 using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
@@ -1689,6 +1687,11 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_TShirtGBI"); // DLC
                 AddClothingMesh("GEAR_TShirtSnappy"); // DLC
                 AddClothingMesh("GEAR_TShirtCM"); // DLC
+                AddClothingMesh("GEAR_DownParka");
+                AddClothingMesh("GEAR_DownSkiJacket");
+                AddClothingMesh("GEAR_LightParka");
+                AddClothingMesh("GEAR_MackinawJacket");
+                AddClothingMesh("GEAR_SkiJacket");
 
                 //Pants
                 AddClothingMesh("GEAR_CargoPants");
@@ -1699,6 +1702,8 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_WorkPants");
                 AddClothingMesh("GEAR_LongUnderwear");
                 AddClothingMesh("GEAR_LongUnderwearWool");
+                AddClothingMesh("GEAR_WolfSkinPant"); // DLC
+                AddClothingMesh("GEAR_MinersPants"); // DLC
 
                 //Socks
                 AddClothingMesh("GEAR_CottonSocks");
@@ -1714,7 +1719,7 @@ namespace SkyCoop
 
                 // Gloves
                 AddClothingMesh("GEAR_BasicGloves");
-
+                AddClothingMesh("GEAR_TacticalGloves");
 
                 foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
                 {
@@ -1924,7 +1929,7 @@ namespace SkyCoop
                     {
                         Renderer GearMesh = null;
 
-                        if (GearName != "GEAR_DeerSkinPants") // У этого объекта остался MeshRenderer (без MeshFilter, по этому мы её не видем) от старой модели из альфы. Текстура там не та.
+                        if (GearName != "GEAR_DeerSkinPants" || GearName == "GEAR_WolfSkinPant") // У этого объекта остался MeshRenderer (без MeshFilter, по этому мы её не видем) от старой модели из альфы. Текстура там не та.
                         {
                             GearMesh = GearReference.GetComponent<Renderer>();
                         }
