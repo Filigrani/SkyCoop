@@ -1348,15 +1348,6 @@ namespace SkyCoopServer
                     SceneFileName = m_SceneName.Split('_')[0];
                 }
 
-                if (ServerInstance.m_Rules.m_GearSpawns != null)
-                {
-                    DataStr.SceneLootSpawns LootData = null;
-                    if (ServerInstance.m_Rules.m_GearSpawns.TryGetValue(SceneFileName, out LootData))
-                    {
-                        SpawnGears(ServerInstance, LootData);
-                    }
-                }
-
                 System.Random RNG = new Random(Guid.NewGuid().GetHashCode());
 
                 Dictionary<string, RadialObjectSpawnerData> Spawners = null;
