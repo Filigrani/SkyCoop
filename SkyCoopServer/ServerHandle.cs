@@ -1003,6 +1003,19 @@ namespace SkyCoopServer
                 case "skiptime":
                     ServerInstance.m_Timeline.SkipHours(1f);
                     break;
+                case "skipday":
+                case "skip24":
+                    ServerInstance.m_Timeline.SkipHours(24);
+                    break;
+                case "skip10":
+                    ServerInstance.m_Timeline.SkipHours(10);
+                    break;
+                case "skip12":
+                    ServerInstance.m_Timeline.SkipHours(12);
+                    break;
+                case "skip5":
+                    ServerInstance.m_Timeline.SkipHours(5);
+                    break;
                 case "rtsleep":
                     ServerInstance.m_Timeline.m_RTSleepOnly = !ServerInstance.m_Timeline.m_RTSleepOnly;
                     break;

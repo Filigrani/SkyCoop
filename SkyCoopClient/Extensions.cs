@@ -201,6 +201,13 @@ namespace SkyCoop
             Data.DisabledForXP = new List<string>();
             Data.EnabledForXP = new List<string>();
 
+            Data.GUID = "";
+            ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();
+            if (Obj)
+            {
+                Data.GUID = Obj.Get();
+            }
+
             Data.IsDLC = Spawn.gameObject.scene.name.Contains("_DLC");
 
             Component[] allComponents = Spawn.gameObject.GetComponentsInChildren<Component>(true);
@@ -298,6 +305,13 @@ namespace SkyCoop
             Data.PossiblePoints = new List<DataStr.Vector3JSON>();
             Data.EnabledForXP = new List<string>();
             Data.DisabledForXP = new List<string>();
+
+            Data.GUID = "";
+            ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();
+            if (Obj)
+            {
+                Data.GUID = Obj.Get();
+            }
 
             Data.IsDLC = Spawn.gameObject.scene.name.Contains("_DLC");
 

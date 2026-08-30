@@ -129,7 +129,84 @@ namespace SkyCoopClient
             {
                 if (GearSpawnsRipper.s_Active) { return false; }
 
-                return true;
+                if (!ModMain.IsMultiplayer()) { return true; }
+                string GUID = "";
+                ObjectGuid ObjGUID = __instance.gameObject.GetComponent<ObjectGuid>();
+                if (ObjGUID)
+                {
+                    GUID = ObjGUID.Get();
+                }
+                List<GameObject> list = new List<GameObject>(__instance.m_ObjectList);
+                List<int> list2 = new List<int>(__instance.m_Weights);
+                UnityEngine.Random.State state = UnityEngine.Random.state;
+                int GUIDBasedSeed = ModMain.GetDeterministicSeed(GUID);
+                int Seed = GameManager.GetRandomSeed(GUIDBasedSeed);
+                UnityEngine.Random.InitState(Seed);
+
+                //string SpawnerName = __instance.gameObject.name;
+
+                //if (__instance.gameObject.transform.parent)
+                //{
+                //    SpawnerName = __instance.gameObject.transform.parent.gameObject.name;
+                //}
+
+                //SkyCoop.Logger.Log(ConsoleColor.Green, $"[RandomSpawnObject] {SpawnerName} GUIDBasedSeed {GUIDBasedSeed} Final seed {Seed}");
+                int num = __instance.GetNumObjectsToEnableCurrentXPMode();
+                if (num > list2.Count)
+                {
+                    num = list2.Count;
+                }
+                for (int i = 0; i < num; i++)
+                {
+                    int num2 = 0;
+                    foreach (int num3 in list2)
+                    {
+                        num2 += num3;
+                    }
+                    if (num2 == 0)
+                    {
+                        UnityEngine.Random.state = state;
+                        return false;
+                    }
+                    List<MapDetail> list3 = new List<MapDetail>();
+                    foreach (GameObject gameObject in list)
+                    {
+                        if (gameObject)
+                        {
+                            MapDetail[] componentsInChildren = gameObject.GetComponentsInChildren<MapDetail>();
+                            list3.AddRange(componentsInChildren);
+                        }
+                    }
+                    int num4 = UnityEngine.Random.Range(0, num2);
+                    int num5 = 0;
+                    int num6 = -1;
+                    for (int j = 0; j < list2.Count; j++)
+                    {
+                        int num7 = num5 + list2[j];
+                        if (num4 >= num5 && num4 < num7)
+                        {
+                            if (list[j] && list[j].GetComponent<GearItem>() == null)
+                            {
+                                list[j].SetActive(true);
+                                foreach (MapDetail item in list[j].GetComponentsInChildren<MapDetail>())
+                                {
+                                    list3.Remove(item);
+                                }
+                            }
+                            num6 = j;
+                            break;
+                        }
+                        num5 = num7;
+                    }
+                    if (num6 >= 0)
+                    {
+                        list2.RemoveAt(num6);
+                        list.RemoveAt(num6);
+                    }
+                }
+
+
+                return false;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(GearItem), "RollSpawnChance")]
@@ -1205,7 +1282,7 @@ namespace SkyCoopClient
                 {
                     if (GameManager.m_SceneTransitionData != null)
                     {
-                        __result = GameManager.m_SceneTransitionData.m_GameRandomSeed + GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent.GetHashCode();
+                        __result = (GameManager.m_SceneTransitionData.m_GameRandomSeed + ModMain.GetDeterministicSeed(GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent)) ^ seed;
                     }
                 }
             }

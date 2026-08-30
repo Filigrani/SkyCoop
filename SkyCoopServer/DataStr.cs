@@ -12,6 +12,8 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
+using static SkyCoopServer.DataStr;
+using static SkyCoopServer.Logger;
 
 namespace SkyCoopServer
 {
@@ -166,6 +168,7 @@ namespace SkyCoopServer
             public bool m_Weather = true;
             public bool m_CanCraft = true;
             public Dictionary<string, SceneLootSpawns> m_GearSpawns = new Dictionary<string, SceneLootSpawns>();
+            public Dictionary<string, Dictionary<string, RadialObjectSpawnerData>> m_RadialLootSpawnerBySceneByGUID = new Dictionary<string, Dictionary<string, RadialObjectSpawnerData>>();
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -331,6 +334,26 @@ namespace SkyCoopServer
                                         Inst.m_GearSpawns.Add(LootData.SceneName, New);
                                     }
                                 }
+                            }
+                        }
+                    }
+                    // Оптимизация для будущиего поиска для респавнов предметов
+                    foreach (var item in Inst.m_GearSpawns)
+                    {
+                        string SceneName = item.Key;
+                        SceneLootSpawns Data = item.Value;
+                        
+                        Dictionary<string, RadialObjectSpawnerData> DictRadialByGUID = null;
+                        if(!Inst.m_RadialLootSpawnerBySceneByGUID.TryGetValue(SceneName, out DictRadialByGUID))
+                        {
+                            DictRadialByGUID = new Dictionary<string, RadialObjectSpawnerData>();
+                            Inst.m_RadialLootSpawnerBySceneByGUID.Add(SceneName, DictRadialByGUID);
+                        }
+                        foreach (RadialObjectSpawnerData Radial in Data.RadialSpawns)
+                        {
+                            if (!string.IsNullOrEmpty(Radial.GUID) && !DictRadialByGUID.ContainsKey(Radial.GUID))
+                            {
+                                DictRadialByGUID.Add(Radial.GUID, Radial);
                             }
                         }
                     }
@@ -897,6 +920,7 @@ namespace SkyCoopServer
         {
             public string m_GUID = "";
             public string m_JSON = "";
+            public string m_SpawnerGUID = "";
         }
 
         public class GearDataContainer
@@ -926,6 +950,7 @@ namespace SkyCoopServer
                 public float BeingCookingTime { get; set; }
                 public string CookingPotGUID { get; set; }
                 public string ProductGUID { get; set; }
+                public string SpawnGUID { get; set; }
             }
 
             public SaveData Save()
@@ -946,6 +971,7 @@ namespace SkyCoopServer
                 data.BeingCookingTime = m_Visual.m_BeingCookedTime;
                 data.CookingPotGUID = m_Visual.m_CookpotGUID;
                 data.ProductGUID = m_Visual.m_ProductGUID;
+                data.SpawnGUID = m_Data.m_SpawnerGUID;
 
                 return data;
             }
@@ -965,6 +991,8 @@ namespace SkyCoopServer
 
                 m_Visual.m_CookpotGUID = data.CookingPotGUID;
                 m_Visual.m_ProductGUID = data.ProductGUID;
+
+                m_Data.m_SpawnerGUID = data.SpawnGUID;
             }
         }
 
@@ -1024,6 +1052,7 @@ namespace SkyCoopServer
             public Dictionary<string, bool> m_BreakDowns = new Dictionary<string, bool>();
             public Dictionary<string, HarvestableData> m_Harvestables = new Dictionary<string, HarvestableData>();
             public Dictionary<string, WaterSourceData> m_WaterSources = new Dictionary<string, WaterSourceData>();
+            public Dictionary<string, RadialSpawnSaveData> m_RadialSpawnsData = new Dictionary<string, RadialSpawnSaveData>();
 
             public Dictionary<string, PropData> m_Props = new Dictionary<string, PropData>();
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
@@ -1035,9 +1064,9 @@ namespace SkyCoopServer
             public V3Quat m_VictoryPoint = new V3Quat();
 
             public SceneData() { }
-            public SceneData(SaveData data)
+            public SceneData(SaveData data, Server ServerInstance)
             {
-                Load(data);
+                Load(data, ServerInstance);
             }
 
             public class SaveData
@@ -1052,6 +1081,7 @@ namespace SkyCoopServer
                 public Dictionary<string, bool> BreakDowns { get; set; }
                 public List<HarvestableData.SaveData> Harvestables { get; set; }
                 public List<WaterSourceData.SaveData> WaterSources { get; set; }
+                public List<RadialSpawnSaveData> RadialSpawnsData { get; set; }
             }
 
             public SaveData Save()
@@ -1103,10 +1133,15 @@ namespace SkyCoopServer
                 {
                     data.WaterSources.Add(source.Save());
                 }
+                data.RadialSpawnsData = new List<RadialSpawnSaveData>();
+                foreach (RadialSpawnSaveData spawner in m_RadialSpawnsData.Values.ToList())
+                {
+                    data.RadialSpawnsData.Add(spawner);
+                }
                 return data;
             }
 
-            public void Load(SaveData data)
+            public void Load(SaveData data, Server ServerInstance)
             {
                 m_SceneName = data.SceneName;
                 if(data.Gears != null)
@@ -1166,7 +1201,18 @@ namespace SkyCoopServer
                     foreach (HarvestableData.SaveData saveData in data.Harvestables)
                     {
                         HarvestableData Harvestable = new HarvestableData(saveData);
-                        m_Harvestables.Add(Harvestable.m_GUID, Harvestable);
+
+                        if (ServerInstance.m_Timeline != null)
+                        {
+                            if(ServerInstance.m_Timeline.m_Time < Harvestable.m_RespawnIn)
+                            {
+                                m_Harvestables.Add(Harvestable.m_GUID, Harvestable);
+                            }
+                            else
+                            {
+                                SkyCoopServer.Logger.Log($"Harvestable {Harvestable.m_GUID} going to respawn");
+                            }
+                        }
                     }
                 }
                 if(data.WaterSources != null)
@@ -1175,6 +1221,13 @@ namespace SkyCoopServer
                     {
                         WaterSourceData Source = new WaterSourceData(saveData);
                         m_WaterSources.Add(Source.m_GUID, Source);
+                    }
+                }
+                if (data.RadialSpawnsData != null)
+                {
+                    foreach (RadialSpawnSaveData saveData in data.RadialSpawnsData)
+                    {
+                        m_RadialSpawnsData.Add(saveData.GUID, saveData);
                     }
                 }
             }
@@ -1286,6 +1339,50 @@ namespace SkyCoopServer
                 }
             }
 
+            public void RollRaialSpawnsRespawns(Server ServerInstance)
+            {
+                string SceneFileName = m_SceneName;
+
+                if (SceneFileName.Contains('_'))
+                {
+                    SceneFileName = m_SceneName.Split('_')[0];
+                }
+
+                if (ServerInstance.m_Rules.m_GearSpawns != null)
+                {
+                    DataStr.SceneLootSpawns LootData = null;
+                    if (ServerInstance.m_Rules.m_GearSpawns.TryGetValue(SceneFileName, out LootData))
+                    {
+                        SpawnGears(ServerInstance, LootData);
+                    }
+                }
+
+                System.Random RNG = new Random(Guid.NewGuid().GetHashCode());
+
+                Dictionary<string, RadialObjectSpawnerData> Spawners = null;
+                if(ServerInstance.m_Rules.m_RadialLootSpawnerBySceneByGUID.TryGetValue(SceneFileName, out Spawners))
+                {
+                    foreach (RadialSpawnSaveData Radial in m_RadialSpawnsData.Values.ToList())
+                    {
+                        float HowLongValid = ServerInstance.m_Timeline.m_ElapsedInGameHours - Radial.TimeBecomeValidToRespawn;
+
+                        RadialObjectSpawnerData Spawner = null;
+                        if (Spawners.TryGetValue(Radial.GUID, out Spawner))
+                        {
+                            float TimeToRespawn = RNG.Range(Spawner.MinRespawnTimeGameHours, Spawner.MaxRespawnTimeGameHours);
+
+                            if (TimeToRespawn < HowLongValid)
+                            {
+                                SkyCoopServer.Logger.Log($"Radial spawner {Spawner.GUID} going to respawn");
+
+                                HandleRadialSpawner(ServerInstance, Spawner);
+                                m_RadialSpawnsData.Remove(Radial.GUID);
+                            }
+                        }
+                    }
+                }
+            }
+
             public void SpawnGears(Server ServerInstance)
             {
                 string SceneFileName = m_SceneName;
@@ -1301,6 +1398,103 @@ namespace SkyCoopServer
                     if(ServerInstance.m_Rules.m_GearSpawns.TryGetValue(SceneFileName, out LootData))
                     {
                         SpawnGears(ServerInstance, LootData);
+                    }
+                }
+            }
+
+            public void HandleRadialSpawner(Server ServerInstance, RadialObjectSpawnerData Spawner)
+            {
+                Random RNG = new Random(Guid.NewGuid().GetHashCode());
+                float LootSpawnChanceScaler = 1f;
+
+                switch (ServerInstance.m_Config.m_ExperienceMode)
+                {
+                    case "Pilgrim":
+                        LootSpawnChanceScaler = 1f;
+                        break;
+                    case "Voyageur":
+                        LootSpawnChanceScaler = 0.9f;
+                        break;
+                    case "Stalker":
+                        LootSpawnChanceScaler = 0.6f;
+                        break;
+                    case "Interloper":
+                    case "Misery":
+                        LootSpawnChanceScaler = 0.1f;
+                        break;
+                    default:
+                        LootSpawnChanceScaler = 0.6f;
+                        break;
+                }
+
+                if (Spawner.EnabledForXP != null && Spawner.EnabledForXP.Count > 0)
+                {
+                    if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                    {
+                        return;
+                    }
+                }
+                if (Spawner.DisabledForXP != null && Spawner.DisabledForXP.Count > 0)
+                {
+                    if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
+                    {
+                        return;
+                    }
+                }
+                int NumToSpawn = RNG.Range(Spawner.MinToSpawn, Spawner.MaxToSpawn);
+                
+                List<Vector3JSON> PossiblePoints = new List<Vector3JSON>(Spawner.PossiblePoints);
+
+                if (NumToSpawn > 0)
+                {
+                    for (int i = 1; i <= NumToSpawn; i++)
+                    {
+                        float TotalWeight = 0;
+
+                        foreach (RadialObjectSpawnerElementData Element in Spawner.Gears)
+                        {
+                            TotalWeight += Element.SpawnWeight;
+                        }
+                        float RandomValue = (float)RNG.NextDouble() * TotalWeight;
+                        float CumulativeWeight = 0;
+
+                        RadialObjectSpawnerElementData GearToSpawn = null;
+
+                        for (int i2 = 0; i < Spawner.Gears.Count; i2++)
+                        {
+                            RadialObjectSpawnerElementData Gear = Spawner.Gears[i2];
+                            CumulativeWeight += Gear.SpawnWeight;
+                            if (RandomValue <= CumulativeWeight)
+                            {
+                                GearToSpawn = Gear;
+                                break;
+                            }
+                        }
+
+                        if (GearToSpawn == null)
+                        {
+                            GearToSpawn = Spawner.Gears[0];
+                        }
+
+                        if (GearToSpawn != null)
+                        {
+                            bool Spawn = true;
+
+                            if (GearToSpawn.Chance < 99f)
+                            {
+                                Spawn = RNG.Range(0f, 100) < GearToSpawn.Chance * LootSpawnChanceScaler;
+                            }
+                            if (Spawn)
+                            {
+                                if (PossiblePoints.Count > 0)
+                                {
+                                    int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
+                                    Vector3JSON Point = PossiblePoints[RandomPointIndex];
+                                    PossiblePoints.RemoveAt(RandomPointIndex);
+                                    ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0, "", -1, "", 0, 0, "", Spawner.GUID);
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -1404,6 +1598,9 @@ namespace SkyCoopServer
                             }
                         }
                     }
+
+                    
+
                     foreach (RandomSpawnObjectData Spawner in LootData.RandomSpawnObjects)
                     {
                         if (Spawner.EnabledForXP != null && Spawner.EnabledForXP.Count > 0)
@@ -1499,78 +1696,9 @@ namespace SkyCoopServer
                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, 0);
                         }
                     }
-                    int IndexForLog = -1;
                     foreach (RadialObjectSpawnerData Spawner in LootData.RadialSpawns)
                     {
-                        IndexForLog++;
-                        if (Spawner.EnabledForXP != null && Spawner.EnabledForXP.Count > 0)
-                        {
-                            if (!Spawner.EnabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
-                            {
-                                continue;
-                            }
-                        }
-                        if (Spawner.DisabledForXP != null && Spawner.DisabledForXP.Count > 0)
-                        {
-                            if (Spawner.DisabledForXP.Contains(ServerInstance.m_Config.m_ExperienceMode))
-                            {
-                                continue;
-                            }
-                        }
-                        int NumToSpawn = RNG.Range(Spawner.MinToSpawn, Spawner.MaxToSpawn);
-                        List<Vector3JSON> PossiblePoints = new List<Vector3JSON>(Spawner.PossiblePoints);
-                        if (NumToSpawn > 0)
-                        {
-                            for (int i = 1; i <= NumToSpawn; i++)
-                            {
-                                float TotalWeight = 0;
-
-                                foreach (RadialObjectSpawnerElementData Element in Spawner.Gears)
-                                {
-                                    TotalWeight += Element.SpawnWeight;
-                                }
-                                float RandomValue = (float)RNG.NextDouble() * TotalWeight;
-                                float CumulativeWeight = 0;
-
-                                RadialObjectSpawnerElementData GearToSpawn = null;
-
-                                for (int i2 = 0; i < Spawner.Gears.Count; i2++)
-                                {
-                                    RadialObjectSpawnerElementData Gear = Spawner.Gears[i2];
-                                    CumulativeWeight += Gear.SpawnWeight;
-                                    if (RandomValue <= CumulativeWeight)
-                                    {
-                                        GearToSpawn = Gear;
-                                        break;
-                                    }
-                                }
-
-                                if(GearToSpawn == null)
-                                {
-                                    GearToSpawn = Spawner.Gears[0];
-                                }
-
-                                if (GearToSpawn != null)
-                                {
-                                    bool Spawn = true;
-
-                                    if (GearToSpawn.Chance < 99f)
-                                    {
-                                        Spawn = RNG.Range(0f, 100) < GearToSpawn.Chance * LootSpawnChanceScaler;
-                                    }
-                                    if (Spawn)
-                                    {
-                                        if (PossiblePoints.Count > 0)
-                                        {
-                                            int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
-                                            Vector3JSON Point = PossiblePoints[RandomPointIndex];
-                                            PossiblePoints.RemoveAt(RandomPointIndex);
-                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0);
-                                        }
-                                    }
-                                }
-                            }
-                        }
+                        HandleRadialSpawner(ServerInstance, Spawner);
                     }
                     foreach (SpawnGearVariantData Spawn in LootData.SpawnGearVariants)
                     {
@@ -1582,6 +1710,17 @@ namespace SkyCoopServer
                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, 0);
                         }
                     }
+                }
+            }
+
+            public void AddRadialSpawnerToRespawn(string SpawnerGUID, float CurrentTime)
+            {
+                if(!m_RadialSpawnsData.ContainsKey(SpawnerGUID))
+                {
+                    RadialSpawnSaveData Data = new RadialSpawnSaveData();
+                    Data.GUID = SpawnerGUID;
+                    Data.TimeBecomeValidToRespawn = CurrentTime;
+                    m_RadialSpawnsData.Add(Data.GUID, Data);
                 }
             }
 
@@ -3499,6 +3638,7 @@ namespace SkyCoopServer
 
             public List<string> DisabledForXP { get; set; }
             public List<string> EnabledForXP { get; set; }
+            public string GUID { get; set; }
         }
 
         public class LooseGearSpawn
@@ -3533,6 +3673,7 @@ namespace SkyCoopServer
 
             public List<string> DisabledForXP { get; set; }
             public List<string> EnabledForXP { get; set; }
+            public string GUID { get; set; }
         }
 
         public class SpawnGearVariantData
@@ -3614,6 +3755,12 @@ namespace SkyCoopServer
                 m_ChanceToBeBad = data.ChanceToBeBad;
                 m_GUID = data.GUID;
             }
+        }
+
+        public class RadialSpawnSaveData
+        {
+            public string GUID { get; set; }
+            public float TimeBecomeValidToRespawn { get; set; }
         }
     }
 }

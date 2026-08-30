@@ -241,27 +241,35 @@ namespace SkyCoopClient
                 if (!ModMain.IsMultiplayer() || s_ByPass) { return true; }
 
                 s_PassTimeMode = false;
+                s_DesiredTimeToSleep = __instance.m_SleepHours * 60 * 60;
 
                 if (__instance.m_Bed)
                 {
-                    string GUID = "";
-
-                    ObjectGuid ObjGUID = __instance.m_Bed.gameObject.GetComponent<ObjectGuid>();
-
-                    if (ObjGUID)
+                    if (!GameManager.GetPlayerInVehicle().m_InVehicle)
                     {
-                        GUID = ObjGUID.Get();
+                        string GUID = "";
+                        ObjectGuid ObjGUID = __instance.m_Bed.gameObject.GetComponent<ObjectGuid>();
+
+                        if (ObjGUID)
+                        {
+                            GUID = ObjGUID.Get();
+                        }
+
+                        if (!string.IsNullOrEmpty(GUID))
+                        {
+                            PlayersManager.s_LastTryInteractionComponent = __instance.m_Bed;
+                            ClientSend.SendTryInteract(GUID, true);
+                        }
+                        else
+                        {
+                            DoRest();
+                        }
                     }
-
-                    if (!string.IsNullOrEmpty(GUID))
+                    else
                     {
-                        PlayersManager.s_LastTryInteractionComponent = __instance.m_Bed;
-                        ClientSend.SendTryInteract(GUID, true);
+                        DoRest();
                     }
                 }
-
-                s_DesiredTimeToSleep = __instance.m_SleepHours * 60 * 60;
-
 
                 return false;
             }
@@ -281,19 +289,30 @@ namespace SkyCoopClient
 
                 if (__instance.m_Bed)
                 {
-                    string GUID = "";
-
-                    ObjectGuid ObjGUID = __instance.m_Bed.gameObject.GetComponent<ObjectGuid>();
-
-                    if (ObjGUID)
+                    if (!GameManager.GetPlayerInVehicle().m_InVehicle)
                     {
-                        GUID = ObjGUID.Get();
+                        string GUID = "";
+
+                        ObjectGuid ObjGUID = __instance.m_Bed.gameObject.GetComponent<ObjectGuid>();
+
+                        if (ObjGUID)
+                        {
+                            GUID = ObjGUID.Get();
+                        }
+
+                        if (!string.IsNullOrEmpty(GUID))
+                        {
+                            PlayersManager.s_LastTryInteractionComponent = __instance.m_Bed;
+                            ClientSend.SendTryInteract(GUID, true);
+                        }
+                        else
+                        {
+                            DoPassTime();
+                        }
                     }
-
-                    if (!string.IsNullOrEmpty(GUID))
+                    else
                     {
-                        PlayersManager.s_LastTryInteractionComponent = __instance.m_Bed;
-                        ClientSend.SendTryInteract(GUID, true);
+                        DoPassTime();
                     }
                 }
                 else
@@ -625,32 +644,35 @@ namespace SkyCoopClient
 
             if (GameManager.m_Rest)
             {
-                Bed Bed = GameManager.GetRestComponent().m_Bed;
-
-                if(Bed == null)
+                if(GameManager.m_PlayerInVehicle && !GameManager.m_PlayerInVehicle.m_InVehicle)
                 {
-                    Bed = GameManager.GetPassTime().m_Bed;
-                }
+                    Bed Bed = GameManager.GetRestComponent().m_Bed;
 
-                if (Bed)
-                {
-                    vp_FPSCamera Camera = GameManager.GetVpFPSCamera();
-
-                    if (Camera)
+                    if (Bed == null)
                     {
-                        Transform bedTransform = Bed.m_BodyPlacementTransform;
-                        Quaternion targetRotation = bedTransform.rotation * Quaternion.Euler(0, -90, 0);
+                        Bed = GameManager.GetPassTime().m_Bed;
+                    }
 
-                        Vector3 offset = targetRotation * Vector3.forward * -0.45f;
+                    if (Bed)
+                    {
+                        vp_FPSCamera Camera = GameManager.GetVpFPSCamera();
 
-                        if (Bed.gameObject.name.StartsWith("GEAR_"))
+                        if (Camera)
                         {
-                            offset.y += 0.25f;
-                        }
+                            Transform bedTransform = Bed.m_BodyPlacementTransform;
+                            Quaternion targetRotation = bedTransform.rotation * Quaternion.Euler(0, -90, 0);
 
-                        Camera.transform.position = bedTransform.position + offset;
-                        Camera.transform.rotation = targetRotation;
-                        Camera.enabled = false;
+                            Vector3 offset = targetRotation * Vector3.forward * -0.45f;
+
+                            if (Bed.gameObject.name.StartsWith("GEAR_"))
+                            {
+                                offset.y += 0.25f;
+                            }
+
+                            Camera.transform.position = bedTransform.position + offset;
+                            Camera.transform.rotation = targetRotation;
+                            Camera.enabled = false;
+                        }
                     }
                 }
 

@@ -251,6 +251,12 @@ namespace SkyCoopServer
 
             m_ElapsedWindHours = ElapsedHours;
             m_WindDurationHours = RNG.Range(m_HoursBetweenWindChangeMin, m_HoursBetweenWindChangeMax);
+
+            if(ElapsedHours > m_WindDurationHours)
+            {
+                m_ElapsedWindHours = 0;
+            }
+
             switch (RNG.Next(0, 8))
             {
                 case 0:
@@ -296,6 +302,11 @@ namespace SkyCoopServer
                 m_ElapsedHours = ElapsedHours;
                 m_DurationHours = RNG.Range(SetSetting.DurationMin, SetSetting.DurationMax);
                 m_TransitionTime = RNG.Range(SetSetting.TransitionMin, SetSetting.TransitionMax);
+
+                if(ElapsedHours > m_DurationHours + m_TransitionTime)
+                {
+                    m_ElapsedHours = 0;
+                }
 
                 m_PreviousWeatherSetType = m_CurrentWeatherSetType;
                 m_CurrentWeatherSetType = NewWeatherSetType;
@@ -411,14 +422,15 @@ namespace SkyCoopServer
             m_ElapsedHours += ElapsedHours;
             m_ElapsedWindHours += ElapsedHours;
 
-            if(m_ElapsedHours > m_DurationHours+m_TransitionTime)
+            if (m_ElapsedHours > m_DurationHours + m_TransitionTime)
             {
-                float Overstock = (m_DurationHours + m_TransitionTime) - m_ElapsedHours;
+                float Overstock = m_ElapsedHours - (m_DurationHours + m_TransitionTime);
                 SetNewWeatherSet(GetNextWeatherType(), Overstock);
             }
-            if(m_ElapsedWindHours > m_WindDurationHours)
+
+            if (m_ElapsedWindHours > m_WindDurationHours)
             {
-                float Overstock = m_WindDurationHours - m_ElapsedWindHours;
+                float Overstock = m_ElapsedWindHours - m_WindDurationHours;
                 SetNewWindSeed(Overstock);
             }
         }

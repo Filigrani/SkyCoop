@@ -319,12 +319,16 @@ namespace SkyCoop
 
                         Transform BedTransfrorm = null;
 
-                        if(GameManager.m_Rest && GameManager.m_Rest.m_Bed)
+                        if(GameManager.m_PlayerInVehicle && !GameManager.m_PlayerInVehicle.m_InVehicle)
                         {
-                            BedTransfrorm = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform;
-                        }else if(GameManager.m_PassTime && GameManager.m_PassTime.m_Bed)
-                        {
-                            BedTransfrorm = GameManager.m_PassTime.m_Bed.m_BodyPlacementTransform;
+                            if (GameManager.m_Rest && GameManager.m_Rest.m_Bed)
+                            {
+                                BedTransfrorm = GameManager.m_Rest.m_Bed.m_BodyPlacementTransform;
+                            }
+                            else if (GameManager.m_PassTime && GameManager.m_PassTime.m_Bed)
+                            {
+                                BedTransfrorm = GameManager.m_PassTime.m_Bed.m_BodyPlacementTransform;
+                            }
                         }
 
                         if (BedTransfrorm)

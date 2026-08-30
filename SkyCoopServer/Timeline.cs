@@ -123,6 +123,8 @@ namespace SkyCoopServer
 
         public void SkipHours(float Hours)
         {
+            float PreviousTime = m_ElapsedInGameHours;
+
             float ElapsedInGameHours = Hours; // Сколько игровых часов прошло.
 
             m_TODInHours += ElapsedInGameHours;
@@ -144,6 +146,8 @@ namespace SkyCoopServer
             int PlayersExist = 0;
             int PlayersSleep = 0;
             bool EveryoneIsSleep = EveryoneIsSleeping(out PlayersExist, out PlayersSleep);
+
+            Logger.Log(ConsoleColor.Green, $"Skipped {Hours} hour(s), PreviousTime {PreviousTime} current time {m_ElapsedInGameHours}, Clock: {FormatGameTime(m_ElapsedInGameHours + m_StartingTime)}");
 
             ServerSend.SendTime(m_ServerInstance, m_TODTimeNormalized, m_ElapsedInGameHours, EveryoneIsSleep, PlayersSleep, PlayersExist);
         }
@@ -265,7 +269,7 @@ namespace SkyCoopServer
                 }
                 else
                 {
-                    Logger.Log(ConsoleColor.Green, $"Time acceleration finished, {m_ElapsedInGameHours - m_TimeBeforeLastAcceleration} hours skipped in total");
+                    Logger.Log(ConsoleColor.Green, $"Time acceleration finished, {m_ElapsedInGameHours - m_TimeBeforeLastAcceleration} hours skipped in total.");
                 }
             }
             

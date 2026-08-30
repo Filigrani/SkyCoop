@@ -406,6 +406,20 @@ namespace SkyCoop
             return newGUID;
         }
 
+        public static int GetDeterministicSeed(string guidString)
+        {
+            int seed = 17; // Простое начальное число
+
+            foreach (char c in guidString)
+            {
+                seed = seed * 31 + c;
+                // Добавляем XOR для лучшего перемешивания
+                seed ^= seed >> 16;
+            }
+
+            return seed;
+        }
+
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]
         public class GameManager_OnApplicationFocus
         {

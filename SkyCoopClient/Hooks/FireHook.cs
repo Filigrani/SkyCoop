@@ -409,6 +409,10 @@ namespace SkyCoopClient
                     {
                         __result = false;
                     }
+                    if(__instance.m_FireplaceHost && __instance.m_FireplaceHost.Fire && __instance.m_FireplaceHost.Fire.m_FireState != FireState.FullBurn)
+                    {
+                        __result = false;
+                    }
                 }
             }
         }
@@ -558,6 +562,10 @@ namespace SkyCoopClient
                         CookingSlotVisual SlotVisual = Slot.GetComponent<CookingSlotVisual>();
 
                         if(SlotVisual && SlotVisual.m_Gear)
+                        {
+                            __result = MeshLocationCategory.Invalid;
+                        }
+                        if (Slot.m_FireplaceHost && Slot.m_FireplaceHost.Fire && Slot.m_FireplaceHost.Fire.m_FireState != FireState.FullBurn)
                         {
                             __result = MeshLocationCategory.Invalid;
                         }

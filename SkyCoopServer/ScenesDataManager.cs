@@ -104,10 +104,13 @@ namespace SkyCoopServer
                 }
                 else
                 {
-                    sceneData = new SceneData(SaveData);
+                    sceneData = new SceneData(SaveData, m_ServerInstance);
 
                     m_LoadedScenes.Add(SceneName, sceneData);
+
                     SkyCoopServer.Logger.Log($"{SceneName} has been restored from file");
+
+                    sceneData.RollRaialSpawnsRespawns(m_ServerInstance);
                 }
             }
         }
@@ -432,6 +435,11 @@ namespace SkyCoopServer
                         Data.m_Visual.m_ProductGUID = "";
                     }
 
+                    if (!string.IsNullOrEmpty(Data.m_Data.m_SpawnerGUID))
+                    {
+                        SceneData.AddRadialSpawnerToRespawn(Data.m_Data.m_SpawnerGUID, m_ServerInstance.m_Timeline.m_ElapsedInGameHours);
+                    }
+
                     SceneData.m_Gears.Remove(GUID);
                     ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
                 }
@@ -465,7 +473,7 @@ namespace SkyCoopServer
             return null;
         }
 
-        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "")
+        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "", string SpawnerGUID = "")
         {
             string NewGUID = Guid.NewGuid().ToString();
 
@@ -497,6 +505,8 @@ namespace SkyCoopServer
                     ServerSend.SendGearVisual(CookingPot.m_Visual, SceneName, m_ServerInstance);
                 }
             }
+
+            DataContainer.m_Data.m_SpawnerGUID = SpawnerGUID;
 
 
             return AddGear(SceneName, DataContainer);
@@ -1357,7 +1367,7 @@ namespace SkyCoopServer
                 if(RespawnTimeMin != 0 && RespawnTimeMax != 0)
                 {
                     Random RNG = new Random(System.Guid.NewGuid().GetHashCode());
-                    Harvestable.m_RespawnIn = RNG.Range(RespawnTimeMin, RespawnTimeMax);
+                    Harvestable.m_RespawnIn = m_ServerInstance.m_Timeline.m_ElapsedInGameHours+RNG.Range(RespawnTimeMin, RespawnTimeMax);
                 }
                 SceneData.m_Harvestables.Add(GUID, Harvestable);
                 ServerSend.SendHarvest(m_ServerInstance, GUID, SceneName);
