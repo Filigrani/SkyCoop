@@ -1662,6 +1662,7 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_WoolWrap"); // No UV.
                 AddClothingMesh("GEAR_WoolWrapCap"); // No UV.
                 AddClothingMesh("GEAR_RabbitskinHat");
+                AddClothingMesh("GEAR_HatGatorBalaclavaA"); // DLC
 
                 AddGearAsClothingMesh("GEAR_HatLeatherAviatorA", new Vector3(0, 0.08f, 0), new Vector3(0, 0, 0), new Vector3(1.14f, 1, 1)); // DLC
                 AddGearAsClothingMesh("GEAR_MinersHelmet", new Vector3(0, 0.118f, 0), new Vector3(0, 0, 0), new Vector3(1.2f, 1, 1)); // DLC
@@ -1692,6 +1693,13 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_LightParka");
                 AddClothingMesh("GEAR_MackinawJacket");
                 AddClothingMesh("GEAR_SkiJacket");
+                AddClothingMesh("GEAR_HeavyParka");
+                AddClothingMesh("GEAR_PremiumWinterCoat");
+                AddClothingMesh("GEAR_QualityWinterCoat");
+                AddClothingMesh("GEAR_MilitaryParka");
+                AddClothingMesh("GEAR_DownVest");
+                AddClothingMesh("GEAR_InsulatedVest");
+                AddClothingMesh("GEAR_BearSkinCoat");
 
                 //Pants
                 AddClothingMesh("GEAR_CargoPants");
@@ -1715,7 +1723,7 @@ namespace SkyCoop
 
                 //Boots
                 AddClothingMesh("GEAR_BasicShoes");
-
+                AddClothingMesh("GEAR_LeatherShoes");
 
                 // Gloves
                 AddClothingMesh("GEAR_BasicGloves");
