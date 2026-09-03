@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static SkyCoop.Comps;
+using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoopClient
 {
@@ -310,110 +311,6 @@ namespace SkyCoopClient
                     localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
                     Player.SetIgnorePhysicsForObject(FlareShot);
                 }
-            }else if(ProjectileName == "GEAR_NoiseMaker")
-            {
-                GameObject Noise = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>("GEAR_NoiseMaker"), Position, Rotation);
-                NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
-                if (Player)
-                {
-                    Player.SetIgnorePhysicsForObject(Noise);
-                    //GameObject localplayerColider = new GameObject();
-                    //localplayerColider.name = "LocalPlayerColider";
-                    //BoxCollider Colider = localplayerColider.AddComponent<BoxCollider>();
-                    //Colider.center = new Vector3(0, 0.028f, 0f);
-                    //Colider.size = new Vector3(0.45f, 0.45f, 0.11f);
-                    //Colider.extents = new Vector3(0.225f, 0.225f, 0.55f);
-                    //localplayerColider.transform.SetParent(Noise.transform);
-                    //localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
-
-                    if(Fuse > 0)
-                    {
-                        Player.DoThrow();
-                    }
-                }
-                float throwForce = GameManager.m_PlayerManager.m_ThrowForce;
-                float num = GameManager.m_PlayerManager.m_ThrowTorque;
-                GearItem component = Noise.GetComponent<GearItem>();
-                if (component)
-                {
-                    NoiseMakerItem component1 = component.m_NoiseMakerItem;
-                    Noise.AddComponent<Comps.OtherPlayerBullet>();
-                    Noise.AddComponent<Comps.NoiseMakerKillFeedHandle>().m_ThrowerID = ShooterID;
-
-                    if (component1)
-                    {
-                        component1.m_CanThrow = false;
-                        component1.Ignite();
-                        component1.m_PlayerDamageInflictionInRadius = 15;
-                        component1.m_PlayerDamageRadius = component1.m_AIDamageRadius;
-                        component1.m_GearItem.SetNormalizedHP(Fuse);
-                        component1.m_PlayerDamageInflictionInRadius = 15;
-                        component1.m_PlayerDamageRadius = component1.m_AIDamageRadius;
-                        if (ProjectileName == "GEAR_NoiseMaker")
-                        {
-                            component1.PrepareForThrow();
-                            component1.m_Thrown = true;
-                            Rigidbody rigidbody = component.GetComponent<Rigidbody>();
-                            if (rigidbody == null)
-                            {
-                                return;
-                            }
-                            Utils.SetIsKinematic(rigidbody, false);
-                            rigidbody.velocity = Velocity;
-                            rigidbody.angularVelocity = AngularVelocity;
-                            rigidbody.angularDrag = 0.0f;
-                            rigidbody.drag = 0.0f;
-                        }
-                    }
-                }
-            }else if(ProjectileName == "GEAR_Stone" || ProjectileName == "GEAR_FlareA" || ProjectileName == "GEAR_BlueFlare")
-            {
-                GameObject Stone = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(ProjectileName), Position, Rotation);
-                NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
-                if (Player)
-                {
-                    Player.SetIgnorePhysicsForObject(Stone);
-                    //GameObject localplayerColider = new GameObject();
-                    //localplayerColider.name = "LocalPlayerColider";
-                    //BoxCollider Colider = localplayerColider.AddComponent<BoxCollider>();
-                    //Colider.center = new Vector3(0, 0.028f, 0f);
-                    //Colider.size = new Vector3(0.45f, 0.45f, 0.11f);
-                    //Colider.extents = new Vector3(0.225f, 0.225f, 0.55f);
-                    //localplayerColider.transform.SetParent(Stone.transform);
-                    //localplayerColider.layer = vp_Layer.CharacterControllerCollideOnly;
-
-                    Player.DoThrow();
-                }
-                GearItem component = Stone.GetComponent<GearItem>();
-                Stone.AddComponent<Comps.OtherPlayerBullet>();
-
-                if (component.m_StoneItem)
-                {
-                    component.m_StoneItem.PrepareForThrow();
-                    component.m_StoneItem.SetThrown(true);
-                }
-                if (component.m_FlareItem)
-                {
-                    component.m_FlareItem.PrepareForThrow();
-                    component.m_FlareItem.m_Thrown = true;
-                }
-                if (component.m_TorchItem)
-                {
-                    component.m_TorchItem.PrepareForThrow();
-                    component.m_TorchItem.m_Thrown = true;
-                }
-                component.enabled = false;
-
-                Rigidbody rigidbody = Stone.GetComponent<Rigidbody>();
-                Utils.SetIsKinematic(rigidbody, false);
-                rigidbody.velocity = Velocity;
-                rigidbody.angularVelocity = AngularVelocity;
-                rigidbody.angularDrag = 0.0f;
-                rigidbody.drag = 0.0f;
-
-                Comps.GearThrownVisual Visual = Stone.AddComponent<Comps.GearThrownVisual>();
-                Visual.m_SendThrown = false;
-                Visual.m_Rigidbody = rigidbody;
             }
             else if(ProjectileName == "Melee" || ProjectileName == "Fish")
             {
@@ -462,6 +359,81 @@ namespace SkyCoopClient
                 component.m_CurrentHP = 100;
                 component.m_ArrowItem.SetPlacementHelperEnabled(true);
                 component.m_ArrowItem.Fire(component.m_ArrowItem.m_BowDamageMultiplier);
+            }
+            else
+            {
+                GameObject Obj = UnityEngine.Object.Instantiate<GameObject>(AssetManager.GetAssetFromGame<GameObject>(ProjectileName), Position, Rotation);
+                NetworkPlayer Player = PlayersManager.GetPlayer(ShooterID);
+                if (Player)
+                {
+                    Player.SetIgnorePhysicsForObject(Obj);
+                }
+
+                GearItem gi = Obj.GetComponent<GearItem>();
+
+                if (gi && gi.m_NoiseMakerItem || gi.m_StoneItem || gi.m_TorchItem || gi.m_FlareItem)
+                {
+                    float throwForce = GameManager.m_PlayerManager.m_ThrowForce;
+                    float num = GameManager.m_PlayerManager.m_ThrowTorque;
+                    gi.SetNormalizedHP(Fuse);
+
+                    Obj.AddComponent<Comps.OtherPlayerBullet>();
+
+                    if (gi.m_NoiseMakerItem)
+                    {
+                        Obj.AddComponent<Comps.NoiseMakerKillFeedHandle>().m_ThrowerID = ShooterID;
+
+                        gi.m_NoiseMakerItem.m_CanThrow = false;
+                        gi.m_NoiseMakerItem.Ignite();
+                        gi.m_NoiseMakerItem.m_PlayerDamageInflictionInRadius = 15;
+                        gi.m_NoiseMakerItem.m_PlayerDamageRadius = gi.m_NoiseMakerItem.m_AIDamageRadius;
+                        gi.m_NoiseMakerItem.m_GearItem.SetNormalizedHP(Fuse);
+                        gi.m_NoiseMakerItem.m_PlayerDamageInflictionInRadius = 15;
+                        gi.m_NoiseMakerItem.m_PlayerDamageRadius = gi.m_NoiseMakerItem.m_AIDamageRadius;
+                        gi.m_NoiseMakerItem.PrepareForThrow();
+                        gi.m_NoiseMakerItem.m_Thrown = true;
+                    }
+                    if (gi.m_StoneItem)
+                    {
+                        gi.m_StoneItem.PrepareForThrow();
+                        gi.m_StoneItem.SetThrown(true);
+                    }
+                    if (gi.m_FlareItem)
+                    {
+                        gi.m_FlareItem.PrepareForThrow();
+                        gi.m_FlareItem.m_Thrown = true;
+                    }
+                    if (gi.m_TorchItem)
+                    {
+                        gi.m_TorchItem.PrepareForThrow();
+                        gi.m_TorchItem.m_Thrown = true;
+                    }
+
+                    Rigidbody rigidbody = Obj.GetComponent<Rigidbody>();
+                    if (rigidbody)
+                    {
+                        Utils.SetIsKinematic(rigidbody, false);
+                        rigidbody.velocity = Velocity;
+                        rigidbody.angularVelocity = AngularVelocity;
+                        rigidbody.angularDrag = 0.0f;
+                        rigidbody.drag = 0.0f;
+                    }
+                    if (gi.m_NoiseMakerItem == null)
+                    {
+                        Comps.GearThrownVisual Visual = Obj.AddComponent<Comps.GearThrownVisual>();
+                        Visual.m_SendThrown = false;
+                        Visual.m_Rigidbody = rigidbody;
+                        Player.DoThrow();
+                    }
+                    else
+                    {
+                        if (Fuse > 0)
+                        {
+                            Player.DoThrow();
+                        }
+                    }
+                    gi.enabled = false;
+                }
             }
             if (Bullet)
             {

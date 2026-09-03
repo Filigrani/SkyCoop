@@ -322,6 +322,8 @@ namespace SkyCoopServer
                 BeingCooked = Reader.GetFloat();
             }
 
+            float TimeFinish = Reader.GetFloat();
+
 
             SkyCoopServer.Logger.Log(ConsoleColor.Green, $"ServerHandle.ClientSendGear {GearName} FireGUID {FireGUID} CookingSlot {CookingSlotIndex} CookpotGUID {CookpotGUID}");
 
@@ -351,7 +353,7 @@ namespace SkyCoopServer
                 }
             }
 
-            ScenesDataManager.AddedGearData AddGearResult = ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, RecipeResult, Volume, BeingCooked, CookpotGUID);
+            ScenesDataManager.AddedGearData AddGearResult = ServerInstance.m_ScenesData.AddGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearName, Position, Rotation, JSON, NormalizedCondition, Style, true, FireGUID, CookingSlotIndex, RecipeResult, Volume, BeingCooked, CookpotGUID, "", TimeFinish);
 
             if(!string.IsNullOrEmpty(AddGearResult.FireGUID))
             {

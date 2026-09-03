@@ -120,7 +120,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "beta5";
+        public const string c_Key = "beta6";
 
         public enum TypeVoice
         {
@@ -225,6 +225,7 @@ namespace SkyCoopServer
             }
 
             Writer.Put(Visual.m_BeingCookedTime);
+            Writer.Put(Visual.m_FinishProcessTime);
         }
 
         public static DataStr.GearDataVisual GetGearVisual(this NetDataReader Reader)
@@ -255,6 +256,7 @@ namespace SkyCoopServer
             }
 
             Visual.m_BeingCookedTime = Reader.GetFloat();
+            Visual.m_FinishProcessTime = Reader.GetFloat();
 
             return Visual;
         }
@@ -431,6 +433,10 @@ namespace SkyCoopServer
             Writer.Put(Data.m_BootsDamage);
 
             Writer.Put(Data.m_TechPack);
+            Writer.Put(Data.m_Respirator);
+
+            Writer.Put(Data.m_Body2);
+            Writer.Put(Data.m_Body2Damage);
         }
 
         public static DataStr.ClothingData GetClothingData(this NetDataReader Reader)
@@ -459,6 +465,10 @@ namespace SkyCoopServer
             Data.m_BootsDamage = Reader.GetFloat();
 
             Data.m_TechPack = Reader.GetBool();
+            Data.m_Respirator = Reader.GetBool();
+
+            Data.m_Body2 = Reader.GetString();
+            Data.m_Body2Damage = Reader.GetFloat();
 
             return Data;
         }

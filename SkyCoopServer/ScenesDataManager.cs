@@ -473,7 +473,7 @@ namespace SkyCoopServer
             return null;
         }
 
-        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "", string SpawnerGUID = "")
+        public AddedGearData AddGear(string SceneName, string GearName, Vector3 Position, Quaternion Rotation, string JSON, float Condition, int Style, bool DroppedByPlayer, string FireGUID = "", int CookingSlot = -1, string RecipeResult = "", float Volume = 0, float TimeBeingCooked = 0, string CookpotGUID = "", string SpawnerGUID = "", float FinishProcessAt = 0)
         {
             string NewGUID = Guid.NewGuid().ToString();
 
@@ -481,6 +481,7 @@ namespace SkyCoopServer
 
             DataContainer.m_Data.m_GUID = NewGUID;
             DataContainer.m_Data.m_JSON = JSON;
+            DataContainer.m_Data.m_DroppedByPlayer = DroppedByPlayer;
 
             DataContainer.m_Visual.m_Style = Style;
             DataContainer.m_Visual.m_ConditionNormalized = Condition;
@@ -507,7 +508,11 @@ namespace SkyCoopServer
             }
 
             DataContainer.m_Data.m_SpawnerGUID = SpawnerGUID;
-
+            DataContainer.m_Visual.m_FinishProcessTime = FinishProcessAt;
+            if(m_ServerInstance != null && m_ServerInstance.m_Timeline != null)
+            {
+                DataContainer.m_Visual.m_DroppedTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+            }
 
             return AddGear(SceneName, DataContainer);
         }

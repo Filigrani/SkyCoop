@@ -863,6 +863,9 @@ namespace SkyCoopServer
             public string m_CookpotGUID = "";
             public string m_ProductGUID = "";
 
+            public float m_FinishProcessTime = 0;
+            public float m_DroppedTime = 0;
+
             public void SetCookingSlot(string FireGUID, int SlotIndex)
             {
                 if(SlotIndex < 0 || string.IsNullOrEmpty(FireGUID))
@@ -921,6 +924,7 @@ namespace SkyCoopServer
             public string m_GUID = "";
             public string m_JSON = "";
             public string m_SpawnerGUID = "";
+            public bool m_DroppedByPlayer = false;
         }
 
         public class GearDataContainer
@@ -951,6 +955,9 @@ namespace SkyCoopServer
                 public string CookingPotGUID { get; set; }
                 public string ProductGUID { get; set; }
                 public string SpawnGUID { get; set; }
+                public bool DroppedByPlayer { get; set; }
+                public float FinishProcessTime { get; set; }
+                public float DroppedTime { get; set; }
             }
 
             public SaveData Save()
@@ -972,6 +979,9 @@ namespace SkyCoopServer
                 data.CookingPotGUID = m_Visual.m_CookpotGUID;
                 data.ProductGUID = m_Visual.m_ProductGUID;
                 data.SpawnGUID = m_Data.m_SpawnerGUID;
+                data.DroppedByPlayer = m_Data.m_DroppedByPlayer;
+                data.FinishProcessTime = m_Visual.m_FinishProcessTime;
+                data.DroppedTime = m_Visual.m_DroppedTime;
 
                 return data;
             }
@@ -993,6 +1003,9 @@ namespace SkyCoopServer
                 m_Visual.m_ProductGUID = data.ProductGUID;
 
                 m_Data.m_SpawnerGUID = data.SpawnGUID;
+                m_Data.m_DroppedByPlayer = data.DroppedByPlayer;
+                m_Visual.m_FinishProcessTime = data.FinishProcessTime;
+                m_Visual.m_DroppedTime = data.DroppedTime;
             }
         }
 
@@ -1482,7 +1495,7 @@ namespace SkyCoopServer
                                     int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
                                     Vector3JSON Point = PossiblePoints[RandomPointIndex];
                                     PossiblePoints.RemoveAt(RandomPointIndex);
-                                    ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0, "", -1, "", 0, 0, "", Spawner.GUID);
+                                    ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0, false, "", -1, "", 0, 0, "", Spawner.GUID);
                                 }
                             }
                         }
@@ -1577,7 +1590,7 @@ namespace SkyCoopServer
                                         if (Spawn)
                                         {
 
-                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
                                         }
                                         break;
                                     }
@@ -1662,7 +1675,7 @@ namespace SkyCoopServer
 
                                         if (Spawn)
                                         {
-                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
                                         }
                                         break;
                                     }
@@ -1684,7 +1697,7 @@ namespace SkyCoopServer
 
                         if (Spawn)
                         {
-                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
                         }
                     }
                     foreach (RadialObjectSpawnerData Spawner in LootData.RadialSpawns)
@@ -1698,7 +1711,7 @@ namespace SkyCoopServer
                             int RandomIndex = RNG.Range(0, Spawn.Gears.Count);
 
                             SpawnGearVariantElementData Element = Spawn.Gears[RandomIndex];
-                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, 0);
+                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
                         }
                     }
                 }
@@ -1759,7 +1772,7 @@ namespace SkyCoopServer
 
                                 //SkyCoopServer.Logger.Log($"[PopulateLoot] {m_SceneName} Point {PointIndex}({i}/{LootPerPoint}) picked {GearName}");
 
-                                ServerInstance.m_ScenesData.AddGear(m_SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0);
+                                ServerInstance.m_ScenesData.AddGear(m_SceneName, GearName, Point, Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0, false);
                                 AvaliablePoints.RemoveAt(Index);
                             }
                         }
@@ -2309,6 +2322,7 @@ namespace SkyCoopServer
             public string m_Hat1 = "";
             public string m_Hat2 = "";
             public string m_Body = "";
+            public string m_Body2 = "";
             public string m_Gloves = "";
             public string m_Pants = "";
             public string m_Boots = "";
@@ -2319,11 +2333,13 @@ namespace SkyCoopServer
             public float m_Hat1Damage = 0;
             public float m_Hat2Damage = 0;
             public float m_BodyDamage = 0;
+            public float m_Body2Damage = 0;
             public float m_GlovesDamage = 0;
             public float m_PantsDamage = 0;
             public float m_BootsDamage = 0;
 
             public bool m_TechPack = false;
+            public bool m_Respirator = false;
 
             public ClothingData GetCopy()
             {
@@ -2332,6 +2348,7 @@ namespace SkyCoopServer
                 Clone.m_Hat1 = m_Hat1;
                 Clone.m_Hat2 = m_Hat2;
                 Clone.m_Body = m_Body;
+                Clone.m_Body2 = m_Body2;
                 Clone.m_Gloves = m_Gloves;
                 Clone.m_Pants = m_Pants;
                 Clone.m_Boots = m_Boots;
@@ -2347,6 +2364,7 @@ namespace SkyCoopServer
                 Clone.m_BootsDamage = m_BootsDamage;
 
                 Clone.m_TechPack = m_TechPack;
+                Clone.m_Respirator = m_Respirator;
 
                 return Clone;
             }
@@ -2356,12 +2374,14 @@ namespace SkyCoopServer
                 if(m_Hat1 == Other.m_Hat1 
                     && m_Hat2 == Other.m_Hat2
                     && m_Body == Other.m_Body
+                    && m_Body2 == Other.m_Body2
                     && m_Gloves == Other.m_Gloves
                     && m_Pants == Other.m_Pants
                     && m_Boots == Other.m_Boots
                     && m_Accs1 == Other.m_Accs1
                     && m_Accs2 == Other.m_Accs2
-                    && m_TechPack == Other.m_TechPack)
+                    && m_TechPack == Other.m_TechPack
+                    && m_Respirator == Other.m_Respirator)
                 {
                     return true;
                 }
@@ -2373,6 +2393,7 @@ namespace SkyCoopServer
                 if (m_Hat1 == GearName
                     || m_Hat2 == GearName
                     || m_Body == GearName
+                    || m_Body2 == GearName
                     || m_Gloves == GearName
                     || m_Pants == GearName
                     || m_Boots == GearName

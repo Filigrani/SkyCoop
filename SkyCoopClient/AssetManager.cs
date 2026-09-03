@@ -6,6 +6,7 @@ using Il2CppTLD.Scenes;
 using SkyCoopClient;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.AI;
 using UnityEngine.ResourceManagement.ResourceLocations;
 using static SkyCoop.Comps;
 using Il2CppCollection = Il2CppSystem.Collections.Generic;
@@ -92,7 +93,7 @@ namespace SkyCoop
             }
         }
 
-        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, float Volume = 0, float ConditionNormalized = 1, int Style = 0, Transform parent = null)
+        public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, float Volume = 0, float ConditionNormalized = 1, int Style = 0, float TimeFinishAt = 0, Transform parent = null)
         {
             LocalizedName = "Invalid";
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
@@ -155,13 +156,21 @@ namespace SkyCoop
 
                     if (gi.m_FlareItem)
                     {
+                        if(Style == 0)
+                        {
+                            if (ModMain.Client.m_LastServerTime > TimeFinishAt)
+                            {
+                                Style = 2;
+                            }
+                        }
+                        
                         switch (Style)
                         {
                             case 0:
                                 gi.m_FlareItem.SetState(FlareState.Fresh);
                                 break;
                             case 1:
-                                gi.m_FlareItem.SetState(FlareState.Burning);
+                                gi.m_FlareItem.Ignite(gi.m_FlareItem.m_LoopWithoutIgniteAudio);
                                 break;
                             case 2:
                                 gi.m_FlareItem.SetState(FlareState.BurnedOut);
@@ -176,13 +185,20 @@ namespace SkyCoop
                     }
                     if (gi.m_TorchItem)
                     {
+                        if (Style == 0)
+                        {
+                            if (ModMain.Client.m_LastServerTime > TimeFinishAt)
+                            {
+                                Style = 2;
+                            }
+                        }
                         switch (Style)
                         {
                             case 0:
                                 gi.m_TorchItem.SetState(TorchState.Fresh);
                                 break;
                             case 1:
-                                gi.m_TorchItem.SetState(TorchState.Burning);
+                                gi.m_TorchItem.Ignite(gi.m_TorchItem.m_LoopWithoutIgniteAudio);
                                 break;
                             case 2:
                                 gi.m_TorchItem.SetState(TorchState.BurnedOut);
@@ -227,7 +243,11 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<GearCookingVisual>().Name
                             && ComName != Il2CppType.Of<Bed>().Name
                             && ComName != Il2CppType.Of<FlareItem>().Name
-                            && ComName != Il2CppType.Of<TorchItem>().Name)
+                            && ComName != Il2CppType.Of<FlareIntensity>().Name
+                            && ComName != Il2CppType.Of<TorchItem>().Name
+                            && ComName != Il2CppType.Of<TorchIntensity>().Name
+                            && ComName != Il2CppType.Of<HeatSource>().Name
+                            && ComName != Il2CppType.Of<NavMeshObstacle>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }

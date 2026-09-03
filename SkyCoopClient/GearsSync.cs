@@ -3,6 +3,7 @@ using Il2Cpp;
 using Il2CppRewired;
 using Il2CppRewired.HID;
 using Il2CppTLD.Cooking;
+using Il2CppTLD.Gameplay.Fishing;
 using Il2CppTLD.Gear;
 using Il2CppTLD.IntBackedUnit;
 using Il2CppTLD.Interactions;
@@ -829,6 +830,17 @@ namespace SkyCoopClient
                 float NormalizedCondition = gear.GetNormalizedCondition();
                 int Style = 0;
                 string CookpotGUID = "";
+                float TimeFinishAt = 0;
+
+                if (gear.m_FlareItem)
+                {
+                    TimeFinishAt = ModMain.Client.m_LastServerTime + ((gear.m_FlareItem.GetModifiedBurnLifetimeMinutes()-gear.m_FlareItem.m_ElapsedBurnMinutes) / 60f);
+                    //SkyCoop.Logger.Log(ConsoleColor.Green, $"m_LastServerTime {ModMain.Client.m_LastServerTime} gear.m_FlareItem.m_ElapsedBurnMinutes {gear.m_FlareItem.m_ElapsedBurnMinutes} FinishAt {TimeFinishAt}");
+                }
+                if (gear.m_TorchItem)
+                {
+                    TimeFinishAt = ModMain.Client.m_LastServerTime + ((gear.m_TorchItem.GetModifiedBurnLifetimeMinutes() - gear.m_TorchItem.m_ElapsedBurnMinutes) / 60f);
+                }
 
                 if (gear.m_FoodItem && gear.m_FoodItem.m_Opened)
                 {
@@ -986,7 +998,7 @@ namespace SkyCoopClient
 
                 if (ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_CanDropItems)
                 {
-                    ClientSend.SendGear(gear.name, v3, rot, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, CookingResult, Volume, BeingCookedTime, CookpotGUID);
+                    ClientSend.SendGear(gear.name, v3, rot, JSON, NormalizedCondition, Style, FireGUID, CookingSlotIndex, CookingResult, Volume, BeingCookedTime, CookpotGUID, TimeFinishAt);
                 }
 
                 if (total < 2)
@@ -1031,7 +1043,7 @@ namespace SkyCoopClient
                 string LocalizedGearName = "InvalidGearName";
                 bool IsCookpotItem = false;
                 bool IsCookable = false;
-                GearObject = AssetManager.CreateLocalizedBogusGear(Data.m_GearName, out LocalizedGearName, Data.m_Volume, Data.m_ConditionNormalized, Data.m_Style);
+                GearObject = AssetManager.CreateLocalizedBogusGear(Data.m_GearName, out LocalizedGearName, Data.m_Volume, Data.m_ConditionNormalized, Data.m_Style, Data.m_FinishProcessTime);
                 if (GearObject != null)
                 {
                     //SkyCoop.Logger.Log(ConsoleColor.Green, $"Bogus created!");
@@ -1063,6 +1075,8 @@ namespace SkyCoopClient
 
                         GearComp.m_CookingVisual.SetupGrubMesh(GearComp.m_CookingVisual.GetState());
                     }
+                    GearComp.m_DroppedTime = Data.m_DroppedTime;
+                    GearComp.m_FinishProcessAt = Data.m_FinishProcessTime;
 
                     GearsSync.ApplyTextureDoner(GearObject);
 
@@ -1095,6 +1109,8 @@ namespace SkyCoopClient
 
                     GearComp.m_CookingVisual.SetupGrubMesh(GearComp.m_CookingVisual.GetState());
                 }
+                GearComp.m_DroppedTime = Data.m_DroppedTime;
+                GearComp.m_FinishProcessAt = Data.m_FinishProcessTime;
             }
         }
 
@@ -1652,6 +1668,201 @@ namespace SkyCoopClient
                     return false;
                 }
                 return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(FlareItem), "Update")]
+        private static class FlareItem_Update
+        {
+            internal static bool Prefix(FlareItem __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                Comps.DroppedGearVisual Dropped = __instance.gameObject.GetComponent<Comps.DroppedGearVisual>();
+                if (Dropped)
+                {
+                    if(ModMain.Client != null && ModMain.Client.m_IsReady)
+                    {
+                        float MinutesLeft = 0;
+
+                        if(ModMain.Client.m_LastServerTime < Dropped.m_FinishProcessAt)
+                        {
+                            MinutesLeft = (Dropped.m_FinishProcessAt - ModMain.Client.m_LastServerTime) * 60;
+                        }
+                        __instance.m_ElapsedBurnMinutes = __instance.GetModifiedBurnLifetimeMinutes() - MinutesLeft;
+                    }
+                }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(TorchItem), "Update")]
+        private static class TorchItem_Update
+        {
+            internal static bool Prefix(TorchItem __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                Comps.DroppedGearVisual Dropped = __instance.gameObject.GetComponent<Comps.DroppedGearVisual>();
+                if (Dropped)
+                {
+                    if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                    {
+                        float MinutesLeft = 0;
+
+                        if (ModMain.Client.m_LastServerTime < Dropped.m_FinishProcessAt)
+                        {
+                            MinutesLeft = (Dropped.m_FinishProcessAt - ModMain.Client.m_LastServerTime) * 60;
+                        }
+                        __instance.m_ElapsedBurnMinutes = __instance.GetModifiedBurnLifetimeMinutes() - MinutesLeft;
+
+                        __instance.MaybeAdjustHeatSource();
+                        __instance.UpdateTorchAudioPosition();
+                        __instance.UpdateLightPosition();
+
+                        if(__instance.m_ElapsedBurnMinutes >= __instance.GetModifiedBurnLifetimeMinutes())
+                        {
+                            if(__instance.m_State != TorchState.BurnedOut)
+                            {
+                                __instance.Extinguish(TorchState.BurnedOut);
+                                Transform Gradient = __instance.transform.FindChild("RadialGradient");
+                                if (Gradient)
+                                {
+                                    Gradient.gameObject.SetActive(false);
+                                }
+                            }
+                        }
+
+                        return false;
+                    }
+                }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(FlareItem), "BurnOut")]
+        private static class FlareItem_BurnOut
+        {
+            internal static bool Prefix(FlareItem __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                Comps.DroppedGearVisual Dropped = __instance.gameObject.GetComponent<Comps.DroppedGearVisual>();
+                if (Dropped)
+                {
+                    __instance.StopLoopingAudio();
+                    GameAudioManager.PlaySound(__instance.m_BurnOutAudio, __instance.gameObject);
+                    __instance.SetState(FlareState.BurnedOut);
+                    if (__instance.m_HeatSource)
+                    {
+                        __instance.m_HeatSource.TurnOffImmediate();
+                    }
+                    __instance.MaybeEnableNavMeshObstacle(false);
+                    __instance.m_FXGameObject.SetActive(false);
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(TorchItem), "SetState")]
+        private static class TorchItem_SetState
+        {
+            internal static bool Prefix(TorchItem __instance, TorchState state)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                Comps.DroppedGearVisual Dropped = __instance.gameObject.GetComponent<Comps.DroppedGearVisual>();
+                if (Dropped)
+                {
+                    __instance.m_State = state;
+                    if (__instance.m_State == TorchState.Fresh)
+                    {
+                        __instance.m_TorchMeshGameObject.SetActive(true);
+                        __instance.m_TorchBurntMeshGameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        __instance.m_TorchMeshGameObject.SetActive(false);
+                        __instance.m_TorchBurntMeshGameObject.SetActive(true);
+                    }
+                    return false;
+                }
+                return true;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(FlareItem), "Deserialize")]
+        private static class FlareItem_Deserialize
+        {
+            internal static void Postfix(FlareItem __instance, string text)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+
+
+                FlareItemSaveDataProxy data = Utils.DeserializeObject<FlareItemSaveDataProxy>(text);
+                float HoursPassed = 0;
+
+                if(data.m_HoursPlayed < ModMain.Client.m_LastServerTime)
+                {
+                    HoursPassed = ModMain.Client.m_LastServerTime - data.m_HoursPlayed;
+                }
+
+                float NewElapsedTime = data.m_ElapsedBurnMinutesProxy + (HoursPassed * 60f);
+                __instance.m_ElapsedBurnMinutes = NewElapsedTime;
+
+                float NormalizedCondition = 1;
+                if(NewElapsedTime > __instance.GetModifiedBurnLifetimeMinutes())
+                {
+                    NormalizedCondition = 0;
+                }
+                else
+                {
+                    NormalizedCondition = 1 -(NewElapsedTime / __instance.GetModifiedBurnLifetimeMinutes());
+                }
+                
+                __instance.m_GearItem.SetNormalizedHP(NormalizedCondition);
+
+                //SkyCoop.Logger.Log($"data.m_HoursPlayed {data.m_HoursPlayed} m_LastServerTime {ModMain.Client.m_LastServerTime} HoursPassed {HoursPassed} m_ElapsedBurnMinutesProxy {data.m_ElapsedBurnMinutesProxy} NewElapsedTime {NewElapsedTime}");
+
+
+                if (__instance.m_State != FlareState.BurnedOut && NewElapsedTime >= __instance.GetModifiedBurnLifetimeMinutes())
+                {
+                    __instance.BurnOut();
+                }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(TorchItem), "Deserialize")]
+        private static class TorchItem_Deserialize
+        {
+            internal static void Postfix(TorchItem __instance, string text)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+                TorchItemSaveDataProxy data = Utils.DeserializeObject<TorchItemSaveDataProxy>(text);
+                float HoursPassed = 0;
+
+                if (data.m_HoursPlayed < ModMain.Client.m_LastServerTime)
+                {
+                    HoursPassed = ModMain.Client.m_LastServerTime - data.m_HoursPlayed;
+                }
+
+                float NewElapsedTime = data.m_ElapsedBurnMinutesProxy + (HoursPassed * 60f);
+                __instance.m_ElapsedBurnMinutes = NewElapsedTime;
+
+                float NormalizedCondition = 1;
+                if (NewElapsedTime > __instance.GetModifiedBurnLifetimeMinutes())
+                {
+                    NormalizedCondition = 0;
+                }
+                else
+                {
+                    NormalizedCondition = 1 - (NewElapsedTime / __instance.GetModifiedBurnLifetimeMinutes());
+                }
+
+                __instance.m_GearItem.SetNormalizedHP(NormalizedCondition);
+
+                if (__instance.m_State != TorchState.BurnedOut && NewElapsedTime >= __instance.GetModifiedBurnLifetimeMinutes())
+                {
+                    __instance.Extinguish(TorchState.BurnedOut);
+                }
             }
         }
     }

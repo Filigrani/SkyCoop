@@ -181,7 +181,7 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendGear(string GearName, Vector3 Position, Quaternion Rotation, string JSON, float NormalizedCondition, int Style, string FireGUID = "", int CookingSlot = -1, string CookingResult = "", float Volume = 1, float BeingCookedTime = 0, string CookPotGUID = "")
+        public static void SendGear(string GearName, Vector3 Position, Quaternion Rotation, string JSON, float NormalizedCondition, int Style, string FireGUID = "", int CookingSlot = -1, string CookingResult = "", float Volume = 1, float BeingCookedTime = 0, string CookPotGUID = "", float TimeFinishAt = 0)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientSendGear);
@@ -215,7 +215,9 @@ namespace SkyCoop
                 writer.Put(BeingCookedTime);
             }
 
-            SkyCoop.Logger.Log(ConsoleColor.Green, $"ClientSend.SendGear {GearName}");
+            writer.Put(TimeFinishAt);
+
+            //SkyCoop.Logger.Log(ConsoleColor.Green, $"ClientSend.SendGear {GearName}");
             //SkyCoop.Logger.Log(ConsoleColor.Green, $"JSON: {JSON}");
 
             SendToHost(writer);

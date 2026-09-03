@@ -133,6 +133,8 @@ namespace SkyCoop
             public int m_Style = 0;
             public GearCookingVisual m_CookingVisual;
             public Bed m_Bed = null;
+            public float m_DroppedTime = 0;
+            public float m_FinishProcessAt = 0;
 
             public SimpleInteraction m_SimpeInteraction = null;
 
@@ -326,8 +328,6 @@ namespace SkyCoop
                     }
                 }
             }
-
-
         }
 
         public class GearCookingVisual : MonoBehaviour
@@ -1232,6 +1232,7 @@ namespace SkyCoop
             public GameObject m_Satchel = null;
             public GameObject m_TechnicalBackpack = null;
             public GameObject m_Vest = null;
+            public GameObject m_Respirator = null;
             public Transform m_BottomLip = null;
             public float m_MouthMinY = 0.03f;
             public float m_MouthMaxY = 0.053f;
@@ -1457,6 +1458,10 @@ namespace SkyCoop
                 {
                     m_Vest.SetActive(m_VisualData.m_ClothingData.m_Accs1 == "GEAR_BallisticVest" || m_VisualData.m_ClothingData.m_Accs2 == "GEAR_BallisticVest");
                 }
+                if (m_Respirator)
+                {
+                    m_Respirator.SetActive(m_VisualData.m_ClothingData.m_Respirator);
+                }
                 if (m_HairMesh)
                 {
                     m_HairMesh.SetActive(CanShowHairs());
@@ -1487,6 +1492,10 @@ namespace SkyCoop
                         else if (Mesh.name == Data.m_Body)
                         {
                             DamageFloat = Data.m_BodyDamage;
+                        }
+                        else if (Mesh.name == Data.m_Body2)
+                        {
+                            DamageFloat = Data.m_Body2Damage;
                         }
                         else if (Mesh.name == Data.m_Gloves)
                         {
@@ -1639,13 +1648,11 @@ namespace SkyCoop
                     GearsSync.ApplyTextureDoner(FishKnife, "GEAR_FishKnife");
                 }
 
-
                 m_Helmet = AddCookpot(new Vector3(0f, 0.245f, 0f), new Vector3(0, 180, 180), 1.03f);
                 m_Satchel = AddSatchel(new Vector3(0.23f, 0.23f, -0.42f), new Vector3(90, 0, -50), 1f);
                 m_TechnicalBackpack = AddTechPack(new Vector3(0, -0.44f, -0.19f), new Vector3(0, 0, 0), 1f);
                 m_Vest = AddVest(new Vector3(0, 0, -0.28f), new Vector3(90, 0, 0), new Vector3(1, 9, 1));
-
-                AddColider(m_Helmet);
+                m_Respirator = AddRespirator(new Vector3(0, 0.06f, 0.06f), new Vector3(90, 0, 0), new Vector3(1.35f, 1, 1.2f)); // DLC
 
                 m_HairMesh = transform.FindChild("Hair_mesh").gameObject;
                 m_BeardMesh = transform.FindChild("Beard_mesh").gameObject;
@@ -1662,7 +1669,7 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_WoolWrap"); // No UV.
                 AddClothingMesh("GEAR_WoolWrapCap"); // No UV.
                 AddClothingMesh("GEAR_RabbitskinHat");
-                AddClothingMesh("GEAR_HatGatorBalaclavaA"); // DLC
+                AddClothingMesh("GEAR_HatGatorBalaclavaA");
 
                 AddGearAsClothingMesh("GEAR_HatLeatherAviatorA", new Vector3(0, 0.08f, 0), new Vector3(0, 0, 0), new Vector3(1.14f, 1, 1)); // DLC
                 AddGearAsClothingMesh("GEAR_MinersHelmet", new Vector3(0, 0.118f, 0), new Vector3(0, 0, 0), new Vector3(1.2f, 1, 1)); // DLC
@@ -1746,9 +1753,12 @@ namespace SkyCoop
             {
                 foreach (Collider col in m_PlayerColiders)
                 {
-                    foreach (Collider col2 in obj.GetComponentsInChildren<Collider>())
+                    if(col != null)
                     {
-                        UnityEngine.Physics.IgnoreCollision(col2, col, true);
+                        foreach (Collider col2 in obj.GetComponentsInChildren<Collider>())
+                        {
+                            UnityEngine.Physics.IgnoreCollision(col2, col, true);
+                        }
                     }
                 }
             }
@@ -1805,8 +1815,8 @@ namespace SkyCoop
                             Gear.transform.SetParent(RightHand);
                             Gear.transform.localPosition = LocalPosition;
                             Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
+                            Gear.SetActive(false);
                         }
-                        Gear.SetActive(false);
                     } else
                     {
                         GameObject Reference = AssetManager.GetAssetFromGame<GameObject>(GearName);
@@ -1816,8 +1826,8 @@ namespace SkyCoop
                             Gear.transform.SetParent(RightHand);
                             Gear.transform.localPosition = LocalPosition;
                             Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
+                            Gear.SetActive(false);
                         }
-                        Gear.SetActive(false);
                     }
                     AddVisualGear(GearName, Gear, HandPose, Player);
                 }
@@ -1838,9 +1848,9 @@ namespace SkyCoop
                             Gear.transform.SetParent(RightHand);
                             Gear.transform.localPosition = LocalPosition;
                             Gear.transform.SetLocalEulerAngles(LocalRotation, RotationOrder.OrderXYZ);
+                            Gear.SetActive(false);
+                            AddVisualGear(GearName, Gear, HandPose, Player);
                         }
-                        Gear.SetActive(false);
-                        AddVisualGear(GearName, Gear, HandPose, Player);
                         return Gear;
                     }
                 }
@@ -1912,8 +1922,25 @@ namespace SkyCoop
                     Gear.transform.localPosition = Position;
                     Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
                     Gear.transform.localScale = Scale;
+                    Gear.SetActive(false);
                 }
-                Gear.SetActive(false);
+                return Gear;
+            }
+
+            public GameObject AddRespirator(Vector3 Position, Vector3 Rotation, Vector3 Scale)
+            {
+                Transform Head = GetBone(m_Animator, HumanBodyBones.LeftEye);
+                GameObject Gear = AssetManager.CreateBogusGear("GEAR_Respirator", null, true);
+                if (Gear)
+                {
+                    Gear.transform.SetParent(Head);
+                    Gear.transform.localPosition = Position;
+                    Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
+                    Gear.transform.localScale = Scale;
+                    Gear.transform.GetChild(1).gameObject.SetActive(false);
+                    Gear.transform.GetChild(2).gameObject.SetActive(true);
+                    Gear.SetActive(false);
+                }
                 return Gear;
             }
 

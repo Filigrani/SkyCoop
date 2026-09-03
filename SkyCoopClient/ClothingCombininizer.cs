@@ -176,6 +176,18 @@ namespace SkyCoopClient
             return 0;
         }
 
+        public static bool HasShortSleeves(GearItem gi)
+        {
+            string GearName = GetClothingNameFromGear(gi);
+
+            if(GearName == "GEAR_DownVest" || GearName == "GEAR_InsulatedVest")
+            {
+                return true;
+            }
+
+            return false;
+        }
+
         public static DataStr.ClothingData GetClothing()
         {
             DataStr.ClothingData Data = new DataStr.ClothingData();
@@ -212,11 +224,12 @@ namespace SkyCoopClient
             GearItem Jacket1 = GetClothingInSlot(ClothingRegion.Chest, ClothingLayer.Top);
             GearItem Jacket2 = GetClothingInSlot(ClothingRegion.Chest, ClothingLayer.Top2);
 
-
-            GearItem Pants1 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Top);
-            GearItem Pants2 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Top2);
-            GearItem LongUnderware1 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Base);
-            GearItem LongUnderware2 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Mid);
+            if (HasShortSleeves(Jacket1) && Jacket2 == null)
+            {
+                Data.m_Body2 = GetClothingNameFromGear(Jacket1);
+                Data.m_Body2Damage = GetClothingDamageFromGear(Jacket1);
+                Jacket1 = null; // Чтобы далее GetMostTopFromFour нашёл что под желетом.
+            }
 
             int BodyResult = GetMostTopFromFour(Shirt1, Shirt2, Jacket1, Jacket2);
             switch (BodyResult)
@@ -242,6 +255,13 @@ namespace SkyCoopClient
                     Data.m_BodyDamage = GetClothingDamageFromGear(Jacket2);
                     break;
             }
+
+
+            GearItem Pants1 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Top);
+            GearItem Pants2 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Top2);
+            GearItem LongUnderware1 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Base);
+            GearItem LongUnderware2 = GetClothingInSlot(ClothingRegion.Legs, ClothingLayer.Mid);
+
             int PantsResult = GetMostTopFromFour(LongUnderware1, LongUnderware2, Pants1, Pants2);
             switch (PantsResult)
             {
@@ -305,6 +325,8 @@ namespace SkyCoopClient
             Data.m_Accs2 = GetClothingNameFromGear(GetClothingInSlot(ClothingRegion.Accessory, ClothingLayer.Mid));
 
             Data.m_TechPack = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_TechnicalBackpack");
+            Data.m_Respirator = RespiratorManager.s_EquippedInstance != null;
+            
 
             return Data;
         }

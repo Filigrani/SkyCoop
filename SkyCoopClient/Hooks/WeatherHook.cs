@@ -39,6 +39,10 @@ namespace SkyCoopClient
                     WeatherTransition.m_WeatherTransitionTimeScalar = 1;
                 }
             }
+            if (GameManager.m_TimeOfDay)
+            {
+                GameManager.m_TimeOfDay.m_WeatherSystem.m_ElapsedHoursAccumulator = 0;
+            }
             if (GameManager.m_Wind)
             {
                 GameManager.m_Wind.enabled = CanUseWeather;

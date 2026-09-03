@@ -880,7 +880,7 @@ namespace SkyCoop
 
             if (Uni)
             {
-                Uni.m_ElapsedHours = ElapsedInGameHours;
+                Uni.SetElapsedHours(ElapsedInGameHours);
                 Uni.SetNormalizedTime(NormalizedTOD);
             }
 

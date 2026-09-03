@@ -17,5 +17,5 @@ internal static class BuildInfo
 {
 	internal const string ModName = "Sky Co-op REBORN";
 	internal const string ModAuthor = "Filigrani & REDcat";
-	internal const string ModVersion = "0.0.5";
+	internal const string ModVersion = "0.0.6";
 }
