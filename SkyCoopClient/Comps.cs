@@ -1415,31 +1415,6 @@ namespace SkyCoop
                 return m_VisualData.m_ClothingData.m_Hat1 == RequiredHat || m_VisualData.m_ClothingData.m_Hat2 == RequiredHat;
             }
 
-            public bool CanShowHairs()
-            {
-                return m_VisualData.m_ClothingData.m_Hat1 == "" && m_VisualData.m_ClothingData.m_Hat1 == "";
-            }
-
-            public bool CanShowBeard()
-            {
-                if(OneOfHatsIsThis("GEAR_Balaclava") ||
-                    OneOfHatsIsThis("GEAR_WoolWrap") ||
-                    OneOfHatsIsThis("GEAR_WoolWrapCap"))
-                {
-                    return false;
-                }
-                return true;
-            }
-
-            public bool CanShowEyebrows()
-            {
-                if (OneOfHatsIsThis("GEAR_Balaclava"))
-                {
-                    return false;
-                }
-                return true;
-            }
-
             public void UpdateClothing()
             {
                 if (m_Helmet)
@@ -1464,15 +1439,15 @@ namespace SkyCoop
                 }
                 if (m_HairMesh)
                 {
-                    m_HairMesh.SetActive(CanShowHairs());
+                    m_HairMesh.SetActive(ClothingCombininizer.CanShowHair(m_VisualData.m_ClothingData.m_Hat1, m_VisualData.m_ClothingData.m_Hat2));
                 }
                 if (m_BeardMesh)
                 {
-                    m_BeardMesh.SetActive(CanShowBeard());
+                    m_BeardMesh.SetActive(ClothingCombininizer.CanShowBeard(m_VisualData.m_ClothingData.m_Hat1, m_VisualData.m_ClothingData.m_Hat2));
                 }
                 if (m_EyebrowsMesh)
                 {
-                    m_EyebrowsMesh.SetActive(CanShowEyebrows());
+                    m_EyebrowsMesh.SetActive(ClothingCombininizer.CanShowBrows(m_VisualData.m_ClothingData.m_Hat1, m_VisualData.m_ClothingData.m_Hat2));
                 }
                 ClothingData Data = m_VisualData.m_ClothingData;
                 foreach (GameObject Mesh in m_ClothingMeshes)
@@ -1652,7 +1627,7 @@ namespace SkyCoop
                 m_Satchel = AddSatchel(new Vector3(0.23f, 0.23f, -0.42f), new Vector3(90, 0, -50), 1f);
                 m_TechnicalBackpack = AddTechPack(new Vector3(0, -0.44f, -0.19f), new Vector3(0, 0, 0), 1f);
                 m_Vest = AddVest(new Vector3(0, 0, -0.28f), new Vector3(90, 0, 0), new Vector3(1, 9, 1));
-                m_Respirator = AddRespirator(new Vector3(0, 0.06f, 0.06f), new Vector3(90, 0, 0), new Vector3(1.35f, 1, 1.2f)); // DLC
+                m_Respirator = AddRespirator(new Vector3(0, 0.06f, 0.06f), new Vector3(0, 0, 0), new Vector3(1.35f, 1, 1.2f)); // DLC
 
                 m_HairMesh = transform.FindChild("Hair_mesh").gameObject;
                 m_BeardMesh = transform.FindChild("Beard_mesh").gameObject;
@@ -1665,12 +1640,14 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_BasicWoolHat");
                 AddClothingMesh("GEAR_Toque");
                 AddClothingMesh("GEAR_ImprovisedHat");
-                AddClothingMesh("GEAR_CottonScarf"); // No UV.
-                AddClothingMesh("GEAR_WoolWrap"); // No UV.
-                AddClothingMesh("GEAR_WoolWrapCap"); // No UV.
+                AddClothingMesh("GEAR_WoolWrapCap");
                 AddClothingMesh("GEAR_RabbitskinHat");
                 AddClothingMesh("GEAR_HatGatorBalaclavaA");
 
+                AddGearAsClothingMesh("GEAR_WoolWrap", new Vector3(-0.02f, -0.11f, 0.06f), new Vector3(35, 0, 0), new Vector3(1.21f, 1, 1.3f));
+                AddGearAsClothingMesh("GEAR_CottonScarf", new Vector3(-0.01f, -0.1f, 0.02f), new Vector3(30, 0, 0), new Vector3(0.93f, 1, 1.03f));
+                AddGearAsClothingMesh("GEAR_BasicWoolScarf", new Vector3(0.03f, -0.1f, 0), new Vector3(30, 0, 0), new Vector3(0.7f, 1, 1));
+                AddGearAsClothingMesh("GEAR_EarMuffs", new Vector3(0, 0.08f, -0.02f), new Vector3(330f, 0, 0), new Vector3(1.3f, 1, 1.1f));
                 AddGearAsClothingMesh("GEAR_HatLeatherAviatorA", new Vector3(0, 0.08f, 0), new Vector3(0, 0, 0), new Vector3(1.14f, 1, 1)); // DLC
                 AddGearAsClothingMesh("GEAR_MinersHelmet", new Vector3(0, 0.118f, 0), new Vector3(0, 0, 0), new Vector3(1.2f, 1, 1)); // DLC
                 AddGearAsClothingMesh("GEAR_CougarWrap", new Vector3(0, -0.07f, -0.03f), new Vector3(0, 0, 0), new Vector3(1, 1, 1)); // DLC
@@ -1707,6 +1684,11 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_DownVest");
                 AddClothingMesh("GEAR_InsulatedVest");
                 AddClothingMesh("GEAR_BearSkinCoat");
+                AddClothingMesh("GEAR_WolfSkinCape");
+                AddClothingMesh("GEAR_MooseHideCloak");
+                AddClothingMesh("GEAR_MinersJacket"); // DLC
+                AddClothingMesh("GEAR_JacketLeatherFlightA"); // DLC
+                AddClothingMesh("GEAR_TacticalJacket"); // DLC
 
                 //Pants
                 AddClothingMesh("GEAR_CargoPants");
@@ -1731,7 +1713,14 @@ namespace SkyCoop
                 //Boots
                 AddClothingMesh("GEAR_BasicShoes");
                 AddClothingMesh("GEAR_LeatherShoes");
-
+                AddClothingMesh("GEAR_CombatBoots");
+                AddClothingMesh("GEAR_WorkBoots");
+                AddClothingMesh("GEAR_BasicBoots");
+                AddClothingMesh("GEAR_InsulatedBoots");
+                AddClothingMesh("GEAR_MuklukBoots");
+                AddClothingMesh("GEAR_DeerSkinBoots");
+                AddClothingMesh("GEAR_SkiBoots");
+                AddClothingMesh("GEAR_MinersBoots"); // DLC
                 // Gloves
                 AddClothingMesh("GEAR_BasicGloves");
                 AddClothingMesh("GEAR_TacticalGloves");
@@ -1937,8 +1926,8 @@ namespace SkyCoop
                     Gear.transform.localPosition = Position;
                     Gear.transform.SetLocalEulerAngles(Rotation, RotationOrder.OrderXYZ);
                     Gear.transform.localScale = Scale;
-                    Gear.transform.GetChild(1).gameObject.SetActive(false);
-                    Gear.transform.GetChild(2).gameObject.SetActive(true);
+                    Gear.transform.Find("OBJ_Respirator").gameObject.SetActive(false);
+                    Gear.transform.Find("OBJ_Respirator_Inspect").gameObject.SetActive(true);
                     Gear.SetActive(false);
                 }
                 return Gear;
@@ -1964,7 +1953,7 @@ namespace SkyCoop
                     {
                         Renderer GearMesh = null;
 
-                        if (GearName != "GEAR_DeerSkinPants" || GearName == "GEAR_WolfSkinPant") // У этого объекта остался MeshRenderer (без MeshFilter, по этому мы её не видем) от старой модели из альфы. Текстура там не та.
+                        if (GearName != "GEAR_DeerSkinPants" && GearName != "GEAR_WolfSkinPant") // У этого объекта остался MeshRenderer (без MeshFilter, по этому мы её не видем) от старой модели из альфы. Текстура там не та.
                         {
                             GearMesh = GearReference.GetComponent<Renderer>();
                         }

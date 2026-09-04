@@ -11,34 +11,22 @@ namespace SkyCoopClient
 {
     public class ClothingCombininizer
     {
-        public static int GetCombination(string Hat1, string Hat2, string[] Combinable)
+        public static int GetCombination(string Hat1, string Hat2)
         {
-            foreach (string Combo in Combinable)
+            List<string> BothHats = new List<string>() { Hat1 , Hat2};
+
+            if(BothHats.Contains("GEAR_Balaclava") 
+                || BothHats.Contains("GEAR_HatGatorBalaclavaA") 
+                || BothHats.Contains("GEAR_CottonScarf") 
+                || BothHats.Contains("GEAR_BasicWoolScarf")
+                || BothHats.Contains("GEAR_HatGatorBalaclavaA")
+                || BothHats.Contains("GEAR_HatGatorBalaclavaA")
+                || BothHats.Contains("GEAR_HatGatorBalaclavaA"))
             {
-                if (Hat1 == Combo)
-                {
-                    if (string.IsNullOrEmpty(Hat2))
-                    {
-                        return 1;
-                    }
-                    else
-                    {
-                        return 3;
-                    }
-                }
-                else if (Hat2 == Combo)
-                {
-                    if (string.IsNullOrEmpty(Hat1))
-                    {
-                        return 2;
-                    }
-                    else
-                    {
-                        return 3;
-                    }
-                }
+                return 3;
             }
-            return 0;
+
+            return 2;
         } 
 
         public static int GetHeadGearToUse(GearItem Gear1, GearItem Gear2)
@@ -53,7 +41,7 @@ namespace SkyCoopClient
 
             if (Hat1 == Hat2)
             {
-                return 2;
+                return 1;
             }
 
             if (!string.IsNullOrEmpty(Hat1) && string.IsNullOrEmpty(Hat2))
@@ -66,16 +54,7 @@ namespace SkyCoopClient
                 return 2;
             }
 
-            return GetCombination(Hat1, Hat2, new string[] 
-            {
-                "GEAR_Balaclava",
-                "GEAR_BasicWoolScarf",
-                "GEAR_CottonScarf",
-                "GEAR_WoolWrap",
-                "GEAR_WoolWrapCap",
-                "GEAR_CookingPot",
-            }
-            );
+            return GetCombination(Hat1, Hat2);
         }
         //                                            1                       2                      3                      4
         public static int GetMostTopFromFour(GearItem GearBaseLayer, GearItem GearMidLayer, GearItem GearTopLayer, GearItem GearTopLayer2)
@@ -195,20 +174,21 @@ namespace SkyCoopClient
             GearItem Hat1 = GetClothingInSlot(ClothingRegion.Head, ClothingLayer.Base);
             GearItem Hat2 = GetClothingInSlot(ClothingRegion.Head, ClothingLayer.Mid);
 
+            Data.m_Hat1 = "";
+            Data.m_Hat1Damage = 0;
+            Data.m_Hat2 = "";
+            Data.m_Hat2Damage = 0;
+
             int HatResult = GetHeadGearToUse(Hat1, Hat2);
             switch (HatResult)
             {
-                case 0:
-                    Data.m_Hat1 = "";
-                    Data.m_Hat1Damage = 0;
-                    break;
                 case 1:
                     Data.m_Hat1 = GetClothingNameFromGear(Hat1);
                     Data.m_Hat1Damage = GetClothingDamageFromGear(Hat1);
                     break;
                 case 2:
-                    Data.m_Hat1 = GetClothingNameFromGear(Hat2);
-                    Data.m_Hat1Damage = GetClothingDamageFromGear(Hat2);
+                    Data.m_Hat2 = GetClothingNameFromGear(Hat2);
+                    Data.m_Hat2Damage = GetClothingDamageFromGear(Hat2);
                     break;
                 case 3:
                     Data.m_Hat1 = GetClothingNameFromGear(Hat1);
@@ -329,6 +309,63 @@ namespace SkyCoopClient
             
 
             return Data;
+        }
+
+        public static bool AllowsHair(string Hat)
+        {
+            if(string.IsNullOrEmpty(Hat)
+                || Hat == "GEAR_WoolWrap"
+                || Hat == "GEAR_CottonScarf"
+                || Hat == "GEAR_BasicWoolScarf")
+            {
+                return true;
+            }
+            
+            
+            return false;
+        }
+
+        public static bool AllowBeard(string Hat)
+        {
+            return false;
+        }
+
+        public static bool CanShowBeard(string Hat1, string Hat2)
+        {
+            List<string> BothHats = new List<string>() { Hat1, Hat2 };
+
+            if (BothHats.Contains("GEAR_Balaclava")
+                || BothHats.Contains("GEAR_HatGatorBalaclavaA")
+                || BothHats.Contains("GEAR_WoolWrapCap"))
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public static bool CanShowHair(string Hat1, string Hat2)
+        {
+            List<string> BothHats = new List<string>() { Hat1, Hat2 };
+
+            bool Hat1Allow = AllowsHair(Hat1);
+            bool Hat2Allow = AllowsHair(Hat2);
+
+            return Hat1Allow && Hat2Allow;
+        }
+
+        public static bool CanShowBrows(string Hat1, string Hat2)
+        {
+            List<string> BothHats = new List<string>() { Hat1, Hat2 };
+
+            if (BothHats.Contains("GEAR_Balaclava")
+                || BothHats.Contains("GEAR_HatGatorBalaclavaA"))
+            {
+                return false;
+            }
+
+
+            return true;
         }
     }
 }

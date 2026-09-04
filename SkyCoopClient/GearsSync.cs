@@ -1806,27 +1806,30 @@ namespace SkyCoopClient
                     HoursPassed = ModMain.Client.m_LastServerTime - data.m_HoursPlayed;
                 }
 
-                float NewElapsedTime = data.m_ElapsedBurnMinutesProxy + (HoursPassed * 60f);
-                __instance.m_ElapsedBurnMinutes = NewElapsedTime;
-
-                float NormalizedCondition = 1;
-                if(NewElapsedTime > __instance.GetModifiedBurnLifetimeMinutes())
+                if(data.m_StateProxy == FlareState.Burning)
                 {
-                    NormalizedCondition = 0;
-                }
-                else
-                {
-                    NormalizedCondition = 1 -(NewElapsedTime / __instance.GetModifiedBurnLifetimeMinutes());
-                }
-                
-                __instance.m_GearItem.SetNormalizedHP(NormalizedCondition);
+                    float NewElapsedTime = data.m_ElapsedBurnMinutesProxy + (HoursPassed * 60f);
+                    __instance.m_ElapsedBurnMinutes = NewElapsedTime;
 
-                //SkyCoop.Logger.Log($"data.m_HoursPlayed {data.m_HoursPlayed} m_LastServerTime {ModMain.Client.m_LastServerTime} HoursPassed {HoursPassed} m_ElapsedBurnMinutesProxy {data.m_ElapsedBurnMinutesProxy} NewElapsedTime {NewElapsedTime}");
+                    float NormalizedCondition = 1;
+                    if (NewElapsedTime > __instance.GetModifiedBurnLifetimeMinutes())
+                    {
+                        NormalizedCondition = 0;
+                    }
+                    else
+                    {
+                        NormalizedCondition = 1 - (NewElapsedTime / __instance.GetModifiedBurnLifetimeMinutes());
+                    }
+
+                    __instance.m_GearItem.SetNormalizedHP(NormalizedCondition);
+
+                    //SkyCoop.Logger.Log($"data.m_HoursPlayed {data.m_HoursPlayed} m_LastServerTime {ModMain.Client.m_LastServerTime} HoursPassed {HoursPassed} m_ElapsedBurnMinutesProxy {data.m_ElapsedBurnMinutesProxy} NewElapsedTime {NewElapsedTime}");
 
 
-                if (__instance.m_State != FlareState.BurnedOut && NewElapsedTime >= __instance.GetModifiedBurnLifetimeMinutes())
-                {
-                    __instance.BurnOut();
+                    if (__instance.m_State != FlareState.BurnedOut && NewElapsedTime >= __instance.GetModifiedBurnLifetimeMinutes())
+                    {
+                        __instance.BurnOut();
+                    }
                 }
             }
         }
@@ -1844,24 +1847,27 @@ namespace SkyCoopClient
                     HoursPassed = ModMain.Client.m_LastServerTime - data.m_HoursPlayed;
                 }
 
-                float NewElapsedTime = data.m_ElapsedBurnMinutesProxy + (HoursPassed * 60f);
-                __instance.m_ElapsedBurnMinutes = NewElapsedTime;
-
-                float NormalizedCondition = 1;
-                if (NewElapsedTime > __instance.GetModifiedBurnLifetimeMinutes())
+                if(data.m_StateProxy == TorchState.Burning)
                 {
-                    NormalizedCondition = 0;
-                }
-                else
-                {
-                    NormalizedCondition = 1 - (NewElapsedTime / __instance.GetModifiedBurnLifetimeMinutes());
-                }
+                    float NewElapsedTime = data.m_ElapsedBurnMinutesProxy + (HoursPassed * 60f);
+                    __instance.m_ElapsedBurnMinutes = NewElapsedTime;
 
-                __instance.m_GearItem.SetNormalizedHP(NormalizedCondition);
+                    float NormalizedCondition = 1;
+                    if (NewElapsedTime > __instance.GetModifiedBurnLifetimeMinutes())
+                    {
+                        NormalizedCondition = 0;
+                    }
+                    else
+                    {
+                        NormalizedCondition = 1 - (NewElapsedTime / __instance.GetModifiedBurnLifetimeMinutes());
+                    }
 
-                if (__instance.m_State != TorchState.BurnedOut && NewElapsedTime >= __instance.GetModifiedBurnLifetimeMinutes())
-                {
-                    __instance.Extinguish(TorchState.BurnedOut);
+                    __instance.m_GearItem.SetNormalizedHP(NormalizedCondition);
+
+                    if (__instance.m_State != TorchState.BurnedOut && NewElapsedTime >= __instance.GetModifiedBurnLifetimeMinutes())
+                    {
+                        __instance.Extinguish(TorchState.BurnedOut);
+                    }
                 }
             }
         }
