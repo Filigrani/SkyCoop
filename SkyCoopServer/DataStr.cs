@@ -169,6 +169,7 @@ namespace SkyCoopServer
             public bool m_CanCraft = true;
             public Dictionary<string, SceneLootSpawns> m_GearSpawns = new Dictionary<string, SceneLootSpawns>();
             public Dictionary<string, Dictionary<string, RadialObjectSpawnerData>> m_RadialLootSpawnerBySceneByGUID = new Dictionary<string, Dictionary<string, RadialObjectSpawnerData>>();
+            public List<string> m_DupesList = new List<string>();
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -229,6 +230,7 @@ namespace SkyCoopServer
             public bool Weather { get; set; }
             public bool CanCraft { get; set; }
             public List<string> GearSpawns { get; set; }
+            public List<string> DupeLists { get; set; }
 
             public GameRules Load(string FileName)
             {
@@ -354,6 +356,23 @@ namespace SkyCoopServer
                             if (!string.IsNullOrEmpty(Radial.GUID) && !DictRadialByGUID.ContainsKey(Radial.GUID))
                             {
                                 DictRadialByGUID.Add(Radial.GUID, Radial);
+                            }
+                        }
+                    }
+                }
+                if (DupeLists != null)
+                {
+                    foreach (string Path in DupeLists)
+                    {
+                        List<string> DupesList = FilesManager.GetDupeList(Path);
+                        if (DupesList != null)
+                        {
+                            foreach (string GearName in DupesList)
+                            {
+                                if (!Inst.m_DupesList.Contains(GearName))
+                                {
+                                    Inst.m_DupesList.Add(GearName);
+                                }
                             }
                         }
                     }
@@ -1495,7 +1514,9 @@ namespace SkyCoopServer
                                     int RandomPointIndex = RNG.Range(0, PossiblePoints.Count);
                                     Vector3JSON Point = PossiblePoints[RandomPointIndex];
                                     PossiblePoints.RemoveAt(RandomPointIndex);
-                                    ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, 0, false, "", -1, "", 0, 0, "", Spawner.GUID);
+
+                                    int Style = ServerInstance.m_Rules.m_DupesList.Contains(GearToSpawn.GearName) ? -1 : 0;
+                                    ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, Style, false, "", -1, "", 0, 0, "", Spawner.GUID);
                                 }
                             }
                         }
@@ -1589,8 +1610,8 @@ namespace SkyCoopServer
 
                                         if (Spawn)
                                         {
-
-                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
+                                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Gear.GearName) ? -1 : 0;
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                                         }
                                         break;
                                     }
@@ -1675,7 +1696,8 @@ namespace SkyCoopServer
 
                                         if (Spawn)
                                         {
-                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
+                                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Gear.GearName) ? -1 : 0;
+                                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                                         }
                                         break;
                                     }
@@ -1697,7 +1719,8 @@ namespace SkyCoopServer
 
                         if (Spawn)
                         {
-                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
+                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Spawner.GearName) ? -1 : 0;
+                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                         }
                     }
                     foreach (RadialObjectSpawnerData Spawner in LootData.RadialSpawns)
@@ -1711,7 +1734,8 @@ namespace SkyCoopServer
                             int RandomIndex = RNG.Range(0, Spawn.Gears.Count);
 
                             SpawnGearVariantElementData Element = Spawn.Gears[RandomIndex];
-                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, 0, false);
+                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Element.GearName) ? -1 : 0;
+                            ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                         }
                     }
                 }

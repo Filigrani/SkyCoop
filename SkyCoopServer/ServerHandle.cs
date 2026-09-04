@@ -365,7 +365,7 @@ namespace SkyCoopServer
                 if(!string.IsNullOrEmpty(FireGUID))
                 {
                     SkyCoopServer.Logger.Log(ConsoleColor.Red, $"Gear expected to be added to fire, but it did not happend, deleting gear from server and doing refund!");
-                    DataStr.GearDataContainer RefundGear = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, AddGearResult.GUID, true);
+                    DataStr.GearDataContainer RefundGear = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, AddGearResult.GUID, true, Client);
                     ServerSend.SendPickUpGear(Client, RefundGear.m_Visual.m_GearName, RefundGear.m_Data.m_JSON, true, BeingCooked, RecipeResult, Volume);
                 }
             }
@@ -415,12 +415,12 @@ namespace SkyCoopServer
                     if(ProductData != null)
                     {
                         ServerSend.SendPickUpGear(Client, ProductData.m_Visual.m_GearName, ProductData.m_Data.m_JSON, true, GearData.m_Visual.m_BeingCookedTime, ProductData.m_Visual.m_CookingResult, ProductData.m_Visual.m_Volume);
-                        ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, ProductData.m_Visual.m_GUID);
+                        ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, ProductData.m_Visual.m_GUID, Client);
                         return;
                     }
                 }
                 ServerSend.SendPickUpGear(Client, GearData.m_Visual.m_GearName, GearData.m_Data.m_JSON, false, GearData.m_Visual.m_BeingCookedTime, GearData.m_Visual.m_CookingResult, GearData.m_Visual.m_Volume);
-                ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID);
+                ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID, Client);
             }
         }
 

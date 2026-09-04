@@ -159,7 +159,13 @@ namespace SkyCoop
                 {
                     if(m_CookingVisual == null || string.IsNullOrEmpty(m_CookingVisual.m_CookingResult))
                     {
-                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = m_LocalizedName;
+                        string Text = m_LocalizedName;
+                        if(m_Style == -1)
+                        {
+                            Text = $"[87DBF5]{m_LocalizedName}[-]";
+                        }
+
+                        m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID = Text;
                         m_SimpeInteraction.HoverText = m_SimpeInteraction.m_DefaultHoverText.m_LocalizationID;
                     }else
                     {
@@ -1721,21 +1727,22 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_DeerSkinBoots");
                 AddClothingMesh("GEAR_SkiBoots");
                 AddClothingMesh("GEAR_MinersBoots"); // DLC
+
                 // Gloves
                 AddClothingMesh("GEAR_BasicGloves");
-                AddClothingMesh("GEAR_TacticalGloves");
+                AddClothingMesh("GEAR_TacticalGloves");  // DLC
+                AddClothingMesh("GEAR_FleeceMittens");
+                AddClothingMesh("GEAR_ImprovisedMittens");
+                AddClothingMesh("GEAR_Mittens");
+                AddClothingMesh("GEAR_MittenBlueStripe"); // DLC
+                AddClothingMesh("GEAR_MittenBrownStripe"); // DLC
+                AddClothingMesh("GEAR_MittenBurgundyPattern"); // DLC
+                AddClothingMesh("GEAR_RabbitSkinMittens");
 
                 foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
                 {
                     Mesh.gameObject.layer = vp_Layer.Gear;
                 }
-
-
-                //ModMain.AddPlaceholderHoldingGear(this, "DarkWalker_Death", false);
-                //ModMain.AddPlaceholderHoldingGear(this, "GEAR_Shovel", false);
-                //ModMain.AddPlaceholderHoldingGear(this, "GEAR_ClothSheet", false);
-                //ModMain.AddPlaceholderHoldingGear(this, "GEAR_FireAxe", false);
-                //ModMain.AddPlaceholderHoldingGear(this, "CORPSE_Human_Frozen4", false);
             }
 
             public void SetIgnorePhysicsForObject(GameObject obj)

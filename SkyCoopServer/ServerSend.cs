@@ -3,6 +3,7 @@ using LiteNetLib.Utils;
 using Microsoft.VisualBasic;
 using System;
 using System.Numerics;
+using static SkyCoopServer.DataStr;
 namespace SkyCoopServer
 {
     public class ServerSend
@@ -109,6 +110,7 @@ namespace SkyCoopServer
         }
         public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtaFloat, bool PlaySound, Server ServerInstance)
         {
+            //Logger.Log($"SendProjectile {ProjectileName}");
             NetDataWriter writer = new NetDataWriter();
 
             writer.Put((int)Packet.Type.ClientProjectile);
@@ -383,6 +385,21 @@ namespace SkyCoopServer
             foreach (NetPeer Peer in peers.ToArray())
             {
                 if(ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
+                {
+                    Peer.Send(writer, DeliveryMethod.ReliableOrdered);
+                }
+            }
+        }
+        public static void SendGearRemoved(string GUID, string SceneName, Server ServerInstance, NetPeer Peer)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRemoveGear);
+
+            writer.Put(GUID);
+
+            if (Peer != null)
+            {
+                if (ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == SceneName)
                 {
                     Peer.Send(writer, DeliveryMethod.ReliableOrdered);
                 }

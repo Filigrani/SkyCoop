@@ -18,10 +18,7 @@ namespace SkyCoopClient
             if(BothHats.Contains("GEAR_Balaclava") 
                 || BothHats.Contains("GEAR_HatGatorBalaclavaA") 
                 || BothHats.Contains("GEAR_CottonScarf") 
-                || BothHats.Contains("GEAR_BasicWoolScarf")
-                || BothHats.Contains("GEAR_HatGatorBalaclavaA")
-                || BothHats.Contains("GEAR_HatGatorBalaclavaA")
-                || BothHats.Contains("GEAR_HatGatorBalaclavaA"))
+                || BothHats.Contains("GEAR_BasicWoolScarf"))
             {
                 return 3;
             }
@@ -320,13 +317,7 @@ namespace SkyCoopClient
             {
                 return true;
             }
-            
-            
-            return false;
-        }
-
-        public static bool AllowBeard(string Hat)
-        {
+                        
             return false;
         }
 
@@ -363,7 +354,6 @@ namespace SkyCoopClient
             {
                 return false;
             }
-
 
             return true;
         }

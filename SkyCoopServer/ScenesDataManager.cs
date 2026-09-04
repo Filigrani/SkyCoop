@@ -377,7 +377,7 @@ namespace SkyCoopServer
             return new AddedGearData(DataContainer.m_Data.m_GUID, DataContainer.m_Visual.m_FireGUID);
         }
 
-        public void RemoveGear(string SceneName, string GUID)
+        public void RemoveGear(string SceneName, string GUID, NetPeer Picker = null)
         {
             SceneData SceneData = GetSceneData(SceneName);
             if (SceneData == null)
@@ -440,13 +440,23 @@ namespace SkyCoopServer
                         SceneData.AddRadialSpawnerToRespawn(Data.m_Data.m_SpawnerGUID, m_ServerInstance.m_Timeline.m_ElapsedInGameHours);
                     }
 
-                    SceneData.m_Gears.Remove(GUID);
-                    ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
+                    if (!Data.m_Data.m_DroppedByPlayer && m_ServerInstance.m_Rules.m_DupesList.Contains(Data.m_Visual.m_GearName))
+                    {
+                        if (Picker != null)
+                        {
+                            ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance, Picker);
+                        }
+                    }
+                    else
+                    {
+                        SceneData.m_Gears.Remove(GUID);
+                        ServerSend.SendGearRemoved(GUID, SceneName, m_ServerInstance);
+                    }
                 }
             }
         }
 
-        public GearDataContainer GetGear(string SceneName, string GUID, bool Remove = false)
+        public GearDataContainer GetGear(string SceneName, string GUID, bool Remove = false, NetPeer Picker = null)
         {
             SceneData SceneData = GetSceneData(SceneName);
             if (SceneData == null)
@@ -463,7 +473,7 @@ namespace SkyCoopServer
                 {
                     if (Remove)
                     {
-                        RemoveGear(SceneName, GUID);
+                        RemoveGear(SceneName, GUID, Picker);
                     }
                 }
 

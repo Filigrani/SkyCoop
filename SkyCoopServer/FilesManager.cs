@@ -568,5 +568,38 @@ namespace SkyCoopServer
 
             return Proxy.Load();
         }
+
+        public static List<string> GetDupeList(string Path)
+        {
+
+            string _Path = $"{s_DataDirectory}/{Path}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {_Path}");
+            if (File.Exists(_Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(_Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {_Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {_Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {_Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<List<string>>(JSON);
+        }
     }
 }

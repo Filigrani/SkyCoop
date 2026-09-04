@@ -205,6 +205,7 @@ namespace SkyCoop
             string ProjectileName = Reader.GetString();
             float ExtraFloat = Reader.GetFloat();
             bool PlayEffect = Reader.GetBool();
+            SkyCoop.Logger.Log($"ClientProjectile {ProjectileName}");
             WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, PlayEffect, ExtraFloat);
         }
         public static void ClientProjectileThrow(NetDataReader Reader)
@@ -216,6 +217,7 @@ namespace SkyCoop
             Vector3 Velocity = Reader.GetVector3Unity();
             Vector3 AngularVelocity = Reader.GetVector3Unity();
             float Fuse = Reader.GetFloat();
+            SkyCoop.Logger.Log($"ClientProjectileThrow {ProjectileName}");
             WeaponsManager.HandleProjectileSync(ShooterID, Pos, Rot, ProjectileName, true, Velocity, AngularVelocity, Fuse);
         }
         public static void KillFeedMessage(NetDataReader Reader)

@@ -95,6 +95,11 @@ namespace SkyCoop
         }
         public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName, bool PlaySound = true, float ExtaFloat = 1)
         {
+            if (string.IsNullOrEmpty(ProjectileName))
+            {
+                return;
+            }
+            
             //SkyCoop.Logger.Log("SendProjectile " + ProjectileName);
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientProjectile);

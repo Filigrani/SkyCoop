@@ -1,7 +1,11 @@
 ﻿using Il2Cpp;
+using Il2CppTLD.Gear;
 using SkyCoop;
+using SkyCoopServer;
+using System.Text.Json;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopClient
 {
@@ -51,6 +55,7 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("ripmodded", new Action(RIPModded));
             uConsole.RegisterCommand("ripstop", new Action(RIPSTOP));
             uConsole.RegisterCommand("checksave", new Action(CheckSave));
+            uConsole.RegisterCommand("ripnaratives", new Action(RIPNaratives));
         }
 
         public static void GiveIlegalGear()
@@ -125,6 +130,44 @@ namespace SkyCoopClient
             if (!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
             {
                 GearSpawnsRipper.s_ScenesToSave.Clear();
+            }
+        }
+        public static void RIPNaratives()
+        {
+            uConsole.RunCommandSilent("add_all_gear");
+
+            List<string> Dupples = new List<string>();
+
+            if (GameManager.m_Inventory)
+            {
+                foreach (GearItemObject item in GameManager.m_Inventory.m_Items)
+                {
+                    if (item.m_GearItem && item.m_GearItem.m_NarrativeCollectibleItem)
+                    {
+                        if (!Dupples.Contains(item.m_GearItemName))
+                        {
+                            Dupples.Add(item.m_GearItemName);
+                        }
+                    }
+                }
+            }
+            JsonSerializerOptions Options = new JsonSerializerOptions();
+            Options.WriteIndented = true;
+            string JSON = JsonSerializer.Serialize<List<string>>(Dupples, Options);
+
+            if (!Directory.Exists($"{FilesManager.s_DataDirectory}/DupeLists"))
+            {
+                Directory.CreateDirectory($"{FilesManager.s_DataDirectory}/DupeLists");
+            }
+
+            try
+            {
+                File.WriteAllText($"{FilesManager.s_DataDirectory}/DupeLists/Naratives", JSON);
+                return;
+            }
+            catch (Exception e)
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file: {e.Message}");
             }
         }
 
