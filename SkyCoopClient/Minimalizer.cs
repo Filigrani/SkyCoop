@@ -319,7 +319,7 @@ namespace SkyCoopClient
                     {
                         continue;
                     }
-                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteJournal"))
+                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteJournal" && butt.name != "SpriteMissions"))
                     {
                         __instance.m_ActiveElements.RemoveAt(i);
                     }
@@ -343,7 +343,7 @@ namespace SkyCoopClient
                     {
                         continue;
                     }
-                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteJournal"))
+                    if (butt && (butt.name != "SpriteFirstAid" && butt.name != "SpriteInventory" && butt.name != "SpriteJournal" && butt.name != "SpriteMissions"))
                     {
                         butt.SetEnabled(false);
                         butt.gameObject.SetActive(false);

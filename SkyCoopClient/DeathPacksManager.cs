@@ -104,7 +104,8 @@ namespace SkyCoopClient
             }
 
 
-            string Prefab = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_TechnicalBackpack") ? "GEAR_TechnicalBackpack" : "CONTAINER_Backpack";
+            //string Prefab = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_TechnicalBackpack") ? "GEAR_TechnicalBackpack" : "CONTAINER_Backpack";
+            string Prefab = "CONTAINER_Backpack";
             string GUID = Guid.NewGuid().ToString();
             string OwnerName = ModMain.GetNickName();
             Vector3 Position = GameManager.GetPlayerTransform().position;

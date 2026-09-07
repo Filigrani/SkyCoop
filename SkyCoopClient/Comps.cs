@@ -1618,6 +1618,8 @@ namespace SkyCoop
                 AddPlaceholderHoldingGear(this, "GEAR_Hammer", new Vector3(0.09f, 0.11f, -0.1f), new Vector3(80, 0, 0));
                 AddPlaceholderHoldingGear(this, "GEAR_Prybar", new Vector3(0.09f, 0.1f, -0.02f), new Vector3(350, 0, 0));
 
+                AddPlaceholderHoldingGear(this, "GEAR_Camera", new Vector3(0, 0.09f, -0.03f), new Vector3(0, 0, 270));
+
                 GameObject FishKnife = AddPlaceholderHoldingGearFromBundle(this, "TalkingFish", "GEAR_FishKnife", new Vector3(0.09f, 0.07f, -0.085f), new Vector3(75, 0, 0), GearHandPose.GenericHold);
 
                 if (FishKnife)
@@ -1738,6 +1740,9 @@ namespace SkyCoop
                 AddClothingMesh("GEAR_MittenBrownStripe"); // DLC
                 AddClothingMesh("GEAR_MittenBurgundyPattern"); // DLC
                 AddClothingMesh("GEAR_RabbitSkinMittens");
+                AddClothingMesh("GEAR_Gauntlets");
+                AddClothingMesh("GEAR_SkiGloves");
+                AddClothingMesh("GEAR_WorkGloves");
 
                 foreach (SkinnedMeshRenderer Mesh in GetComponentsInChildren<SkinnedMeshRenderer>())
                 {

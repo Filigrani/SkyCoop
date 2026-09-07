@@ -289,7 +289,11 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<MeshRenderer>().Name
                             && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name
                             && ComName != Il2CppType.Of<FlareItem>().Name
-                            && ComName != Il2CppType.Of<TorchItem>().Name)
+                            && ComName != Il2CppType.Of<FlareIntensity>().Name
+                            && ComName != Il2CppType.Of<TorchItem>().Name
+                            && ComName != Il2CppType.Of<TorchIntensity>().Name
+                            && ComName != Il2CppType.Of<HeatSource>().Name
+                            && ComName != Il2CppType.Of<NavMeshObstacle>().Name)
                         {
                             UnityEngine.Object.Destroy(Com);
                         }

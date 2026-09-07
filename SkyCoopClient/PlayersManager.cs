@@ -277,6 +277,10 @@ namespace SkyCoop
                         return Comps.NetworkPlayer.Actions.PistolAim;
                     }
                 }
+                else if (PM.m_ItemInHands.name == "GEAR_Camera")
+                {
+                    return Comps.NetworkPlayer.Actions.PistolAim;
+                }
             }
 
             return Comps.NetworkPlayer.Actions.None;

@@ -128,14 +128,7 @@ namespace SkyCoopClient
                 }
 
                 int left = Had - ShouldDrop;
-                if (left > 0)
-                {
-                    SendDropItem(__instance, ShouldDrop, Had, false);
-                }
-                else
-                {
-                    SendDropItem(__instance, 0, 0, false);
-                }
+                SendDropItem(__instance, ShouldDrop, Had, false);
 
                 if (__result && __result != __instance)
                 {
@@ -292,7 +285,7 @@ namespace SkyCoopClient
                     if (OBJ)
                     {
                         Comps.DroppedGearVisual Visual = OBJ.GetComponent<Comps.DroppedGearVisual>();
-                        if (Visual)
+                        if (Visual && (__instance.m_ItemInHands == null || __instance.m_ItemInHands.m_KeroseneLampItem == null))
                         {
                             TryPickUp(Visual, true);
                         }
@@ -1287,12 +1280,13 @@ namespace SkyCoopClient
                 Explosive = true;
             }
 
-            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueuer {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} Volume {Data.m_Volume} Style {Data.m_Style} GUID {Data.m_GUID}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueue {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} Volume {Data.m_Volume} Style {Data.m_Style} GUID {Data.m_GUID}");
 
             if(Data.m_Style == -1 && !string.IsNullOrEmpty(Data.m_GUID))
             {
                 SaveSystemHook.AddCollectedDupe(Data.m_GUID);
             }
+
 
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(Data.m_GearName);
             if (reference)

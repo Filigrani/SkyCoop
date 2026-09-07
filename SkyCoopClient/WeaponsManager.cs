@@ -607,13 +607,17 @@ namespace SkyCoopClient
                         return;
                     }
                 }
-                if (__instance.ProjectilePrefab.name == "PistolBullet")
+
+                if (__instance.ProjectilePrefab)
                 {
-                    ClientSend.SendFire();
-                }
-                if (__instance.ProjectilePrefab.name == "GEAR_FlareGunAmmoSingle")
-                {
-                    ClientSend.SendProjectile(__instance.m_Camera.transform.position, __instance.m_Camera.transform.rotation, "GEAR_FlareGunAmmoSingle");
+                    if (__instance.ProjectilePrefab.name == "PistolBullet")
+                    {
+                        ClientSend.SendFire();
+                    }
+                    if (__instance.ProjectilePrefab.name == "GEAR_FlareGunAmmoSingle")
+                    {
+                        ClientSend.SendProjectile(__instance.m_Camera.transform.position, __instance.m_Camera.transform.rotation, "GEAR_FlareGunAmmoSingle");
+                    }
                 }
             }
         }
