@@ -326,6 +326,23 @@ namespace SkyCoopClient
             }
         }
 
+        [HarmonyLib.HarmonyPatch(typeof(Freezing), "CalculateBodyTemperature")]
+        private static class Freezing_CalculateBodyTemperature
+        {
+            private static void Postfix(Freezing __instance, ref float __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (s_PassingTime)
+                {
+                    if (GameManager.m_Rest)
+                    {
+                        __result += GameManager.m_Rest.GetBedWarmthBonusCelsius();
+                    }
+                }
+            }
+        }
+
         public static bool DoRest()
         {
             Panel_Rest Panel = InterfaceManager.GetPanel<Panel_Rest>();
@@ -506,6 +523,10 @@ namespace SkyCoopClient
             if (GameManager.m_PassTime && s_PassingTime)
             {
                 GameManager.m_Rest.EndSleeping(false);
+                if (GameManager.m_PassTime.m_Bed)
+                {
+                    GameManager.m_PassTime.m_Bed.PlayCloseAudio();
+                }
                 GameManager.m_PassTime.m_Bed = null;
                 s_PassingTime = false;
                 if (GameManager.m_PassTime.m_PassTimeAudioInstance != 0U)
@@ -517,8 +538,37 @@ namespace SkyCoopClient
             }
         }
 
+        public static void UnequipToSleep()
+        {
+            if (GameManager.m_PlayerManager)
+            {
+                if (GameManager.m_PlayerManager.m_ItemInHands)
+                {
+                    GearItem gi = GameManager.m_PlayerManager.m_ItemInHands;
+                    if (gi.m_FlareItem || gi.m_TorchItem || gi.m_KeroseneLampItem)
+                    {
+                        if (gi.m_FlareItem && gi.m_FlareItem.IsBurning())
+                        {
+                            gi.Drop(1, true, true, true);
+                        }
+                        else if (gi.m_TorchItem && gi.m_TorchItem.IsBurning())
+                        {
+                            gi.Drop(1, true, true, true);
+                        }
+                        else if (gi.m_KeroseneLampItem)
+                        {
+                            gi.m_KeroseneLampItem.TurnOff();
+                        }
+                    }
+                    GameManager.m_PlayerManager.UseInventoryItem(gi, true);
+                }
+                GameManager.m_PlayerManager.m_LastUnequippedItem = null;
+            }
+        }
+
         public static void OnStartPassTime(PassTime Pass, Bed b)
         {
+            GameManager.GetRestComponent().m_Bed = b;
             Pass.m_Bed = b;
             s_PassingTime = true;
             s_PassTimeStartTOD = GameManager.GetUniStorm().m_ElapsedHours;
@@ -526,6 +576,13 @@ namespace SkyCoopClient
             {
                 Pass.m_PassTimeAudioInstance = GameAudioManager.PlaySound(Pass.m_PassTimeAudio, GameManager.GetPlayerObject());
             }
+
+            if (b)
+            {
+                b.PlayOpenAudio();
+            }
+
+            UnequipToSleep();
 
             Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
 
@@ -572,6 +629,8 @@ namespace SkyCoopClient
             Rest.m_SleepDurationHours = 12;
             Rest.m_SleepDurationSeconds = 43200;
             GameManager.GetLogComponent().AddItem(Localization.Get("GAMEPLAY_Wenttosleep"));
+
+            UnequipToSleep();
 
             Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
 
