@@ -76,7 +76,6 @@ namespace SkyCoopClient
             }
         }
 
-
         [HarmonyLib.HarmonyPatch(typeof(BreakDown), "DeserializeAll")]
         private static class HarvestableManagern_DeserializeAll
         {

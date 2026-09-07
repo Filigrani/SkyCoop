@@ -48,8 +48,10 @@ namespace SkyCoopClient
             public float m_TimeBeingCooked = 0;
             public string m_CookingResult = "";
             public float m_Volume = 1;
+            public int m_Style = 0;
+            public string m_GUID = "";
 
-            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false, float timebeingcooked = 0, string cookingresult = "", float volume = 1)
+            public GearPickedElement(string gearName, string json, bool dropAround = false, bool spawnLoaded = false, float timebeingcooked = 0, string cookingresult = "", float volume = 1, int style = 0, string GUID = "")
             {
                 m_GearName = gearName;
                 m_JSON = json;
@@ -58,6 +60,13 @@ namespace SkyCoopClient
                 m_TimeBeingCooked = timebeingcooked;
                 m_CookingResult = cookingresult;
                 m_Volume = volume;
+                m_Style = style;
+                m_GUID = GUID;
+
+                if(m_Style == -1)
+                {
+                    m_DropAround = true;
+                }
             }
         }
 
@@ -1036,6 +1045,11 @@ namespace SkyCoopClient
 
         public static void HandleGearDropped(DataStr.GearDataVisual Data)
         {
+            if(Data.m_Style == -1 && SaveSystemHook.IsDupeAlreadyCollected(Data.m_GUID))
+            {
+                return;
+            }
+            
             GameObject GearObject = PdidTable.GetGameObject(Data.m_GUID);
 
             if(GearObject == null)
@@ -1273,7 +1287,12 @@ namespace SkyCoopClient
                 Explosive = true;
             }
 
-            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueuer {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} Volume {Data.m_Volume}");
+            SkyCoop.Logger.Log(ConsoleColor.Green, $"ProcessGearPickUpQueuer {Data.m_GearName} CookingResult {Data.m_CookingResult} TimeBeingCooked {Data.m_TimeBeingCooked} Volume {Data.m_Volume} Style {Data.m_Style} GUID {Data.m_GUID}");
+
+            if(Data.m_Style == -1 && !string.IsNullOrEmpty(Data.m_GUID))
+            {
+                SaveSystemHook.AddCollectedDupe(Data.m_GUID);
+            }
 
             GameObject reference = AssetManager.GetAssetFromGame<GameObject>(Data.m_GearName);
             if (reference)

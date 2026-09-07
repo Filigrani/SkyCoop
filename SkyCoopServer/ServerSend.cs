@@ -347,7 +347,7 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON, bool DropAround = false, float TimeBeingCooked = 0, string CookingResult = "", float Volume = 0)
+        public static void SendPickUpGear(NetPeer Client, string GearName, string JSON, bool DropAround = false, float TimeBeingCooked = 0, string CookingResult = "", float Volume = 0, int Style = 0, string GUID = "")
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientPickUpGear);
@@ -359,6 +359,8 @@ namespace SkyCoopServer
             writer.Put(TimeBeingCooked);
             writer.Put(CookingResult);
             writer.Put(Volume);
+            writer.Put(Style);
+            writer.Put(GUID);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

@@ -304,7 +304,9 @@ namespace SkyCoop
                 float TimeBeingCooked = Reader.GetFloat();
                 string CookingResult = Reader.GetString();
                 float Volume = Reader.GetFloat();
-                GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement(GearName, JSON, DropAround, false, TimeBeingCooked, CookingResult, Volume));
+                int Style = Reader.GetInt();
+                string GUID = Reader.GetString();
+                GearsSync.HandleGearPickUp(new GearsSync.GearPickedElement(GearName, JSON, DropAround, false, TimeBeingCooked, CookingResult, Volume, Style, GUID));
             }
             else
             {

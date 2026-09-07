@@ -104,7 +104,7 @@ namespace SkyCoopClient
             }
 
 
-            string Prefab = "CONTAINER_Backpack";
+            string Prefab = GameManager.GetInventoryComponent().HasNonRuinedItem("GEAR_TechnicalBackpack") ? "GEAR_TechnicalBackpack" : "CONTAINER_Backpack";
             string GUID = Guid.NewGuid().ToString();
             string OwnerName = ModMain.GetNickName();
             Vector3 Position = GameManager.GetPlayerTransform().position;
@@ -170,6 +170,10 @@ namespace SkyCoopClient
                             {
                                 InterfaceManager.GetPanel<Panel_PickWater>().TransferAllWaterInventoryToContainer(Box, Gear.m_WaterSupply);
                             }
+                        }
+                        else if(Gear.m_CantDropItem || Gear.m_NarrativeCollectibleItem || Gear.name == "GEAR_BallisticVest")
+                        {
+                            continue;
                         }
                         else if (Gear.m_StackableItem && Box.AddToExistingStackable(Gear, Gear.GetNormalizedCondition(), Gear.m_StackableItem.m_Units))
                         {
