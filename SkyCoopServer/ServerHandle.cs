@@ -239,7 +239,12 @@ namespace SkyCoopServer
             injectedItem.m_Position = Position;
             injectedItem.m_Rotation = Rotation;
 
-            ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID)).m_VisualData.m_InjectedItems.Add(injectedItem);
+            PlayerData Target = ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID));
+            if (Target == null) // Target left the server.
+            {
+                return;
+            }
+            Target.m_VisualData.m_InjectedItems.Add(injectedItem);
 
             List<NetPeer> peers = new List<NetPeer>();
             ServerInstance.m_Instance.GetConnectedPeers(peers);
@@ -269,6 +274,10 @@ namespace SkyCoopServer
             }
 
             PlayerData Data = ServerInstance.GetPlayerDataByNetPeer(ServerInstance.GetClient(PlayerID));
+            if (Data == null) // Target left the server.
+            {
+                return;
+            }
 
             for (int i = 0; i < Data.m_VisualData.m_InjectedItems.Count; i++)
             {

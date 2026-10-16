@@ -63,8 +63,12 @@ namespace SkyCoopServer
 
         public bool SetPlayerName(int Index, string Name)
         {
-            DataStr.PlayerData Player = m_Players[Index];
-            if (Player != null)
+            DataStr.PlayerData Player = GetPlayer(Index);
+            if (Player == null)
+            {
+                return false;
+            }
+            else
             {
                 if (NameIsFree(Name))
                 {
@@ -482,6 +486,10 @@ namespace SkyCoopServer
 
         public void OnPlayerDisconnect(int PlayerID)
         {
+            if (GetPlayer(PlayerID) == null)
+            {
+                return;
+            }
             PlayersSquad LeftSquad = GetSquadPlayerIn(PlayerID);
             m_Players[PlayerID] = new PlayerData(PlayerID);
 

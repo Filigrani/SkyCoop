@@ -241,7 +241,7 @@ namespace SkyCoopServer
 
         public DataStr.PlayerData GetPlayerDataByNetPeer(NetPeer Peer)
         {
-            if (m_Instance != null)
+            if (m_Instance != null && Peer != null)
             {
                 return m_PlayersData.GetPlayer(Peer.Id);
             }
@@ -694,6 +694,13 @@ namespace SkyCoopServer
 
             m_Listener.PeerConnectedEvent += peer =>
             {
+                // Requests that were accepted at the same time can push Id past the players list.
+                if (peer.Id >= maxPlayers)
+                {
+                    Logger.Log(ConsoleColor.Red, $"[Server] Client {peer.Id} rejected, server is full ({maxPlayers})");
+                    m_Instance.DisconnectPeer(peer);
+                    return;
+                }
                 Logger.Log(ConsoleColor.Green, $"[Server] We got connection: {peer} assigned them as {peer.Id}");
                 ServerSend.Welcome(peer, peer.Id);
             };
@@ -712,11 +719,22 @@ namespace SkyCoopServer
 
             m_Listener.NetworkReceiveEvent += (fromPeer, dataReader, channel, deliveryMethod) =>
             {
-                int PacketID = dataReader.GetInt();
+                int PacketID = -1;
+                try
+                {
+                    PacketID = dataReader.GetInt();
 
-                ExecutePacketEvent(PacketID, fromPeer, dataReader);
-
-                dataReader.Recycle();
+                    ExecutePacketEvent(PacketID, fromPeer, dataReader);
+                }
+                catch (Exception e)
+                {
+                    // One bad packet should not break the whole server tick.
+                    Logger.Log(ConsoleColor.Red, $"[Server] Failed to handle packet {PacketID} from client {fromPeer.Id}: {e}");
+                }
+                finally
+                {
+                    dataReader.Recycle();
+                }
             };
 
             m_IsReady = true;
