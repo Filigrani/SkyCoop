@@ -319,7 +319,7 @@ namespace SkyCoop
                 }
                 if (GUI.Button(new Rect(160, 70, 80, 20), "Teleport"))
                 {
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT ID OF PLAYER TELEPORT TO", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT ID OF PLAYER TELEPORT TO", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
                 if (GUI.Button(new Rect(160, 100, 80, 20), "Animals"))
                 {
@@ -352,7 +352,7 @@ namespace SkyCoop
 
                     //MyMod.CheckOtherPlayer(MyMod.BuildMyAfflictionList(), 0, Con.m_CurrentHP, Con.m_MaxHP,Thi.m_CurrentThirst, Hun.m_CurrentReserveCalories, Hun.m_MaxReserveCalories);
                     //MyMod.MakeFakeFire(FireManager.m_Fires[0]);
-                    //InterfaceManager.m_Panel_ActionsRadial.ShowToolsRadial();
+                    //InterfaceManager.GetPanel<Panel_ActionsRadial>().ShowToolsRadial();
                     //MyMod.AddSpray(Replica);
                     //MyMod.DropAll();
                     //MyMod.OriginalRadioSeaker = true;
@@ -406,7 +406,7 @@ namespace SkyCoop
                     //{
                     //    ContainerOverride = "";
                     //}
-                    //ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), (int)GameManager.GetUniStorm().m_CurrentRegion);
+                    //ExpeditionManager.StartNewExpedition(MPSaveManager.GetSubNetworkGUID(), RegionIds.Of(GameManager.GetUniStorm().m_CurrentRegion));
                     //MyMod.LogScreenshotData();
                     ResourceIndependent.SpawnSomeGearsOnScene(MyMod.level_name, "", "GEAR_SCPresent");
                     ResourceIndependent.SpawnSomeGearsOnScene(MyMod.level_name, "SANDBOX", "GEAR_SCPresent");
@@ -647,11 +647,11 @@ namespace SkyCoop
                 }
                 if (GUI.Button(new Rect(160, 130, 80, 20), "TP to GUID"))
                 {
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT GUID TO TELEPORT TO", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT GUID TO TELEPORT TO", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
                 if (GUI.Button(new Rect(160, 160, 80, 20), "Track GUID"))
                 {
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT GUID TO TRACK", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "INPUT GUID TO TRACK", "", Panel_Confirmation.ButtonLayout.Button_2, "TELEPORT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
                 if (GUI.Button(new Rect(160, 220, 80, 20), "Remove all"))
                 {

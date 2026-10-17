@@ -39,7 +39,7 @@ namespace GameServer
 #if (DEDICATED)
             Logger.Log(LOG, Shared.LoggerColor.Blue);
 #else
-            MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, LOG);
+            MelonLoader.MelonLogger.Msg(System.ConsoleColor.Blue, LOG);
 #endif
         }
 
@@ -117,4 +117,4 @@ namespace GameServer
             }
         }
     }
-}
+}

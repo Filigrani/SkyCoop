@@ -1,211 +1,35 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- Ported from .NET Framework 4.7.2 / MelonLoader 0.5 to net6 / MelonLoader 0.7.2 for TLD 2.55 (Unity 6). -->
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{7F1E1453-C20A-4A4C-9C7D-41DD727613BF}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <TargetFramework>net6.0</TargetFramework>
+    <LangVersion>Latest</LangVersion>
     <RootNamespace>SkyCoop</RootNamespace>
     <AssemblyName>SkyCoop</AssemblyName>
-    <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
+    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <DebugType>embedded</DebugType>
+    <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+    <Configurations>Debug;Release;Dedicated;Dedicated Linux</Configurations>
+    <NoWarn>$(NoWarn);CS0162;CS0168;CS0219;CS0414;CS0649;CS0169;CS0618;CS0612</NoWarn>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>TRACE;DEBUG</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <AllowUnsafeBlocks>false</AllowUnsafeBlocks>
-  </PropertyGroup>
-  <PropertyGroup />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Dedicated|AnyCPU'">
-    <OutputPath>bin\Dedicated\</OutputPath>
+  <PropertyGroup Condition="'$(Configuration)' == 'Dedicated'">
     <DefineConstants>DEDICATED</DefineConstants>
   </PropertyGroup>
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'Dedicated Linux|AnyCPU'">
-    <OutputPath>bin\Dedicated Linux\</OutputPath>
+  <PropertyGroup Condition="'$(Configuration)' == 'Dedicated Linux'">
     <DefineConstants>DEDICATED;DEDICATED_LINUX</DefineConstants>
   </PropertyGroup>
-  <ItemGroup>
-    <Compile Include="API.cs" />
-    <Compile Include="ClientHandle.cs" />
-    <Compile Include="ClientUser.cs" />
-    <Compile Include="Comps.cs" />
-    <Compile Include="Constants.cs" />
-    <Compile Include="DataStr.cs" />
-    <Compile Include="DeBugMenu.cs" />
-    <Compile Include="ExpeditionBuilder.cs" />
-    <Compile Include="ExpeditionEditor.cs" />
-    <Compile Include="ExpeditionManager.cs" />
-    <Compile Include="GameLogic.cs" />
-    <Compile Include="MenuHook.cs" />
-    <Compile Include="ModsValidation.cs" />
-    <Compile Include="MPSaveManager.cs" />
-    <Compile Include="MPStats.cs" />
-    <Compile Include="Packet.cs" />
-    <Compile Include="Patches.cs" />
-    <Compile Include="ResourceIndependent.cs" />
-    <Compile Include="SafeZoneManager.cs" />
-    <Compile Include="SanityManager.cs" />
-    <Compile Include="Server.cs" />
-    <Compile Include="Client.cs" />
-    <Compile Include="MyModMain.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="ServerHandle.cs" />
-    <Compile Include="ServerSend.cs" />
-    <Compile Include="Shared.cs" />
-    <Compile Include="SteamConnect.cs" />
-    <Compile Include="Supporters.cs" />
-    <Compile Include="TFHUD.cs" />
-    <Compile Include="ThreadManager.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <WCFMetadata Include="Service References\" />
-  </ItemGroup>
-  <ItemGroup>
-    <Reference Include="0Harmony">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\0Harmony.dll</HintPath>
-    </Reference>
-    <Reference Include="Assembly-CSharp, Version=1.0.8129.36050, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\Assembly-CSharp.dll</HintPath>
-    </Reference>
-    <Reference Include="Il2Cppmscorlib">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\Il2Cppmscorlib.dll</HintPath>
-    </Reference>
-    <Reference Include="Il2CppSystem, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\Il2CppSystem.dll</HintPath>
-    </Reference>
-    <Reference Include="KeyboardUtilities">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\KeyboardUtilities.dll</HintPath>
-    </Reference>
-    <Reference Include="MelonLoader, Version=0.5.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\MelonLoader.dll</HintPath>
-    </Reference>
-    <Reference Include="Steamworks.NET">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.IO.Compression" />
-    <Reference Include="System.IO.Compression.FileSystem" />
-    <Reference Include="System.Numerics" />
-    <Reference Include="UnhollowerBaseLib">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnhollowerBaseLib.dll</HintPath>
-    </Reference>
-    <Reference Include="UnhollowerRuntimeLib">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnhollowerRuntimeLib.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AIModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.AIModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AnimationModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.AnimationModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AssetBundleModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.AssetBundleModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.AudioModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.AudioModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.CoreModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.CoreModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.ImageConversionModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.ImageConversionModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.IMGUIModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.IMGUIModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.ParticleSystemModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.ParticleSystemModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.Physics2DModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.Physics2DModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.PhysicsModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.PhysicsModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.TerrainModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.TerrainModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.TextRenderingModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.TextRenderingModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UI, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.UI.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UIModule, Version=3.7.1.6, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.UIModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.UnityWebRequestModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.UnityWebRequestWWWModule, Version=0.0.0.0, Culture=neutral, processorArchitecture=MSIL">
-      <SpecificVersion>False</SpecificVersion>
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.UnityWebRequestWWWModule.dll</HintPath>
-    </Reference>
-    <Reference Include="UnityEngine.VehiclesModule">
-      <HintPath>D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\MelonLoader\Managed\UnityEngine.VehiclesModule.dll</HintPath>
-    </Reference>
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+
+  <!-- Game install with MelonLoader 0.7.2 that has generated Il2CppAssemblies. Override with /p:TLDPath=... -->
   <PropertyGroup>
-    <PostBuildEvent>@del "S:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent"
-@del "S:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\Client.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Client.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\DataStr.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\DataStr.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\MPSaveManager.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\MPSaveManager.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\Packet.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Packet.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\ResourceIndependent.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ResourceIndependent.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\SafeZoneManager.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\SafeZoneManager.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\Server.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Server.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\ServerHandle.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ServerHandle.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\ServerSend.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ServerSend.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\Shared.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Shared.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\Supporters.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\Supporters.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\MPStats.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\MPStats.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\ExpeditionManager.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ExpeditionManager.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\ExpeditionBuilder.cs" "S:\source\SkyCoopDedicatedServer\SkyCoopDedicatedServer\ExpeditionBuilder.cs"
-@copy "S:\source\repos\SkyCoopBeforeTFTFT\bin\Release\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll"
-"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\BuildInfo.json" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\blueprints" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\auto-mapped" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\gear-spawns"
-@rename "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.zip" "SkyCoop.modcomponent"
-"C:\Program Files\7-Zip\7z.exe" a "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoopRelease.zip" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\Steamworks.NET.dll" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\README.TXT" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\SkyCoop.modcomponent" "D:\Program Files (x86)\Steam\steamapps\common\TheLongDark\Mods\multiplayerstuff.unity3d"</PostBuildEvent>
+    <TLDPath Condition="'$(TLDPath)' == ''">E:\Programs\Steam\steamapps\common\TheLongDark</TLDPath>
   </PropertyGroup>
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+  <ItemGroup>
+    <PackageReference Include="LavaGang.MelonLoader" Version="0.7.2" ExcludeAssets="runtime" />
+    <PackageReference Include="HarmonyX" Version="2.10.2" ExcludeAssets="runtime" />
+    <PackageReference Include="Il2CppInterop.Runtime" Version="1.5.1" ExcludeAssets="runtime" />
+    <!-- Matches the game's steam_api64 (SDK 1.51: SteamUser021/SteamFriends017). Ship runtimes/win-x64 dll to UserLibs. -->
+    <PackageReference Include="Steamworks.NET" Version="15.0.1" />
+    <Reference Include="$(TLDPath)\MelonLoader\Il2CppAssemblies\*.dll" Private="false" />
+    <!-- Unity editor scripts and build outputs, not part of the mod. -->
+    <Compile Remove="Tools/**;dist/**" />
+  </ItemGroup>
 </Project>

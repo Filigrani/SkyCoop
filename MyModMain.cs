@@ -11,16 +11,16 @@ using System.Threading.Tasks;
 using System.IO;
 using System.IO.Compression;
 using MelonLoader;
-using Harmony;
-using UnhollowerRuntimeLib;
-using UnhollowerBaseLib;
+using HarmonyLib;
+// using UnhollowerRuntimeLib; (see GlobalUsings.cs)
+// using UnhollowerBaseLib; (see GlobalUsings.cs)
 using GameServer;
-using MelonLoader.TinyJSON;
+using TinyJSON;
 using IL2CPP = Il2CppSystem.Collections.Generic;
 using static SkyCoop.Comps;
 using static SkyCoop.DataStr;
 using UnityEngine.SceneManagement;
-using static Utils;
+using static Il2Cpp.Utils;
 using static SkyCoop.ExpeditionManager;
 
 namespace SkyCoop
@@ -296,7 +296,7 @@ namespace SkyCoop
 
         public static void AddSlicedJsonData(DataStr.SlicedJsonData jData)
         {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
+            //MelonLogger.Msg(System.ConsoleColor.Yellow, "Got Slice for hash:"+jData.m_Hash+" DATA: "+jData.m_Str);
             if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
             {
                 string previousString = "";
@@ -357,16 +357,16 @@ namespace SkyCoop
 
                 if (__instance.m_ResearchItem.IsResearchComplete())
                 {
-                    __instance.m_ResearchItem.UpdateItemType(GearTypeEnum.Firestarting);
+                    // 2.55 removed ResearchItem.UpdateItemType (book category is fixed by its GearItemData).
                 } else {
-                    __instance.m_ResearchItem.UpdateItemType(GearTypeEnum.Tool);
+                    // 2.55 removed ResearchItem.UpdateItemType (book category is fixed by its GearItemData).
                 }
             }
         }
 
         public static void AddSlicedJsonDataForPicker(DataStr.SlicedJsonData jData, bool place)
         {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Got Requested Item Slice for hash:" + jData.m_Hash + " DATA: " + jData.m_Str);
+            //MelonLogger.Msg(System.ConsoleColor.Yellow, "Got Requested Item Slice for hash:" + jData.m_Hash + " DATA: " + jData.m_Str);
             if (SlicedJsonDataBuffer.ContainsKey(jData.m_Hash))
             {
                 string previousString = "";
@@ -390,16 +390,16 @@ namespace SkyCoop
                 if (SlicedJsonDataBuffer.TryGetValue(jData.m_Hash, out finalJsonData) == true)
                 {
                     SlicedJsonDataBuffer.Remove(jData.m_Hash);
-                    MelonLogger.Msg(ConsoleColor.Green, "Finished getting data for:" + jData.m_Hash);
+                    MelonLogger.Msg(System.ConsoleColor.Green, "Finished getting data for:" + jData.m_Hash);
 
                     string gearName = jData.m_Extra.m_GearName;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Going to get " + jData.m_Extra.m_GearName);
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "Going to get " + jData.m_Extra.m_GearName);
 
                     GameObject reference = GetGearItemObject(gearName);
 
                     if (reference == null)
                     {
-                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                         return;
                     }
 
@@ -408,7 +408,7 @@ namespace SkyCoop
                     DisableObjectForXPMode.RemoveDisabler(newGear.gameObject);
                     if (newGear == null)
                     {
-                        MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                        MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                         return;
                     }
 
@@ -420,7 +420,7 @@ namespace SkyCoop
                     {
                         int minutesDroped = MinutesFromStartServer - Extra.m_DroppedTime;
                         OverrideLampReduceFuel = minutesDroped;
-                        MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
+                        MelonLogger.Msg(System.ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                     }
                     bool UseLastVisualDropPos = false;
                     if (!string.IsNullOrEmpty(finalJsonData))
@@ -430,7 +430,7 @@ namespace SkyCoop
                     {
                         UseLastVisualDropPos = true;
                     }
-                    MelonLogger.Msg(ConsoleColor.Cyan, "UseLastVisualDropPos " + UseLastVisualDropPos);
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "UseLastVisualDropPos " + UseLastVisualDropPos);
 
                     if (!string.IsNullOrEmpty(jData.m_Extra.m_PhotoGUID))
                     {
@@ -478,8 +478,8 @@ namespace SkyCoop
                                 int minutesOnDry = MinutesFromStartServer - Extra.m_DroppedTime;
 
                                 gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = (float)minutesOnDry / 60;
-                                MelonLogger.Msg(ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
-                                MelonLogger.Msg(ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                                MelonLogger.Msg(System.ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
+                                MelonLogger.Msg(System.ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
                             }
                         }
                         if (!string.IsNullOrEmpty(Extra.m_ExpeditionNote))
@@ -529,16 +529,16 @@ namespace SkyCoop
 
         public static void ShowCFGData()
         {
-            MelonLogger.Msg(ConsoleColor.Green, "[Server Config Data] Data updated");
-            MelonLogger.Msg(ConsoleColor.Blue, "m_FastConsumption: " + ServerConfig.m_FastConsumption);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedSpawns: " + ServerConfig.m_DuppedSpawns);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_DuppedContainers: " + ServerConfig.m_DuppedContainers);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_PlayersSpawnType: " + ServerConfig.m_PlayersSpawnType);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_FireSync: " + ServerConfig.m_FireSync);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_CheatsMode: " + ServerConfig.m_CheatsMode);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_CheckModsValidation: " + ServerConfig.m_CheckModsValidation);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_SaveScamProtection: " + ServerConfig.m_SaveScamProtection);
-            MelonLogger.Msg(ConsoleColor.Blue, "m_PVP: " + ServerConfig.m_PVP);
+            MelonLogger.Msg(System.ConsoleColor.Green, "[Server Config Data] Data updated");
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_FastConsumption: " + ServerConfig.m_FastConsumption);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_DuppedSpawns: " + ServerConfig.m_DuppedSpawns);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_DuppedContainers: " + ServerConfig.m_DuppedContainers);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_PlayersSpawnType: " + ServerConfig.m_PlayersSpawnType);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_FireSync: " + ServerConfig.m_FireSync);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_CheatsMode: " + ServerConfig.m_CheatsMode);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_CheckModsValidation: " + ServerConfig.m_CheckModsValidation);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_SaveScamProtection: " + ServerConfig.m_SaveScamProtection);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "m_PVP: " + ServerConfig.m_PVP);
         }
 
         //STRUCTS
@@ -684,7 +684,7 @@ namespace SkyCoop
             if (SaveToLoad != null)
             {
                 SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
-                GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
+                GameManager.LoadSaveGameSlot(SaveToLoad);
             }
         }
 
@@ -708,20 +708,20 @@ namespace SkyCoop
             }
             if (HaveSaveFile == false)
             {
-                MelonLogger.Msg(ConsoleColor.Yellow, "[Dedicated server] No save file with name " + searchname + " found!");
-                MelonLogger.Msg(ConsoleColor.Yellow, "[Dedicated server] Found " + SaveGameSlots.m_SaveSlots.Count + " saves");
+                MelonLogger.Msg(System.ConsoleColor.Yellow, "[Dedicated server] No save file with name " + searchname + " found!");
+                MelonLogger.Msg(System.ConsoleColor.Yellow, "[Dedicated server] Found " + SaveGameSlots.m_SaveSlots.Count + " saves");
                 ForceCreateSlotForPlayingSilently(Region, Expereince, Seed, searchname);
             }
             else{
                 SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save found!");
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot name " + SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot user defined name " + SaveGameSlots.GetUserDefinedSlotName(SaveToLoad.m_SaveSlotName));
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Save found!");
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Save slot base name is " + SaveGameSlots.GetBaseNameForSave(SaveToLoad.m_SaveSlotName));
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Save slot name " + SaveToLoad.m_SaveSlotName);
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Save slot user defined name " + SaveGameSlots.GetUserDefinedSlotName(SaveToLoad.m_SaveSlotName));
                 SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Selecting slot " + SaveGameSystem.GetCurrentSaveName());
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Save slot hash " + SaveGameSlots.LoadDataFromSlot(SaveToLoad.m_SaveSlotName, "global").GetHashCode());
-                GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Selecting slot " + SaveGameSystem.GetCurrentSaveName());
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Save slot hash " + SaveGameSlots.LoadDataFromSlot(SaveToLoad.m_SaveSlotName, "global").GetHashCode());
+                GameManager.LoadSaveGameSlot(SaveToLoad);
             }
         }
 
@@ -732,14 +732,14 @@ namespace SkyCoop
 
             if(Seed == 0)
             {
-                MelonLogger.Msg(ConsoleColor.Green, "[Dedicated server] Creating save slot " + SlotName + " with random seed");
+                MelonLogger.Msg(System.ConsoleColor.Green, "[Dedicated server] Creating save slot " + SlotName + " with random seed");
             }else{
-                MelonLogger.Msg(ConsoleColor.Green, "[Dedicated server] Creating save slot " + SlotName + " with seed " + Seed);
+                MelonLogger.Msg(System.ConsoleColor.Green, "[Dedicated server] Creating save slot " + SlotName + " with seed " + Seed);
             }
 
             SaveGameSystem.SetCurrentSaveInfo(Episode.One, SaveSlotType.SANDBOX, SaveGameSlots.GetUnusedGameId(), null);
             GameManager.GetExperienceModeManagerComponent().SetExperienceModeType(ExpType);
-            GameManager.m_StartRegion = Region;
+            GameManager.m_StartRegion = RegionIds.Spec((int)Region);
             SaveGameSlots.SetSlotDisplayName(SaveGameSystem.GetCurrentSaveName(), SlotName);
 
             GameManager.Instance().LaunchSandbox();
@@ -787,12 +787,12 @@ namespace SkyCoop
             }
             if (HaveSaveFile == false)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "[-slot] No save file with name " + searchname + " found!");
+                MelonLogger.Msg(System.ConsoleColor.Red, "[-slot] No save file with name " + searchname + " found!");
             } else {
-                MelonLogger.Msg(ConsoleColor.Magenta, "[-slot] Save found! Loading...");
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[-slot] Save found! Loading...");
                 SaveGameSlots.SetBaseNameForSave(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveSlotName);
                 SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
-                GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
+                GameManager.LoadSaveGameSlot(SaveToLoad);
             }
         }
 
@@ -800,7 +800,7 @@ namespace SkyCoop
         {
             SteamConnect.Main.SetLobbyName(CustomServerName);
             Server.StartSteam(MaxPlayers);
-            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server is ready! Have fun!");
+            MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Server is ready! Have fun!");
         }
 
         public static bool SetP2PToLobbyForDSAfterLoad = false;
@@ -821,15 +821,15 @@ namespace SkyCoop
 
             if (ds == true)
             {
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Trying to load save file...");
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Trying to load save file...");
                 MyChatName = "DedicatedServer";
             }
 
             if (SteamConnect.CanUseSteam == false && ServerData.UsingSteam == true)
             {
                 ServerData.UsingSteam = false;
-                MelonLogger.Msg(ConsoleColor.Red, ServStr + " In server.json 'UsingSteam' set to true, but you using version of the game that not support Hosting with using Steam! If you use licence version of the game, but still see this, reboot steam.");
-                MelonLogger.Msg(ConsoleColor.Magenta, ServStr + " Forced changing 'UsingSteam' to false, and running regular server.");
+                MelonLogger.Msg(System.ConsoleColor.Red, ServStr + " In server.json 'UsingSteam' set to true, but you using version of the game that not support Hosting with using Steam! If you use licence version of the game, but still see this, reboot steam.");
+                MelonLogger.Msg(System.ConsoleColor.Magenta, ServStr + " Forced changing 'UsingSteam' to false, and running regular server.");
             }
 
             if (ServerData.UsingSteam == false)
@@ -938,7 +938,7 @@ namespace SkyCoop
 
         public static void DumpInterloperBans()
         {
-            Il2CppReferenceArray<UnityEngine.Object> Stuff = Resources.LoadAll("", GameObject.Il2CppType);
+            Il2CppReferenceArray<UnityEngine.Object> Stuff = Resources.LoadAll("", Il2CppType.Of<GameObject>());
             foreach (var item in Stuff)
             {
                 GameObject obj = item.Cast<GameObject>();
@@ -952,7 +952,7 @@ namespace SkyCoop
             }
         }
 
-        public override void OnApplicationStart()
+        public override void OnInitializeMelon()
         {
             SetAppBackgroundMode();
             bool DedicatedServerWithRender = Environment.GetCommandLineArgs().Contains("-dedicated");
@@ -963,37 +963,33 @@ namespace SkyCoop
             bool ForceNoSteam = Environment.GetCommandLineArgs().Contains("-nosteam");
             bool ForceNoEgs = Environment.GetCommandLineArgs().Contains("-noegs");
 
-            if (typeof(SteamManager).GetMethod("Awake") == null || ForceNoSteam)
+            // 2.55: SteamManager became Il2CppTLD.Platform.SteamPlatformProvider; EpicOnlineServicesManager is gone (EGS builds unsupported).
+            // Looked up by name: the non-Steam (Epic/EOS) build of 2.55 has no SteamPlatformProvider type at all.
+            var steamInit = HarmonyLib.AccessTools.TypeByName("Il2CppTLD.Platform.SteamPlatformProvider")?.GetMethod("Initialize");
+            if (steamInit == null || ForceNoSteam)
             {
                 if (ForceNoSteam)
                 {
-                    MelonLogger.Msg(ConsoleColor.DarkMagenta, "[SteamWorks.NET] Force no steam enabled");
+                    MelonLogger.Msg(System.ConsoleColor.DarkMagenta, "[SteamWorks.NET] Force no steam enabled");
                 }
-                MelonLogger.Msg("[SteamWorks.NET] This game version has not SteamManager");
-                var original = typeof(EpicOnlineServicesManager).GetMethod("Start");
-                if (original == null || ForceNoEgs)
-                {
-                    MelonLogger.Msg("[EpicOnlineServicesManager] This game version has not EpicOnlineServicesManager");
-                } else {
-                    MelonLogger.Msg("[EpicOnlineServicesManager] This game version has EpicOnlineServicesManager");
-                    var postfix = typeof(Pathes).GetMethod("EGSHook");
-                    HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
-                    MelonLogger.Msg("[EpicOnlineServicesManager] Patching EpicOnlineServicesManager complete!");
-                }
+                MelonLogger.Msg("[SteamWorks.NET] Steam platform not available, Steam features disabled");
             } else {
-                MelonLogger.Msg("[SteamWorks.NET] This game version has SteamManager");
-                var original = typeof(SteamManager).GetMethod("Awake");
                 var postfix = typeof(SteamConnect).GetMethod("Init");
-                HarmonyInstance.Patch(original, null, new HarmonyLib.HarmonyMethod(postfix));
-                MelonLogger.Msg("[SteamWorks.NET] Patching SteamManager complete!");
+                HarmonyInstance.Patch(steamInit, null, new HarmonyLib.HarmonyMethod(postfix));
+                MelonLogger.Msg("[SteamWorks.NET] Patching SteamPlatformProvider complete!");
             }
 
             Supporters.GetSupportersList();
 
-            MelonLogger.Msg($"[{InfoAttribute.Name}] Version {InfoAttribute.Version} loaded!");
+            MelonLogger.Msg($"[{Info.Name}] Version {Info.Version} loaded!");
+            if (!MelonMod.RegisteredMelons.Any(m => m.Info.Name == "ModComponent"))
+            {
+                MelonLogger.Warning("[SkyCoop] ModComponent is not loaded: SkyCoop items (GEAR_SC*) will be missing. Put ModComponent.dll into Mods.");
+            }
 
 
-            LoadedBundle = AssetBundle.LoadFromFile("Mods\\multiplayerstuff.unity3d");
+            // Unity's native IO does not resolve "Mods\..." against the game folder; pass an absolute path.
+            LoadedBundle = AssetBundle.LoadFromFile(Path.Combine(MelonLoader.Utils.MelonEnvironment.ModsDirectory, "multiplayerstuff.unity3d"));
             if (LoadedBundle == null)
             {
                 MelonLogger.Msg("Have problems with loading multiplayerstuff.unity3d!!");
@@ -1003,7 +999,7 @@ namespace SkyCoop
 
             if (DedicatedServerAppMode)
             {
-                MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Please wait...");
+                MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Please wait...");
                 InputManager.m_InputDisableTime = float.PositiveInfinity;
                 MPSaveManager.SaveRecentTimer = 30;
             }
@@ -1172,7 +1168,7 @@ namespace SkyCoop
                 Con.m_LocalizedDisplayName = new LocalizedString();
                 Con.m_LocalizedDisplayName.m_LocalizationID = "GAMEPLAY_TechnicalBackpack";
             }
-            Con.m_CapacityKG = 0;
+            Con.m_Capacity = ItemWeight.Zero;
             Con.m_Inspected = true;
             Con.m_StartInspected = true;
             Comps.DeathDropContainer DC = box.GetComponent<Comps.DeathDropContainer>();
@@ -1263,7 +1259,7 @@ namespace SkyCoop
                     {
                         if (Gear.m_WaterSupply)
                         {
-                            InterfaceManager.m_Panel_PickWater.TransferAllWaterInventoryToContainer(Box, Gear.m_WaterSupply);
+                            InterfaceManager.GetPanel<Panel_PickWater>().TransferAllWaterInventoryToContainer(Box, Gear.m_WaterSupply);
                         }
                         else if (Gear.m_StackableItem && Box.AddToExistingStackable(Gear.name, Gear.GetNormalizedCondition(), Gear.m_StackableItem.m_Units, Gear))
                         {
@@ -1411,7 +1407,7 @@ namespace SkyCoop
         }
 
 
-        public override void OnLevelWasInitialized(int level)
+        public override void OnSceneWasInitialized(int level, string sceneName)
         {
             if (KillOnUpdate == true)
             {
@@ -1433,6 +1429,7 @@ namespace SkyCoop
 
             MelonLogger.Msg("Level name: " + UnityEngine.SceneManagement.SceneManager.GetActiveScene().name);
             level_name = UnityEngine.SceneManagement.SceneManager.GetActiveScene().name;
+            if (level_name.StartsWith("MainMenu")) level_name = "MainMenu"; // 2.55 + TFTFT main menu scene is "MainMenu_DLC01"
             MyTicksOnScene = 0;
 
             if (level_name != "MainMenu" && level_name != "Boot" && level_name != "Empty")
@@ -1446,6 +1443,10 @@ namespace SkyCoop
 
             DisableOriginalAnimalSpawns();
             Shared.InitAllPlayers();
+            if (level_name != "MainMenu" && level_name != "Boot" && level_name != "Empty")
+            {
+                SceneDiag.Dump("SceneInit");
+            }
         }
 
         public static GameObject MakeModObject(string _name, Transform newparent = null)
@@ -1503,12 +1504,12 @@ namespace SkyCoop
                 breakDown.gameObject.transform.parent.GetComponent<RadialObjectSpawner>().RemoveFromSpawns(breakDown.gameObject);
                 RadialSpawnManager.ReturnToObjectPool(breakDown.gameObject);
             }
-            breakDown.StickSurfaceObjectsToGround();
+            breakDown.StickSurfaceObjectsToGround(false);
             if (ReBake)
             {
                 BakePreSpawnedGearsList();
             }
-            MissionUtils.PostObjectEvent(breakDown.gameObject, MissionTypes.MissionObjectEvent.ObjectBrokenDown);
+            MissionUtils.PostObjectEvent(breakDown.gameObject, Il2CppMissionTypes.MissionObjectEvent.ObjectBrokenDown);
             MelonLogger.Msg("Furn " + GUID+" removed");
         }
         public static void NoSyncFurtitureRepair(BreakDown breakDown, string GUID)
@@ -1585,9 +1586,22 @@ namespace SkyCoop
         }
 
         public static Dictionary<long, GameObject> PreSpawnedGears = new Dictionary<long, GameObject>();
+        // Position each natural item had when the scene was baked. The pickup key must be built from it: in 2.55 the
+        // item is already moved into the inspect view when some pickup paths report it.
+        public static Dictionary<int, Vector3> PreSpawnedGearPositions = new Dictionary<int, Vector3>();
+        public static Vector3 GetSpawnPosition(GearItem gi)
+        {
+            Vector3 pos;
+            if (gi != null && PreSpawnedGearPositions.TryGetValue(gi.gameObject.GetInstanceID(), out pos))
+            {
+                return pos;
+            }
+            return gi.gameObject.transform.position;
+        }
         public static void BakePreSpawnedGearsList()
         {
             PreSpawnedGears.Clear();
+            PreSpawnedGearPositions.Clear();
             for (int i = 0; i < GearManager.m_Gear.Count; i++)
             {
                 GearItem currentGear = GearManager.m_Gear[i];
@@ -1597,31 +1611,60 @@ namespace SkyCoop
                 if (currentGear.m_BeenInPlayerInventory == false && obj.activeSelf == true && currentGear.m_InsideContainer == false)
                 {
                     //MelonLogger.Msg("[BakePreSpawnedGearsList] " + currentGear.m_GearName + " Key " + Key);
+                    PreSpawnedGearPositions[obj.GetInstanceID()] = obj.transform.position;
                     if (!PreSpawnedGears.ContainsKey(Key))
                     {
                         PreSpawnedGears.Add(Key, obj);
                     } else
                     {
-                        //MelonLogger.Msg(ConsoleColor.Red,"[BakePreSpawnedGearsList] GEAR ALREADY IN THE LIST! " + currentGear.m_GearName + " Key " + Key);
+                        //MelonLogger.Msg(System.ConsoleColor.Red,"[BakePreSpawnedGearsList] GEAR ALREADY IN THE LIST! " + currentGear.m_GearName + " Key " + Key);
                     }
                 }
             }
         }
 
-        public static void RemovePickedGear(long Key)
+        public static bool RemovePickedGear(long Key)
         {
             MelonLogger.Msg("[RemovePickedGear] Key " + Key);
             if (ServerConfig.m_DuppedSpawns == true)
             {
-                return;
+                return true;
             }
             GameObject Gear;
-            if (PreSpawnedGears.TryGetValue(Key, out Gear))
+            if (PreSpawnedGears.TryGetValue(Key, out Gear) && Gear != null)
             {
                 if(Gear.GetComponent<GearItem>() && Gear.GetComponent<GearItem>().m_BeenInPlayerInventory == false && Gear.gameObject.activeSelf == true)
                 {
                     Gear.gameObject.SetActive(false);
                 }
+                return true;
+            }
+            return false;
+        }
+
+        // The key is built from the exact position, but in 2.55 physics settles items slightly differently on each
+        // machine, so the key often misses. Fall back to the nearest unpicked item with the same name.
+        public static void RemovePickedGear(DataStr.PickedGearSync picked)
+        {
+            if (RemovePickedGear(MPSaveManager.GetPickedGearKey(picked)) || string.IsNullOrEmpty(picked.m_GearName))
+            {
+                return;
+            }
+            string name = Compat.CleanGearName(picked.m_GearName);
+            GearItem best = null;
+            float bestDist = 1f;
+            for (int i = 0; i < GearManager.m_Gear.Count; i++)
+            {
+                GearItem gi = GearManager.m_Gear[i];
+                if (gi == null || gi.m_BeenInPlayerInventory || gi.m_InsideContainer || !gi.gameObject.activeSelf) continue;
+                if (Compat.CleanGearName(gi.gameObject.name) != name) continue;
+                float d = Vector3.Distance(gi.transform.position, picked.m_Spawn);
+                if (d < bestDist) { bestDist = d; best = gi; }
+            }
+            if (best != null)
+            {
+                MelonLogger.Msg("[RemovePickedGear] Matched " + name + " by distance " + bestDist);
+                best.gameObject.SetActive(false);
             }
         }
 
@@ -1970,11 +2013,11 @@ namespace SkyCoop
                 foreach (Component Com in ViewModelPhoto.GetComponents<Component>())
                 {
                     string ComName = Com.GetIl2CppType().Name;
-                    if (ComName != PhysicMaterial.Il2CppType.Name
-                        && ComName != LODGroup.Il2CppType.Name
-                        && ComName != Transform.Il2CppType.Name
-                        && ComName != MeshRenderer.Il2CppType.Name
-                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    if (ComName != Il2CppType.Of<PhysicsMaterial>().Name
+                        && ComName != Il2CppType.Of<LODGroup>().Name
+                        && ComName != Il2CppType.Of<Transform>().Name
+                        && ComName != Il2CppType.Of<MeshRenderer>().Name
+                        && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
                     {
                         UnityEngine.Object.Destroy(Com);
                     }
@@ -1998,11 +2041,11 @@ namespace SkyCoop
                 foreach (Component Com in ViewModelMap.GetComponents<Component>())
                 {
                     string ComName = Com.GetIl2CppType().Name;
-                    if (ComName != PhysicMaterial.Il2CppType.Name
-                        && ComName != LODGroup.Il2CppType.Name
-                        && ComName != Transform.Il2CppType.Name
-                        && ComName != MeshRenderer.Il2CppType.Name
-                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    if (ComName != Il2CppType.Of<PhysicsMaterial>().Name
+                        && ComName != Il2CppType.Of<LODGroup>().Name
+                        && ComName != Il2CppType.Of<Transform>().Name
+                        && ComName != Il2CppType.Of<MeshRenderer>().Name
+                        && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
                     {
                         UnityEngine.Object.Destroy(Com);
                     }
@@ -2027,11 +2070,11 @@ namespace SkyCoop
                 foreach (Component Com in ViewModelNote.GetComponents<Component>())
                 {
                     string ComName = Com.GetIl2CppType().Name;
-                    if (ComName != PhysicMaterial.Il2CppType.Name
-                        && ComName != LODGroup.Il2CppType.Name
-                        && ComName != Transform.Il2CppType.Name
-                        && ComName != MeshRenderer.Il2CppType.Name
-                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    if (ComName != Il2CppType.Of<PhysicsMaterial>().Name
+                        && ComName != Il2CppType.Of<LODGroup>().Name
+                        && ComName != Il2CppType.Of<Transform>().Name
+                        && ComName != Il2CppType.Of<MeshRenderer>().Name
+                        && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
                     {
                         UnityEngine.Object.Destroy(Com);
                     }
@@ -2055,11 +2098,11 @@ namespace SkyCoop
             //    foreach (Component Com in ViewModelFish.GetComponents<Component>())
             //    {
             //        string ComName = Com.GetIl2CppType().Name;
-            //        if (ComName != PhysicMaterial.Il2CppType.Name
-            //            && ComName != LODGroup.Il2CppType.Name
-            //            && ComName != Transform.Il2CppType.Name
-            //            && ComName != MeshRenderer.Il2CppType.Name
-            //            && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+            //        if (ComName != Il2CppType.Of<PhysicsMaterial>().Name
+            //            && ComName != Il2CppType.Of<LODGroup>().Name
+            //            && ComName != Il2CppType.Of<Transform>().Name
+            //            && ComName != Il2CppType.Of<MeshRenderer>().Name
+            //            && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
             //        {
             //            UnityEngine.Object.Destroy(Com);
             //        }
@@ -2186,7 +2229,7 @@ namespace SkyCoop
                 RemoveLootFromContainer(obj, State);
             } else
             {
-               //MelonLogger.Msg(ConsoleColor.Red,"Can't find container " + GUID + " for State " + State);
+               //MelonLogger.Msg(System.ConsoleColor.Red,"Can't find container " + GUID + " for State " + State);
             }
         }
 
@@ -2325,9 +2368,9 @@ namespace SkyCoop
                 UnityEngine.Object.Destroy(animal.GetComponent<CharacterController>());
             }
             //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
-            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
+            if (animal.GetComponent<Il2CppNodeCanvas.Framework.Blackboard>() != null)
             {
-                UnityEngine.Object.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
+                UnityEngine.Object.Destroy(animal.GetComponent<Il2CppNodeCanvas.Framework.Blackboard>());
             }
             //MelonLogger.Msg("Blackboard DA BECAUSE DA");
             if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
@@ -2369,37 +2412,37 @@ namespace SkyCoop
             PreviousControlModeBeforeAction = GameManager.GetPlayerManagerComponent().GetControlMode();
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
             InteractionInprocess = true;
-            InterfaceManager.m_Panel_HUD.StartItemProgressBar(Duration, actionString, (GearItem)null, new System.Action(EmptyFn));
+            InterfaceManager.GetPanel<Panel_HUD>().StartItemProgressBar(Duration, actionString, (GearItem)null, new System.Action(EmptyFn));
 
             if (actionType == "Excision")
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine && Obj && Obj.GetComponent<GearItem>() && Obj.GetComponent<GearItem>().m_Sharpenable)
+                if (InterfaceManager.GetPanel<Panel_Inventory_Examine>() && Obj && Obj.GetComponent<GearItem>() && Obj.GetComponent<GearItem>().m_Sharpenable)
                 {
-                    InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound(Obj.GetComponent<GearItem>().m_Sharpenable.m_SharpenAudio, InterfaceManager.GetSoundEmitter());
+                    InterfaceManager.GetPanel<Panel_Inventory_Examine>().m_ProgressBarAudio = GameAudioManager.PlaySound(Obj.GetComponent<GearItem>().m_Sharpenable.m_SharpenAudio, InterfaceManager.GetSoundEmitter());
                 }
             } else if (actionType == "Lockpick")
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine)
+                if (InterfaceManager.GetPanel<Panel_Inventory_Examine>())
                 {
-                    InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_CRAFTINGGENERIC", InterfaceManager.GetSoundEmitter());
+                    InterfaceManager.GetPanel<Panel_Inventory_Examine>().m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_CRAFTINGGENERIC", InterfaceManager.GetSoundEmitter());
                 }
             }
             else if (actionType == "Locksmith0")
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine)
+                if (InterfaceManager.GetPanel<Panel_Inventory_Examine>())
                 {
-                    InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_HARVESTINGMETALSAW", InterfaceManager.GetSoundEmitter());
+                    InterfaceManager.GetPanel<Panel_Inventory_Examine>().m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_HARVESTINGMETALSAW", InterfaceManager.GetSoundEmitter());
                 }
             }
             else if (actionType == "Locksmith1")
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine)
+                if (InterfaceManager.GetPanel<Panel_Inventory_Examine>())
                 {
-                    InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_CRAFTINGARROWS", InterfaceManager.GetSoundEmitter());
+                    InterfaceManager.GetPanel<Panel_Inventory_Examine>().m_ProgressBarAudio = GameAudioManager.PlaySound("PLAY_CRAFTINGARROWS", InterfaceManager.GetSoundEmitter());
                 }
             }else if(actionType == "ExpInt" && !string.IsNullOrEmpty(Audio))
             {
-                InterfaceManager.m_Panel_Inventory_Examine.m_ProgressBarAudio = GameAudioManager.PlaySound(Audio, InterfaceManager.GetSoundEmitter());
+                InterfaceManager.GetPanel<Panel_Inventory_Examine>().m_ProgressBarAudio = GameAudioManager.PlaySound(Audio, InterfaceManager.GetSoundEmitter());
             }
         }
 
@@ -2412,7 +2455,7 @@ namespace SkyCoop
             PlayerInteractionWith = mP;
             PreviousControlModeBeforeAction = GameManager.GetPlayerManagerComponent().GetControlMode();
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Locked);
-            InterfaceManager.m_Panel_HUD.StartItemProgressBar(mP.m_InteractTimer, actionString, (GearItem)null, new System.Action(EmptyFn));
+            InterfaceManager.GetPanel<Panel_HUD>().StartItemProgressBar(mP.m_InteractTimer, actionString, (GearItem)null, new System.Action(EmptyFn));
 
             if (actionType != "Revive")
             {
@@ -2508,7 +2551,7 @@ namespace SkyCoop
             mP.m_IsBeingInteractedWith = false;
             mP.m_InteractTimer = 0.0f;
             PlayerInteractionWith = null;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            InterfaceManager.GetPanel<Panel_HUD>().CancelItemProgressBar();
         }
 
         public static void LongActionCanceled()
@@ -2521,12 +2564,12 @@ namespace SkyCoop
             InteractionInprocess = false;
             InteractTimer = 0.0f;
             InteractHold = false;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            InterfaceManager.GetPanel<Panel_HUD>().CancelItemProgressBar();
             if (InteractionType == "Excision" || InteractionType == "Lockpick" || InteractionType == "Locksmith0" || InteractionType == "Locksmith1" || InteractionType == "ExpInt")
             {
-                if (InterfaceManager.m_Panel_Inventory_Examine)
+                if (InterfaceManager.GetPanel<Panel_Inventory_Examine>())
                 {
-                    InterfaceManager.m_Panel_Inventory_Examine.StopProgressBarAudio();
+                    InterfaceManager.GetPanel<Panel_Inventory_Examine>().StopProgressBarAudio();
                 }
             }
             SendInteractingGUID("");
@@ -2548,10 +2591,10 @@ namespace SkyCoop
                 if (SwearOnLockpickingDone)
                 {
                     GameAudioManager.PlaySound("Play_SndInvCrowbarPrybar", InterfaceManager.GetSoundEmitter());
-                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIREFAIL", Voice.Priority.Critical);
+                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIREFAIL", Il2CppVoice.Priority.Critical);
                 } else {
                     GameAudioManager.PlaySound("PLAY_SNDMECHSAFETUMBLERFALL", InterfaceManager.GetSoundEmitter());
-                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIRESUCCESS", Voice.Priority.Critical);
+                    GameManager.GetPlayerVoiceComponent().Play("PLAY_FIRESUCCESS", Il2CppVoice.Priority.Critical);
                 }
             }else if(ActionType == "Locksmith0" || ActionType == "Locksmith1" || ActionType == "Locksmith5")
             {
@@ -2627,10 +2670,10 @@ namespace SkyCoop
                     GameManager.GetPlayerManagerComponent().AddItemCONSOLE(Data.m_Yield, Data.m_YieldCount);
                     if (Data.m_YieldCount > 1)
                     {
-                        GearMessage.AddMessage(Utils.GetGearDisplayName(Data.m_Yield), Localization.Get("GAMEPLAY_Added"), Data.m_Yield + " (" + Data.m_YieldCount + ")");
+                        GearMessage.AddMessage(GearItem.GetGearDisplayName(Data.m_Yield), Localization.Get("GAMEPLAY_Added"), Data.m_Yield + " (" + Data.m_YieldCount + ")");
                     } else
                     {
-                        GearMessage.AddMessage(Utils.GetGearDisplayName(Data.m_Yield), Localization.Get("GAMEPLAY_Added"), Data.m_Yield);
+                        GearMessage.AddMessage(GearItem.GetGearDisplayName(Data.m_Yield), Localization.Get("GAMEPLAY_Added"), Data.m_Yield);
                     }
                 }
 
@@ -2841,9 +2884,9 @@ namespace SkyCoop
                 Spr.m_ElapsedRestList.Add(0.0f);
                 Spr.m_SecondsSinceLastPainAudio = 0.0f;
                 Spr.DoStumbleEffects();
-                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedAnkle", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.m_Panel_HUD.m_DamageEventDisplaySeconds, InterfaceManager.m_Panel_HUD.m_DamageEventFadeOutSeconds);
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedAnkleVO, Voice.Priority.Critical);
-                GameAudioManager.PlaySound(Spr.m_SprainedAnkleSFX, Spr.gameObject);
+                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedAnkle", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.GetPanel<Panel_HUD>().m_DamageEventDisplaySeconds, InterfaceManager.GetPanel<Panel_HUD>().m_DamageEventFadeOutSeconds);
+                Spr.m_SprainedAnkleAudioEvent?.Post(GameManager.GetPlayerObject());
+                Spr.m_SprainedAnkleSFXEvent?.Post(Spr.gameObject);
 
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedAnkle, causeID);
                 StatsManager.IncrementValue(StatID.Sprains_Ankle);
@@ -2856,8 +2899,8 @@ namespace SkyCoop
                 Spr.m_DurationHoursList.Add(UnityEngine.Random.Range(Spr.m_DurationHoursMin, Spr.m_DurationHoursMax));
                 Spr.m_ElapsedRestList.Add(0.0f);
                 Spr.DoStumbleEffects();
-                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedWrist", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.m_Panel_HUD.m_DamageEventDisplaySeconds, InterfaceManager.m_Panel_HUD.m_DamageEventFadeOutSeconds);
-                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedWristVO, Voice.Priority.Critical);
+                PlayerDamageEvent.SpawnDamageEvent(Spr.m_LocalizedDisplayName.m_LocalizationID, "GAMEPLAY_Affliction", "ico_injury_sprainedWrist", InterfaceManager.m_FirstAidRedColor, true, InterfaceManager.GetPanel<Panel_HUD>().m_DamageEventDisplaySeconds, InterfaceManager.GetPanel<Panel_HUD>().m_DamageEventFadeOutSeconds);
+                GameManager.GetPlayerVoiceComponent().Play(Spr.m_SprainedWristVO, Il2CppVoice.Priority.Critical);
                 GameAudioManager.PlaySound(Spr.m_SprainedWristSFX, Spr.gameObject);
                 GameManager.GetLogComponent().AddAffliction(AfflictionType.SprainedWrist, causeID);
                 StatsManager.IncrementValue(StatID.Sprains_Wrist);
@@ -3009,13 +3052,13 @@ namespace SkyCoop
                 }
             }
 
-            GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Voice.Priority.Critical, PlayerVoice.Options.None);
+            GameManager.GetPlayerVoiceComponent().Play("PLAY_PLAYERDAMAGE", Il2CppVoice.Priority.Critical, PlayerVoice.Options.None);
 
             Transform V3 = GameManager.GetPlayerTransform();
             GameObject Player = GameManager.GetPlayerObject();
 
             GameAudioManager.SetMaterialSwitch("Flesh", Player);
-            int num = (int)AkSoundEngine.PostEvent(AK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+            int num = (int)AkSoundEngine.PostEvent(Il2CppAK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
             GameAudioManager.SetAudioSourceTransform(Player, V3);
         }
 
@@ -3079,6 +3122,24 @@ namespace SkyCoop
                 }
             }
         }
+        public static void CaptureBulletPrefab(vp_FPSShooter shooter)
+        {
+            if (shooter == null || shooter.ProjectilePrefab == null) return;
+            string n = shooter.ProjectilePrefab.name;
+            if (PistolBulletPrefab == null && n.StartsWith("PistolBullet")) PistolBulletPrefab = shooter.ProjectilePrefab;
+            if (RevolverBulletPrefab == null && n.StartsWith("RevolverBullet")) RevolverBulletPrefab = shooter.ProjectilePrefab;
+        }
+
+        // The FPS weapon views exist (inactive) under the player even if a gun was never equipped.
+        public static void EnsureBulletPrefabs()
+        {
+            if (PistolBulletPrefab != null && RevolverBulletPrefab != null) return;
+            foreach (vp_FPSShooter s in Resources.FindObjectsOfTypeAll<vp_FPSShooter>())
+            {
+                CaptureBulletPrefab(s);
+            }
+        }
+
         public static void SimulateSpawnFromRegionSpawn(string GUID, SpawnRegion spRobj)
         {
             if (spRobj != null && spRobj.GetComponent<SpawnRegion>() != null)
@@ -3088,11 +3149,16 @@ namespace SkyCoop
                 Quaternion identity = Quaternion.identity;
                 BaseAi newAnimal = null;
 
-                if (spR.TryGetSpawnPositionAndRotation(ref zero, ref identity) == true)
+                if (spR.m_SpawnablePrefab == null)
+                {
+                    // TLD 2.55 resolves animal prefabs via addressable tables, so m_SpawnablePrefab is null.
+                    newAnimal = spR.InstantiateAndPlaceSpawn(WildlifeMode.Normal);
+                }
+                else if (spR.TryGetSpawnPositionAndRotation(ref zero, ref identity) == true)
                 {
                     if (spR.PositionValidForSpawn(zero) == true)
                     {
-                        newAnimal = spR.InstantiateSpawnInternal(WildlifeMode.Normal, zero, identity);
+                        newAnimal = spR.InstantiateSpawnInternal(spR.m_SpawnablePrefab, WildlifeMode.Normal, zero, identity);
                     }
                 }
                 if (newAnimal != null)
@@ -3211,7 +3277,7 @@ namespace SkyCoop
                 }
             } else if (result == 2)
             {
-                GameObject reference = GetGearItemObject("WILDLIFE_Rabbit");
+                GameObject reference = Compat.LoadAnimalPrefab("WILDLIFE_Rabbit");
                 if (reference)
                 {
                     GameObject obj = UnityEngine.Object.Instantiate<GameObject>(reference, GameManager.GetPlayerTransform().transform.position, GameManager.GetPlayerTransform().transform.rotation);
@@ -3227,7 +3293,7 @@ namespace SkyCoop
                     }
                     if (obj.GetComponent<WildlifeItem>())
                     {
-                        obj.GetComponent<WildlifeItem>().ProcessInteraction();
+                        obj.GetComponent<WildlifeItemInteraction>()?.PerformInteraction();
                     }
                 }
             }
@@ -3248,7 +3314,7 @@ namespace SkyCoop
         {
             if (AnimalsController == true)
             {
-                GameObject reference = GetGearItemObject("WILDLIFE_Rabbit");
+                GameObject reference = Compat.LoadAnimalPrefab("WILDLIFE_Rabbit");
                 if (reference == null)
                     return;
                 GameObject Rabbit = UnityEngine.Object.Instantiate<GameObject>(reference);
@@ -3271,7 +3337,7 @@ namespace SkyCoop
         {
             if (AnimalsController == true)
             {
-                GameObject reference = GetGearItemObject("WILDLIFE_Rabbit");
+                GameObject reference = Compat.LoadAnimalPrefab("WILDLIFE_Rabbit");
                 if (reference == null)
                     return;
                 GameObject Rabbit = UnityEngine.Object.Instantiate<GameObject>(reference);
@@ -3344,7 +3410,7 @@ namespace SkyCoop
                         bh.MaybeSpawnOrRefreshCarcassSite();
                         if (bh.m_CarcassSite != null)
                         {
-                            bh.m_CarcassSite.SpawnQuarteringMess();
+                            bh.m_CarcassSite.AddPostHarvestMessFx(bh.transform.position);
                         }
                     }
                     UnityEngine.Object.Destroy(AnimalCorpse);
@@ -3363,7 +3429,7 @@ namespace SkyCoop
             {
                 bh.m_CanQuarter = false;
             }
-            InterfaceManager.m_Panel_BodyHarvest.Enable(true, bh, false, ComingFromScreenCategory.NotUI);
+            InterfaceManager.GetPanel<Panel_BodyHarvest>().Enable(true, bh, false, ComingFromScreenCategory.NotUI);
         }
 
         public static BodyHarvest GoingToHarvest = null;
@@ -3379,7 +3445,7 @@ namespace SkyCoop
                     DataStr.AnimalKilled Animal;
                     if (Shared.AnimalsKilled.TryGetValue(GUID, out Animal))
                     {
-                        bh.m_MeatAvailableKG = Animal.m_Meat;
+                        bh.m_MeatAvailableKG = ItemWeight.FromKilograms(Animal.m_Meat);
                         bh.m_GutAvailableUnits = Animal.m_Guts;
                         bh.m_HideAvailableUnits = Animal.m_Hide;
                         return Animal;
@@ -3400,7 +3466,7 @@ namespace SkyCoop
                     DataStr.AnimalKilled Animal;
                     if (Shared.AnimalsKilled.TryGetValue(GUID, out Animal))
                     {
-                        bh.m_MeatAvailableKG = Animal.m_Meat;
+                        bh.m_MeatAvailableKG = ItemWeight.FromKilograms(Animal.m_Meat);
                         bh.m_GutAvailableUnits = Animal.m_Guts;
                         bh.m_HideAvailableUnits = Animal.m_Hide;
                         OpenBodyHarvest(bh);
@@ -3632,7 +3698,7 @@ namespace SkyCoop
             }
             ObjectGuidManager.UnRegisterGuid(GUID);
 
-            //MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to actor " + GUID);
+            //MelonLogger.Msg(System.ConsoleColor.Cyan, "Starting recrating animal to actor " + GUID);
 
             SpawnAnimalActor(prefabName, v3, rot, GUID, RegionGUID, Arrows);
         }
@@ -3777,7 +3843,7 @@ namespace SkyCoop
             string prefabName = GetAnimalPrefabName(animal.name);
             Vector3 v3 = animal.transform.position;
             Quaternion rot = animal.transform.rotation;
-            //MelonLogger.Msg(ConsoleColor.Cyan, "Starting recrating animal to syncable " + GUID+" with region GUID "+ RegionGUID);
+            //MelonLogger.Msg(System.ConsoleColor.Cyan, "Starting recrating animal to syncable " + GUID+" with region GUID "+ RegionGUID);
 
             if (!AiUtils.IsNavmeshPosValid(v3, 0.5f, 1f))
             {
@@ -3786,11 +3852,11 @@ namespace SkyCoop
 
             BaseAi bai;
             GameObject newAnimal;
-            GameObject reference = GetGearItemObject(prefabName);
+            GameObject reference = Compat.LoadAnimalPrefab(prefabName);
 
             if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't re-create animal with prefab name " + prefabName);
+                MelonLogger.Msg(System.ConsoleColor.Red, "Can't re-create animal with prefab name " + prefabName);
                 return;
             }
 
@@ -3861,7 +3927,7 @@ namespace SkyCoop
 
         public static void ExitHarvesting()
         {
-            Panel_BodyHarvest PBH = InterfaceManager.m_Panel_BodyHarvest;
+            Panel_BodyHarvest PBH = InterfaceManager.GetPanel<Panel_BodyHarvest>();
 
             if (PBH.m_CurrentHarvestAction != Panel_BodyHarvest.HarvestAction.None)
             {
@@ -3871,18 +3937,12 @@ namespace SkyCoop
             }
         }
 
-        public static GearItem GetGearItemPrefab(string name) => Resources.Load(name).Cast<GameObject>().GetComponent<GearItem>();
+        // 2.55: gear prefabs live in Addressables, Resources.Load returns null for them.
+        public static GearItem GetGearItemPrefab(string name) => Compat.LoadGearPrefab(name);
         public static GameObject GetGearItemObject(string name)
         {
-            if (Resources.Load(name) == null)
-            {
-                return null;
-            }
-            if (Resources.Load(name).Cast<GameObject>() != null)
-            {
-                return Resources.Load(name).Cast<GameObject>();
-            }
-            return null;
+            GearItem prefab = Compat.LoadGearPrefab(name);
+            return prefab != null ? prefab.gameObject : null;
         }
 
         //PACKETS
@@ -3958,7 +4018,7 @@ namespace SkyCoop
 
         public static void GiveRecivedItem(DataStr.GearItemDataPacket gearData)
         {
-            //MelonLogger.Msg(ConsoleColor.Blue, "Got gear with name ["+ gearData.m_GearName + "] DATA: "+ gearData.m_DataProxy);
+            //MelonLogger.Msg(System.ConsoleColor.Blue, "Got gear with name ["+ gearData.m_GearName + "] DATA: "+ gearData.m_DataProxy);
 
             GearItemSaveDataProxy itemSaveDataProxy = Utils.DeserializeObject<GearItemSaveDataProxy>(gearData.m_DataProxy);
             string dummy_name = gearData.m_GearName;
@@ -3988,7 +4048,7 @@ namespace SkyCoop
 
             if (watermode == false) // If this is water we not give new item, but just add to supply.
             {
-                GearItem closestMatchStackable = GameManager.GetInventoryComponent().GetClosestMatchStackable(give_name, itemSaveDataProxy.m_NormalizedCondition);
+                GearItem closestMatchStackable = null; // 2.55 removed GetClosestMatchStackable; InstantiateItemInPlayerInventory stacks by itself.
                 if (closestMatchStackable == null)
                 {
                     MelonLogger.Msg("Not stack for item " + give_name + ", creating new item");
@@ -4020,7 +4080,7 @@ namespace SkyCoop
                     }
                 }
             } else {
-                string bottlename = Resources.Load(give_name).Cast<GameObject>().GetComponent<GearItem>().m_LocalizedDisplayName.Text();
+                string bottlename = GetGearItemPrefab(give_name).m_LocalizedDisplayName.Text();
 
                 MelonLogger.Msg("Got water " + gearData.m_Water);
                 if (gearData.m_Water == 0.5f)
@@ -4029,7 +4089,7 @@ namespace SkyCoop
                 } else {
                     say = gearData.m_Water + " of " + bottlename;
                 }
-                GameManager.GetInventoryComponent().AddToWaterSupply(gearData.m_Water, water_q);
+                GameManager.GetInventoryComponent().AddToWaterSupply(ItemLiquidVolume.FromLiters(gearData.m_Water), water_q);
             }
 
             HUDMessage.AddMessage("Other player gave you " + say + ".");
@@ -4039,7 +4099,7 @@ namespace SkyCoop
 
         public static void SimRevive()
         {
-            InterfaceManager.m_Panel_Log.Enable(false);
+            InterfaceManager.GetPanel<Panel_Log>().Enable(false);
             SetRevivedStats();
             GameManager.GetPlayerManagerComponent().SetControlMode(PlayerControlMode.Normal);
         }
@@ -4298,10 +4358,10 @@ namespace SkyCoop
                             component1.PerformDetonation((ContactPoint[])null);
                         }
                     } else {
-                        MelonLogger.Msg(ConsoleColor.Red, "GEAR_NoiseMaker NoiseMakerItem!!!");
+                        MelonLogger.Msg(System.ConsoleColor.Red, "GEAR_NoiseMaker NoiseMakerItem!!!");
                     }
                 } else {
-                    MelonLogger.Msg(ConsoleColor.Red, "GEAR_NoiseMaker Has not GearItem!!!");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "GEAR_NoiseMaker Has not GearItem!!!");
                 }
             } else if (shoot.m_projectilename == "Melee")
             {
@@ -4312,6 +4372,14 @@ namespace SkyCoop
                 GameObject gameObject = null;
                 GearItem itemInHands = null;
 
+                EnsureBulletPrefabs();
+                if (shoot.m_projectilename == "PistolBullet" && PistolBulletPrefab == null || shoot.m_projectilename == "RevolverBullet" && RevolverBulletPrefab == null)
+                {
+                    // No bullet prefab known yet (local player never had a gun out): still give audio/visual feedback.
+                    PlayMultiplayer3dAduio(shoot.m_projectilename == "PistolBullet" ? "PLAY_RIFLE_SHOOT_3D" : "PLAY_REVOLVER_SHOOT_3D", from);
+                    DoShootFX(shoot.m_position);
+                    return;
+                }
                 if (shoot.m_projectilename == "PistolBullet")
                 {
                     itemInHands = GetGearItemPrefab("GEAR_Rifle");
@@ -4364,7 +4432,7 @@ namespace SkyCoop
                     }
                 }
                 //GameObject emitterFromGameObject = GameAudioManager.GetSoundEmitterFromGameObject(gameObject);
-                //AkSoundEngine.PostEvent(AK.EVENTS.PLAY_RIFLEFIRE, emitterFromGameObject);
+                //AkSoundEngine.PostEvent(Il2CppAK.EVENTS.PLAY_RIFLEFIRE, emitterFromGameObject);
                 //GameAudioManager.SetAudioSourceTransform(emitterFromGameObject, emitterFromGameObject.transform);
 
                 if (players[from] != null)
@@ -4520,6 +4588,39 @@ namespace SkyCoop
             }
         }
 
+        // Every 30 s per fire: make the remaining burn time match the player who sends it.
+        // A mirrored fire (not lit by us) takes the sender's time; a fire both players fed keeps the longer of the
+        // two, so both sides converge on the same value without ever cutting a fire short.
+        static readonly Dictionary<string, float> NextFireTimerCheck = new Dictionary<string, float>();
+        const float FireTimerCheckSeconds = 30f;
+        const float FireTimerToleranceSeconds = 60f;
+
+        public static void SyncFireTimer(Fire fire, DataStr.FireSourcesSync SyncData)
+        {
+            if (fire == null || fire.m_IsPerpetual || SyncData.m_Fuel <= 0f || fire.m_FireState == FireState.Off)
+            {
+                return;
+            }
+            string key = level_guid + "|" + (SyncData.m_Guid != "" ? SyncData.m_Guid : SyncData.m_Position.ToString());
+            float next;
+            if (NextFireTimerCheck.TryGetValue(key, out next) && Time.time < next)
+            {
+                return;
+            }
+            NextFireTimerCheck[key] = Time.time + FireTimerCheckSeconds;
+
+            float mine = fire.GetRemainingLifeTimeSeconds();
+            float theirs = SyncData.m_Fuel;
+            float target = fire.m_StartedByPlayer ? Mathf.Max(mine, theirs) : theirs;
+            if (Mathf.Abs(target - mine) <= FireTimerToleranceSeconds)
+            {
+                return;
+            }
+            float maxSeconds = GameManager.GetFireManagerComponent().m_MaxDurationHoursOfFire * 60f * 60f;
+            fire.m_MaxOnTODSeconds = Mathf.Clamp(fire.m_ElapsedOnTODSeconds + target, 0f, maxSeconds);
+            MelonLogger.Msg("[FireSync] Burn time corrected for " + fire.gameObject.name + ": " + Mathf.RoundToInt(mine / 60f) + " -> " + Mathf.RoundToInt(fire.GetRemainingLifeTimeSeconds() / 60f) + " min");
+        }
+
         public static void MakeFakeFire(Fire fire)
         {
             fire.m_StartedByPlayer = false;
@@ -4547,8 +4648,7 @@ namespace SkyCoop
 
         public static void MakeFakeCampfire(DataStr.FireSourcesSync SyncData)
         {
-            GameObject campfireObj = UnityEngine.Object.Instantiate<GameObject>(GameManager.GetFireManagerComponent().m_CampFirePrefab);
-            campfireObj.name = GameManager.GetFireManagerComponent().m_CampFirePrefab.name;
+            GameObject campfireObj = GameManager.GetFireManagerComponent().InstantiateCampFire().gameObject;
             campfireObj.transform.position = SyncData.m_Position;
             campfireObj.transform.rotation = SyncData.m_Rotation;
             Fire cfFire = campfireObj.GetComponent<Fire>();
@@ -4616,15 +4716,17 @@ namespace SkyCoop
                             if (IsSameFire(FindData, SyncData) == true)
                             {
                                 //MelonLogger.Msg("Found same fire");
-                                if (curfire.m_FireState == FireState.Off || curfire.m_StartedByPlayer == false)
+                                if (curfire.m_FireState == FireState.Off)
                                 {
                                     //MelonLogger.Msg("Apply fire on existen object");
                                     MakeFakeFire(curfire);
-                                    FoundSource = true;
-                                } else {
-                                    //MelonLogger.Msg("Found object, but won't apply fire on it");
-                                    FoundSource = true;
+                                    // Just lit: take the sender's burn time right away instead of the 5 min default.
+                                    NextFireTimerCheck.Remove(level_guid + "|" + (SyncData.m_Guid != "" ? SyncData.m_Guid : SyncData.m_Position.ToString()));
                                 }
+                                // A mirrored fire that is already burning is no longer re-forced to 5 minutes every
+                                // second: that wiped the synced burn time. Its time now follows the sender.
+                                FoundSource = true;
+                                SyncFireTimer(curfire, SyncData);
                                 break;
                             } else {
                                 //MelonLogger.Msg("Object is not same");
@@ -4722,7 +4824,7 @@ namespace SkyCoop
                             {
                                 if (curfire.m_FireState == FireState.FullBurn)
                                 {
-                                    GameObject gear = UnityEngine.Object.Instantiate(Resources.Load(fuelName)).Cast<GameObject>();
+                                    GameObject gear = UnityEngine.Object.Instantiate(GetGearItemObject(fuelName));
                                     if (gear)
                                     {
                                         GearItem gearItem = gear.GetComponent<GearItem>();
@@ -4957,10 +5059,10 @@ namespace SkyCoop
                         if (!NoDsSaves)
                         {
                             GameManager.ForceSaveGame();
-                            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save in " + DsSavePerioud + " seconds later!");
+                            MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Server saved! Next save in " + DsSavePerioud + " seconds later!");
                         }
                     }else{
-                        MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Restarting...");
+                        MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Restarting...");
                         ServerSend.RESTART();
                         QuitWithoutSaving = true;
                         Application.Quit();
@@ -5129,7 +5231,7 @@ namespace SkyCoop
                         {
                             HostUDDSAfterLoad = false;
                             Shared.HostAServer(PortForDSLoad);
-                            MelonLogger.Msg(ConsoleColor.Magenta, "[Dedicated server] Server is ready! Have fun!");
+                            MelonLogger.Msg(System.ConsoleColor.Magenta, "[Dedicated server] Server is ready! Have fun!");
                         }
                     }
                 }else{
@@ -5141,7 +5243,7 @@ namespace SkyCoop
                 {
                     if (NeedApplyAutoCMDs == true || AutoHostWhenLoaded == true)
                     {
-                        MelonLogger.Msg(ConsoleColor.Magenta, "[Start-ups] Going to apply some parameters after load save");
+                        MelonLogger.Msg(System.ConsoleColor.Magenta, "[Start-ups] Going to apply some parameters after load save");
                     }
 
                     ApplyAutoThingsAfterLoaed = 3;
@@ -5156,10 +5258,10 @@ namespace SkyCoop
                             NeedApplyAutoCMDs = false;
                             if (AutoCMDs.Count > 0)
                             {
-                                MelonLogger.Msg(ConsoleColor.Magenta, "[-cmd] Going to apply auto commands...");
+                                MelonLogger.Msg(System.ConsoleColor.Magenta, "[-cmd] Going to apply auto commands...");
                                 for (int i = 0; i < AutoCMDs.Count; i++)
                                 {
-                                    MelonLogger.Msg(ConsoleColor.Magenta, "[-cmd] " + AutoCMDs[i]);
+                                    MelonLogger.Msg(System.ConsoleColor.Magenta, "[-cmd] " + AutoCMDs[i]);
                                     uConsole.RunCommandSilent(AutoCMDs[i]);
                                 }
                             }
@@ -5167,7 +5269,7 @@ namespace SkyCoop
                         if (AutoHostWhenLoaded == true)
                         {
                             AutoHostWhenLoaded = false;
-                            MelonLogger.Msg(ConsoleColor.Magenta, "[-host] Going to start server with using server.json");
+                            MelonLogger.Msg(System.ConsoleColor.Magenta, "[-host] Going to start server with using server.json");
                             StartDedicatedServer(false);
                         }
                     }
@@ -5179,7 +5281,7 @@ namespace SkyCoop
                     if (UpdateSnowshelters == 0)
                     {
                         UpdateSnowshelters = -1;
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply all showshelters");
+                        //MelonLogger.Msg(System.ConsoleColor.Blue, "Apply all showshelters");
                         LoadAllSnowSheltersByOther();
                     }
                 }
@@ -5187,12 +5289,12 @@ namespace SkyCoop
                 if (UpdateRopesAndFurns > 0)
                 {
                     UpdateRopesAndFurns = UpdateRopesAndFurns - 1;
-                    //MelonLogger.Msg(ConsoleColor.Blue, "Apply other campfires");
+                    //MelonLogger.Msg(System.ConsoleColor.Blue, "Apply other campfires");
                     ApplyOtherCampfires = true;
 
                     if (UpdateRopesAndFurns == 0)
                     {
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply ropes and furns");
+                        //MelonLogger.Msg(System.ConsoleColor.Blue, "Apply ropes and furns");
                         UpdateDeployedRopes();
                     }
                 }
@@ -5202,7 +5304,7 @@ namespace SkyCoop
 
                     if (UpdateCampfires == 0)
                     {
-                        //MelonLogger.Msg(ConsoleColor.Blue, "Apply other campfires");
+                        //MelonLogger.Msg(System.ConsoleColor.Blue, "Apply other campfires");
                         ApplyOtherCampfires = true;
                     }
                 }
@@ -5232,7 +5334,7 @@ namespace SkyCoop
                 if (GameManager.m_Thirst != null)
                 {
                     Thirst th = GameManager.GetThirstComponent();
-                    if (th.m_LitersLeftToDrink > 0)
+                    if (th.m_LitersLeftToDrink.m_Units > 0)
                     {
                         IsDrinking = true;
                     } else {
@@ -5285,7 +5387,7 @@ namespace SkyCoop
                     }
                 }
 
-                if(InterfaceManager.m_Panel_HUD != null && !InterfaceManager.m_Panel_HUD.IsShowingCollectibleNote())
+                if(InterfaceManager.GetPanel<Panel_HUD>() != null && !InterfaceManager.GetPanel<Panel_HUD>().IsShowingCollectibleNote())
                 {
                     if (ForcedShowExpeditionHUDSeconds > 0)
                     {
@@ -5309,7 +5411,7 @@ namespace SkyCoop
 
                 if (GameManager.m_PlayerManager != null)
                 {
-                    character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
+                    character = (int)PlayerManager.m_VoicePersona;
                 }
 
                 if (iAmHost == true)
@@ -5527,11 +5629,11 @@ namespace SkyCoop
                 //MelonLogger.Msg("[CharacterController]-> off");
             }
             //MelonLogger.Msg("CharacterController ANUS SEBE CONTROLIRUI");
-            if (animal.GetComponent<NodeCanvas.Framework.Blackboard>() != null)
+            if (animal.GetComponent<Il2CppNodeCanvas.Framework.Blackboard>() != null)
             {
-                //UnityEngine.Component.Destroy(animal.GetComponent<NodeCanvas.Framework.Blackboard>());
-                animal.GetComponent<NodeCanvas.Framework.Blackboard>().enabled = active;
-                //MelonLogger.Msg("[NodeCanvas.Framework.Blackboard]-> off");
+                //UnityEngine.Component.Destroy(animal.GetComponent<Il2CppNodeCanvas.Framework.Blackboard>());
+                animal.GetComponent<Il2CppNodeCanvas.Framework.Blackboard>().enabled = active;
+                //MelonLogger.Msg("[Il2CppNodeCanvas.Framework.Blackboard]-> off");
             }
             //MelonLogger.Msg("Blackboard DA BECAUSE DA");
             if (animal.GetComponent<TLDBehaviourTreeOwner>() != null)
@@ -5548,11 +5650,11 @@ namespace SkyCoop
         }
         public static GameObject SpawnAnimalActor(string prefabName, Vector3 v3, Quaternion rot, string GUID, string RegionGUID, List<DataStr.AnimalArrow> Arrows)
         {
-            GameObject reference = GetGearItemObject(prefabName);
+            GameObject reference = Compat.LoadAnimalPrefab(prefabName);
 
             if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't create animal actor with prefab name " + prefabName);
+                MelonLogger.Msg(System.ConsoleColor.Red, "Can't create animal actor with prefab name " + prefabName);
                 return null;
             }
 
@@ -5595,7 +5697,7 @@ namespace SkyCoop
 
             if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't create animal body prefab name " + prefab);
+                MelonLogger.Msg(System.ConsoleColor.Red, "Can't create animal body prefab name " + prefab);
                 return;
             }
             GameObject oldObj = ObjectGuidManager.Lookup(GUID);
@@ -5714,7 +5816,7 @@ namespace SkyCoop
             if (m_Panel_MainMenu != null)
             {
                 m_Panel_MainMenu.ShowNameSaveSlotPopup();
-                InterfaceManager.m_Panel_Confirmation.m_CurrentGroup.m_InputField.SetText(DateTime.Now.ToString());
+                InterfaceManager.GetPanel<Panel_Confirmation>().m_CurrentGroup.m_InputField.SetText(DateTime.Now.ToString());
             }
         }
 
@@ -5762,7 +5864,7 @@ namespace SkyCoop
 
                     SaveGameSystem.SetCurrentSaveInfo(SaveToLoad.m_Episode, SaveToLoad.m_GameMode, SaveToLoad.m_GameId, SaveToLoad.m_SaveSlotName);
                     MelonLogger.Msg("Selecting slot " + SaveGameSystem.GetCurrentSaveName());
-                    GameManager.LoadSaveGameSlot(SaveToLoad.m_SaveSlotName, SaveToLoad.m_SaveChangelistVersion);
+                    GameManager.LoadSaveGameSlot(SaveToLoad);
                     PendingSaveSlotInfo = null;
                 }
             }else{
@@ -5816,8 +5918,8 @@ namespace SkyCoop
                         break;
                     } else
                     {
-                        MelonLogger.Msg(ConsoleColor.DarkRed, "Found slot to load but it saved on outdated version of the game");
-                        MelonLogger.Msg(ConsoleColor.DarkRed, "Generation version of this slot " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
+                        MelonLogger.Msg(System.ConsoleColor.DarkRed, "Found slot to load but it saved on outdated version of the game");
+                        MelonLogger.Msg(System.ConsoleColor.DarkRed, "Generation version of this slot " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
                     }
                 }
             }
@@ -5853,7 +5955,7 @@ namespace SkyCoop
             MelonLogger.Msg("Prepare ui for creating save slot");
             InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(false);
-            InterfaceManager.TrySetPanelEnabled<Panel_Story>(false);
+            InterfaceManager.TrySetPanelEnabled<Panel_MissionsStory>(false);
             InterfaceManager.TrySetPanelEnabled<Panel_ChooseSandbox>(false);
 
             if (ServerConfig.m_PlayersSpawnType == 0) // Same as host.
@@ -5897,7 +5999,7 @@ namespace SkyCoop
                     MelonLogger.Msg("Custom Experience Mode recreated from string!");
                 } else
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Failed to recreate custom experience from string!");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Failed to recreate custom experience from string!");
                 }
             }
             
@@ -5921,7 +6023,7 @@ namespace SkyCoop
             MelonLogger.Msg("Save slot userdefined name " + SaveGameSlots.GetUserDefinedSlotName(SaveGameSystem.GetCurrentSaveName()));
 
 
-            GameManager.m_StartRegion = Region;
+            GameManager.m_StartRegion = RegionIds.Spec((int)Region);
             InterloperHook = true;
             OverridedSceneForSpawn = Data.m_FixedSpawnScene;
             OverridedPositionForSpawn = Data.m_FixedSpawnPosition;
@@ -6017,7 +6119,7 @@ namespace SkyCoop
             } else {
                 MelonLogger.Msg("m_PlayerManager is null");
             }
-            InterfaceManager.m_Panel_Log.ExitInterface();
+            InterfaceManager.GetPanel<Panel_Log>().ExitInterface();
             GameManager.GetInventoryComponent().DestroyAllGear();
             GameManager.GetPlayerManagerComponent().m_StartGear.AddAllToInventory();
 
@@ -6217,7 +6319,7 @@ namespace SkyCoop
         public static InterfaceManager m_InterfaceManager;
         public static Panel_SelectSurvivor m_Panel_SelectSurvivor;
         public static Panel_MainMenu m_Panel_MainMenu;
-        public static Panel_SelectRegion m_Panel_SelectRegion;
+        public static Panel_SelectRegion_Map m_Panel_SelectRegion;
         public static Panel_Sandbox m_Panel_Sandbox;
         public static Panel_ChooseSandbox m_Panel_ChooseSandbox;
         public static Panel_ChallengeComplete m_Panel_ChallengeComplete;
@@ -6226,7 +6328,7 @@ namespace SkyCoop
         {
             if (HasWaitForConnect == false)
             {
-                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
                 {
                     if (m_Panel_MainMenu != null)
                     {
@@ -6250,7 +6352,7 @@ namespace SkyCoop
                     }
 
 
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, "Connecting...", Txt, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, "Connecting...", Txt, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
                     HasWaitForConnect = true;
                 }
             }
@@ -6377,9 +6479,9 @@ namespace SkyCoop
             {
                 QuitWithoutSaving = true;
                 GameManager.CancelPendingSave();
-                if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
                 {
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECT TIMEOUT", "\n" + "Host did not responced after 10 Attempts, you can safly exit the game.\nGame won't be saves to keep save valid for host on reconnection!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECT TIMEOUT", "\n" + "Host did not responced after 10 Attempts, you can safly exit the game.\nGame won't be saves to keep save valid for host on reconnection!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                 }
                 return;
             }
@@ -6412,33 +6514,33 @@ namespace SkyCoop
 
         public static void DoPleaseWait(string title, string text)
         {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n" + text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
+                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Waiting, title, "\n" + text, Panel_Confirmation.ButtonLayout.Button_0, Panel_Confirmation.Background.Transperent, null, null);
             }
         }
         public static void RemovePleaseWait()
         {
-            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
-                InterfaceManager.m_Panel_Confirmation.OnCancel();
+                InterfaceManager.GetPanel<Panel_Confirmation>().OnCancel();
             }
         }
 
         public static void RemoveWaitForConnect()
         {
             HasWaitForConnect = false;
-            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
-                InterfaceManager.m_Panel_Confirmation.OnCancel();
+                InterfaceManager.GetPanel<Panel_Confirmation>().OnCancel();
             }
         }
         public static void DoKickMessage(string txt)
         {
             RemoveWaitForConnect();
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "DISCONNECTED", "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
             }
 
             if(level_name != "MainMenu")
@@ -6454,9 +6556,9 @@ namespace SkyCoop
 
         public static void DoOKMessage(string title, string txt)
         {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, title, "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, title, "\n" + txt, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
             }
         }
 
@@ -6464,7 +6566,7 @@ namespace SkyCoop
         {
             DataStr.ShowShelterByOther FindData = new DataStr.ShowShelterByOther();
 
-            Panel_SnowShelterInteract panel = InterfaceManager.m_Panel_SnowShelterInteract;
+            Panel_SnowShelterInteract panel = InterfaceManager.GetPanel<Panel_SnowShelterInteract>();
             if (panel.m_SnowShelter != null && panel.m_SnowShelter.gameObject != null)
             {
                 FindData.m_Position = panel.m_SnowShelter.gameObject.transform.position;
@@ -6611,7 +6713,7 @@ namespace SkyCoop
                 return;
             }
             bool PreviousRecord = DoingRecord;
-            DoingRecord = KeyboardUtilities.InputManager.GetKey(KeyCode.V);
+            DoingRecord = Input.GetKey(KeyCode.V);
 
             if ((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
             {
@@ -6716,6 +6818,7 @@ namespace SkyCoop
 
         public static void FinishedLoading()
         {
+            SceneDiag.Dump("FinishedLoading");
             RegularUpdateSeconds = 2;
             if (HostFromLobbyAfterLoader)
             {
@@ -6732,9 +6835,9 @@ namespace SkyCoop
 
         public static void DedicatedServerUpdate()
         {
-            if(InterfaceManager.m_Panel_Loading != null)
+            if(InterfaceManager.GetPanel<Panel_Loading>() != null)
             {
-                Panel_Loading Panel = InterfaceManager.m_Panel_Loading;
+                Panel_Loading Panel = InterfaceManager.GetPanel<Panel_Loading>();
 
                 Panel.m_HoldScreenAfterLoad = false;
                 Panel.m_ContinueToGame = true;
@@ -6748,7 +6851,7 @@ namespace SkyCoop
                 GameManager.m_PlayerManager.m_Ghost = true;
                 GameManager.m_PlayerObject.transform.position = new Vector3(0, -300, 0);
                 IsDead = true;
-                GameAudioManager.SetRTPCValue(AK.GAME_PARAMETERS.GLOBALVOLUME, 0 * 100f, (GameObject)null);
+                GameAudioManager.SetRTPCValue(Il2CppAK.GAME_PARAMETERS.GLOBALVOLUME, 0 * 100f, (GameObject)null);
             }
         }
 
@@ -6773,7 +6876,7 @@ namespace SkyCoop
 
         public static bool SnareCanTrap(Vector3 pos, string prefabname)
         {
-            //MelonLogger.Msg(ConsoleColor.Yellow, "Snare looking for region with "+ prefabname + "...");
+            //MelonLogger.Msg(System.ConsoleColor.Yellow, "Snare looking for region with "+ prefabname + "...");
             SpawnRegionManager SRM = GameManager.GetSpawnRegionManager();
             for (int index = 0; index < SRM.m_SpawnRegions.Count; ++index)
             {
@@ -6783,17 +6886,28 @@ namespace SkyCoop
                 //MelonLogger.Msg(index + ". Distance to snare " + dis + " maximal allowed distance " + mindis+" animal prefab "+ spPrefab);
                 if (dis <= mindis && prefabname == spPrefab)
                 {
-                    //MelonLogger.Msg(ConsoleColor.Yellow, "Snare inside spawnregion " + SRM.m_SpawnRegions[index].gameObject.name);
+                    //MelonLogger.Msg(System.ConsoleColor.Yellow, "Snare inside spawnregion " + SRM.m_SpawnRegions[index].gameObject.name);
                     return true;
                 }
             }
-            //MelonLogger.Msg(ConsoleColor.Red, "Snare cannot catch here! ");
+            //MelonLogger.Msg(System.ConsoleColor.Red, "Snare cannot catch here! ");
             return false;
         }
 
 
         public static void FakeDropItem(int GearID, Vector3 v3, Quaternion rot, int Hash, DataStr.ExtraDataForDroppedGear extra)
         {
+            // The same drop can arrive twice (resent packet): replace the old dummy instead of throwing on Add.
+            GameObject oldDummy;
+            if (DroppedGearsObjs.TryGetValue(Hash, out oldDummy))
+            {
+                DroppedGearsObjs.Remove(Hash);
+                TrackableDroppedGearsObjs.Remove(Hash);
+                if (oldDummy != null)
+                {
+                    UnityEngine.Object.Destroy(oldDummy);
+                }
+            }
             bool IsSpeicalItem = false;
 
             if(extra.m_Variant == -2)
@@ -6812,7 +6926,7 @@ namespace SkyCoop
             {
                 if (DroppedGearsObjs.ContainsKey(Hash) == true)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear with hash " + Hash + " already exist!");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Gear with hash " + Hash + " already exist!");
                     return;
                 }
             }
@@ -6821,7 +6935,7 @@ namespace SkyCoop
 
             if (reference == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                 return;
             }
 
@@ -6919,17 +7033,17 @@ namespace SkyCoop
                 foreach (Component Com in obj.GetComponents<Component>())
                 {
                     string ComName = Com.GetIl2CppType().Name;
-                    if (ComName != BoxCollider.Il2CppType.Name
-                        && ComName != SphereCollider.Il2CppType.Name
-                        && ComName != CapsuleCollider.Il2CppType.Name
-                        && ComName != MeshCollider.Il2CppType.Name
-                        && ComName != PhysicMaterial.Il2CppType.Name
-                        && ComName != MeshFilter.Il2CppType.Name
-                        && ComName != LODGroup.Il2CppType.Name
-                        && ComName != Transform.Il2CppType.Name
-                        && ComName != Rigidbody.Il2CppType.Name
-                        && ComName != MeshRenderer.Il2CppType.Name
-                        && ComName != SkinnedMeshRenderer.Il2CppType.Name)
+                    if (ComName != Il2CppType.Of<BoxCollider>().Name
+                        && ComName != Il2CppType.Of<SphereCollider>().Name
+                        && ComName != Il2CppType.Of<CapsuleCollider>().Name
+                        && ComName != Il2CppType.Of<MeshCollider>().Name
+                        && ComName != Il2CppType.Of<PhysicsMaterial>().Name
+                        && ComName != Il2CppType.Of<MeshFilter>().Name
+                        && ComName != Il2CppType.Of<LODGroup>().Name
+                        && ComName != Il2CppType.Of<Transform>().Name
+                        && ComName != Il2CppType.Of<Rigidbody>().Name
+                        && ComName != Il2CppType.Of<MeshRenderer>().Name
+                        && ComName != Il2CppType.Of<SkinnedMeshRenderer>().Name)
                     {
                         UnityEngine.Object.Destroy(Com);
                     }
@@ -6954,6 +7068,7 @@ namespace SkyCoop
                     DGD.m_SearchKey = Hash;
                     DGD.m_Extra = extra;
                     DGD.m_LocalizedDisplayName = _DisName;
+                    Compat.EnsureInteraction(obj);
                     if (_FakeBed)
                     {
                         obj.AddComponent<Comps.FakeBed>();
@@ -6979,7 +7094,7 @@ namespace SkyCoop
                                 FakeDecoy.m_DropGearDummy = DGD;
 
                                 GearManager.MaybeAddToDroppedDecoys(DGD.m_DecoyDummy);
-                                MelonLogger.Msg(ConsoleColor.Cyan, "Gear prefab with name " + gearName + " registered as decoy");
+                                MelonLogger.Msg(System.ConsoleColor.Cyan, "Gear prefab with name " + gearName + " registered as decoy");
                             }
                         }
                     }
@@ -6996,7 +7111,7 @@ namespace SkyCoop
             }
             else
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
             }
         }
 
@@ -7018,7 +7133,7 @@ namespace SkyCoop
             {
                 SearchKey = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
             } else {
-                //MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy is not exist by somereason...");
+                //MelonLogger.Msg(System.ConsoleColor.Red, "DroppedGearDummy is not exist by somereason...");
 
 
                 GearItem GI = obj.GetComponent<GearItem>();
@@ -7071,7 +7186,7 @@ namespace SkyCoop
 
                 if (reference == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
@@ -7084,12 +7199,12 @@ namespace SkyCoop
                 {
                     int minutesDroped = MinutesFromStartServer - Extra.m_DroppedTime;
                     OverrideLampReduceFuel = minutesDroped;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                 }
 
                 if (newGear == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
@@ -7155,7 +7270,7 @@ namespace SkyCoop
             {
                 SearchKey = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
             } else {
-                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                MelonLogger.Msg(System.ConsoleColor.Red, "DroppedGearDummy by somereason...");
                 return;
             }
 
@@ -7208,7 +7323,7 @@ namespace SkyCoop
             {
                 SearchKey = obj.GetComponent<Comps.DroppedGearDummy>().m_SearchKey;
             } else {
-                MelonLogger.Msg(ConsoleColor.Red, "DroppedGearDummy by somereason...");
+                MelonLogger.Msg(System.ConsoleColor.Red, "DroppedGearDummy by somereason...");
                 return;
             }
 
@@ -7260,7 +7375,7 @@ namespace SkyCoop
 
                 if (reference == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
@@ -7269,7 +7384,7 @@ namespace SkyCoop
 
                 if (newGear == null)
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Gear prefab with name " + gearName + " not exist! Maybe you miss an modded item pack?");
                     return;
                 }
 
@@ -7279,7 +7394,7 @@ namespace SkyCoop
                 {
                     int minutesDroped = MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
                     OverrideLampReduceFuel = minutesDroped;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "Lamp been dropped " + minutesDroped + " minutes");
                 }
                 if (!string.IsNullOrEmpty(DataProxy.m_Json))
                 {
@@ -7328,8 +7443,8 @@ namespace SkyCoop
                             int minutesOnDry = MyMod.MinutesFromStartServer - DGD.m_Extra.m_DroppedTime;
 
                             gear.m_EvolveItem.m_TimeSpentEvolvingGameHours = (float)minutesOnDry / 60;
-                            MelonLogger.Msg(ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
-                            MelonLogger.Msg(ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
+                            MelonLogger.Msg(System.ConsoleColor.Blue, "Saving minutesOnDry " + minutesOnDry);
+                            MelonLogger.Msg(System.ConsoleColor.Blue, "m_TimeSpentEvolvingGameHours " + gear.m_EvolveItem.m_TimeSpentEvolvingGameHours);
                         }
                     }
                 }
@@ -7516,7 +7631,7 @@ namespace SkyCoop
             else if (Aff.m_Type == (int)AfflictionType.Dysentery)
             {
                 GameManager.GetDysenteryComponent().TakeAntibiotics();
-                GameManager.GetDysenteryComponent().DrinkCleanWater(2f);
+                GameManager.GetDysenteryComponent().DrinkCleanWater(ItemLiquidVolume.FromLiters(2f));
                 return;
             }
             else if (Aff.m_Type == (int)AfflictionType.SprainedAnkle)
@@ -7683,13 +7798,11 @@ namespace SkyCoop
             NPC m_NPC = DiagnosisDummy.AddComponent<NPC>();
             NPCAfflictions m_NPCaff = DiagnosisDummy.AddComponent<NPCAfflictions>();
             NPCCondition m_NPCcon = DiagnosisDummy.AddComponent<NPCCondition>();
-            CarryableBody m_BodyCarry = DiagnosisDummy.AddComponent<CarryableBody>();
             NPCThirst m_Thirst = DiagnosisDummy.AddComponent<NPCThirst>();
             NPCVoice m_Voice = DiagnosisDummy.AddComponent<NPCVoice>();
             NPCFreezing m_Cold = DiagnosisDummy.AddComponent<NPCFreezing>();
             m_NPC.m_AfflictionsComponent = m_NPCaff;
             m_NPC.m_Condition = m_NPCcon;
-            m_NPC.m_Body = m_BodyCarry;
             m_NPC.m_Thirst = m_Thirst;
             m_NPC.m_Voice = m_Voice;
             m_NPC.m_Freezing = m_Cold;
@@ -7734,7 +7847,7 @@ namespace SkyCoop
             m_Thirst.m_ThirstIncreasePerHour = 0;
             m_Cold.m_CurrentFreezing = 100 - Mathf.Clamp(0.5f + (100f * hunger) / hungermax, 0.0f, 100f);
             m_Cold.m_MaxFreezing = hungermax;
-            Panel_Diagnosis Panel = InterfaceManager.m_Panel_Diagnosis;
+            Panel_Diagnosis Panel = InterfaceManager.GetPanel<Panel_Diagnosis>();
             RemovePleaseWait();
             DiscardRepeatPacket();
 
@@ -7747,7 +7860,7 @@ namespace SkyCoop
             TemertureBar.SetActive(true);
 
             string Speach = "PLAY_SURVIVORDIAGNOSIS"; // Astrid Default
-            if (GameManager.GetPlayerManagerComponent().m_VoicePersona == VoicePersona.Male) // If Makenzy
+            if (PlayerManager.m_VoicePersona == VoicePersona.Male) // If Makenzy
             {
                 if (!HasAnyBadOnes) // All is okay
                 {
@@ -7764,7 +7877,7 @@ namespace SkyCoop
                     Speach = MakenzyDiagnosis[rnd.Next(MakenzyDiagnosis.Count)];
                 }
             }
-            GameManager.GetPlayerVoiceComponent().Play(Speach, Voice.Priority.Critical);
+            GameManager.GetPlayerVoiceComponent().Play(Speach, Il2CppVoice.Priority.Critical);
         }
 
         public static int TimeToDry(string gearName)
@@ -7882,7 +7995,7 @@ namespace SkyCoop
                 string GearGiveName = CloneTrimer(OriginalName);
                 int hashV3 = Shared.GetVectorHash(v3);
                 int hashRot = Shared.GetQuaternionHash(rot);
-                int hashLevelKey = level_guid.GetHashCode();
+                int hashLevelKey = level_guid.StableHash();
                 int SearchKey = hashV3 + hashRot + hashLevelKey;
                 string LevelKey = level_guid;
 
@@ -7900,7 +8013,7 @@ namespace SkyCoop
                     }
                 }
 
-                DataProxy = gear.Serialize();
+                DataProxy = Compat.SerializeGearForSync(gear);
 
                 int NeedToDry = 0;
                 int MinuteToSkip = 0;
@@ -7992,7 +8105,7 @@ namespace SkyCoop
                 {
                     if (variant == 1)
                     {
-                        float fuel = gear.m_KeroseneLampItem.m_CurrentFuelLiters;
+                        float fuel = gear.m_KeroseneLampItem.m_CurrentFuelLiters.ToQuantity(1f);
                         float fuelPerMinute = gear.m_KeroseneLampItem.m_FuelBurnLitersPerHour / 60;
                         float minuteLeft = fuel / fuelPerMinute;
 
@@ -8054,7 +8167,7 @@ namespace SkyCoop
                             SlicedPacket.m_Last = true;
                             SlicedPacket.m_Extra = Extra;
 
-                            //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                            //MelonLogger.Msg(System.ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
                             if (sendMyPosition == true)
                             {
                                 AddGearCarefulSlice(SlicedPacket);
@@ -8202,13 +8315,13 @@ namespace SkyCoop
 
                             if (OpenablesObjs.ContainsKey(_Guid) == false)
                             {
-                                //MelonLogger.Msg(ConsoleColor.Yellow, "[OpenableThingsUnloader] Added " + _Guid);
+                                //MelonLogger.Msg(System.ConsoleColor.Yellow, "[OpenableThingsUnloader] Added " + _Guid);
                                 OpenablesObjs.Add(_Guid, curObj);
                             }
                         }
                     }
                 }
-                //MelonLogger.Msg(ConsoleColor.Blue, "[OpenableThingsUnloader] Finished convert list to dictionary List("+ OpenCloseManager.s_ActiveOpenClosers.Count+ ") Dictionary(" + OpenablesObjs.Count+")");
+                //MelonLogger.Msg(System.ConsoleColor.Blue, "[OpenableThingsUnloader] Finished convert list to dictionary List("+ OpenCloseManager.s_ActiveOpenClosers.Count+ ") Dictionary(" + OpenablesObjs.Count+")");
             }
             foreach (var cur in OpenableThings)
             {
@@ -8337,7 +8450,22 @@ namespace SkyCoop
             return Utils.SerializeObject(containerSaveDataProxy);
         }
 
-        public static void FinishOpeningFakeContainer(string CompressedData)
+        // Nobody has opened this container yet: the host never stored loot for it, so use the container's own
+        // (seeded, same for every player) loot instead of wiping it. The first close then stores it on the host.
+        public static void FillWithOwnLoot(Container box)
+        {
+            if (box.m_NotPopulated)
+            {
+                box.PopulateContents();
+            }
+            if (box.m_Items.Count == 0)
+            {
+                box.InstantiateContents();
+            }
+            MelonLogger.Msg("[FakeContainer] Never looted, using own loot: " + box.m_Items.Count + " items");
+        }
+
+        public static void FinishOpeningFakeContainer(string CompressedData, bool NeverLooted = false)
         {
             MelonLogger.Msg("Finish Opening Fake Container");
             string Data = "";
@@ -8349,12 +8477,20 @@ namespace SkyCoop
             Container box = GoingToOpenContinaer;
             GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
             GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched = null;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            InterfaceManager.GetPanel<Panel_HUD>().CancelItemProgressBar();
             box.m_SearchInProgress = false;
+            box.StopSearchAudio(); // vanilla ShowContainerContents stops it, but we skip that method
             box.m_OpenInProgress = false;
+            if (Data == "" && NeverLooted)
+            {
+                FillWithOwnLoot(box);
+            }
             box.m_Inspected = true;
             box.m_StartInspected = true;
-            if (Data == "")
+            if (Data == "" && NeverLooted)
+            {
+            }
+            else if (Data == "")
             {
                 MelonLogger.Msg("Container empty");
                 box.DestroyAllGear();
@@ -8365,8 +8501,8 @@ namespace SkyCoop
             }
             //box.m_CapacityKG = 1000f;
             RemovePleaseWait();
-            InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
-            InterfaceManager.m_Panel_Container.Enable(true);
+            InterfaceManager.GetPanel<Panel_Container>().SetContainer(box, box.m_LocalizedDisplayName.Text());
+            InterfaceManager.GetPanel<Panel_Container>().Enable(true);
             box.m_Inspected = true;
             box.m_StartInspected = true;
             GoingToOpenContinaer = null;
@@ -8401,13 +8537,22 @@ namespace SkyCoop
 
             GameManager.GetPlayerManagerComponent().SetControlMode(box.m_RestoreControlMode);
             GameManager.GetPlayerManagerComponent().m_ContainerBeingSearched = null;
-            InterfaceManager.m_Panel_HUD.CancelItemProgressBar();
+            InterfaceManager.GetPanel<Panel_HUD>().CancelItemProgressBar();
             box.m_SearchInProgress = false;
+            box.StopSearchAudio(); // vanilla ShowContainerContents stops it, but we skip that method
             box.m_OpenInProgress = false;
+            bool NeverLooted = Data == "" && MPSaveManager.GetContainerState(level_guid, boxGUID) == -1;
+            if (NeverLooted)
+            {
+                FillWithOwnLoot(box);
+            }
             box.m_Inspected = true;
             box.m_StartInspected = true;
 
-            if (Data == "")
+            if (NeverLooted)
+            {
+            }
+            else if (Data == "")
             {
                 box.DestroyAllGear();
             } else {
@@ -8417,8 +8562,8 @@ namespace SkyCoop
             box.m_Inspected = true;
             box.m_StartInspected = true;
             //box.m_CapacityKG = 1000f;
-            InterfaceManager.m_Panel_Container.SetContainer(box, box.m_LocalizedDisplayName.Text());
-            InterfaceManager.m_Panel_Container.Enable(true);
+            InterfaceManager.GetPanel<Panel_Container>().SetContainer(box, box.m_LocalizedDisplayName.Text());
+            InterfaceManager.GetPanel<Panel_Container>().Enable(true);
         }
 
         public static void CloseFakeContainer(Container box)
@@ -8444,7 +8589,7 @@ namespace SkyCoop
                     for (int i = box.m_Items.Count - 1; i >= 0; i--)
                     {
                         GearItemObject item = box.m_Items[i];
-                        if (item.m_GearItem && item.m_GearItem.m_WaterSupply && item.m_GearItem.m_WaterSupply.m_VolumeInLiters == 0)
+                        if (item.m_GearItem && item.m_GearItem.m_WaterSupply && item.m_GearItem.m_WaterSupply.m_VolumeInLiters.m_Units == 0)
                         {
                             box.RemoveGear(item.m_GearItem);
                         }
@@ -8532,7 +8677,7 @@ namespace SkyCoop
                 }
             }
             GameManager.GetPlayerManagerComponent().MaybeRevealPolaroidDiscoveryOnClose();
-            InterfaceManager.m_Panel_Container.Enable(false);
+            InterfaceManager.GetPanel<Panel_Container>().Enable(false);
         }
 
         public static void InitAudio()
@@ -8576,8 +8721,8 @@ namespace SkyCoop
         {
             if (SleepingButtons == null)
             {
-                SleepingButtons = InterfaceManager.m_Panel_Rest.gameObject.transform.GetChild(3).gameObject;
-                WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.m_Panel_Rest.gameObject.transform);
+                SleepingButtons = InterfaceManager.GetPanel<Panel_Rest>().gameObject.transform.GetChild(3).gameObject;
+                WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.GetPanel<Panel_Rest>().gameObject.transform);
                 UnityEngine.Object.Destroy(WaitForSleepLable.GetComponent<UILocalize>());
                 WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP";
                 WaitForSleepLable.SetActive(false);
@@ -8585,7 +8730,7 @@ namespace SkyCoop
 
             if (new_button == null)
             {
-                new_button = UnityEngine.Object.Instantiate(InterfaceManager.m_Panel_Rest.m_SleepButton, InterfaceManager.m_Panel_Rest.m_SleepButton.transform.parent);
+                new_button = UnityEngine.Object.Instantiate(InterfaceManager.GetPanel<Panel_Rest>().m_SleepButton, InterfaceManager.GetPanel<Panel_Rest>().m_SleepButton.transform.parent);
 
                 if (new_button2 == null)
                 {
@@ -8959,7 +9104,7 @@ namespace SkyCoop
                     }
                 }
 
-                if (InterfaceManager.m_Panel_PauseMenu.isActiveAndEnabled && level_name != "MainMenu")
+                if (InterfaceManager.GetPanel<Panel_PauseMenu>().isActiveAndEnabled && level_name != "MainMenu")
                 {
                     if (InOnline())
                     {
@@ -9155,7 +9300,7 @@ namespace SkyCoop
                     SimRevive();
                 }
 
-                ALWAYS_FUCKING_CURSOR_ON = KeyboardUtilities.InputManager.GetKey(KeyCode.L);
+                ALWAYS_FUCKING_CURSOR_ON = Input.GetKey(KeyCode.L);
 
                 if (InputManager.GetKeyDown(InputManager.m_CurrentContext, KeyCode.LeftAlt))
                 {
@@ -9242,7 +9387,7 @@ namespace SkyCoop
                     }
                 }
             }
-            if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
+            if (InterfaceManager.GetPanel<Panel_Map>().IsEnabled() == false)
             {
                 if (GameManager.GetPlayerManagerComponent().m_ItemInHands != null)
                 {
@@ -9275,7 +9420,7 @@ namespace SkyCoop
                     GearItem curItem = GameManager.GetInventoryComponent().m_Items[i];
                     if (curItem.m_GearName == GearName && curItem != GameManager.GetPlayerManagerComponent().m_ItemInHands)
                     {
-                        string saveProxyData = curItem.Serialize();
+                        string saveProxyData = curItem.SerializeToString();
                         SendGivingItem(saveProxyData, curItem, Borrower, true);
                         break;
                     }
@@ -9310,7 +9455,7 @@ namespace SkyCoop
                 {
                     bottle = GameManager.GetInventoryComponent().m_WaterSupplyNotPotable.m_WaterSupply;
                 }
-                float Liters = bottle.m_VolumeInLiters;
+                float Liters = bottle.m_VolumeInLiters.ToQuantity(1f);
 
                 if (Liters >= 0.5f)
                 {
@@ -9345,7 +9490,7 @@ namespace SkyCoop
                 }
             } else {
                 byte[] bytesToSlice = Encoding.UTF8.GetBytes(saveProxyData);
-                //MelonLogger.Msg(ConsoleColor.Green, "Gonna send json" + saveProxyData.GetHashCode() + " DATA: " + saveProxyData);
+                //MelonLogger.Msg(System.ConsoleColor.Green, "Gonna send json" + saveProxyData.StableHash() + " DATA: " + saveProxyData);
                 if (bytesToSlice.Length > 500)
                 {
                     List<byte> BytesBuffer = new List<byte>();
@@ -9360,7 +9505,7 @@ namespace SkyCoop
                         DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
                         SlicedPacket.m_GearName = _gear.m_GearName;
                         SlicedPacket.m_SendTo = GiveItemTo;
-                        SlicedPacket.m_Hash = saveProxyData.GetHashCode();
+                        SlicedPacket.m_Hash = saveProxyData.StableHash();
                         SlicedPacket.m_Str = jsonStringSlice;
 
                         if (BytesBuffer.Count != 0)
@@ -9369,7 +9514,7 @@ namespace SkyCoop
                         } else {
                             SlicedPacket.m_Last = true;
                         }
-                        //MelonLogger.Msg(ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
+                        //MelonLogger.Msg(System.ConsoleColor.Yellow, "Sending slice " + SlicedPacket.m_Hash + " DATA: " + SlicedPacket.m_Str);
 
                         if (iAmHost == true)
                         {
@@ -9394,7 +9539,7 @@ namespace SkyCoop
                         DataStr.SlicedJsonData SlicedPacket = new DataStr.SlicedJsonData();
                         SlicedPacket.m_GearName = _gear.m_GearName;
                         SlicedPacket.m_SendTo = GiveItemTo;
-                        SlicedPacket.m_Hash = saveProxyData.GetHashCode();
+                        SlicedPacket.m_Hash = saveProxyData.StableHash();
                         SlicedPacket.m_Str = jsonStringSlice;
                         SlicedPacket.m_Last = true;
 
@@ -9415,7 +9560,7 @@ namespace SkyCoop
                     DataStr.SlicedJsonData DropPacket = new DataStr.SlicedJsonData();
                     DropPacket.m_GearName = _gear.m_GearName;
                     DropPacket.m_SendTo = GiveItemTo;
-                    DropPacket.m_Hash = saveProxyData.GetHashCode();
+                    DropPacket.m_Hash = saveProxyData.StableHash();
                     DropPacket.m_Str = saveProxyData;
                     DropPacket.m_Last = true;
                     if (iAmHost == true)
@@ -9437,13 +9582,13 @@ namespace SkyCoop
             {
                 string say = "half liter of " + _gear.m_LocalizedDisplayName.Text();
 
-                if (bottle.m_VolumeInLiters == waterGave)
+                if (Mathf.Approximately(bottle.m_VolumeInLiters.ToQuantity(1f), waterGave))
                 {
-                    bottle.m_VolumeInLiters = 0;
+                    bottle.m_VolumeInLiters = ItemLiquidVolume.Zero;
                 }
                 else
                 {
-                    bottle.m_VolumeInLiters = bottle.m_VolumeInLiters - waterGave;
+                    bottle.m_VolumeInLiters = ItemLiquidVolume.FromLiters(bottle.m_VolumeInLiters.ToQuantity(1f) - waterGave);
                     say = waterGave + " liter of " + _gear.m_LocalizedDisplayName.Text();
                 }
                 if (!Borrow)
@@ -9463,24 +9608,24 @@ namespace SkyCoop
                 MelonLogger.Msg("You gave " + LastSelectedGearName + " to " + playersData[GiveItemTo].m_Name);
             }
 
-            InterfaceManager.m_Panel_Inventory.m_IsDirty = true;
-            InterfaceManager.m_Panel_Inventory.Update();
+            InterfaceManager.GetPanel<Panel_Inventory>().m_IsDirty = true;
+            InterfaceManager.GetPanel<Panel_Inventory>().Update();
         }
 
         public static void ProcessGivingItem(bool SelectOnly = false)
         {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Inventory != null && InterfaceManager.m_Panel_Inventory.IsEnabled())
+            if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Inventory>() != null && InterfaceManager.GetPanel<Panel_Inventory>().IsEnabled())
             {
-                Panel_Inventory Panel = InterfaceManager.m_Panel_Inventory;
+                Panel_Inventory Panel = InterfaceManager.GetPanel<Panel_Inventory>();
                 if (Panel.m_SelectedItemIndex != -1)
                 {
                     int seelecteditem = Panel.m_SelectedItemIndex;
                     seelecteditem = seelecteditem + Panel.m_FirstItemDisplayedIndex;
-                    Il2CppSystem.Collections.Generic.List<GearItem> itemlist = Panel.m_FilteredInventoryList;
+                    var itemlist = Panel.m_FilteredInventoryList;
 
                     if (Panel.m_FilteredInventoryList.Count > 0)
                     {
-                        GearItem gear = Panel.m_FilteredInventoryList[seelecteditem];
+                        GearItem gear = Panel.m_FilteredInventoryList[seelecteditem]?.m_GearItem;
 
                         if (gear != null)
                         {
@@ -9516,7 +9661,7 @@ namespace SkyCoop
                 return;
             }
 
-            if (LastSelectedGearName != "" && LastSelectedGear != null && InterfaceManager.m_Panel_Inventory.IsEnabled() == true && GiveItemTo != -1)
+            if (LastSelectedGearName != "" && LastSelectedGear != null && InterfaceManager.GetPanel<Panel_Inventory>().IsEnabled() == true && GiveItemTo != -1)
             {
                 Il2CppSystem.Collections.Generic.List<GearItemObject> items = GameManager.GetInventoryComponent().m_Items;
                 GearItem _gear = null;
@@ -9567,7 +9712,7 @@ namespace SkyCoop
                         }
 
                         //Saving patched item.
-                        saveProxyData = _gear.Serialize();
+                        saveProxyData = _gear.SerializeToString();
 
                         //Restore actual values.
                         if (_gear.m_StackableItem != null)
@@ -9577,10 +9722,10 @@ namespace SkyCoop
                         _gear.m_InPlayerInventory = wasInPlayerInv;
 
                         //GearItemSaveDataProxy Proxy = Utils.DeserializeObject<GearItemSaveDataProxy>(saveProxyData);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_CurrentHP " + cloneGear.m_CurrentHP);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_LastUpdatedTODHours " + cloneGear.m_LastUpdatedTODHours);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_HoursPlayed " + Proxy.m_HoursPlayed);
-                        //MelonLogger.Msg(ConsoleColor.Green, "[GearItem] Sending gear with m_DecayScalar " + cloneGear.m_DecayScalar);
+                        //MelonLogger.Msg(System.ConsoleColor.Green, "[GearItem] Sending gear with m_CurrentHP " + cloneGear.m_CurrentHP);
+                        //MelonLogger.Msg(System.ConsoleColor.Green, "[GearItem] Sending gear with m_LastUpdatedTODHours " + cloneGear.m_LastUpdatedTODHours);
+                        //MelonLogger.Msg(System.ConsoleColor.Green, "[GearItem] Sending gear with m_HoursPlayed " + Proxy.m_HoursPlayed);
+                        //MelonLogger.Msg(System.ConsoleColor.Green, "[GearItem] Sending gear with m_DecayScalar " + cloneGear.m_DecayScalar);
 
                         //UnityEngine.Object.Destroy(cloneObj);
                         break;
@@ -9757,14 +9902,14 @@ namespace SkyCoop
                         }
                         else
                         {
-                            if (InterfaceManager.m_Panel_Map.IsEnabled() == false)
+                            if (InterfaceManager.GetPanel<Panel_Map>().IsEnabled() == false)
                             {
-                                if (InterfaceManager.m_Panel_BreakDown.IsBreakingDown() == true)
+                                if (InterfaceManager.GetPanel<Panel_BreakDown>().IsBreakingDown() == true)
                                 {
-                                    BreakDown bk = InterfaceManager.m_Panel_BreakDown.m_BreakDown;
+                                    BreakDown bk = InterfaceManager.GetPanel<Panel_BreakDown>().m_BreakDown;
                                     if (bk != null && bk.gameObject != null)
                                     {
-                                        GameObject bkObj = InterfaceManager.m_Panel_BreakDown.m_BreakDown.gameObject;
+                                        GameObject bkObj = InterfaceManager.GetPanel<Panel_BreakDown>().m_BreakDown.gameObject;
                                         float CamY = GameManager.GetMainCamera().transform.position.y;
                                         if (bkObj.transform.position.y > CamY)
                                         {
@@ -9780,7 +9925,7 @@ namespace SkyCoop
                                         MyAnimState = "Harvesting";
                                     }
                                 }
-                                else if (PlayerInteractionWith != null || (InterfaceManager.m_Panel_Diagnosis != null && InterfaceManager.m_Panel_Diagnosis.TreatmentInProgress() == true))
+                                else if (PlayerInteractionWith != null || (InterfaceManager.GetPanel<Panel_Diagnosis>() != null && InterfaceManager.GetPanel<Panel_Diagnosis>().TreatmentInProgress() == true))
                                 {
                                     if (GameManager.GetPlayerManagerComponent().PlayerIsCrouched() == true)
                                     {
@@ -9791,11 +9936,11 @@ namespace SkyCoop
                                         MyAnimState = "HarvestingStanding";
                                     }
                                 }
-                                else if (InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null)
+                                else if (InterfaceManager.GetPanel<Panel_BodyHarvest>() != null && InterfaceManager.GetPanel<Panel_BodyHarvest>().m_BodyHarvest != null && InterfaceManager.GetPanel<Panel_BodyHarvest>().m_BodyHarvest.gameObject != null)
                                 {
                                     MyAnimState = "Harvesting";
                                 }
-                                else if ((InterfaceManager.m_Panel_SnowShelterBuild != null && InterfaceManager.m_Panel_SnowShelterBuild.m_IsBuilding == true) || (InterfaceManager.m_Panel_SnowShelterInteract != null && InterfaceManager.m_Panel_SnowShelterInteract.m_IsDismantling == true))
+                                else if ((InterfaceManager.GetPanel<Panel_SnowShelterBuild>() != null && InterfaceManager.GetPanel<Panel_SnowShelterBuild>().m_IsBuilding == true) || (InterfaceManager.GetPanel<Panel_SnowShelterInteract>() != null && InterfaceManager.GetPanel<Panel_SnowShelterInteract>().m_IsDismantling == true))
                                 {
                                     MyAnimState = "Harvesting";
                                 } else if (Pathes.FakeRockCacheCallback != null)
@@ -10040,7 +10185,7 @@ namespace SkyCoop
                 harvestGUID = h.gameObject.GetComponent<ObjectGuid>().Get();
             }
             //If I am harvest animal
-            Panel_BodyHarvest PBH = InterfaceManager.m_Panel_BodyHarvest;
+            Panel_BodyHarvest PBH = InterfaceManager.GetPanel<Panel_BodyHarvest>();
             if (PBH != null && PBH.isActiveAndEnabled == true)
             {
                 if (PBH.m_BodyHarvest != null && PBH.m_BodyHarvest.gameObject != null && PBH.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
@@ -10049,7 +10194,7 @@ namespace SkyCoop
                 }
             }
             // If I am breakdown something
-            Panel_BreakDown PBD = InterfaceManager.m_Panel_BreakDown;
+            Panel_BreakDown PBD = InterfaceManager.GetPanel<Panel_BreakDown>();
             if (PBD != null && PBD.isActiveAndEnabled == true && PBD.m_BreakDown != null && PBD.m_BreakDown.gameObject != null)
             {
                 if (PBD.m_BreakDown.gameObject.activeSelf == true)
@@ -10209,7 +10354,7 @@ namespace SkyCoop
 
                 HUDMessage.HUDMessageInfo msg = new HUDMessage.HUDMessageInfo();
                 msg.m_Text = "Frequency " + GetRadioFrequency(RadioFrequency);
-                HUDMessage.ShowMessage(msg);
+                HUDMessage.AddMessage(msg.m_Text, false, false);
                 SendNewRadioFrequency();
             }
             if (WheelScroll > 0 && RadioFrequency < 25)
@@ -10219,14 +10364,14 @@ namespace SkyCoop
 
                 HUDMessage.HUDMessageInfo msg = new HUDMessage.HUDMessageInfo();
                 msg.m_Text = "Frequency " + GetRadioFrequency(RadioFrequency);
-                HUDMessage.ShowMessage(msg);
+                HUDMessage.AddMessage(msg.m_Text, false, false);
                 SendNewRadioFrequency();
             }
             bool LEDState = ViewModelRadioLED.activeSelf;
 
             if (InputManager.GetAltFirePressed(InputManager.m_CurrentContext))
             {
-                Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+                Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
                 if(Panel && !Panel.IsEnabled())
                 {
                     if (MPSaveManager.NeverSeenExpeditions())
@@ -10432,7 +10577,7 @@ namespace SkyCoop
         {
             PlayerManager managerComponent = GameManager.GetPlayerManagerComponent();
             if (InterfaceManager.IsOverlayActiveImmediate()
-                || (InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI && InterfaceManager.m_Panel_HUD.m_TwoButtonsChoiceUI.IsManagingInput())
+                || (InterfaceManager.GetPanel<Panel_HUD>().m_TwoButtonsChoiceUI && InterfaceManager.GetPanel<Panel_HUD>().m_TwoButtonsChoiceUI.IsManagingInput())
                 || (UICamera.currentScheme != UICamera.ControlScheme.Controller && managerComponent.m_InteractiveObjectUnderCrosshair && !managerComponent.PlayerIsZooming() && managerComponent.m_InteractiveObjectUnderCrosshair.GetComponent<BreakDown>())
                 || managerComponent.IsInPlacementMode()
                 || InputManager.IsClickHoldActive()
@@ -10478,7 +10623,7 @@ namespace SkyCoop
 
         public static void ReadNoteInHands()
         {
-            if (MouseActionIsAllowed() && InterfaceManager.m_Panel_HUD.m_CollectibleNoteObject.activeSelf == false)
+            if (MouseActionIsAllowed() && InterfaceManager.GetPanel<Panel_HUD>().m_CollectibleNoteObject.activeSelf == false)
             {
                 Pathes.DisplayNote(GameManager.GetPlayerManagerComponent().m_ItemInHands);
             }
@@ -10512,7 +10657,7 @@ namespace SkyCoop
                 GameAudioManager.SetMaterialSwitch(surfaceTag, hit.collider.gameObject);
                 Transform V3 = PlayerObj.transform;
                 GameObject Player = PlayerObj;
-                int num = (int)AkSoundEngine.PostEvent(AK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(PlayerObj));
+                int num = (int)AkSoundEngine.PostEvent(Il2CppAK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(PlayerObj));
                 GameAudioManager.SetAudioSourceTransform(Player, V3);
             }
         }
@@ -10577,7 +10722,7 @@ namespace SkyCoop
                 GameAudioManager.SetMaterialSwitch(surfaceTag, hit.collider.gameObject);
                 Transform V3 = GameManager.GetPlayerTransform();
                 GameObject Player = GameManager.GetPlayerObject();
-                int num = (int)AkSoundEngine.PostEvent(AK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
+                int num = (int)AkSoundEngine.PostEvent(Il2CppAK.EVENTS.PLAY_BULLETIMPACTS, GameAudioManager.GetSoundEmitterFromGameObject(GameManager.GetPlayerObject()));
                 GameAudioManager.SetAudioSourceTransform(Player, V3);
                 Comps.PlayerBulletDamage PlayerDamage = hit.collider.gameObject.GetComponent<Comps.PlayerBulletDamage >();
                 if (PlayerDamage != null)
@@ -10628,8 +10773,8 @@ namespace SkyCoop
                 {
                     MelonLogger.Msg("This is baseAI animal");
                     LocalizedDamage component = hit.collider.GetComponent<LocalizedDamage>();
-                    float bleedOutMinutes = component.GetBleedOutMinutes(BodyDamage.Weapon.Rifle);
-                    float Damage = GetMeelePlayerInfo(Weapon).m_AnimalDamage * component.GetDamageScale(BodyDamage.Weapon.Rifle);
+                    float bleedOutMinutes = component.GetBleedOutMinutes(WeaponSource.Rifle);
+                    float Damage = GetMeelePlayerInfo(Weapon).m_AnimalDamage * component.GetDamageScale(WeaponSource.Rifle);
 
                     if (!Utils.IsZero(Damage) || baseAiFromObject.ForceApplyDamage())
                     {
@@ -10645,8 +10790,8 @@ namespace SkyCoop
                 if (ActorFromObject != null)
                 {
                     LocalizedDamage component = hit.collider.GetComponent<LocalizedDamage>();
-                    float bleedOutMinutes = component.GetBleedOutMinutes(BodyDamage.Weapon.Rifle);
-                    float Damage = GetMeelePlayerInfo(Weapon).m_AnimalDamage * component.GetDamageScale(BodyDamage.Weapon.Rifle);
+                    float bleedOutMinutes = component.GetBleedOutMinutes(WeaponSource.Rifle);
+                    float Damage = GetMeelePlayerInfo(Weapon).m_AnimalDamage * component.GetDamageScale(WeaponSource.Rifle);
 
                     if (Damage > 0 && ActorFromObject.m_Hp > 0)
                     {
@@ -10776,7 +10921,7 @@ namespace SkyCoop
         {
             if (EmoteWheel)
             {
-                bool IsDown = KeyboardUtilities.InputManager.GetKey(KeyCode.T);
+                bool IsDown = Input.GetKey(KeyCode.T);
 
                 if ((chatInput != null && chatInput.gameObject.activeSelf == true) || (uConsole.m_Instance != null && uConsole.m_On == true))
                 {
@@ -10918,15 +11063,15 @@ namespace SkyCoop
             }
             if (m_InterfaceManager != null)
             {
-                if (NeedConnectAfterLoad != -1 && InterfaceManager.m_Panel_Confirmation != null)
+                if (NeedConnectAfterLoad != -1 && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
                 {
                     DoWaitForConnect(true); // Showing connection message after startup connection
                 }
-                if (InterfaceManager.m_Panel_SnowShelterInteract != null)
+                if (InterfaceManager.GetPanel<Panel_SnowShelterInteract>() != null)
                 {
                     CancleDismantling(); // Cancle Break-down of snowshelter where any other player is inside
                 }
-                if (InterfaceManager.m_Panel_Rest != null && InterfaceManager.m_Panel_Rest.isActiveAndEnabled == true)
+                if (InterfaceManager.GetPanel<Panel_Rest>() != null && InterfaceManager.GetPanel<Panel_Rest>().isActiveAndEnabled == true)
                 {
                     if (SleepingButtons == null)
                     {
@@ -10935,9 +11080,9 @@ namespace SkyCoop
                         UpdateSleepScreen(); // Upating sleepers numbers text
                     }
                 }
-                if (InterfaceManager.m_Panel_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject != null && InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
+                if (InterfaceManager.GetPanel<Panel_BodyHarvest>() != null && InterfaceManager.GetPanel<Panel_BodyHarvest>().m_BodyHarvest != null && InterfaceManager.GetPanel<Panel_BodyHarvest>().m_BodyHarvest.gameObject != null && InterfaceManager.GetPanel<Panel_BodyHarvest>().m_BodyHarvest.gameObject.GetComponent<ObjectGuid>() != null)
                 {
-                    HarvestingAnimal = InterfaceManager.m_Panel_BodyHarvest.m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
+                    HarvestingAnimal = InterfaceManager.GetPanel<Panel_BodyHarvest>().m_BodyHarvest.gameObject.GetComponent<ObjectGuid>().Get();
                 }else{
                     HarvestingAnimal = "";
                 }
@@ -10953,10 +11098,10 @@ namespace SkyCoop
 
                 if (CurrentCustomChalleng.m_Started || OnExpedition)
                 {
-                    if (InterfaceManager.m_Panel_Actions != null && InterfaceManager.m_Panel_Actions.isActiveAndEnabled)
+                    if (InterfaceManager.GetPanel<Panel_Actions>() != null && InterfaceManager.GetPanel<Panel_Actions>().isActiveAndEnabled)
                     {
-                        InterfaceManager.m_Panel_Actions.m_MissionObjectWithTimer.SetActive(true);
-                        InterfaceManager.m_Panel_Actions.m_MissionObjectiveWithTimerLabel.gameObject.SetActive(true);
+                        InterfaceManager.GetPanel<Panel_Actions>().m_MissionObjectWithTimer.SetActive(true);
+                        InterfaceManager.GetPanel<Panel_Actions>().m_MissionObjectiveWithTimerLabel.gameObject.SetActive(true);
                     }
                     if (OnExpedition)
                     {
@@ -10998,7 +11143,7 @@ namespace SkyCoop
             {
                 if (NewFlairNotification)
                 {
-                    if (m_Panel_MainMenu && m_Panel_MainMenu.m_MainPanel && m_Panel_MainMenu.m_MainPanel.gameObject.activeSelf && InterfaceManager.m_Panel_Confirmation && !InterfaceManager.m_Panel_Confirmation.isActiveAndEnabled)
+                    if (m_Panel_MainMenu && m_Panel_MainMenu.m_MainPanel && m_Panel_MainMenu.m_MainPanel.gameObject.activeSelf && InterfaceManager.GetPanel<Panel_Confirmation>() && !InterfaceManager.GetPanel<Panel_Confirmation>().isActiveAndEnabled)
                     {
                         NewFlairNotification.SetActive(NotificationString != "");
                         if (NotificationString != "")
@@ -11019,10 +11164,11 @@ namespace SkyCoop
             }
             if(ForcedShowExpeditionHUDSeconds > 0)
             {
-                InterfaceManager.m_Panel_Actions.Enable(true);
+                InterfaceManager.GetPanel<Panel_Actions>().Enable(true);
             }
         }
 
+        static bool NoViewModelRadioLogged = false;
         public static void CustomWeapons()
         {
             if (GameManager.m_PlayerManager != null && GameManager.GetPlayerManagerComponent().m_ItemInHands)
@@ -11031,7 +11177,7 @@ namespace SkyCoop
 
                 if (ViewModelRadio)
                 {
-                    if (GameManager.GetPlayerManagerComponent().m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
+                    if (GameManager.GetPlayerManagerComponent().m_ItemInHands.m_GearName == "GEAR_HandheldShortwave")
                     {
                         ViewModelRadio.SetActive(true);
                         if (!OriginalRadioSeaker)
@@ -11045,7 +11191,12 @@ namespace SkyCoop
                     }
                 } else
                 {
-                    MelonLogger.Msg("No ViewModelRadio mesh");
+                    // Called every frame; the radio view model isn't built on 2.55 yet, so report it only once.
+                    if (!NoViewModelRadioLogged)
+                    {
+                        NoViewModelRadioLogged = true;
+                        MelonLogger.Msg("No ViewModelRadio mesh");
+                    }
                 }
 
                 if (IsCustomHandItem(InHandName))
@@ -11157,7 +11308,7 @@ namespace SkyCoop
             if (SteamServerWorks != "" || Server.UsingSteamWorks == true)
             {
                 bool HoldRadio = false;
-                if (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_ItemInHands && GameManager.m_PlayerManager.m_ItemInHands.GetFPSMeshID() == (int)FPSMeshID.HandledShortwave)
+                if (GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_ItemInHands && GameManager.m_PlayerManager.m_ItemInHands.m_GearName == "GEAR_HandheldShortwave")
                 {
                     HoldRadio = true;
                 }
@@ -11280,7 +11431,7 @@ namespace SkyCoop
                                 if (GUID == playersData[i].m_BrakingObject.m_Guid)
                                 {
                                     GameAudioManager.PlayGUIError();
-                                    InterfaceManager.m_Panel_GenericProgressBar.Cancel();
+                                    InterfaceManager.GetPanel<Panel_GenericProgressBar>().Cancel();
                                     LongActionCanceled();
                                     break;
                                 }
@@ -11310,7 +11461,7 @@ namespace SkyCoop
                             {
                                 HUDMessage.AddMessage(playersData[i].m_Name + " IS BREAKING THIS!");
                                 GameAudioManager.PlayGUIError();
-                                InterfaceManager.m_Panel_GenericProgressBar.Cancel();
+                                InterfaceManager.GetPanel<Panel_GenericProgressBar>().Cancel();
                                 break;
                             }
                         }
@@ -11320,7 +11471,7 @@ namespace SkyCoop
                             {
                                 HUDMessage.AddMessage(playersData[i].m_Name + " IS USING THIS!");
                                 GameAudioManager.PlayGUIError();
-                                InterfaceManager.m_Panel_GenericProgressBar.Cancel();
+                                InterfaceManager.GetPanel<Panel_GenericProgressBar>().Cancel();
                                 break;
                             }
                         }
@@ -11407,7 +11558,7 @@ namespace SkyCoop
         public static bool IgnoreFeebackKeyDownUntilReleased = false;
         public static void ExpeditionFeedbackReport()
         {
-            bool HoldF3 = KeyboardUtilities.InputManager.GetKey(KeyCode.F3);
+            bool HoldF3 = Input.GetKey(KeyCode.F3);
             if (HoldF3 && !InteractionInprocess && !IgnoreFeebackKeyDownUntilReleased)
             {
                 IgnoreFeebackKeyDownUntilReleased = true;
@@ -11433,12 +11584,12 @@ namespace SkyCoop
             {
                 GameObject Clone = UnityEngine.Object.Instantiate(CloneTarget);
                 Clone.SetActive(false);
-                MelonLogger.Msg(ConsoleColor.Cyan, "SemiPrefab "+ Name+" ready!");
+                MelonLogger.Msg(System.ConsoleColor.Cyan, "SemiPrefab "+ Name+" ready!");
                 GameObject.DontDestroyOnLoad(Clone);
                 SemiPrefabs.Add(Name, Clone);
             } else
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't register SemiPrefab " + Name + "! Clone target not exist!");
+                MelonLogger.Msg(System.ConsoleColor.Red, "Can't register SemiPrefab " + Name + "! Clone target not exist!");
             }
         }
 
@@ -11469,7 +11620,7 @@ namespace SkyCoop
             {
                 scenes[i] = System.IO.Path.GetFileNameWithoutExtension(UnityEngine.SceneManagement.SceneUtility.GetScenePathByBuildIndex(i));
             }
-            MelonLogger.Msg(ConsoleColor.Cyan, "[DumpGearSpawns] "+ sceneCount+" scenes in game, starting dumping...");
+            MelonLogger.Msg(System.ConsoleColor.Cyan, "[DumpGearSpawns] "+ sceneCount+" scenes in game, starting dumping...");
             DumpingGearSpawns = true;
         }
 
@@ -11485,13 +11636,13 @@ namespace SkyCoop
                 {
                     string NextSceneName = scenes[CurrentSearchIndex];
 
-                    MelonLogger.Msg(ConsoleColor.Cyan, "[DumpGearSpawns] Preloading scene " + NextSceneName);
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "[DumpGearSpawns] Preloading scene " + NextSceneName);
                     UnityEngine.SceneManagement.SceneManager.LoadScene(NextSceneName, LoadSceneMode.Single);
                     DumpOnNextFrame = true;
                 } else
                 {
                     DumpingGearSpawns = false;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "[DumpGearSpawns] Finished!");
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "[DumpGearSpawns] Finished!");
                     MPSaveManager.SaveData("IndependantGearSpawners.json", JSON.Dump(AllGearSpawners), 0, @"Mods\IndependantGearSpawners.json");
                 }
             } else
@@ -11499,12 +11650,12 @@ namespace SkyCoop
                 string CurrentScene = scenes[CurrentSearchIndex];
                 SceneGearSpawners SceneData = new SceneGearSpawners();
                 SceneData.SceneName = CurrentScene;
-                MelonLogger.Msg(ConsoleColor.Cyan, "[DumpGearSpawns] Searching on "+ CurrentScene+ " ("+CurrentSearchIndex+"/"+sceneCount+")");
+                MelonLogger.Msg(System.ConsoleColor.Cyan, "[DumpGearSpawns] Searching on "+ CurrentScene+ " ("+CurrentSearchIndex+"/"+sceneCount+")");
                 
                 Il2CppArrayBase<RandomSpawnObject> RSO = Resources.FindObjectsOfTypeAll<RandomSpawnObject>();
                 foreach (var item in RSO)
                 {
-                    MelonLogger.Msg(ConsoleColor.Gray, "[DumpGearSpawns] RandomSpawnObject");
+                    MelonLogger.Msg(System.ConsoleColor.Gray, "[DumpGearSpawns] RandomSpawnObject");
                     RandomSpawnObjectDescriptor R = new RandomSpawnObjectDescriptor();
                     R.SpawnOnPiligrim = item.m_NumObjectsToEnablePilgrim;
                     R.SpawnOnVoyageur = item.m_NumObjectsToEnableVoyageur;
@@ -11524,7 +11675,7 @@ namespace SkyCoop
                                 Element.Chance = gi.m_SpawnChance;
                                 Element.Position = item.transform.position;
                                 Element.Rotation = item.transform.rotation;
-                                MelonLogger.Msg(ConsoleColor.DarkCyan, "[DumpGearSpawns] GearName " + Element.GearName + " Weight " + Element.Weight);
+                                MelonLogger.Msg(System.ConsoleColor.DarkCyan, "[DumpGearSpawns] GearName " + Element.GearName + " Weight " + Element.Weight);
                                 R.Gears.Add(Element);
                             }
                         }
@@ -11535,7 +11686,7 @@ namespace SkyCoop
                 Il2CppArrayBase<PrefabSpawn> PS = Resources.FindObjectsOfTypeAll<PrefabSpawn>();
                 foreach (var item in PS)
                 {   
-                    MelonLogger.Msg(ConsoleColor.Gray, "[DumpGearSpawns] PrefabSpawn");
+                    MelonLogger.Msg(System.ConsoleColor.Gray, "[DumpGearSpawns] PrefabSpawn");
                     PrefabSpawnDescriptor R = new PrefabSpawnDescriptor();
                     R.ChanceOfNoSpawn = item.m_ChanceOfNoSpawn;
                     R.Min = item.m_NumToSpawnMin;
@@ -11555,7 +11706,7 @@ namespace SkyCoop
                                 Element.Chance = gi.m_SpawnChance;
                                 Element.Position = item.transform.position + item2.m_Offset;
                                 Element.Rotation = Quaternion.Euler(item2.m_Rotation);
-                                MelonLogger.Msg(ConsoleColor.DarkCyan, "[DumpGearSpawns] GearName " + Element.GearName + " Weight " + Element.Weight);
+                                MelonLogger.Msg(System.ConsoleColor.DarkCyan, "[DumpGearSpawns] GearName " + Element.GearName + " Weight " + Element.Weight);
                                 R.Gears.Add(Element);
                             }
                         }
@@ -11580,7 +11731,14 @@ namespace SkyCoop
             {
                 if (!DonePreloadNextFrame)
                 {
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Starting preload...");
+                    // 2.55: regions are Addressables scenes, not in build settings; skip instead of failing every frame.
+                    if (!Application.CanStreamedLevelBeLoaded("RuralRegion_STORY"))
+                    {
+                        MelonLogger.Msg(System.ConsoleColor.Yellow, "Preload skipped: RuralRegion_STORY is not loadable, expedition decorations will be simplified");
+                        DonePreload = true;
+                        return;
+                    }
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "Starting preload...");
                     UnityEngine.SceneManagement.SceneManager.LoadScene("RuralRegion_STORY", LoadSceneMode.Additive);
                     DonePreloadNextFrame = true;
                 } else
@@ -11599,7 +11757,7 @@ namespace SkyCoop
 
                     UnityEngine.SceneManagement.SceneManager.UnloadScene("RuralRegion_STORY");
                     DonePreload = true;
-                    MelonLogger.Msg(ConsoleColor.Cyan, "Done");
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "Done");
                 }
             }
         }
@@ -11608,7 +11766,7 @@ namespace SkyCoop
         public void ModUpdate()
         {
             SaveCheck();
-            if (!DedicatedServerAppMode) 
+            if (!DedicatedServerAppMode)
             {
                 if (Flag1)
                 {
@@ -11687,7 +11845,7 @@ namespace SkyCoop
         public static void LoadAllOpenableThingsForScene()
         {
             string Scene = level_guid;
-            MelonLogger.Msg(ConsoleColor.Blue, "Trying to load openables for scene " + Scene);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "Trying to load openables for scene " + Scene);
             Dictionary<string, bool> Opens = MPSaveManager.LoadOpenableThings(Scene);
             if (Opens != null)
             {
@@ -11705,7 +11863,7 @@ namespace SkyCoop
         public static void LoadAllDropsForScene()
         {
             string Scene = level_guid;
-            MelonLogger.Msg(ConsoleColor.Blue, "Trying to load drops for scene " + Scene);
+            MelonLogger.Msg(System.ConsoleColor.Blue, "Trying to load drops for scene " + Scene);
             Shared.ModifyDynamicGears(Scene);
             Dictionary<int, DataStr.DroppedGearItemDataPacket> Visuals = MPSaveManager.LoadDropVisual(Scene);
             Dictionary<int, DataStr.SlicedJsonDroppedGear> Drops = MPSaveManager.LoadDropData(Scene);
@@ -11743,7 +11901,7 @@ namespace SkyCoop
             {
                 if (SteamServerWorks == "")
                 {
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", "127.0.0.1", Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
                 else {
                     if (SteamConnect.CanUseSteam == true)
@@ -11931,11 +12089,11 @@ namespace SkyCoop
                 }
             }
 
-            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input secret seed for key", "", Panel_Confirmation.ButtonLayout.Button_2, "Next", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input secret seed for key", "", Panel_Confirmation.ButtonLayout.Button_2, "Next", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
         }
         public static void CreateDebugKey()
         {
-            InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "DATA FOR DEBUG KEY", "", Panel_Confirmation.ButtonLayout.Button_2, "CRAFT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+            InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "DATA FOR DEBUG KEY", "", Panel_Confirmation.ButtonLayout.Button_2, "CRAFT", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
         }
 
         public static void TryingLockDoor(LoadScene Door, string KeySeed, string Scene)
@@ -12036,7 +12194,7 @@ namespace SkyCoop
             Cdata.m_Top = MyTop;
             Cdata.m_Bottom = MyBottom;
             Cdata.m_Boots = MyBoots;
-            int character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
+            int character = (int)PlayerManager.m_VoicePersona;
             if (sendMyPosition == true)
             {
                 using (Packet _packet = new Packet((int)ClientPackets.SELECTEDCHARACTER))
@@ -12125,7 +12283,7 @@ namespace SkyCoop
 
         public static bool CanSleep(bool domessage)
         {
-            Panel_Rest rest = InterfaceManager.m_Panel_Rest;
+            Panel_Rest rest = InterfaceManager.GetPanel<Panel_Rest>();
 
             if (rest == null)
             {
@@ -12180,7 +12338,7 @@ namespace SkyCoop
 
         public static string GetClothForSlot(ClothingRegion s, ClothingLayer l)
         {
-            if (GameManager.m_PlayerManager == null || GameManager.m_PlayerManager.m_Clothing == null)
+            if (GameManager.m_PlayerManager == null) // 2.55: m_Clothing is an untyped Il2CppObjectBase, do not touch it
             {
                 return "";
             }
@@ -12262,11 +12420,11 @@ namespace SkyCoop
             if (m_Panel_Sandbox && m_Panel_Sandbox.isActiveAndEnabled)
             {
                 MenuChange.MenuMode = "Multiplayer";
-                Transform Align = m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
-                Align.GetChild(2).gameObject.SetActive(true); //Grid
-                Align.GetChild(4).gameObject.SetActive(true); //Description
-                Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                Transform Align = m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                Align.Find("Selected").gameObject.SetActive(true); //SelectIcon
+                Align.Find("Grid").gameObject.SetActive(true); //Grid
+                Align.Find("Description").gameObject.SetActive(true); //Description
+                Align.Find("Linebreak").gameObject.SetActive(true); //Linebreaker
             }
         }
 
@@ -12313,11 +12471,11 @@ namespace SkyCoop
                 ApplyOtherCampfires = true;
 
                 Shared.InitAllPlayers();
-                Transform Align = m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
-                Align.GetChild(2).gameObject.SetActive(true); //Grid
-                Align.GetChild(4).gameObject.SetActive(true); //Description
-                Align.GetChild(5).gameObject.SetActive(true); //Linebreaker     
+                Transform Align = m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                Align.Find("Selected").gameObject.SetActive(true); //SelectIcon
+                Align.Find("Grid").gameObject.SetActive(true); //Grid
+                Align.Find("Description").gameObject.SetActive(true); //Description
+                Align.Find("Linebreak").gameObject.SetActive(true); //Linebreaker     
 
                 if (ShouldUseSteam == false)
                 {
@@ -12347,7 +12505,7 @@ namespace SkyCoop
 
         public static void ShowNotiy()
         {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
                 string Title = "YOU GOT A NEW FLAIR!";
                 if (int.Parse(NotificationString) > 1)
@@ -12355,7 +12513,7 @@ namespace SkyCoop
                     Title = "YOU GOT NEW FLAIRS!";
                 }
 
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + "Open flairs customization menu?", Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
+                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + "Open flairs customization menu?", Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
             }
         }
 
@@ -12991,9 +13149,9 @@ namespace SkyCoop
 
         public static void ExpeditionUI(string ExpeditionName, string desc, int TimeLeft)
         {
-            Panel_Log Log = InterfaceManager.m_Panel_Log;
-            Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
-            Panel_Actions Act = InterfaceManager.m_Panel_Actions;
+            Panel_Log Log = InterfaceManager.GetPanel<Panel_Log>();
+            Panel_ActionsRadial Rad = InterfaceManager.GetPanel<Panel_ActionsRadial>();
+            Panel_Actions Act = InterfaceManager.GetPanel<Panel_Actions>();
             string Time = GetFormatedTimeForExpedition(TimeLeft);
             desc = ExpeditionName + "\n" + desc;
 
@@ -13083,9 +13241,9 @@ namespace SkyCoop
                 DisplayIndex = CalculateHowManyTaskDone();
             }
 
-            Panel_Log Log = InterfaceManager.m_Panel_Log;
-            Panel_ActionsRadial Rad = InterfaceManager.m_Panel_ActionsRadial;
-            Panel_Actions Act = InterfaceManager.m_Panel_Actions;
+            Panel_Log Log = InterfaceManager.GetPanel<Panel_Log>();
+            Panel_ActionsRadial Rad = InterfaceManager.GetPanel<Panel_ActionsRadial>();
+            Panel_Actions Act = InterfaceManager.GetPanel<Panel_Actions>();
             if (Rad)
             {
                 Rad.m_MissionObjectiveLabel.text = Cdesc;
@@ -13145,7 +13303,7 @@ namespace SkyCoop
         }
         public static void RestoreCodeFromGears()
         {
-            MelonLogger.Msg(ConsoleColor.Blue, "[Papers codes] Checking all papers to make sure if we have code");
+            MelonLogger.Msg(System.ConsoleColor.Blue, "[Papers codes] Checking all papers to make sure if we have code");
             foreach (GearItemObject item in GameManager.GetInventoryComponent().m_Items)
             {
                 int Code = GetPasswordFromGear(item.m_GearItemName);
@@ -13160,9 +13318,9 @@ namespace SkyCoop
         {
             if (GameManager.GetPlayerManagerComponent().m_KnownCodes.Contains(code))
             {
-                MelonLogger.Msg(ConsoleColor.Yellow, "[Papers codes] Code " + code + " is already known");
+                MelonLogger.Msg(System.ConsoleColor.Yellow, "[Papers codes] Code " + code + " is already known");
             } else {
-                MelonLogger.Msg(ConsoleColor.Green, "[Papers codes] Code " + code + " added to the player's memory");
+                MelonLogger.Msg(System.ConsoleColor.Green, "[Papers codes] Code " + code + " added to the player's memory");
                 GameManager.GetPlayerManagerComponent().m_KnownCodes.Add(code);
             }
         }
@@ -13324,7 +13482,7 @@ namespace SkyCoop
         public static void RequestExpedition()
         {
             PlayRadioOver();
-            Shared.GameRegion Region = ConvertGameRegion(GameManager.GetUniStorm().m_CurrentRegion);
+            Shared.GameRegion Region = ConvertGameRegion((GameRegion)RegionIds.Of(GameManager.GetUniStorm().m_CurrentRegion));
             MelonLogger.Msg("Trying to get expedition on "+ExpeditionBuilder.GetRegionString((int)Region));
             if (iAmHost)
             {
@@ -13352,14 +13510,14 @@ namespace SkyCoop
                 R.m_TitleLocID = "Начальное Руководство По Экспедициям";
                 R.m_MessageLocID = "Используя [27AE60]Рацию[-] Вы можете начинать экспедиции и присоединяться к ним.\nКликните [00FFFF]Правой Кнопкой Мыши[-] когда держите Рацию в руках, чтобы открыть Меню Экспедиций.\nЧтобы начать [FFB233]Случайную Экспедицию[-] кликните [FFB233]«Start Expedition»[-] в Меню Экспедиций.\nЕсли вы найдёте какие либо [50C878]Специальные Предметы[-] Вы сможете начать [50C878]Специальную Экспедицию[-], сложные испытания с более весомой наградой.\n[50C878]Специальные Предметы[-] случайно могут быть найдеты в любом контейнере, кликните [50C878]«Special Expedition»[-] в Меню Экспедиций чтобы узнать есть ли у Вас какие либо [50C878]Специальные Предметы[-] для старта экспедиции.\nА также Вы можете [00FFFF]Приглашать[-] других игроков в Вашу Экспедицию, чтобы это сделать, просто кликните по ним держа в руках [27AE60]Рацию[-].\nВсе полученные [00FFFF]Приглашения[-] Вы можете найти в меню Экспедиций.\nЕсли же вы уже в экспедиции, вы можете зажать кнопку [27AE60]TAB[-] чтобы увидеть Цель текущей Экспедиции.";
             }
-            InterfaceManager.m_Panel_TutorialPopup.QueueTutorialPopupRequest(R);
-            InterfaceManager.m_Panel_TutorialPopup.ShowCurrentTutorialPopup();
+            InterfaceManager.GetPanel<Panel_TutorialPopup>().QueueTutorialPopupRequest(R);
+            InterfaceManager.GetPanel<Panel_TutorialPopup>().ShowCurrentTutorialPopup();
             MPSaveManager.SeenExpeditions();
         }
 
         public static void ShowRadioActionPicker(GameObject objectInteractedWith)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 Panel.Enable(true);
@@ -13368,13 +13526,13 @@ namespace SkyCoop
                 Action act2 = new Action(() => ShowInvitesAfterPicker());
                 Action act3 = new Action(() => ShowCluesAfterPicker());
                 Action act4 = new Action(() => ShowCluesAfterPicker());
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_map", "Start Expedition", act1));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_log_Collectibles", "Special Expedition", act3));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_knowledge_people", "Expedition Invites", act2));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_map", "Start Expedition", act1));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_log_Collectibles", "Special Expedition", act3));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_knowledge_people", "Expedition Invites", act2));
                 bool CrashSiteActive = false;
                 if (CrashSiteActive)
                 {
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("icoMap_willAirplane", "Invistigate\nCrash Site", act4));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("icoMap_willAirplane", "Invistigate\nCrash Site", act4));
                 }
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
@@ -13470,7 +13628,7 @@ namespace SkyCoop
                 return;
             }
 
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 string Icon = "ico_log_Notes";
@@ -13480,7 +13638,7 @@ namespace SkyCoop
                 foreach (SpecialExpeditionItem Item in Items)
                 {
                     Action act = new Action(() => StartExpeditionWithClue(Item));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Item.m_GearName, act));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData(Icon, Item.m_GearName, act));
                 }
 
                 Panel.m_ObjectInteractedWith = null;
@@ -13495,7 +13653,7 @@ namespace SkyCoop
                 return;
             }
 
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 string Icon = "ico_knowledge_people";
@@ -13505,7 +13663,7 @@ namespace SkyCoop
                 foreach (ExpeditionManager.ExpeditionInvite Invite in Invites)
                 {
                     Action act = new Action(() => AcceptInvite(Invite));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, "Invite by " + Invite.m_InviterName, act));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData(Icon, "Invite by " + Invite.m_InviterName, act));
                 }
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
@@ -13611,7 +13769,7 @@ namespace SkyCoop
 
         public static void ShowBlankworkingPicker(GameObject objectInteractedWith)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 Panel.Enable(true);
@@ -13630,10 +13788,10 @@ namespace SkyCoop
 
                 //Action Flattening = new Action(() => LocksmithWork(objectInteractedWith, 2));
 
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_BearSpear", "Sawing", Saw));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_injury_majorBruising", "Grinding", Grind));
-                //Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_crafting", "Flattening", Flattening));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_climb", "Pickup", act));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_BearSpear", "Sawing", Saw));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_injury_majorBruising", "Grinding", Grind));
+                //Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_crafting", "Flattening", Flattening));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "Pickup", act));
 
                 Panel.EnableWithCurrentList();
             }
@@ -13641,7 +13799,7 @@ namespace SkyCoop
 
         public static void ShowLeadCastingPicker(GameObject objectInteractedWith)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 Panel.Enable(true);
@@ -13649,8 +13807,8 @@ namespace SkyCoop
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
                 Action act = new Action(() => PickupBlank(objectInteractedWith));
                 Action LeadCast = new Action(() => LocksmithWork(objectInteractedWith, 5));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_forge", "Cast Lead", LeadCast));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_climb", "Pickup", act));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_forge", "Cast Lead", LeadCast));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_climb", "Pickup", act));
 
                 Panel.EnableWithCurrentList();
             }
@@ -13720,26 +13878,26 @@ namespace SkyCoop
             CharcoalItem.m_CharcoalItemInUseForSurvey = Coal;
             GameManager.GetPlayerAnimationComponent().Trigger_Generic_Stow();
             Coal.m_SurveyAudioID = GameAudioManager.PlaySound(Coal.m_SurveyLoopAudio, InterfaceManager.GetSoundEmitter());
-            //InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "NOTE MESSAGE", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Done", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
-            InterfaceManager.m_Panel_Log.EnableStatsView();
-            InterfaceManager.m_Panel_Log.OnEnterGeneralNotes();
-            InterfaceManager.m_Panel_Log.m_SectionNav.SetActive(false);
-            InterfaceManager.m_Panel_Log.m_TabsNotesObject.SetActive(false);
-            InterfaceManager.m_Panel_Log.m_NotesTextField.SetText("");
+            //InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "NOTE MESSAGE", "", Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Done", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+            InterfaceManager.GetPanel<Panel_Log>().EnableStatsView();
+            InterfaceManager.GetPanel<Panel_Log>().OnEnterGeneralNotes();
+            InterfaceManager.GetPanel<Panel_Log>().m_SectionNav.SetActive(false);
+            InterfaceManager.GetPanel<Panel_Log>().m_TabsNotesObject.SetActive(false);
+            InterfaceManager.GetPanel<Panel_Log>().m_NotesTextField.SetText("");
         }
 
         public static void ShowCharCoalPicker(GameObject objectInteractedWith, CharcoalItem Coal)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 Panel.Enable(true);
                 Panel.m_ActionPickerItemDataList.Clear();
 
                 Action Map = new Action(() => CharCoalDraw(Coal));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_map", "Survey local area", Map));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_map", "Survey local area", Map));
                 Action Note = new Action(() => WriteNote(Coal));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_log_Notes", "Write a note", Note));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_log_Notes", "Write a note", Note));
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
                 Panel.EnableWithCurrentList();
@@ -13754,7 +13912,7 @@ namespace SkyCoop
                 return;
             }
             
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 string Icon = "ico_unlocked";
@@ -13764,7 +13922,7 @@ namespace SkyCoop
                 foreach (int Idx in Knockers)
                 {
                     Action act = new Action(() => LetThemEnter(Idx, level_guid));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, "Invite " + playersData[Idx].m_Name, act));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData(Icon, "Invite " + playersData[Idx].m_Name, act));
                 }
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
@@ -13774,7 +13932,7 @@ namespace SkyCoop
 
         public static void ShowKeysActionsPicker(GameObject objectInteractedWith, KeysAction ActType)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 List<DataStr.DoorKey> KeysList = GetKeysList();
@@ -13803,7 +13961,7 @@ namespace SkyCoop
                 foreach (DataStr.DoorKey Key in KeysList)
                 {
                     Action act = new Action(() => UseKey(Key.m_Seed, objectInteractedWith, Key.m_Lead));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData(Icon, Key.m_Name, act));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData(Icon, Key.m_Name, act));
                 }
 
                 if (CanLockPick)
@@ -13811,10 +13969,10 @@ namespace SkyCoop
                     if (LockPicks > 0)
                     {
                         Action act = new Action(() => LockPick(objectInteractedWith));
-                        Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_Radial_tools", "Lockpick ("+ LockPicks+")", act));
+                        Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_Radial_tools", "Lockpick ("+ LockPicks+")", act));
                     }
                     Action knock = new Action(() => KnockKnock(objectInteractedWith));
-                    Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_fist", "Knock", knock));
+                    Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_fist", "Knock", knock));
                 }
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
@@ -13827,7 +13985,7 @@ namespace SkyCoop
 
             if (GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
             {
-                Region = (int)GameManager.GetUniStorm().m_CurrentRegion;
+                Region = RegionIds.Of(GameManager.GetUniStorm().m_CurrentRegion);
             }
 
             return Region;
@@ -13837,19 +13995,19 @@ namespace SkyCoop
             switch (Color)
             {
                 case Shared.LoggerColor.Red:
-                    return ConsoleColor.Red;
+                    return System.ConsoleColor.Red;
                 case Shared.LoggerColor.Green:
-                    return ConsoleColor.Green;
+                    return System.ConsoleColor.Green;
                 case Shared.LoggerColor.Blue:
-                    return ConsoleColor.Green;
+                    return System.ConsoleColor.Green;
                 case Shared.LoggerColor.Yellow:
-                    return ConsoleColor.Yellow;
+                    return System.ConsoleColor.Yellow;
                 case Shared.LoggerColor.Magenta:
-                    return ConsoleColor.Magenta;
+                    return System.ConsoleColor.Magenta;
                 case Shared.LoggerColor.White:
-                    return ConsoleColor.White;
+                    return System.ConsoleColor.White;
                 default:
-                    return ConsoleColor.White;
+                    return System.ConsoleColor.White;
             }
         }
         public static void DoExpeditionState(int State)
@@ -13857,43 +14015,43 @@ namespace SkyCoop
             if (State == 0 || State == 1 || State == -1 || State == 4 || State == -2)
             {
                 OnExpedition = false;
-                if (InterfaceManager.m_Panel_Actions != null)
+                if (InterfaceManager.GetPanel<Panel_Actions>() != null)
                 {
-                    InterfaceManager.m_Panel_Actions.m_MissionObjectWithTimer.SetActive(false);
-                    InterfaceManager.m_Panel_Actions.m_MissionObjectiveWithTimerLabel.gameObject.SetActive(false);
-                    InterfaceManager.m_Panel_Actions.m_MissionTimerLabel.gameObject.SetActive(false);
+                    InterfaceManager.GetPanel<Panel_Actions>().m_MissionObjectWithTimer.SetActive(false);
+                    InterfaceManager.GetPanel<Panel_Actions>().m_MissionObjectiveWithTimerLabel.gameObject.SetActive(false);
+                    InterfaceManager.GetPanel<Panel_Actions>().m_MissionTimerLabel.gameObject.SetActive(false);
                 }
             }
 
             ForcedShowExpeditionHUDSeconds = 20;
-            InterfaceManager.m_Panel_Actions.Enable(true);
+            InterfaceManager.GetPanel<Panel_Actions>().Enable(true);
 
-            if (m_InterfaceManager && InterfaceManager.m_Panel_HUD)
+            if (m_InterfaceManager && InterfaceManager.GetPanel<Panel_HUD>())
             {
                 if (State == 0)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Expedition Cancled", "Time Over", "ico_map");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffLossNotification("Expedition Cancled", "Time Over", "ico_map");
                 } else if (State == 1)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Expedition Finished", "Loot Your Reward", "ico_map");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffNotification("Expedition Finished", "Loot Your Reward", "ico_map");
                 } else if (State == 2)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Expedition Started", "Objective Updated", "ico_map");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffNotification("Expedition Started", "Objective Updated", "ico_map");
                 } else if (State == 3)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Task Completed", "Objective Updated", "ico_map");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffLossNotification("Task Completed", "Objective Updated", "ico_map");
                 } else if (State == -1)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Crash Site Found", "You Late", "icoMap_willAirplane");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffLossNotification("Crash Site Found", "You Late", "icoMap_willAirplane");
                 } else if (State == 4)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Crash Site Found", "Loot Your Reward", "icoMap_willAirplane");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffNotification("Crash Site Found", "Loot Your Reward", "icoMap_willAirplane");
                 } else if (State == 5)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffNotification("Find Crash Site", "Objective Updated", "icoMap_willAirplane");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffNotification("Find Crash Site", "Objective Updated", "icoMap_willAirplane");
                 }else if(State == -2)
                 {
-                    InterfaceManager.m_Panel_HUD.ShowBuffLossNotification("Time Over", "You Late", "icoMap_willAirplane");
+                    InterfaceManager.GetPanel<Panel_HUD>().ShowBuffLossNotification("Time Over", "You Late", "icoMap_willAirplane");
                 }
             }
         }
@@ -13972,7 +14130,7 @@ namespace SkyCoop
 
         public static void ShowRockStashActionPicker(GameObject objectInteractedWith)
         {
-            Panel_ActionPicker Panel = InterfaceManager.m_Panel_ActionPicker;
+            Panel_ActionPicker Panel = InterfaceManager.GetPanel<Panel_ActionPicker>();
             if (Panel)
             {
                 Comps.FakeRockCache Stash = null;
@@ -13992,8 +14150,8 @@ namespace SkyCoop
                 Action act1 = new Action(() => Stash.Open());
                 Action act2 = new Action(() => Stash.Remove());
 
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_rockCache", "GAMEPLAY_Open", act1));
-                Panel.m_ActionPickerItemDataList.Add(new Panel_ActionPicker.ActionPickerItemData("ico_dismantle", "GAMEPLAY_Dismantle", act2));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_rockCache", "GAMEPLAY_Open", act1));
+                Panel.m_ActionPickerItemDataList.Add(new ActionPickerItemData("ico_dismantle", "GAMEPLAY_Dismantle", act2));
                 //Play_RockCache
 
                 Panel.m_ObjectInteractedWith = objectInteractedWith;
@@ -14008,7 +14166,7 @@ namespace SkyCoop
             {
                 GameManager.s_IsAISuspended = true;
                 Pathes.FakeRockCacheCallback = PendingRockCahceRemove;
-                InterfaceManager.m_Panel_GenericProgressBar.Launch(Localization.Get("GAMEPLAY_BreakingDownProgress"), 2f, 10, 0.0f, "Play_RockCache", null, false, false, null);
+                InterfaceManager.GetPanel<Panel_GenericProgressBar>().Launch(Localization.Get("GAMEPLAY_BreakingDownProgress"), 2f, 10, 0.0f, "Play_RockCache", null, false, false, null);
                 PendingRockCahceRemove = null;
             }
         }
@@ -14017,7 +14175,7 @@ namespace SkyCoop
         {
             if(ObjectGuidManager.Lookup(Data.m_GUID) != null)
             {
-                MelonLogger.Msg(ConsoleColor.Yellow, "RockCache with GUID "+Data.m_GUID+" already exist!");
+                MelonLogger.Msg(System.ConsoleColor.Yellow, "RockCache with GUID "+Data.m_GUID+" already exist!");
                 return;
             }
             
@@ -14076,7 +14234,7 @@ namespace SkyCoop
         {
             if (GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
             {
-                return ConvertGameRegion(GameManager.GetUniStorm().m_CurrentRegion);
+                return ConvertGameRegion((GameRegion)RegionIds.Of(GameManager.GetUniStorm().m_CurrentRegion));
             } else
             {
                 return ConvertGameRegion(GameRegion.RandomRegion);
@@ -14087,9 +14245,9 @@ namespace SkyCoop
         {
             if(Reg == GameRegion.RandomRegion)
             {
-                if(m_InterfaceManager && InterfaceManager.m_Panel_Map && InterfaceManager.m_Panel_Map.m_MapObjects.Count > 0)
+                if(m_InterfaceManager && InterfaceManager.GetPanel<Panel_Map>() && InterfaceManager.GetPanel<Panel_Map>().m_MapObjects.Count > 0)
                 {
-                    Panel_Map Panel = InterfaceManager.m_Panel_Map;
+                    Panel_Map Panel = InterfaceManager.GetPanel<Panel_Map>();
                     string RegionName = "";
                     string SceneMapName = Panel.GetMapNameOfCurrentScene();
 
@@ -14120,7 +14278,7 @@ namespace SkyCoop
                     {
                         if(GameManager.m_Weather != null && GameManager.m_WeatherTransition != null && GameManager.m_WeatherTransition.m_CurrentWeatherSet != null && GameManager.GetUniStorm() != null)
                         {
-                            return (Shared.GameRegion)GameManager.GetUniStorm().m_CurrentRegion;
+                            return (Shared.GameRegion)RegionIds.Of(GameManager.GetUniStorm().m_CurrentRegion);
                         }
                     } else
                     {
@@ -14222,17 +14380,20 @@ namespace SkyCoop
             } else if (Prefab == "FireSmall" || Prefab == "FireTiny" || Prefab == "FireLarge")
             {
                 GameObject reference = GetSemiPrefab("FireLight");
+                if (reference == null) return; // 2.55: semi prefabs may be missing (story scene not preloadable)
                 GameObject Light = UnityEngine.Object.Instantiate<GameObject>(reference, Obj.transform);
                 Light.transform.position = Obj.transform.position;
                 Light.SetActive(true);
             }else if(Prefab == "SnowPile")
             {
                 Obj.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
-                Obj.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material = GetSemiPrefab("SnowPileB").transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material;
+                GameObject semi = GetSemiPrefab("SnowPileB");
+                if (semi != null) Obj.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material = semi.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material;
             } else if (Prefab == "RockWall")
             {
                 Obj.transform.localScale = new Vector3(1.7f, 1.7f, 1.7f);
-                Obj.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material = GetSemiPrefab("RockDummy").transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material;
+                GameObject semi = GetSemiPrefab("RockDummy");
+                if (semi != null) Obj.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material = semi.transform.GetChild(0).gameObject.GetComponent<MeshRenderer>().material;
             }
         }
 
@@ -14256,7 +14417,7 @@ namespace SkyCoop
             if (Obj && audioClip)
             {
                 AudioSource AS = Obj.GetComponent<AudioSource>();
-                ProfileState PS = InterfaceManager.m_Panel_OptionsMenu.m_State;
+                var PS = InterfaceManager.GetPanel<Panel_OptionsMenu>().State;
                 if (AS)
                 {
                     AS.volume = PS.m_SoundVolume;
@@ -14461,9 +14622,9 @@ namespace SkyCoop
         }
         public static void NoCustomExp()
         {
-            if (m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+            if (m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
             {
-                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "You can't use custom experience mode in online! This case to major desync!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "You can't use custom experience mode in online! This case to major desync!", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
             }
         }
     }

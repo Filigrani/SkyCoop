@@ -11,7 +11,7 @@ using static SkyCoop.DataStr;
 using TinyJSON;
 using System.Numerics;
 #else
-using MelonLoader.TinyJSON;
+using TinyJSON;
 using UnityEngine;
 #endif
 
@@ -362,7 +362,7 @@ namespace SkyCoop
 
             int hashV3 = Shared.GetVectorHash(PlaceV3);
             int hashRot = Shared.GetQuaternionHash(Rotation);
-            int hashLevelKey = Scene.GetHashCode();
+            int hashLevelKey = Scene.StableHash();
             int SearchKey = hashV3 + hashRot + hashLevelKey;
 
             DroppedGearItemDataPacket GearVisual = new DroppedGearItemDataPacket();

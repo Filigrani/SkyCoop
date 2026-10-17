@@ -5,7 +5,7 @@ using System.Text;
 using System.Threading.Tasks;
 #if(!DEDICATED)
 using UnityEngine;
-using MelonLoader.TinyJSON;
+using TinyJSON;
 #else
 using TinyJSON;
 #endif
@@ -204,7 +204,7 @@ namespace SkyCoop
         public static void Log(string LOG)
         {
 #if (!DEDICATED)
-            MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[Supporters] " + LOG);
+            MelonLoader.MelonLogger.Msg(System.ConsoleColor.Blue, "[Supporters] " + LOG);
 #else
             Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Blue);
 #endif
@@ -214,7 +214,7 @@ namespace SkyCoop
             if (DeBug)
             {
 #if (!DEDICATED)
-                MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[Supporters] " + LOG);
+                MelonLoader.MelonLogger.Msg(System.ConsoleColor.Blue, "[Supporters] " + LOG);
 #else
                 Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Blue);
 #endif
@@ -223,7 +223,7 @@ namespace SkyCoop
         public static void Error(string LOG)
         {
 #if (!DEDICATED)
-            MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[Supporters] " + LOG);
+            MelonLoader.MelonLogger.Msg(System.ConsoleColor.Red, "[Supporters] " + LOG);
 #else
             Logger.Log("[Supporters] " + LOG, Shared.LoggerColor.Red);
 #endif
