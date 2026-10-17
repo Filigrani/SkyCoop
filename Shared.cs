@@ -13,8 +13,8 @@ using System.Security.Cryptography;
 #if (!DEDICATED)
 using UnityEngine;
 using MelonLoader;
-using MelonLoader.TinyJSON;
-using UnhollowerBaseLib;
+using TinyJSON;
+// using UnhollowerBaseLib; (see GlobalUsings.cs)
 #else
 using System.Numerics;
 using TinyJSON;
@@ -707,17 +707,17 @@ namespace SkyCoop
                         obj.name = "gear_rabbitcarcass";
                         gi.m_CurrentHP = bh.GetCondition() / 100f * gi.m_MaxHP;
 
-                        RabbitJson = obj.GetComponent<GearItem>().Serialize();
+                        RabbitJson = obj.GetComponent<GearItem>().SerializeToString();
                         int hashV3 = GetVectorHash(v3);
                         int hashRot = GetQuaternionHash(rot);
-                        int hashLevelKey = Scene.GetHashCode();
+                        int hashLevelKey = Scene.StableHash();
                         SearchKey = hashV3 + hashRot + hashLevelKey;
                         UnityEngine.Object.Destroy(obj);
                     }
 #else
                     int hashV3 = GetVectorHash(v3);
                     int hashRot = GetQuaternionHash(rot);
-                    int hashLevelKey = Scene.GetHashCode();
+                    int hashLevelKey = Scene.StableHash();
                     SearchKey = hashV3 + hashRot + hashLevelKey;
                     RabbitJson = ResourceIndependent.GetRabbit(v3, rot);
 #endif
@@ -817,7 +817,7 @@ namespace SkyCoop
             string SleepersText = "Players sleep " + Sleepers + "/" + SleepersNeed;
             if (MyMod.WaitForSleepLable != null)
             {
-                MyMod.WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP\n" + SleepersText;
+                MyMod.WaitForSleepLable.GetComponent<UILabel>().text = Loc.T("WAITING FOR OTHER PLAYERS TO SLEEP") + "\n" + SleepersText;
             }
 
             if (MyMod.WaitForSleepLable != null && MyMod.WaitForSleepLable.activeSelf == true && EveryOneIsSleeping == true)
@@ -830,9 +830,9 @@ namespace SkyCoop
                 {
                     MyMod.SleepingButtons.SetActive(true);
                 }
-                if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Rest != null)
+                if (MyMod.m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Rest>() != null)
                 {
-                    InterfaceManager.m_Panel_Rest.OnRest();
+                    InterfaceManager.GetPanel<Panel_Rest>().OnRest();
                 }
             }
             if (MyMod.iAmHost == true)
@@ -1329,6 +1329,8 @@ namespace SkyCoop
 
         public static void ClientTryPickupItem(int Hash, int sendTo, string Scene, bool place)
         {
+#if (!DEDICATED)
+#endif
             ServerSend.PICKDROPPEDGEAR(sendTo, Hash, true);
             DataStr.SlicedJsonDroppedGear DataProxy = MPSaveManager.RequestSpecificGear(Hash, Scene, true);
 #if (!DEDICATED)
@@ -1580,7 +1582,7 @@ namespace SkyCoop
                     if (reference == null)
                     {
                         SendFeedBackMessage("Can't find, trying other way..");
-                        Il2CppReferenceArray<UnityEngine.Object> Stuff = Resources.LoadAll("", GameObject.Il2CppType);
+                        Il2CppReferenceArray<UnityEngine.Object> Stuff = Resources.LoadAll("", Il2CppType.Of<GameObject>());
                         foreach (var item in Stuff)
                         {
                             if (item.name.ToLower() == Prefab)
@@ -1656,10 +1658,10 @@ namespace SkyCoop
                 {
 #if (!DEDICATED)
                     MPStats.ExpeditionsProgressData Data = MPStats.GetExpeditionsProgress(Server.GetMACByID(From));
-                    MelonLogger.Msg(ConsoleColor.Green, "Total Progress: " + Data.TotalProgress);
+                    MelonLogger.Msg(System.ConsoleColor.Green, "Total Progress: " + Data.TotalProgress);
                     foreach (var item in Data.ExpeditionsProgress)
                     {
-                        MelonLogger.Msg(ConsoleColor.Green, ExpeditionBuilder.GetRegionString(item.Key) + ": " + item.Value);
+                        MelonLogger.Msg(System.ConsoleColor.Green, ExpeditionBuilder.GetRegionString(item.Key) + ": " + item.Value);
                     }
 #endif
                 }
@@ -1723,7 +1725,7 @@ namespace SkyCoop
                     Comp.text = GlobalOrArea + message.m_By + ": " + message.m_Message;
                 } else
                 {
-                    Comp.text = message.m_Message;
+                    Comp.text = Loc.T(message.m_Message);
                 }
 
                 if (message.m_Type == 0)
@@ -1918,7 +1920,7 @@ namespace SkyCoop
             {
                 if (lvlguid == MyMod.level_guid)
                 {
-                    MyMod.RemovePickedGear(Key);
+                    MyMod.RemovePickedGear(picked);
                 }
             }
 #else
@@ -3214,7 +3216,7 @@ namespace SkyCoop
                                 string Title = "INVALID CONTAINER DATA";
                                 string Text = "Wasn't able to get all chunks of container data, please try again or cancel.\n\n\n\n\n\n\nGUID: " + GUID;
                                 CloseContainerOnCancle = true;
-                                InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + Text, Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
+                                InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + Text, Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
                             }
 #endif
                         }
@@ -3311,7 +3313,7 @@ namespace SkyCoop
                         string Title = "INVALID CONTAINER DATA";
                         string Text = "Server sent invalid data, this can be network delay problem, please press Confirm to try load data again. If problem stays, message us about this problem.\n\n\n\n\n\n\nGUID: " + Scene + "_" + GUID + "\nCheckhash:" + CheckSum + "\nExpected:  " + Data.m_CheckSum + "\nIs base64 " + IsBase64;
                         CloseContainerOnCancle = true;
-                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + Text, Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
+                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Confirm, Title, "\n" + Text, Panel_Confirmation.ButtonLayout.Button_2, Panel_Confirmation.Background.Transperent, null, null);
 #else
                             ServerSend.FINISHEDSENDINGCONTAINER(FromClient, true);
 #endif

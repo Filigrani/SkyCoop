@@ -455,4 +455,4 @@ namespace GameServer
             Log("Initialized packets.");
         }
     }
-}
+}

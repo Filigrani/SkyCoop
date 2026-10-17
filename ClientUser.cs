@@ -243,6 +243,12 @@ namespace GameServer
                         socket.BeginSend(_packet.ToArray(), _packet.Length(), null, null);
                     }
                 }
+                catch (ObjectDisposedException)
+                {
+                    // Connection already closed (host left): stop sending instead of logging every packet.
+                    MelonLogger.Msg("UDP socket is closed, no more data will be sent to the server");
+                    socket = null;
+                }
                 catch (Exception _ex)
                 {
                     MelonLogger.Msg($"Error sending data to server via UDP: {_ex}");
@@ -298,8 +304,8 @@ namespace GameServer
                         int _packetId = _packet.ReadInt();
                         if (MyMod.DebugTrafficCheck == true)
                         {
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize() + " bytes");
+                            MelonLogger.Msg(System.ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
+                            MelonLogger.Msg(System.ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize() + " bytes");
                         }
                         packetHandlers[_packetId](_packet); // Call appropriate method to handle the packet
                     }

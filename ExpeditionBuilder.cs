@@ -10,7 +10,7 @@ using System.Security.Policy;
 using System.Numerics;
 using TinyJSON;
 #else
-using MelonLoader.TinyJSON;
+using TinyJSON;
 using MelonLoader;
 using UnityEngine;
 #endif

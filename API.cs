@@ -26,7 +26,7 @@ namespace SkyCoop
         { 
             if (m_Debug)
             {
-                MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[SkyCoop API] ");
+                MelonLoader.MelonLogger.Msg(System.ConsoleColor.Blue, "[SkyCoop API] ");
             }
         }
 
@@ -47,7 +47,7 @@ namespace SkyCoop
             else{
                 if(m_ClientState == SkyCoopClientState.CLIENT)
                 {
-                    MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[SkyCoop API] Client trying call SendDataToEveryone, but this host only method.");
+                    MelonLoader.MelonLogger.Msg(System.ConsoleColor.Red, "[SkyCoop API] Client trying call SendDataToEveryone, but this host only method.");
                 }
             }
         }
@@ -60,7 +60,7 @@ namespace SkyCoop
             }else{
                 if (m_ClientState == SkyCoopClientState.CLIENT)
                 {
-                    MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[SkyCoop API] Client trying call SendDataToClient, but this host only method.");
+                    MelonLoader.MelonLogger.Msg(System.ConsoleColor.Red, "[SkyCoop API] Client trying call SendDataToClient, but this host only method.");
                 }
             }
         }
@@ -73,7 +73,7 @@ namespace SkyCoop
             }else{
                 if (m_ClientState == SkyCoopClientState.HOST)
                 {
-                    MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[SkyCoop API] Host trying call SendToHost, but this client only method.");
+                    MelonLoader.MelonLogger.Msg(System.ConsoleColor.Red, "[SkyCoop API] Host trying call SendToHost, but this client only method.");
                 }
             }
         }

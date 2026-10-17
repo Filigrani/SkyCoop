@@ -4,7 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
-using UnhollowerBaseLib;
+// using UnhollowerBaseLib; (see GlobalUsings.cs)
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using UnityEngine.SceneManagement;
@@ -323,7 +323,7 @@ namespace SkyCoop
                 Sounds.Add("PLAY_ENTITYDEMO");
                 Sounds.Add("PLAY_FPH_GEAR_BOLTCUTTERS_INTERACTION_CUT_SFX");
 
-                if(GameManager.GetPlayerManagerComponent() && GameManager.GetPlayerManagerComponent().m_VoicePersona == VoicePersona.Female)
+                if(GameManager.GetPlayerManagerComponent() && PlayerManager.m_VoicePersona == VoicePersona.Female)
                 {
                     Sounds.Add("PLAY_SNDVOSMASTE33370");
                     Sounds.Add("PLAY_SNDVOSMASTE33390");
@@ -399,9 +399,7 @@ namespace SkyCoop
                 string sceneToLoad = "BearCave";
                 GameManager.m_SceneTransitionData.m_SpawnPointName = "DefaultSpawnPoint";
                 GameManager.m_SceneTransitionData.m_SpawnPointAudio = "";
-                GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = "";
                 GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = "";
-                GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "";
                 GameManager.LoadScene(sceneToLoad, GameManager.m_SceneTransitionData.m_SceneSaveFilenameCurrent);
             }
         }
@@ -411,8 +409,6 @@ namespace SkyCoop
         {
             //GameManager.m_SceneTransitionData.m_SpawnPointName = m_PreNightmareOutDoorEnterPoint;
             //GameManager.m_SceneTransitionData.m_SpawnPointAudio = "";
-            //GameManager.m_SceneTransitionData.m_ForceSceneOnNextNavMapLoad = "";
-            //GameManager.m_SceneTransitionData.m_SceneLocationLocIDToShow = "";
 
             //GameManager.m_SceneTransitionData.m_ForceNextSceneLoadTriggerScene = m_PreNightmareOutDoorScene;
 

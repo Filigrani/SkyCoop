@@ -117,7 +117,7 @@ namespace GameServer
             if (!MyMod.DedicatedServerAppMode)
             {
                 Log("[Init data] Client 0 -> Client " + _fromClient + " Data from host player object");
-                int character = (int)GameManager.GetPlayerManagerComponent().m_VoicePersona;
+                int character = (int)PlayerManager.m_VoicePersona;
 
                 ServerSend.SELECTEDCHARACTER(0, character, false, _fromClient);
 
@@ -899,16 +899,8 @@ namespace GameServer
                 }
             }
 
-            if(box.m_Guid != "NULL")
-            {
-                AddLootedContainer(box, true, _fromClient, 0);
-#if (!DEDICATED)
-                if (box.m_LevelGUID == MyMod.level_guid)
-                {
-                    MyMod.RemoveLootFromContainer(box.m_Guid, 0);
-                }
-#endif
-            }
+            // Not marked as looted here any more: this arrives when the client only starts opening the container,
+            // before its contents are requested. The client reports the real state when it closes it.
 
             ServerSend.CONTAINERINTERACT(_fromClient, box, false);
         }
@@ -1286,8 +1278,10 @@ namespace GameServer
 
             if (CompressedData == "")
             {
-                Log("Send to client this is empty");
-                ServerSend.OPENEMPTYCONTAINER(_fromClient, true);
+                // true = nobody looted it yet, the client should show the container's own (seeded) loot.
+                bool NeverLooted = MPSaveManager.GetContainerState(Scene, boxGUID) == -1;
+                Log("Send to client this is empty, never looted " + NeverLooted);
+                ServerSend.OPENEMPTYCONTAINER(_fromClient, NeverLooted);
             }else{
                 Log("Send to client data about container");
                 Shared.SendContainerData(CompressedData, Scene, boxGUID, "", _fromClient);

@@ -13,7 +13,7 @@ using System.Security.Policy;
 using System.Numerics;
 using TinyJSON;
 #else
-using MelonLoader.TinyJSON;
+using TinyJSON;
 using UnityEngine;
 #endif
 
@@ -28,7 +28,7 @@ namespace SkyCoop
 #if (DEDICATED)
             Logger.Log("[MPSaveManager] " +LOG, Shared.LoggerColor.Blue);
 #else
-            MelonLoader.MelonLogger.Msg(ConsoleColor.Blue, "[MPSaveManager] " + LOG);
+            MelonLoader.MelonLogger.Msg(System.ConsoleColor.Blue, "[MPSaveManager] " + LOG);
             #endif
         }
         public static void Error(string LOG)
@@ -36,7 +36,7 @@ namespace SkyCoop
 #if (DEDICATED)
             Logger.Log("[MPSaveManager] " +LOG, Shared.LoggerColor.Red);
 #else
-            MelonLoader.MelonLogger.Msg(ConsoleColor.Red, "[MPSaveManager] " + LOG);
+            MelonLoader.MelonLogger.Msg(System.ConsoleColor.Red, "[MPSaveManager] " + LOG);
             #endif
         }
         public static int GetSeed()
@@ -358,11 +358,11 @@ namespace SkyCoop
                         gi.SkipSpawnChanceRollInitialDecayAndAutoEvolve();
                         obj.name = Blank.m_GearName;
 
-                        GearJson = obj.GetComponent<GearItem>().Serialize();
+                        GearJson = obj.GetComponent<GearItem>().SerializeToString();
 
                         int hashV3 = Shared.GetVectorHash(PlaceV3);
                         int hashRot = Shared.GetQuaternionHash(Rotation);
-                        int hashLevelKey = Scene.GetHashCode();
+                        int hashLevelKey = Scene.StableHash();
                         SearchKey = hashV3 + hashRot + hashLevelKey;
                         UnityEngine.Object.Destroy(obj);
                     }else{
@@ -388,7 +388,7 @@ namespace SkyCoop
 
                     int hashV3 = Shared.GetVectorHash(PlaceV3);
                     int hashRot = Shared.GetQuaternionHash(Rotation);
-                    int hashLevelKey = Scene.GetHashCode();
+                    int hashLevelKey = Scene.StableHash();
                     SearchKey = hashV3 + hashRot + hashLevelKey;
 
 #endif
@@ -2185,7 +2185,7 @@ namespace SkyCoop
                             Festives.RemoveAt(i);
                         }
                     }
-                    FestiveGearsSpawnCooldown = Festives.ToDictionary(x => x.Key, x => x.Value);
+                    FestiveGearsSpawnCooldown = new Dictionary<string, int>(Festives);
                     if (!FestiveGearsSpawnCooldown.ContainsKey(Scene))
                     {
                         ResourceIndependent.SpawnSomeGearsOnScene(Scene, "", "GEAR_SCPresent");
@@ -2196,4 +2196,4 @@ namespace SkyCoop
             }
         }
     }
-}
+}
