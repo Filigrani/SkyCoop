@@ -2582,19 +2582,6 @@ namespace GameServer
             }
         }
 
-        /// <summary>Working Vehicles: a vehicle state. 'except' = client that must not get it, 'onlyFor' = the only one that gets it (-1 = none).</summary>
-        public static void WVSTATE(int _From, string State, int except, int onlyFor)
-        {
-            using (Packet _packet = new Packet((int)ServerPackets.WVSTATE))
-            {
-                _packet.Write(State);
-                _packet.Write(_From);
-                if (onlyFor != -1) SendUDPData(onlyFor, _packet);
-                else if (except > 0) SendUDPDataToAllButNotSender(_packet, except);
-                else SendUDPDataToAll(_packet);
-            }
-        }
-
         public static void ANIMALSTOPSFEEDING(string GUID)
         {
             using (Packet _packet = new Packet((int)ServerPackets.ANIMALSTOPSFEEDING))

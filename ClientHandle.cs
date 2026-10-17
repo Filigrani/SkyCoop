@@ -871,12 +871,6 @@ namespace SkyCoop
                 }
             }
         }
-        public static void WVSTATE(Packet _packet)
-        {
-            string state = _packet.ReadString();
-            int from = _packet.ReadInt();
-            WorkingVehiclesSync.ClientGotState(state, from);
-        }
         public static void FIRE(Packet _packet)
         {
             DataStr.FireSourcesSync FireSource = _packet.ReadFire();

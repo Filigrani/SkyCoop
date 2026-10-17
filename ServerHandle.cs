@@ -980,14 +980,6 @@ namespace GameServer
             }
             ServerSend.USESHELTER(_fromClient, shelter, false);
         }
-        public static void WVSTATE(int _fromClient, Packet _packet)
-        {
-            WorkingVehiclesSync.ServerGotState(_fromClient, _packet.ReadString());
-        }
-        public static void WVREQUEST(int _fromClient, Packet _packet)
-        {
-            WorkingVehiclesSync.ServerGotRequest(_fromClient, _packet.ReadString());
-        }
         public static void FIRE(int _fromClient, Packet _packet)
         {
             DataStr.FireSourcesSync FireSource = _packet.ReadFire();

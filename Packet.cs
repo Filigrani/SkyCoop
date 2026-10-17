@@ -206,8 +206,6 @@ namespace GameServer
         ANIMALDESTORYGEAR,
         ANIMALBITECORPSE,
         ANIMALSTOPSFEEDING,
-        WVSTATE,
-        WVREQUEST,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -402,8 +400,6 @@ namespace GameServer
         ANIMALDESTORYGEAR,
         ANIMALBITECORPSE,
         ANIMALSTOPSFEEDING,
-        WVSTATE,
-        WVREQUEST,
     }
 
     public class Packet : IDisposable

@@ -382,8 +382,6 @@ namespace GameServer
                 { (int)ClientPackets.REMOVESHELTER, ServerHandle.REMOVESHELTER},
                 { (int)ClientPackets.USESHELTER, ServerHandle.USESHELTER},
                 { (int)ClientPackets.FIRE, ServerHandle.FIRE},
-                { (int)ClientPackets.WVSTATE, ServerHandle.WVSTATE},
-                { (int)ClientPackets.WVREQUEST, ServerHandle.WVREQUEST},
                 { (int)ClientPackets.CUSTOM, ServerHandle.CUSTOM},
                 { (int)ClientPackets.GOTITEMSLICE, ServerHandle.GOTITEMSLICE},
                 { (int)ClientPackets.VOICECHAT, ServerHandle.VOICECHAT},
