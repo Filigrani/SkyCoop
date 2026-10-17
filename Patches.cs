@@ -5167,11 +5167,6 @@ namespace SkyCoop
                     MelonLogger.Msg(System.ConsoleColor.Blue, "----------------------------------------------------");
                     MelonLogger.Msg(System.ConsoleColor.Gray, " Stack trace for current level: {0}", st.ToString());
                 }
-                if(PlayerPrefs.GetString(nameof(Localization.Language), "English") == "Russian")
-                {
-                    MyMod.DefaultIsRussian = true;
-                }
-
                 if (MyMod.KillOnUpdate)
                 {
                     UnityEngine.Object.Destroy(__instance.m_MainDisclaimerContinue.gameObject.GetComponent<UILocalize>());
@@ -5230,16 +5225,32 @@ namespace SkyCoop
 
         public static void RemoveSinglePlayer(Panel_MainMenu __instance)
         {
-            Transform Grid = MyMod.m_Panel_MainMenu.gameObject.transform.GetChild(0).GetChild(0).GetChild(0).Find("Left_Align/Grid"); // 2.55 inserted MainMenuBG/Upsell, find by name
-            for (int i = 0; i < 3; i++)
+            // 2.55 main menu is Sandbox / Story / TFTFTUpsell / Quit (+ our MULTIPLAYER). Match buttons by model id instead
+            // of grid position, so single player Survival, Wintermute and Quit stay available and only the upsell is hidden.
+            BasicMenu Menu = __instance.m_BasicMenu;
+            if (Menu == null || Menu.m_ItemModelList == null || Menu.m_MenuItems == null)
             {
-                Grid.GetChild(i).gameObject.SetActive(false);
+                return;
             }
-            if (MyMod.MyLobby != "")
+            for (int i = 0; i < Menu.m_ItemModelList.Count && i < Menu.m_MenuItems.Count; i++)
             {
-                MenuChange.OverrideMenuButton(Grid, 3, "LOBBY", false);
-            }else{
-                MenuChange.OverrideMenuButton(Grid, 3, "MULTIPLAYER", false);
+                BasicMenu.BasicMenuItemModel Model = Menu.m_ItemModelList[i];
+                BasicMenu.BasicMenuItemView View = Menu.m_MenuItems[i];
+                if (Model == null || View == null || View.m_Display == null)
+                {
+                    continue;
+                }
+                if (Model.m_Id == "TFTFTUpsell")
+                {
+                    View.m_Display.SetActive(false);
+                }
+                else if (Model.m_LabelText == "MULTIPLAYER" && View.m_Label != null)
+                {
+                    string txt = MyMod.MyLobby != "" ? "LOBBY" : "MULTIPLAYER";
+                    View.m_Label.mText = txt;
+                    View.m_Label.text = txt;
+                    View.m_Label.ProcessText();
+                }
             }
         }
 
@@ -5759,6 +5770,7 @@ namespace SkyCoop
                 if (__instance != null)
                 {
                     MyMod.m_Panel_Sandbox = __instance;
+                    MenuChange.SandboxTitleId = __instance.m_TitleLocalizationId;
                     MelonLogger.Msg("[Legacy UIs] Captured link on Panel_Sandbox!");
                 }
             }

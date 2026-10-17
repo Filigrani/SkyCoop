@@ -600,13 +600,7 @@ namespace SkyCoop
                     SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "VoteTime", MyMod.LobbyVoteLeft.ToString());
                 }
 
-                if (MyMod.DefaultIsRussian)
-                {
-                    MyMod.StartGOLOSOVANIE(); // Play flex cs 1.6 music
-                    MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "GOLOSOVANIE: " + MyMod.LobbyVoteLeft;
-                }else{
-                    MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "VOTING: " + MyMod.LobbyVoteLeft;
-                }
+                MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "VOTING: " + MyMod.LobbyVoteLeft;
 
                 if (MyMod.LobbyVoteLeft <= 0)
                 {

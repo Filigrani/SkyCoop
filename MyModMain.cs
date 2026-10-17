@@ -6065,7 +6065,6 @@ namespace SkyCoop
         }
 
         public static GameObject Golosovanie;
-        public static bool DefaultIsRussian = false;
 
         public static void StartGOLOSOVANIE()
         {
@@ -6343,12 +6342,7 @@ namespace SkyCoop
                     {
                         Txt = "\nPlease wait a moment...";
                     } else {
-                        if (DefaultIsRussian)
-                        {
-                            Txt = "\nЕсли вы используйте hamachi/radmin или другой эмулятор локалки, и у вас проблемы с подключением, не простите о помощи нас.";
-                        } else {
-                            Txt = "\nPlease wait, if you using hamachi/radmin or any other lan emulator and you have connection problems, please don't ask us for help.";
-                        }
+                        Txt = "\nPlease wait. If you are using Hamachi/Radmin or any other LAN emulator and have connection problems, please don't ask us for help.";
                     }
 
 
@@ -13085,7 +13079,7 @@ namespace SkyCoop
                     m_Panel_ChallengeComplete = InterfaceManager.LoadPanel<Panel_ChallengeComplete>();
                 }
                 m_Panel_ChallengeComplete.ShowPanel(Panel_ChallengeComplete.Options.ShowFailStatInfo);
-                m_Panel_ChallengeComplete.SetStatInfoText("Ехать ты лох конечно", "Оставшиеся время:", CurrentCustomChalleng.m_Time, "Обкакался раз:", 99);
+                m_Panel_ChallengeComplete.SetStatInfoText("Challenge failed", "Time left:", CurrentCustomChalleng.m_Time, "Fails:", 99);
             }
             else if (TRIGGER == "Win")
             {
@@ -13094,7 +13088,7 @@ namespace SkyCoop
                     m_Panel_ChallengeComplete = InterfaceManager.LoadPanel<Panel_ChallengeComplete>();
                 }
                 m_Panel_ChallengeComplete.ShowPanel(Panel_ChallengeComplete.Options.Succeeded);
-                m_Panel_ChallengeComplete.SetStatInfoText("Ну молодец", "Оставшиеся время:", CurrentCustomChalleng.m_Time, "Обкакался раз:", 0);
+                m_Panel_ChallengeComplete.SetStatInfoText("Well done", "Time left:", CurrentCustomChalleng.m_Time, "Fails:", 0);
             }
 #endif
             if (TRIGGER.StartsWith("CairnID"))
@@ -13157,13 +13151,7 @@ namespace SkyCoop
 
             if (ForcedShowExpeditionHUDSeconds > 0)
             {
-                if (!DefaultIsRussian)
-                {
-                    desc += "\n\nYou can hold [50C878]TAB[-] key to see this panel again, once it close.";
-                } else
-                {
-                    desc += "\n\nВы можете зажать кнопку [50C878]TAB[-] чтобы показать эту панель ещё раз, когда она пропадёт.";
-                }
+                desc += "\n\nYou can hold the [50C878]TAB[-] key to see this panel again once it closes.";
             }
 
             if (Rad)
@@ -13501,15 +13489,8 @@ namespace SkyCoop
         {
             Panel_TutorialPopup.TutorialPopupRequest R = new Panel_TutorialPopup.TutorialPopupRequest();
 
-            if (!DefaultIsRussian)
-            {
-                R.m_TitleLocID = "Expeditions Starter Guide";
-                R.m_MessageLocID = "The [27AE60]Handheld Radio[-] can be used to start or join expeditions.\nClick [00FFFF]Right Mouse Button[-] when you holding Handheld Radio to open Expeditions Menu.\nTo start [FFB233]Random Expedition[-] click [FFB233]«Start Expedition»[-] in Expeditions Menu.\n If you found any [50C878]Special Items[-] you can start [50C878]Special Expedition[-], an advanced challenges with a much higher reward.\n[50C878]Special Items[-] can be found in any container, click [50C878]«Special Expedition»[-] in Expeditions Menu to see if you have any of them to start expedition.\nYou can also [00FFFF]Invite[-] other players to your Expedition, to do so, just click on them when you holding [27AE60]Handheld Radio[-].\nAny received [00FFFF]Invites[-] you can find in Expedition Menu.\nIf you already in Expedition, you can hold [27AE60]TAB[-] key to see Expedition Objective.";
-            } else
-            {
-                R.m_TitleLocID = "Начальное Руководство По Экспедициям";
-                R.m_MessageLocID = "Используя [27AE60]Рацию[-] Вы можете начинать экспедиции и присоединяться к ним.\nКликните [00FFFF]Правой Кнопкой Мыши[-] когда держите Рацию в руках, чтобы открыть Меню Экспедиций.\nЧтобы начать [FFB233]Случайную Экспедицию[-] кликните [FFB233]«Start Expedition»[-] в Меню Экспедиций.\nЕсли вы найдёте какие либо [50C878]Специальные Предметы[-] Вы сможете начать [50C878]Специальную Экспедицию[-], сложные испытания с более весомой наградой.\n[50C878]Специальные Предметы[-] случайно могут быть найдеты в любом контейнере, кликните [50C878]«Special Expedition»[-] в Меню Экспедиций чтобы узнать есть ли у Вас какие либо [50C878]Специальные Предметы[-] для старта экспедиции.\nА также Вы можете [00FFFF]Приглашать[-] других игроков в Вашу Экспедицию, чтобы это сделать, просто кликните по ним держа в руках [27AE60]Рацию[-].\nВсе полученные [00FFFF]Приглашения[-] Вы можете найти в меню Экспедиций.\nЕсли же вы уже в экспедиции, вы можете зажать кнопку [27AE60]TAB[-] чтобы увидеть Цель текущей Экспедиции.";
-            }
+            R.m_TitleLocID = "Expeditions Starter Guide";
+            R.m_MessageLocID = "The [27AE60]Handheld Radio[-] can be used to start or join expeditions.\nClick [00FFFF]Right Mouse Button[-] when you holding Handheld Radio to open Expeditions Menu.\nTo start [FFB233]Random Expedition[-] click [FFB233]«Start Expedition»[-] in Expeditions Menu.\n If you found any [50C878]Special Items[-] you can start [50C878]Special Expedition[-], an advanced challenges with a much higher reward.\n[50C878]Special Items[-] can be found in any container, click [50C878]«Special Expedition»[-] in Expeditions Menu to see if you have any of them to start expedition.\nYou can also [00FFFF]Invite[-] other players to your Expedition, to do so, just click on them when you holding [27AE60]Handheld Radio[-].\nAny received [00FFFF]Invites[-] you can find in Expedition Menu.\nIf you already in Expedition, you can hold [27AE60]TAB[-] key to see Expedition Objective.";
             InterfaceManager.GetPanel<Panel_TutorialPopup>().QueueTutorialPopupRequest(R);
             InterfaceManager.GetPanel<Panel_TutorialPopup>().ShowCurrentTutorialPopup();
             MPSaveManager.SeenExpeditions();

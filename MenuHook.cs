@@ -14,6 +14,7 @@ namespace SkyCoop
     public class MenuChange
     {
         public static string MenuMode = "Original";
+        public static string SandboxTitleId = "";
         public static int TempExperience = 0;
 
         public static void SetDefaultCamera()
@@ -1079,6 +1080,21 @@ namespace SkyCoop
                         ChangeMenuItems("Multiplayer");
                     }else{
                         ChangeMenuItems("Lobby");
+                    }
+                }
+                else if(list[index].m_Id == "Sandbox" && MyMod.m_Panel_MainMenu != null && __instance == MyMod.m_Panel_MainMenu.m_BasicMenu)
+                {
+                    // Single player Survival shares Panel_Sandbox with the multiplayer menu, restore it to vanilla.
+                    if (MyMod.m_Panel_Sandbox != null)
+                    {
+                        if (MenuMode != "Original")
+                        {
+                            ChangeMenuItems("Original");
+                        }
+                        if (SandboxTitleId != "")
+                        {
+                            MyMod.m_Panel_Sandbox.m_TitleLocalizationId = SandboxTitleId;
+                        }
                     }
                 }
                 else if(list[index].m_LabelText == "LOBBY")
