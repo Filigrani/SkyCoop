@@ -6340,9 +6340,9 @@ namespace SkyCoop
 
                     if (Steam)
                     {
-                        Txt = "\nPlease wait a moment...";
+                        Txt = Loc.T("\nPlease wait a moment...");
                     } else {
-                        Txt = "\nPlease wait. If you are using Hamachi/Radmin or any other LAN emulator and have connection problems, please don't ask us for help.";
+                        Txt = Loc.T("\nPlease wait. If you are using Hamachi/Radmin or any other LAN emulator and have connection problems, please don't ask us for help.");
                     }
 
 
@@ -8718,7 +8718,7 @@ namespace SkyCoop
                 SleepingButtons = InterfaceManager.GetPanel<Panel_Rest>().gameObject.transform.GetChild(3).gameObject;
                 WaitForSleepLable = UnityEngine.Object.Instantiate(SleepingButtons.transform.GetChild(2).GetChild(1).gameObject, InterfaceManager.GetPanel<Panel_Rest>().gameObject.transform);
                 UnityEngine.Object.Destroy(WaitForSleepLable.GetComponent<UILocalize>());
-                WaitForSleepLable.GetComponent<UILabel>().text = "WAITING FOR OTHER PLAYERS TO SLEEP";
+                WaitForSleepLable.GetComponent<UILabel>().text = Loc.T("WAITING FOR OTHER PLAYERS TO SLEEP");
                 WaitForSleepLable.SetActive(false);
             }
 
@@ -8736,7 +8736,7 @@ namespace SkyCoop
                 new_button.name = "WaitForEveryoneButton";
                 GameObject Labl = new_button.transform.GetChild(0).GetChild(0).gameObject;
                 UnityEngine.Object.Destroy(Labl.GetComponent<UILocalize>());
-                Labl.GetComponent<UILabel>().text = "WAIT FOR EVERYONE";
+                Labl.GetComponent<UILabel>().text = Loc.T("WAIT FOR EVERYONE");
                 new_button.GetComponent<GenericButtonMouseSpawner>().onClick = null;
                 new_button.transform.GetChild(0).gameObject.GetComponent<UIButton>().onClick = null;
             }
@@ -8802,7 +8802,7 @@ namespace SkyCoop
             {
                 TargetFlairSlot = -1;
                 CustomizeUi.SetActive(true);
-                CustomizeUiTabLable.text = "Customization";
+                CustomizeUiTabLable.text = Loc.T("Customization");
                 CustomizeUi.transform.GetChild(1).gameObject.SetActive(true); // Main
                 CustomizeUi.transform.GetChild(2).gameObject.SetActive(false); // Flairs Scroll
 
@@ -8818,7 +8818,7 @@ namespace SkyCoop
             } else if (Panel == "Flairs")
             {
                 CustomizeUi.SetActive(true);
-                CustomizeUiTabLable.text = "Flair Slot #" + TargetFlairSlot;
+                CustomizeUiTabLable.text = Loc.T("Flair Slot #" + TargetFlairSlot);
                 CustomizeUi.transform.GetChild(1).gameObject.SetActive(false); // Main
                 CustomizeUi.transform.GetChild(2).gameObject.SetActive(true); // Flairs Scroll
                 CreateFlairsList();
@@ -13151,7 +13151,7 @@ namespace SkyCoop
 
             if (ForcedShowExpeditionHUDSeconds > 0)
             {
-                desc += "\n\nYou can hold the [50C878]TAB[-] key to see this panel again once it closes.";
+                desc += Loc.T("\n\nYou can hold the [50C878]TAB[-] key to see this panel again once it closes.");
             }
 
             if (Rad)
@@ -13489,8 +13489,8 @@ namespace SkyCoop
         {
             Panel_TutorialPopup.TutorialPopupRequest R = new Panel_TutorialPopup.TutorialPopupRequest();
 
-            R.m_TitleLocID = "Expeditions Starter Guide";
-            R.m_MessageLocID = "The [27AE60]Handheld Radio[-] can be used to start or join expeditions.\nClick [00FFFF]Right Mouse Button[-] when you holding Handheld Radio to open Expeditions Menu.\nTo start [FFB233]Random Expedition[-] click [FFB233]«Start Expedition»[-] in Expeditions Menu.\n If you found any [50C878]Special Items[-] you can start [50C878]Special Expedition[-], an advanced challenges with a much higher reward.\n[50C878]Special Items[-] can be found in any container, click [50C878]«Special Expedition»[-] in Expeditions Menu to see if you have any of them to start expedition.\nYou can also [00FFFF]Invite[-] other players to your Expedition, to do so, just click on them when you holding [27AE60]Handheld Radio[-].\nAny received [00FFFF]Invites[-] you can find in Expedition Menu.\nIf you already in Expedition, you can hold [27AE60]TAB[-] key to see Expedition Objective.";
+            R.m_TitleLocID = Loc.T("Expeditions Starter Guide");
+            R.m_MessageLocID = Loc.T("The [27AE60]Handheld Radio[-] can be used to start or join expeditions.\nClick [00FFFF]Right Mouse Button[-] when you holding Handheld Radio to open Expeditions Menu.\nTo start [FFB233]Random Expedition[-] click [FFB233]«Start Expedition»[-] in Expeditions Menu.\n If you found any [50C878]Special Items[-] you can start [50C878]Special Expedition[-], an advanced challenges with a much higher reward.\n[50C878]Special Items[-] can be found in any container, click [50C878]«Special Expedition»[-] in Expeditions Menu to see if you have any of them to start expedition.\nYou can also [00FFFF]Invite[-] other players to your Expedition, to do so, just click on them when you holding [27AE60]Handheld Radio[-].\nAny received [00FFFF]Invites[-] you can find in Expedition Menu.\nIf you already in Expedition, you can hold [27AE60]TAB[-] key to see Expedition Objective.");
             InterfaceManager.GetPanel<Panel_TutorialPopup>().QueueTutorialPopupRequest(R);
             InterfaceManager.GetPanel<Panel_TutorialPopup>().ShowCurrentTutorialPopup();
             MPSaveManager.SeenExpeditions();

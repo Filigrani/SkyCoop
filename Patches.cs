@@ -5170,8 +5170,8 @@ namespace SkyCoop
                 if (MyMod.KillOnUpdate)
                 {
                     UnityEngine.Object.Destroy(__instance.m_MainDisclaimerContinue.gameObject.GetComponent<UILocalize>());
-                    __instance.m_MainDisclaimerContinue.text = "Press Esc to Exit";
-                    __instance.m_MainDisclaimerContinue.mText = "Press Esc to Exit";
+                    __instance.m_MainDisclaimerContinue.text = Loc.T("Press Esc to Exit");
+                    __instance.m_MainDisclaimerContinue.mText = Loc.T("Press Esc to Exit");
                     __instance.m_MainDisclaimerContinue.ProcessText();
                     __instance.m_MainDisclaimerContinue.gameObject.SetActive(true);
                     for (int i = 1; i <= 3; i++)
@@ -5246,7 +5246,7 @@ namespace SkyCoop
                 }
                 else if (Model.m_LabelText == "MULTIPLAYER" && View.m_Label != null)
                 {
-                    string txt = MyMod.MyLobby != "" ? "LOBBY" : "MULTIPLAYER";
+                    string txt = Loc.T(MyMod.MyLobby != "" ? "LOBBY" : "MULTIPLAYER");
                     View.m_Label.mText = txt;
                     View.m_Label.text = txt;
                     View.m_Label.ProcessText();
@@ -6471,7 +6471,7 @@ namespace SkyCoop
                         NGUITools.SetActive(__instance.m_RightPageObject, false);
                         if (AffType == AfflictionType.InfectionRisk || Affliction.IsBadAffliction(AffType))
                         {
-                            __instance.m_LabelCause.text = "AFFLICTION TREATED\nPATIENT NEEDS TIME TO HEAL";
+                            __instance.m_LabelCause.text = Loc.T("AFFLICTION TREATED\nPATIENT NEEDS TIME TO HEAL");
                             __instance.m_LabelCause.color = new Color(0.25f, 1, 0);
                         }
                     }
@@ -9460,7 +9460,7 @@ namespace SkyCoop
                             //__instance.m_BookNameLabel.text = "";
                             //__instance.m_BookDescLabel.text = "";
                             __instance.m_ResearchIcon.spriteName = "ico_xpModeNowhereToHide2020";
-                            __instance.m_SkillImprovedLabel.text = "Gives ability to know your sanity status.";
+                            __instance.m_SkillImprovedLabel.text = Loc.T("Gives ability to know your sanity status.");
                             __instance.m_SkillProgressBarLabel.text = "";
                             __instance.m_SkillProgressBar.value = 0;
                             __instance.m_SkillProgressBarSprite.fillAmount = 0;

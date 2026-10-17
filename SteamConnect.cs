@@ -329,8 +329,8 @@ namespace SkyCoop
                 UnityEngine.UI.Text Status = Element.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Text>();
 
                 Name.text = Data.m_OwnerName;
-                Players.text = "Players: " + Data.m_Players + "/" + Data.m_PlayersMax;
-                Status.text = "Status: " + Data.m_State;
+                Players.text = Loc.T("Players: " + Data.m_Players + "/" + Data.m_PlayersMax);
+                Status.text = Loc.T("Status: " + Data.m_State);
                 ServerObjects.Add(Element);
 
                 Action actJoin = new Action(() => ClickJoin(Data.m_LobbyID));
@@ -600,7 +600,11 @@ namespace SkyCoop
                     SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "VoteTime", MyMod.LobbyVoteLeft.ToString());
                 }
 
-                MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "VOTING: " + MyMod.LobbyVoteLeft;
+                if (Loc.IsRussian)
+                {
+                    MyMod.StartGOLOSOVANIE(); // Play flex cs 1.6 music
+                }
+                MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = Loc.T("VOTING: " + MyMod.LobbyVoteLeft);
 
                 if (MyMod.LobbyVoteLeft <= 0)
                 {
@@ -748,7 +752,7 @@ namespace SkyCoop
                         UpdateVoteObjects(Regions, ExpModes);
                         ProcessVoteUpdate(lobbyID, Regions, ExpModes);
                     }else{
-                        MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "LOBBY " + Peoples + "/" + Limit;
+                        MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = Loc.T("LOBBY " + Peoples + "/" + Limit);
                     }
                 }
             }

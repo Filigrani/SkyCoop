@@ -17,13 +17,54 @@ namespace SkyCoop
         public static string SandboxTitleId = "";
         public static int TempExperience = 0;
 
+        // The old hardcoded camera spots belong to the pre-2.55 MainMenu scene and land off the map in 2.55,
+        // so keep the camera where the menu put it and bring the doll in front of it instead.
+        private static bool SavedMenuCamera = false;
+        private static Vector3 SavedMenuCameraPos;
+        private static Quaternion SavedMenuCameraRot;
+
         public static void SetDefaultCamera()
         {
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(new Vector3(48.08f, 3.33f, 63.81f), GameManager.GetCurrentCamera().transform.rotation);
+            if (SavedMenuCamera)
+            {
+                GameManager.GetPlayerManagerComponent().TeleportPlayer(SavedMenuCameraPos, SavedMenuCameraRot);
+                SavedMenuCamera = false;
+            }
         }
         public static void SetFlairsCamera()
         {
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(new Vector3(-7.71f, 16.85f, 11.47f), GameManager.GetCurrentCamera().transform.rotation);
+            if (!SavedMenuCamera && GameManager.GetPlayerTransform() != null)
+            {
+                SavedMenuCameraPos = GameManager.GetPlayerTransform().position;
+                SavedMenuCameraRot = GameManager.GetCurrentCamera().transform.rotation;
+                SavedMenuCamera = true;
+            }
+        }
+        public static void PlaceDollInFrontOfCamera(GameObject Doll)
+        {
+            Transform Cam = GameManager.GetCurrentCamera().transform;
+            Vector3 Forward = Vector3.ProjectOnPlane(Cam.forward, Vector3.up);
+            if (Forward.sqrMagnitude < 0.001f)
+            {
+                Forward = Vector3.forward;
+            }
+            Forward.Normalize();
+            Vector3 Right = Vector3.Cross(Vector3.up, Forward);
+            // Slightly right of center, so the customization panel on the left does not cover the doll.
+            Vector3 Pos = Cam.position + Forward * 2.2f + Right * 0.6f;
+            float GroundY = Cam.position.y - 1.6f;
+            float BestDist = float.MaxValue;
+            foreach (RaycastHit Hit in Physics.RaycastAll(Pos + Vector3.up * 3f, Vector3.down, 10f))
+            {
+                if (Hit.distance < BestDist && !Hit.transform.IsChildOf(Doll.transform))
+                {
+                    BestDist = Hit.distance;
+                    GroundY = Hit.point.y;
+                }
+            }
+            Pos.y = GroundY;
+            Doll.transform.position = Pos;
+            Doll.transform.rotation = Quaternion.LookRotation(-Forward, Vector3.up);
         }
         public static void MoveUpMainMenuWordmark(int numOfMainMenuItems)
         {
@@ -164,6 +205,10 @@ namespace SkyCoop
                         __instance.m_DescriptionLabel.text = "Vote for experience mode.";
                     }
                 }
+                if (__instance.m_DescriptionLabel != null)
+                {
+                    __instance.m_DescriptionLabel.text = Loc.T(__instance.m_DescriptionLabel.text);
+                }
             }
         }
 
@@ -204,8 +249,8 @@ namespace SkyCoop
                 }
             }
 
-            Label.mText = txt;
-            Label.text = txt;
+            Label.mText = Loc.T(txt);
+            Label.text = Loc.T(txt);
             Label.ProcessText();
             Grid.GetChild(index).gameObject.SetActive(true);
         }
@@ -829,8 +874,7 @@ namespace SkyCoop
             SetFlairsCamera();
             if (MyMod.MyPlayerDoll)
             {
-                MyMod.MyPlayerDoll.transform.position = new Vector3(-9f , 17.2f, 10.8f);
-                MyMod.MyPlayerDoll.transform.rotation = new Quaternion(0, 0.866f, 0, -0.5f);
+                PlaceDollInFrontOfCamera(MyMod.MyPlayerDoll);
             }else{
                 MelonLogger.Msg(System.ConsoleColor.Red, "MyPlayerDoll does not exist");
             }
@@ -868,6 +912,9 @@ namespace SkyCoop
                 OverrideMenuButton(Grid, 1, "CHANGE NICKNAME");
                 OverrideMenuButton(Grid, 2, "CUSTOMIZATION");
                 OverrideMenuButton(Grid, 3, "COPY ACCOUNT ID");
+                // Slot 4 has no menu model of its own, put it under slot 3 like the menu grid would.
+                Grid.GetChild(4).localPosition = Grid.GetChild(3).localPosition + (Grid.GetChild(3).localPosition - Grid.GetChild(2).localPosition);
+                OverrideMenuButton(Grid, 4, Loc.ModeButtonText());
             }
             else if(mode == "Lobby")
             {
@@ -1068,8 +1115,8 @@ namespace SkyCoop
                     bool result = InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
                     if (result)
                     {
-                        MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
-                        MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                        MyMod.m_Panel_Sandbox.m_TitleLocalizationId = Loc.T("MULTIPLAYER");
+                        MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle(Loc.T("MULTIPLAYER"));
                     }else{
                         return;
                     }
@@ -1100,8 +1147,8 @@ namespace SkyCoop
                 else if(list[index].m_LabelText == "LOBBY")
                 {
                     MyMod.m_Panel_Sandbox.Enable(true);
-                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
-                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = Loc.T("MULTIPLAYER");
+                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle(Loc.T("MULTIPLAYER"));
                     ChangeMenuItems("Lobby");
                 }
             }
@@ -1183,6 +1230,13 @@ namespace SkyCoop
                                     }else{
                                         InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't detect your account ID", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                                     }
+                                }
+                                else if (CustomId == 4)
+                                {
+                                    Loc.CycleMode();
+                                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = Loc.T("MULTIPLAYER");
+                                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle(Loc.T("MULTIPLAYER"));
+                                    ChangeMenuItems("MultiProfileSettings");
                                 }
                             }
                             else if(MenuMode == "Join")
