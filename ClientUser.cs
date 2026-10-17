@@ -398,6 +398,7 @@ namespace GameServer
             { (int)ServerPackets.ALLSHELTERS, ClientHandle.ALLSHELTERS},
             { (int)ServerPackets.USESHELTER, ClientHandle.USESHELTER},
             { (int)ServerPackets.FIRE, ClientHandle.FIRE},
+            { (int)ServerPackets.WVSTATE, ClientHandle.WVSTATE},
             { (int)ServerPackets.CUSTOM, ClientHandle.CUSTOM},
             { (int)ServerPackets.KICKMESSAGE, ClientHandle.KICKMESSAGE},
             { (int)ServerPackets.GOTITEMSLICE, ClientHandle.GOTITEMSLICE},

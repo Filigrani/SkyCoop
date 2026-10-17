@@ -11508,6 +11508,7 @@ namespace SkyCoop
             {
                 ModUpdate();
                 Shared.OnUpdate();
+                WorkingVehiclesSync.Update();
             }
 
             if (!KillEverySecond)
