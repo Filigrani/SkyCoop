@@ -22,6 +22,7 @@ namespace SkyCoop
             public bool m_CheckModsValidation = false;
             public bool m_SaveScamProtection = false;
             public bool m_PVP = true;
+            public bool m_SafeZones = true; // map circles; safe interiors (scenes) always apply
         }
         public class ServerSettingsData
         {
@@ -404,6 +405,14 @@ namespace SkyCoop
                     return false;
                 }
             }
+        }
+        public class MovedFurnitureSync
+        {
+            public string m_Guid = "";
+            public string m_LevelGUID = "";
+            public Vector3 m_Position = new Vector3(0, 0, 0);
+            public Quaternion m_Rotation = new Quaternion(0, 0, 0, 1);
+            public bool m_Active = true;
         }
         public class PickedGearSync : IEquatable<PickedGearSync>
         {

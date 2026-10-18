@@ -41,9 +41,9 @@ namespace GameServer
             // Request of server status should be done via UDP.
             // Use same port as game server use.
             // Default port of Sky Co-op Server is 26950 (if not listed otherwise).
-            // Example: Game server with address 87.254.159.105:26950
+            // Example: Game server with address 11.111.111.111:26950
             // Will respond with status data by same 26950 port,
-            // aswell as servers that listed as 87.254.159.105
+            // aswell as servers that listed as 11.111.111.111
             // will respond by port 26950, but I think is obvious.
 
             // Send to server (signed int) -2 message to request servers status.
@@ -243,6 +243,12 @@ namespace GameServer
                         socket.BeginSend(_packet.ToArray(), _packet.Length(), null, null);
                     }
                 }
+                catch (ObjectDisposedException)
+                {
+                    // Connection already closed (host left): stop sending instead of logging every packet.
+                    MelonLogger.Msg("UDP socket is closed, no more data will be sent to the server");
+                    socket = null;
+                }
                 catch (Exception _ex)
                 {
                     MelonLogger.Msg($"Error sending data to server via UDP: {_ex}");
@@ -298,8 +304,8 @@ namespace GameServer
                         int _packetId = _packet.ReadInt();
                         if (MyMod.DebugTrafficCheck == true)
                         {
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize() + " bytes");
+                            MelonLogger.Msg(System.ConsoleColor.Yellow, "[DebugTrafficCheck] Got packet ID " + _packetId);
+                            MelonLogger.Msg(System.ConsoleColor.Yellow, "[DebugTrafficCheck] Packet size " + _packet.ReturnSize() + " bytes");
                         }
                         packetHandlers[_packetId](_packet); // Call appropriate method to handle the packet
                     }
@@ -473,6 +479,7 @@ namespace GameServer
             { (int)ServerPackets.REGISTERSPEICALITEM, ClientHandle.REGISTERSPEICALITEM},
             { (int)ServerPackets.REQUESTSPECIALITEMS, ClientHandle.REQUESTSPECIALITEMS},
             { (int)ServerPackets.ANIMALSTOPSFEEDING, ClientHandle.ANIMALSTOPSFEEDING},
+            { (int)ServerPackets.FURNMOVED, ClientHandle.FURNMOVED},
         };
             MelonLogger.Msg("Initialized packets.");
         }

@@ -451,8 +451,9 @@ namespace GameServer
                 { (int)ClientPackets.REQUESTSPECIALITEMS, ServerHandle.REQUESTSPECIALITEMS},
                 { (int)ClientPackets.ANIMALDESTORYGEAR, ServerHandle.ANIMALDESTORYGEAR},
                 { (int)ClientPackets.ANIMALBITECORPSE, ServerHandle.ANIMALBITECORPSE},
+                { (int)ClientPackets.FURNMOVED, ServerHandle.FURNMOVED},
             };
             Log("Initialized packets.");
         }
     }
-}
+}

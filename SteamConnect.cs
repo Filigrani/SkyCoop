@@ -1,7 +1,7 @@
 ﻿using System;
 using UnityEngine;
 using MelonLoader;
-using UnhollowerBaseLib;
+// using UnhollowerBaseLib; (see GlobalUsings.cs)
 using Steamworks;
 using System.IO;
 using System.Net;
@@ -146,11 +146,11 @@ namespace SkyCoop
                 MyMod.RemovePleaseWait();
                 if(request.m_EChatRoomEnterResponse == 1)
                 {
-                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                    Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
-                    Align.GetChild(2).gameObject.SetActive(true); //Grid
-                    Align.GetChild(4).gameObject.SetActive(true); //Description
-                    Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                    Align.Find("Selected").gameObject.SetActive(true); //SelectIcon
+                    Align.Find("Grid").gameObject.SetActive(true); //Grid
+                    Align.Find("Description").gameObject.SetActive(true); //Description
+                    Align.Find("Linebreak").gameObject.SetActive(true); //Linebreaker
                     MyMod.ServerBrowser.SetActive(false);
                     MelonLogger.Msg("[SteamWorks.NET] Jointed to Lobby "+ request.m_ulSteamIDLobby);
                     MyMod.MyLobby = request.m_ulSteamIDLobby.ToString();
@@ -169,7 +169,7 @@ namespace SkyCoop
                                 Texture2D Avatar = GetImageFromDescripter(Descripter, 64, 64);
                                 MyMod.AddPersonToLobby(SteamFriends.GetPersonaName(), MySteamID, Avatar);
                             }else{
-                                MelonLogger.Msg(ConsoleColor.Yellow, "[SteamWorks.NET] Player has not avatar ");
+                                MelonLogger.Msg(System.ConsoleColor.Yellow, "[SteamWorks.NET] Player has not avatar ");
                             }
                         }
 
@@ -200,11 +200,11 @@ namespace SkyCoop
                         }
                     }
                 }else{
-                    MelonLogger.Msg(ConsoleColor.Red, "[SteamWorks.NET] Can't joing to lobby!");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "[SteamWorks.NET] Can't joing to lobby!");
                     MyMod.RemovePleaseWait();
-                    if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                    if (MyMod.m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
                     {
-                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't join this lobby", "\n" + "Server is no more available to join", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't join this lobby", "\n" + "Server is no more available to join", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                     }
                 }
                 if (MyMod.DedicatedServerAppMode && IsMyLobby)
@@ -219,9 +219,9 @@ namespace SkyCoop
                 {
                     SteamMatchmaking.JoinLobby(request.m_steamIDLobby);
                 }else{
-                    if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                    if (MyMod.m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
                     {
-                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "YOU ALREADY ON SERVER", "\n" + "You already on the server, restart the game if you want to join to another server", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
+                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "YOU ALREADY ON SERVER", "\n" + "You already on the server, restart the game if you want to join to another server", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null, null);
                     }
                 }
             }
@@ -250,14 +250,19 @@ namespace SkyCoop
                         IsMyLobby = true;
                         SetSpawnStyle();
                         SetLobbyName();
+                        if (MyMod.StartSteamHostAfterLobby)
+                        {
+                            MyMod.StartSteamHostAfterLobby = false;
+                            Server.StartSteam(MyMod.MaxPlayers);
+                        }
                     }else{
-                        MelonLogger.Msg(ConsoleColor.Red, "[SteamWorks.NET] Can't create lobby: Error " + pCallback.m_eResult);
-                        MelonLogger.Msg(ConsoleColor.Green, "[SteamWorks.NET] Going to try again in 5 seconds");
+                        MelonLogger.Msg(System.ConsoleColor.Red, "[SteamWorks.NET] Can't create lobby: Error " + pCallback.m_eResult);
+                        MelonLogger.Msg(System.ConsoleColor.Green, "[SteamWorks.NET] Going to try again in 5 seconds");
                         MyMod.TryMakeLobbyAgain = 5;
                     }
                 }else{
-                    MelonLogger.Msg(ConsoleColor.Red, "[SteamWorks.NET] Can't create lobby: Error bIOFailure");
-                    MelonLogger.Msg(ConsoleColor.Green, "[SteamWorks.NET] Going to try again in 5 seconds");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "[SteamWorks.NET] Can't create lobby: Error bIOFailure");
+                    MelonLogger.Msg(System.ConsoleColor.Green, "[SteamWorks.NET] Going to try again in 5 seconds");
                     MyMod.TryMakeLobbyAgain = 5;
                 }
 
@@ -273,7 +278,7 @@ namespace SkyCoop
                             Texture2D Avatar = GetImageFromDescripter(Descripter, 64, 64);
                             MyMod.AddPersonToLobby(SteamFriends.GetPersonaName(), MySteamID, Avatar);
                         }else{
-                            MelonLogger.Msg(ConsoleColor.Yellow, "[SteamWorks.NET] Player has not avatar ");
+                            MelonLogger.Msg(System.ConsoleColor.Yellow, "[SteamWorks.NET] Player has not avatar ");
                         }
                     }
                 }
@@ -329,8 +334,8 @@ namespace SkyCoop
                 UnityEngine.UI.Text Status = Element.transform.GetChild(3).gameObject.GetComponent<UnityEngine.UI.Text>();
 
                 Name.text = Data.m_OwnerName;
-                Players.text = "Players: " + Data.m_Players + "/" + Data.m_PlayersMax;
-                Status.text = "Status: " + Data.m_State;
+                Players.text = Loc.T("Players: " + Data.m_Players + "/" + Data.m_PlayersMax);
+                Status.text = Loc.T("Status: " + Data.m_State);
                 ServerObjects.Add(Element);
 
                 Action actJoin = new Action(() => ClickJoin(Data.m_LobbyID));
@@ -600,13 +605,11 @@ namespace SkyCoop
                     SteamMatchmaking.SetLobbyData(new CSteamID(ulong.Parse(MyMod.MyLobby)), "VoteTime", MyMod.LobbyVoteLeft.ToString());
                 }
 
-                if (MyMod.DefaultIsRussian)
+                if (Loc.IsRussian)
                 {
                     MyMod.StartGOLOSOVANIE(); // Play flex cs 1.6 music
-                    MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "GOLOSOVANIE: " + MyMod.LobbyVoteLeft;
-                }else{
-                    MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "VOTING: " + MyMod.LobbyVoteLeft;
                 }
+                MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = Loc.T("VOTING: " + MyMod.LobbyVoteLeft);
 
                 if (MyMod.LobbyVoteLeft <= 0)
                 {
@@ -754,7 +757,7 @@ namespace SkyCoop
                         UpdateVoteObjects(Regions, ExpModes);
                         ProcessVoteUpdate(lobbyID, Regions, ExpModes);
                     }else{
-                        MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = "LOBBY " + Peoples + "/" + Limit;
+                        MyMod.LobbyUI.transform.GetChild(2).GetComponent<UnityEngine.UI.Text>().text = Loc.T("LOBBY " + Peoples + "/" + Limit);
                     }
                 }
             }
@@ -837,7 +840,7 @@ namespace SkyCoop
                     ulong id = Convert.ToUInt64(whitelist[i]);
                     CSteamID sid = new CSteamID(id);
                     SteamNetworking.AcceptP2PSessionWithUser(sid);
-                    MelonLogger.Msg(ConsoleColor.Blue, "[Dedicated server] Adding user with SID "+ id+" to the whitelist!");
+                    MelonLogger.Msg(System.ConsoleColor.Blue, "[Dedicated server] Adding user with SID "+ id+" to the whitelist!");
                 }
             }
             public static void LoadSaveForHosting()

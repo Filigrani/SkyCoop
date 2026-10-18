@@ -1,8 +1,8 @@
-﻿using GameServer;
+using GameServer;
 using MelonLoader;
 using System;
 using System.Collections.Generic;
-using UnhollowerRuntimeLib;
+// using UnhollowerRuntimeLib; (see GlobalUsings.cs)
 using UnityEngine;
 using static SkyCoop.DataStr;
 using static SkyCoop.MyMod;
@@ -386,7 +386,7 @@ namespace SkyCoop
                         {
                             GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
 
-                            if (RegionSpawnObj != null)
+                            if (RegionSpawnObj != null && RegionSpawnObj.GetComponent<SpawnRegionSimple>() != null && m_Animal.GetComponent<ObjectGuid>() != null)
                             {
                                 RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
                             }
@@ -671,9 +671,10 @@ namespace SkyCoop
                     {
                         GameObject RegionSpawnObj = ObjectGuidManager.Lookup(m_RegionGUID);
 
-                        if (RegionSpawnObj != null)
+                        SpawnRegionSimple Region = RegionSpawnObj != null ? RegionSpawnObj.GetComponent<SpawnRegionSimple>() : null;
+                        if (Region != null && m_Animal.GetComponent<ObjectGuid>() != null)
                         {
-                            RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
+                            Region.m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
                         }
                     }
                 }
@@ -689,10 +690,11 @@ namespace SkyCoop
                     {
                         if (m_RegionGUID != "")
                         {
-                            if (RegionSpawnObj != null)
+                            SpawnRegionSimple Region = RegionSpawnObj != null ? RegionSpawnObj.GetComponent<SpawnRegionSimple>() : null;
+                            if (Region != null)
                             {
-                                RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
-                                RegionSpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(), m_Animal);
+                                Region.m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
+                                Region.m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(), m_Animal);
                             }
                         }
                     }
@@ -715,27 +717,27 @@ namespace SkyCoop
             {
                 if (m_FeedingAudioID == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_FeedingAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_FeedingAudioID, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
             }
             void ExitFlee()
             {
                 if (m_FleeAudioId == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_FleeAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_FleeAudioId, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_FleeAudioId = 0U;
             }
             void ExitHoldGround()
             {
                 if (m_HoldGroundAudioID == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_HoldGroundAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_HoldGroundAudioID, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_HoldGroundAudioID = 0U;
             }
             void ExitIdle()
             {
                 if (m_IdleAudioId == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_IdleAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_IdleAudioId, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_IdleAudioId = 0U;
             }
             void ExitInvestigateFood()
@@ -746,47 +748,47 @@ namespace SkyCoop
             {
                 if (m_SleepingLoopAudioID == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_SleepingLoopAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_SleepingLoopAudioID, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_SleepingLoopAudioID = 0U;
             }
             void ExitStalking()
             {
                 if (m_StalkingAudioID != 0U)
                 {
-                    AkSoundEngine.StopPlayingID(m_StalkingAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                    AkSoundEngine.StopPlayingID(m_StalkingAudioID, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                     m_StalkingAudioID = 0U;
                 }
                 if (m_StalkingLoopAudioID == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_StalkingLoopAudioID, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_StalkingLoopAudioID, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_StalkingLoopAudioID = 0U;
             }
             void ExitStruggle()
             {
                 if (m_StuggleAudioId == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_StuggleAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_StuggleAudioId, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_StuggleAudioId = 0U;
             }
             void ExitWander()
             {
                 if (m_WanderAudioId == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_WanderAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_WanderAudioId, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_WanderAudioId = 0U;
             }
             void ExitHideAndSeek()
             {
                 if (m_HideAndSeekAudioId == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_HideAndSeekAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_HideAndSeekAudioId, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_HideAndSeekAudioId = 0U;
             }
             void ExitJoinPack()
             {
                 if (m_JoinPackAudioId == 0U)
                     return;
-                AkSoundEngine.StopPlayingID(m_JoinPackAudioId, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                AkSoundEngine.StopPlayingID(m_JoinPackAudioId, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                 m_JoinPackAudioId = 0U;
             }
 
@@ -1091,7 +1093,7 @@ namespace SkyCoop
                         NoResponce--;
                         if (NoResponce <= 0)
                         {
-                            //MelonLogger.Msg(ConsoleColor.Yellow, "Found animal that we not need anymore " + m_Animal.GetComponent<ObjectGuid>().Get());
+                            //MelonLogger.Msg(System.ConsoleColor.Yellow, "Found animal that we not need anymore " + m_Animal.GetComponent<ObjectGuid>().Get());
                             GameAudioManager.StopAllSoundsFromGameObject(m_Animal);
                             m_MarkToDestroy = true;
                         }
@@ -1121,7 +1123,7 @@ namespace SkyCoop
                                 {
                                     SpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Remove(m_Animal.GetComponent<ObjectGuid>().Get());
                                     SpawnObj.GetComponent<SpawnRegionSimple>().m_Animals.Add(m_Animal.GetComponent<ObjectGuid>().Get(), m_Animal);
-                                    MelonLogger.Msg(ConsoleColor.Blue, "Animal corpse added to SpawnRegion " + m_RegionGUID);
+                                    MelonLogger.Msg(System.ConsoleColor.Blue, "Animal corpse added to SpawnRegion " + m_RegionGUID);
                                     m_AddedToRegion = true;
                                 }
                             }
@@ -1167,7 +1169,7 @@ namespace SkyCoop
                 m_Banned = Banned;
                 if (m_Banned)
                 {
-                    MelonLogger.Msg(ConsoleColor.Cyan, "SpawnRegion " + m_Region.GetComponent<ObjectGuid>().Get() + " is banned");
+                    MelonLogger.Msg(System.ConsoleColor.Cyan, "SpawnRegion " + m_Region.GetComponent<ObjectGuid>().Get() + " is banned");
                 }
             }
             public void BanCheck()
@@ -1322,7 +1324,7 @@ namespace SkyCoop
             {
                 if (m_GearItem && m_ClothingItem)
                 {
-                    if (InterfaceManager.m_Panel_Clothing != null && InterfaceManager.m_Panel_Clothing.isActiveAndEnabled)
+                    if (InterfaceManager.GetPanel<Panel_Clothing>() != null && InterfaceManager.GetPanel<Panel_Clothing>().isActiveAndEnabled)
                     {
                         m_GearItem.m_ClothingItem = null;
                     }
@@ -1393,6 +1395,98 @@ namespace SkyCoop
             void Start()
             {
                 nextActionBloodDrop = Time.time;
+            }
+
+            // Maps item variants (incl. Tales from the Far Territory rifles/revolvers/bows/lanterns) to the models our bundle has.
+            public static string HeldModelName(string n)
+            {
+                if (string.IsNullOrEmpty(n)) return "";
+                if ((n.StartsWith("GEAR_Rifle") || n.StartsWith("GEAR_HuntingRifle") || n.StartsWith("GEAR_Shotgun")) && !n.Contains("Cleaning") && !n.Contains("Ammo")) return "GEAR_Rifle";
+                if (n.StartsWith("GEAR_Revolver") && !n.Contains("Ammo")) return "GEAR_Revolver";
+                if (n.StartsWith("GEAR_Bow") && !n.StartsWith("GEAR_Bowl")) return "GEAR_Bow";
+                if (n.StartsWith("GEAR_KeroseneLamp") || n.Contains("Lantern")) return "GEAR_KeroseneLamp";
+                if (n.StartsWith("GEAR_Torch")) return "GEAR_Torch";
+                if (n.StartsWith("GEAR_FlareGun")) return "GEAR_FlareGun";
+                if (n == "GEAR_FlareBlue") return "GEAR_BlueFlare";
+                if (n.Contains("Matches")) return "GEAR_WoodMatches";
+                return n;
+            }
+
+            static bool HasBundledModel(string n)
+            {
+                return n == "" || n == "Map" || n == "Book" || n.StartsWith("GEAR_Flare") || n == "GEAR_BlueFlare" || n == "GEAR_WoodMatches"
+                    || n == "GEAR_Rifle" || n == "GEAR_Revolver" || n.StartsWith("GEAR_SprayPaintCan") || n == "GEAR_Stone"
+                    || n == "GEAR_KeroseneLamp" || n == "GEAR_Torch" || n == "GEAR_Bow" || n == "GEAR_NoiseMaker";
+            }
+
+            GameObject m_HeldClone = null;
+            public string m_HoldingItemRaw = "";
+
+            // Model from mpgear.unity3d, already fitted to the hand bone. Meshes the game keeps GPU-only are stored as "@<mesh name>" parts and taken from the game's prefab.
+            bool ShowGearBundleModel(string gearName)
+            {
+                if (MyMod.GearBundle == null || !MyMod.GearBundleModels.Contains(gearName.ToLowerInvariant())) return false;
+                GameObject prefab = MyMod.GearBundle.LoadAsset<GameObject>(gearName);
+                if (prefab == null) return false;
+                GameObject hand = gearName.StartsWith("GEAR_Bow") ? hand_l : hand_r;
+                m_HeldClone = UnityEngine.Object.Instantiate(prefab, hand.transform, false);
+                Dictionary<string, Mesh> gameMeshes = null;
+                foreach (MeshFilter mf in m_HeldClone.GetComponentsInChildren<MeshFilter>(true))
+                {
+                    mf.gameObject.layer = hand.layer;
+                    if (mf.sharedMesh != null || !mf.name.StartsWith("@")) continue;
+                    if (gameMeshes == null)
+                    {
+                        gameMeshes = new Dictionary<string, Mesh>();
+                        GameObject gamePrefab = MyMod.GetGearItemObject(gearName);
+                        if (gamePrefab != null)
+                        {
+                            foreach (MeshFilter g in gamePrefab.GetComponentsInChildren<MeshFilter>(true)) if (g.sharedMesh != null) gameMeshes[g.sharedMesh.name] = g.sharedMesh;
+                            foreach (SkinnedMeshRenderer g in gamePrefab.GetComponentsInChildren<SkinnedMeshRenderer>(true)) if (g.sharedMesh != null) gameMeshes[g.sharedMesh.name] = g.sharedMesh;
+                        }
+                    }
+                    if (gameMeshes.TryGetValue(mf.name.Substring(1), out Mesh mesh)) mf.sharedMesh = mesh;
+                }
+                Transform light = m_HeldClone.transform.Find("Light");
+                if (light != null) light.gameObject.SetActive(m_LightSourceOn);
+                GearFit.ApplyModel(m_HeldClone.transform.Find("Model"), gearName, hand.transform);
+                return true;
+            }
+
+            int m_OffsetsSeen = -1;
+
+            // Hand bone tuning (GearFit) on top of whatever the animator just did.
+            void LateUpdate()
+            {
+                if (hand_r == null || m_HoldingItemRaw == "") return;
+                GearFit.ApplyHand(hand_r.transform, "HANDR_" + m_HoldingItemRaw);
+                GearFit.ApplyHand(hand_l.transform, "HANDL_" + m_HoldingItemRaw);
+            }
+
+
+            // For items without a bundled model (knives, hatchets, prybar, flashlight, DLC tools...) copy only the game prefab's meshes, so no live GearItem is spawned.
+            void ShowHeldClone(string gearName)
+            {
+                GameObject prefab = MyMod.GetGearItemObject(gearName);
+                if (prefab == null) return;
+                Transform pr = prefab.transform;
+                m_HeldClone = new GameObject("HeldClone_" + gearName);
+                m_HeldClone.transform.SetPositionAndRotation(meleeDummy.transform.position, meleeDummy.transform.rotation);
+                foreach (MeshFilter mf in prefab.GetComponentsInChildren<MeshFilter>())
+                {
+                    MeshRenderer mr = mf.GetComponent<MeshRenderer>();
+                    if (mr == null || !mr.enabled || mf.sharedMesh == null || (mf.name.Contains("LOD") && !mf.name.Contains("LOD0"))) continue;
+                    GameObject part = new GameObject(mf.name);
+                    part.layer = hand_r.layer;
+                    part.transform.SetParent(m_HeldClone.transform, false);
+                    part.transform.localPosition = pr.InverseTransformPoint(mf.transform.position);
+                    part.transform.localRotation = Quaternion.Inverse(pr.rotation) * mf.transform.rotation;
+                    part.transform.localScale = mf.transform.lossyScale;
+                    part.AddComponent<MeshFilter>().sharedMesh = mf.sharedMesh;
+                    part.AddComponent<MeshRenderer>().sharedMaterials = mr.sharedMaterials;
+                }
+                // Keep real-world size regardless of the rig's bone scale.
+                m_HeldClone.transform.SetParent(hand_r.transform, true);
             }
 
             public void UpdateVisualItems()
@@ -1605,10 +1699,20 @@ namespace SkyCoop
                 hand_l.transform.GetChild(4).gameObject.SetActive(false);
                 //Food can
                 hand_l.transform.GetChild(5).gameObject.SetActive(false);
+                //Generic game model
+                if (m_HeldClone != null)
+                {
+                    UnityEngine.Object.Destroy(m_HeldClone);
+                    m_HeldClone = null;
+                }
 
                 string m_AnimState = MyMod.playersData[m_ID].m_AnimState;
 
-                if (m_HoldingFood == "" && m_AnimState != "Igniting")
+                if (m_HoldingFood == "" && m_AnimState != "Igniting" && ShowGearBundleModel(m_HoldingItemRaw))
+                {
+                    // Own model shown; the generic one for its type stays hidden.
+                }
+                else if (m_HoldingFood == "" && m_AnimState != "Igniting")
                 {
                     if (m_HoldingItem.StartsWith("GEAR_Flare") != m_HoldingItem.Contains("Gun")) // By some reason, it called GEAR_FlareA, i not know exist FlareB but better check it.
                     {
@@ -1662,6 +1766,10 @@ namespace SkyCoop
                     if (m_HoldingItem == "GEAR_NoiseMaker")
                     {
                         hand_r.transform.GetChild(10).gameObject.SetActive(true);
+                    }
+                    if (m_HoldingItem.StartsWith("GEAR_") && !HasBundledModel(m_HoldingItem))
+                    {
+                        ShowHeldClone(m_HoldingItem);
                     }
                 }
                 else
@@ -1857,9 +1965,13 @@ namespace SkyCoop
                     }
 
                     DataStr.PlayerEquipmentData Edata = pD.m_PlayerEquipmentData;
-                    if ((Edata.m_HoldingItem != m_HoldingItem) || (Edata.m_LightSourceOn != m_LightSourceOn))
+                    GearFit.Poll();
+                    bool offsetsEdited = m_OffsetsSeen != GearFit.Version;
+                    m_OffsetsSeen = GearFit.Version;
+                    if (offsetsEdited || (Edata.m_HoldingItem != m_HoldingItemRaw) || (Edata.m_LightSourceOn != m_LightSourceOn))
                     {
-                        m_HoldingItem = Edata.m_HoldingItem;
+                        m_HoldingItemRaw = Edata.m_HoldingItem;
+                        m_HoldingItem = HeldModelName(Edata.m_HoldingItem);
                         m_LightSourceOn = Edata.m_LightSourceOn;
                         UpdateHeldItem();
                         UpdateVisualItems();
@@ -1918,7 +2030,7 @@ namespace SkyCoop
 
                         if (m_BreakingSoundReference != 0U)
                         {
-                            AkSoundEngine.StopPlayingID(m_BreakingSoundReference, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                            AkSoundEngine.StopPlayingID(m_BreakingSoundReference, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                             m_BreakingSoundReference = 0U;
                         }
 
@@ -1941,7 +2053,7 @@ namespace SkyCoop
                     {
                         if (m_HeavyBreathSoundReference != 0U)
                         {
-                            AkSoundEngine.StopPlayingID(m_HeavyBreathSoundReference, GameManager.GetGameAudioManagerComponent().m_StopAudioFadeOutMicroseconds);
+                            AkSoundEngine.StopPlayingID(m_HeavyBreathSoundReference, GameAudioManager.Instance.m_StopAudioFadeOutMicroseconds);
                             m_HeavyBreathSoundReference = 0U;
                         }
                     }
@@ -2206,6 +2318,46 @@ namespace SkyCoop
                         Top = 18;
                         ArmsType = "Tiny";
                     }
+                    else if (m_Top.Contains("CougarWrap") || m_Top.Contains("Cloak") || m_Top.Contains("Cape"))
+                    {
+                        Top = 17;
+                        ArmsType = "Tiny";
+                    }
+                    else if (m_Top.Contains("Parka") || m_Top.Contains("AstridJacket"))
+                    {
+                        Top = 13;
+                        ArmsType = "Tiny";
+                    }
+                    else if (m_Top.Contains("WinterCoat") || m_Top.Contains("TacticalJacket") || m_Top.Contains("Jacket") || m_Top.Contains("Coat"))
+                    {
+                        Top = 14;
+                        ArmsType = "Tiny";
+                    }
+                    else if (m_Top.Contains("Vest"))
+                    {
+                        Top = 12;
+                        ArmsType = "Long";
+                    }
+                    else if (m_Top.Contains("TeeShirt") || m_Top.Contains("TShirt"))
+                    {
+                        Top = 1;
+                        ArmsType = "Middle";
+                    }
+                    else if (m_Top.Contains("Sweater"))
+                    {
+                        Top = 11;
+                        ArmsType = "Short";
+                    }
+                    else if (m_Top.Contains("Shirt"))
+                    {
+                        Top = 10;
+                        ArmsType = "Short";
+                    }
+                    else if (m_Top.Contains("Hoodie"))
+                    {
+                        Top = 7;
+                        ArmsType = "Tiny";
+                    }
                     else // If missing clotching
                     {
                         Top = 7;
@@ -2272,9 +2424,17 @@ namespace SkyCoop
                     {
                         Pants = 7;
                     }
-                    else if (m_Bottom.Contains("DeerSkinPants"))
+                    else if (m_Bottom.Contains("DeerSkinPants") || m_Bottom.Contains("Deerskin_pants") || m_Bottom.Contains("Hide") || m_Bottom.Contains("Skin"))
                     {
                         Pants = 8;
+                    }
+                    else if (m_Bottom.Contains("SkiPants") || m_Bottom.Contains("Snow") || m_Bottom.Contains("Insulated"))
+                    {
+                        Pants = 5;
+                    }
+                    else if (m_Bottom.Contains("Pants") || m_Bottom.Contains("Trousers"))
+                    {
+                        Pants = 7;
                     }
                     else // If missing clotching
                     {
@@ -2317,6 +2477,18 @@ namespace SkyCoop
                     else if (m_Boots.Contains("BasicShoes"))
                     {
                         Boots = 8;
+                    }
+                    else if (m_Boots.Contains("SkiBoots") || m_Boots.Contains("Insulated"))
+                    {
+                        Boots = 4;
+                    }
+                    else if (m_Boots.Contains("Shoes"))
+                    {
+                        Boots = 1;
+                    }
+                    else if (m_Boots.Contains("Socks"))
+                    {
+                        Boots = 6;
                     }
                     else // If missing clotching
                     {
@@ -2412,7 +2584,7 @@ namespace SkyCoop
                     else
                     {
                         m_AnimState = MyMod.MyAnimState;
-                        HoldingItem = MyMod.MyLightSourceName;
+                        HoldingItem = MultiplayerPlayer.HeldModelName(MyMod.MyLightSourceName);
                     }
                     int currentTagHash = m_Animer.GetCurrentAnimatorStateInfo(0).tagHash; // This what tag is now
                     int neededTagHash = Animator.StringToHash(m_AnimState); // This is what tag we need.
@@ -2813,14 +2985,14 @@ namespace SkyCoop
                             MyMod.StepState = 1;
                             MyMod.MaybeLeaveFootPrint(foot_r.transform.position, m_Player, false, 0.0f, false);
                             string ground_Tag = Utils.GetMaterialTagForObjectAtPosition(m_Player, foot_r.transform.position);
-                            GameAudioManager.Play3DSound(AK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
+                            GameAudioManager.Play3DSound(Il2CppAK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
                         }
                         if (fixed_y_l >= min && fixed_y_l <= max && MyMod.StepState != 2)
                         {
                             MyMod.StepState = 2;
                             MyMod.MaybeLeaveFootPrint(foot_l.transform.position, m_Player, false, 0.0f, true);
                             string ground_Tag = Utils.GetMaterialTagForObjectAtPosition(m_Player, foot_l.transform.position);
-                            GameAudioManager.Play3DSound(AK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
+                            GameAudioManager.Play3DSound(Il2CppAK.EVENTS.PLAY_FOOTSTEPSWOLFWALK, m_Player);
                         }
                     }
                     else
@@ -3180,7 +3352,7 @@ namespace SkyCoop
                 ServerSend.FURNBREAKINGGUID(0, furn, true);
                 GameManager.s_IsAISuspended = true;
                 Pathes.FakeRockCacheCallback = this;
-                InterfaceManager.m_Panel_GenericProgressBar.Launch(Localization.Get("GAMEPLAY_BreakingDownProgress"), 2f, 10, 0.0f, "Play_RockCache", (string)null, false, false, null);
+                InterfaceManager.GetPanel<Panel_GenericProgressBar>().Launch(Localization.Get("GAMEPLAY_BreakingDownProgress"), 2f, 10, 0.0f, "Play_RockCache", (string)null, false, false, null);
             }
         }
         public class LocalVariablesKit : MonoBehaviour
@@ -3294,20 +3466,20 @@ namespace SkyCoop
                 {
                     if(m_Data.m_MaterialCount > 1)
                     {
-                        HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName(m_Data.m_Tool) + " and " + m_Data.m_MaterialCount + " " + Utils.GetGearDisplayName(m_Data.m_Material));
+                        HUDMessage.AddMessage("Requires " + GearItem.GetGearDisplayName(m_Data.m_Tool) + Loc.T(" and ") + m_Data.m_MaterialCount + " " + GearItem.GetGearDisplayName(m_Data.m_Material));
                     } else
                     {
-                        HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName(m_Data.m_Tool) + " and " + Utils.GetGearDisplayName(m_Data.m_Material));
+                        HUDMessage.AddMessage("Requires " + GearItem.GetGearDisplayName(m_Data.m_Tool) + " and " + GearItem.GetGearDisplayName(m_Data.m_Material));
                     }
                     
                     GameAudioManager.PlayGUIError();
                 } else if(!HaveTool && HaveMaterials) 
                 {
-                    HUDMessage.AddMessage("Requires " + Utils.GetGearDisplayName(m_Data.m_Tool));
+                    HUDMessage.AddMessage("Requires " + GearItem.GetGearDisplayName(m_Data.m_Tool));
                     GameAudioManager.PlayGUIError();
                 } else if (HaveTool && !HaveMaterials)
                 {
-                    HUDMessage.AddMessage("Requires " + m_Data.m_MaterialCount + " " + Utils.GetGearDisplayName(m_Data.m_Material));
+                    HUDMessage.AddMessage("Requires " + m_Data.m_MaterialCount + " " + GearItem.GetGearDisplayName(m_Data.m_Material));
                     GameAudioManager.PlayGUIError();
                 }
 

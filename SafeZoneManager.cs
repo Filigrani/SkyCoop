@@ -103,6 +103,12 @@ namespace SkyCoop
         }
         public static bool InsideSafeZone(string Scene, Vector3 Position)
         {
+#if (!DEDICATED)
+            if (!MyMod.ServerConfig.m_SafeZones)
+            {
+                return false;
+            }
+#endif
             List<SafeZoneSpace> Zones;
             if (SafeZones.TryGetValue(Scene, out Zones))
             {

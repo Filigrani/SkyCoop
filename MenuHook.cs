@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Reflection;
-using Harmony;
+using HarmonyLib;
 using UnityEngine;
 using IL2CPP = Il2CppSystem.Collections.Generic;
 using MelonLoader;
-using MelonLoader.TinyJSON;
+using TinyJSON;
 using GameServer;
 using System.Collections.Generic;
 using System.Linq;
@@ -14,19 +14,93 @@ namespace SkyCoop
     public class MenuChange
     {
         public static string MenuMode = "Original";
+
+        // The ResumePreviewer mod appends " (save name)" to the first sandbox button every frame. That is right for
+        // the vanilla Resume button, but in our multiplayer menus the same button reads HOST SERVER / NEW GAME.
+        public static void PatchResumePreviewer(HarmonyLib.Harmony harmony)
+        {
+            MethodInfo target = AccessTools.TypeByName("ResumePreviewer.Core")?.GetMethod("RefreshSaveName", BindingFlags.Instance | BindingFlags.NonPublic | BindingFlags.Public);
+            if (target == null)
+            {
+                return;
+            }
+            harmony.Patch(target, new HarmonyMethod(typeof(MenuChange).GetMethod(nameof(ResumePreviewerPrefix), BindingFlags.Static | BindingFlags.Public)));
+            MelonLogger.Msg("[UI] ResumePreviewer found, its save name is hidden in multiplayer menus");
+        }
+        public static bool ResumePreviewerPrefix()
+        {
+            return MenuMode == "Original";
+        }
+
+        public static string SandboxTitleId = "";
         public static int TempExperience = 0;
+
+        // The old hardcoded camera spots belong to the pre-2.55 MainMenu scene and land off the map in 2.55,
+        // so keep the camera where the menu put it and bring the doll in front of it instead.
+        private static bool SavedMenuCamera = false;
+        private static Vector3 SavedMenuCameraPos;
+        private static Quaternion SavedMenuCameraRot;
 
         public static void SetDefaultCamera()
         {
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(new Vector3(48.08f, 3.33f, 63.81f), GameManager.GetCurrentCamera().transform.rotation);
+            if (SavedMenuCamera)
+            {
+                GameManager.GetPlayerManagerComponent().TeleportPlayer(SavedMenuCameraPos, SavedMenuCameraRot);
+                SavedMenuCamera = false;
+            }
         }
         public static void SetFlairsCamera()
         {
-            GameManager.GetPlayerManagerComponent().TeleportPlayer(new Vector3(-7.71f, 16.85f, 11.47f), GameManager.GetCurrentCamera().transform.rotation);
+            if (!SavedMenuCamera && GameManager.GetPlayerTransform() != null)
+            {
+                SavedMenuCameraPos = GameManager.GetPlayerTransform().position;
+                SavedMenuCameraRot = GameManager.GetCurrentCamera().transform.rotation;
+                SavedMenuCamera = true;
+            }
+        }
+        public static void PlaceDollInFrontOfCamera(GameObject Doll)
+        {
+            Transform Cam = GameManager.GetCurrentCamera().transform;
+            Vector3 Forward = Vector3.ProjectOnPlane(Cam.forward, Vector3.up);
+            if (Forward.sqrMagnitude < 0.001f)
+            {
+                Forward = Vector3.forward;
+            }
+            Forward.Normalize();
+            Vector3 Right = Vector3.Cross(Vector3.up, Forward);
+            // Slightly right of center, so the customization panel on the left does not cover the doll.
+            Vector3 Pos = Cam.position + Forward * 2.2f + Right * 0.6f;
+            float GroundY = Cam.position.y - 1.6f;
+            float BestDist = float.MaxValue;
+            foreach (RaycastHit Hit in Physics.RaycastAll(Pos + Vector3.up * 3f, Vector3.down, 10f))
+            {
+                if (Hit.distance < BestDist && !Hit.transform.IsChildOf(Doll.transform))
+                {
+                    BestDist = Hit.distance;
+                    GroundY = Hit.point.y;
+                }
+            }
+            Pos.y = GroundY;
+            Doll.transform.position = Pos;
+            Doll.transform.rotation = Quaternion.LookRotation(-Forward, Vector3.up);
         }
         public static void MoveUpMainMenuWordmark(int numOfMainMenuItems)
         {
             GameObject.Find("Panel_MainMenu/MainPanel/Main/TLD_wordmark").transform.localPosition += new Vector3(0, (numOfMainMenuItems - 6) * 30, 0);
+        }
+        // MULTIPLAYER goes right above the quit button, whatever the game version has in the main menu.
+        public static int GetQuitIndex(Panel_MainMenu __instance)
+        {
+            int Count = __instance.m_MenuItems.Count;
+            for (int i = 0; i < Count; i++)
+            {
+                string Name = __instance.m_MenuItems[i].m_Type.ToString();
+                if (Name.IndexOf("Quit", StringComparison.OrdinalIgnoreCase) >= 0 || Name.IndexOf("Exit", StringComparison.OrdinalIgnoreCase) >= 0)
+                {
+                    return i;
+                }
+            }
+            return Math.Max(0, Count - 1);
         }
         public static void AddButton(Panel_MainMenu __instance, string name, int order, int plus)
         {
@@ -163,6 +237,10 @@ namespace SkyCoop
                         __instance.m_DescriptionLabel.text = "Vote for experience mode.";
                     }
                 }
+                if (__instance.m_DescriptionLabel != null)
+                {
+                    __instance.m_DescriptionLabel.text = Loc.T(__instance.m_DescriptionLabel.text);
+                }
             }
         }
 
@@ -203,8 +281,8 @@ namespace SkyCoop
                 }
             }
 
-            Label.mText = txt;
-            Label.text = txt;
+            Label.mText = Loc.T(txt);
+            Label.text = Loc.T(txt);
             Label.ProcessText();
             Grid.GetChild(index).gameObject.SetActive(true);
         }
@@ -231,8 +309,8 @@ namespace SkyCoop
                 if (__instance.gameObject.transform.GetChild(1) != null && __instance.gameObject.transform.GetChild(1).GetChild(0) != null && __instance.m_BasicMenu.m_ItemModelList.Count >= 4)
                 {
                     Transform Menu = __instance.gameObject.transform.GetChild(1).GetChild(0);
-                    Transform Left_Align = Menu.GetChild(5);
-                    Transform Grid = Left_Align.GetChild(2);
+                    Transform Left_Align = Menu.Find("Left_Align"); // 2.55 shifted indices, find by name
+                    Transform Grid = Left_Align != null ? Left_Align.Find("Grid") : null;
                     if (Grid != null)
                     {
                         for (int i = 0; i < 4; i++)
@@ -307,7 +385,7 @@ namespace SkyCoop
             public static void Postfix(Panel_MainMenu __instance)
             {
                 MelonLogger.Msg("[UI] Trying modify main menu...");
-                AddButton(__instance, "MULTIPLAYER", 4, 1);
+                AddButton(__instance, "MULTIPLAYER", GetQuitIndex(__instance), 1);
 
                 //AddButton(__instance, "CONNECT BY IP", 4, 1);
 
@@ -343,7 +421,7 @@ namespace SkyCoop
         {
             public static void Postfix(Panel_PauseMenu __instance)
             {
-                Transform Grid = __instance.gameObject.transform.GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+                Transform Grid = __instance.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align/Grid"); // 2.55 inserted MainMenuBG/Upsell, find by name
                 for (int i = 0; i <= 6; i++)
                 {
                     GameObject Button = Grid.GetChild(i).gameObject;
@@ -409,11 +487,11 @@ namespace SkyCoop
                 }else if(MenuMode == "Browser")
                 {
                     MenuMode = "Join";
-                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                    Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
-                    Align.GetChild(2).gameObject.SetActive(true); //Grid
-                    Align.GetChild(4).gameObject.SetActive(true); //Description
-                    Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                    Align.Find("Selected").gameObject.SetActive(true); //SelectIcon
+                    Align.Find("Grid").gameObject.SetActive(true); //Grid
+                    Align.Find("Description").gameObject.SetActive(true); //Description
+                    Align.Find("Linebreak").gameObject.SetActive(true); //Linebreaker
                     MyMod.ServerBrowser.SetActive(false);
                     return false;
                 }else if(MenuMode == "Customize")
@@ -422,11 +500,11 @@ namespace SkyCoop
                     {
                         MyMod.CustomizeUiPanel("Close");
                         MenuMode = "MultiProfileSettings";
-                        Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                        Align.GetChild(1).gameObject.SetActive(true); //SelectIcon
-                        Align.GetChild(2).gameObject.SetActive(true); //Grid
-                        Align.GetChild(4).gameObject.SetActive(true); //Description
-                        Align.GetChild(5).gameObject.SetActive(true); //Linebreaker
+                        Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                        Align.Find("Selected").gameObject.SetActive(true); //SelectIcon
+                        Align.Find("Grid").gameObject.SetActive(true); //Grid
+                        Align.Find("Description").gameObject.SetActive(true); //Description
+                        Align.Find("Linebreak").gameObject.SetActive(true); //Linebreaker
                         MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(3).gameObject.SetActive(true);
                         SetDefaultCamera();
                     }else{
@@ -491,20 +569,20 @@ namespace SkyCoop
             SaveSlotInfo saveSlotInfo = SaveGameSlotHelper.GetSaveSlotInfo(SaveSlotType.SANDBOX, index);
             if (saveSlotInfo == null)
             {
-                MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 0");
+                MelonLogger.Msg(System.ConsoleColor.Red, "Can't load save on step 0");
                 return 0;
             }else{
                 string name = saveSlotInfo.m_SaveSlotName;
                 string text = SaveGameSlots.LoadDataFromSlot(name, "global");
                 if (string.IsNullOrEmpty(text))
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 1");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Can't load save on step 1");
                     return 0;
                 }
                 GlobalSaveGameFormat GSF = Utils.DeserializeObject<GlobalSaveGameFormat>(text);
                 if (string.IsNullOrEmpty(GSF.m_GameManagerSerialized))
                 {
-                    MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 2");
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Can't load save on step 2");
                     return 0;
                 }
                 GameManagerSaveDataProxy managerSaveDataProxy = Utils.DeserializeObject<GameManagerSaveDataProxy>(GSF.m_GameManagerSerialized);
@@ -515,11 +593,11 @@ namespace SkyCoop
                         SceneTransitionData TData = Utils.DeserializeObject<SceneTransitionData>(managerSaveDataProxy.m_SceneTransitionDataSerialized);
                         return TData.m_GameRandomSeed;
                     }else{
-                        MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 4 " + managerSaveDataProxy.m_SceneTransitionDataSerialized);
+                        MelonLogger.Msg(System.ConsoleColor.Red, "Can't load save on step 4 " + managerSaveDataProxy.m_SceneTransitionDataSerialized);
                         return 0;
                     }
                 }else{
-                    MelonLogger.Msg(ConsoleColor.Red, "Can't load save on step 3 "+ managerSaveDataProxy.m_SceneTransitionDataSerialized);
+                    MelonLogger.Msg(System.ConsoleColor.Red, "Can't load save on step 3 "+ managerSaveDataProxy.m_SceneTransitionDataSerialized);
                     return 0;
                 }
             }
@@ -726,7 +804,7 @@ namespace SkyCoop
                     MyMod.InterloperHook = true;
                     MyMod.CheckHaveSaveFileToJoin(SaveData);
                 }else{
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", MPSaveManager.GetLastConnectedServer(), Panel_Confirmation.ButtonLayout.Button_2, "Connect", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input server address", MPSaveManager.GetLastConnectedServer(), Panel_Confirmation.ButtonLayout.Button_2, Loc.T("Connect"), "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                 }
             }
         }
@@ -817,27 +895,26 @@ namespace SkyCoop
 
         public static void OpenFlairsMenu()
         {
-            Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-            Align.GetChild(1).gameObject.SetActive(false); //SelectIcon
-            Align.GetChild(2).gameObject.SetActive(false); //Grid
-            Align.GetChild(4).gameObject.SetActive(false); //Description
-            Align.GetChild(5).gameObject.SetActive(false); //Linebreaker
+            Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+            Align.Find("Selected").gameObject.SetActive(false); //SelectIcon
+            Align.Find("Grid").gameObject.SetActive(false); //Grid
+            Align.Find("Description").gameObject.SetActive(false); //Description
+            Align.Find("Linebreak").gameObject.SetActive(false); //Linebreaker
             MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(3).gameObject.SetActive(false);
             MenuMode = "Customize";
             MyMod.CustomizeUiPanel("Main");
             SetFlairsCamera();
             if (MyMod.MyPlayerDoll)
             {
-                MyMod.MyPlayerDoll.transform.position = new Vector3(-9f , 17.2f, 10.8f);
-                MyMod.MyPlayerDoll.transform.rotation = new Quaternion(0, 0.866f, 0, -0.5f);
+                PlaceDollInFrontOfCamera(MyMod.MyPlayerDoll);
             }else{
-                MelonLogger.Msg(ConsoleColor.Red, "MyPlayerDoll does not exist");
+                MelonLogger.Msg(System.ConsoleColor.Red, "MyPlayerDoll does not exist");
             }
         }
 
         public static void ChangeMenuItems(string mode)
         {
-            Transform Grid = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5).GetChild(2);
+            Transform Grid = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align/Grid"); // 2.55 inserted MainMenuBG/Upsell, find by name
 
             if(mode == "Original")
             {
@@ -867,6 +944,9 @@ namespace SkyCoop
                 OverrideMenuButton(Grid, 1, "CHANGE NICKNAME");
                 OverrideMenuButton(Grid, 2, "CUSTOMIZATION");
                 OverrideMenuButton(Grid, 3, "COPY ACCOUNT ID");
+                // Slot 4 has no menu model of its own, put it under slot 3 like the menu grid would.
+                Grid.GetChild(4).localPosition = Grid.GetChild(3).localPosition + (Grid.GetChild(3).localPosition - Grid.GetChild(2).localPosition);
+                OverrideMenuButton(Grid, 4, Loc.ModeButtonText());
             }
             else if(mode == "Lobby")
             {
@@ -1067,8 +1147,8 @@ namespace SkyCoop
                     bool result = InterfaceManager.TrySetPanelEnabled<Panel_Sandbox>(true);
                     if (result)
                     {
-                        MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
-                        MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                        MyMod.m_Panel_Sandbox.m_TitleLocalizationId = Loc.T("MULTIPLAYER");
+                        MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle(Loc.T("MULTIPLAYER"));
                     }else{
                         return;
                     }
@@ -1081,11 +1161,26 @@ namespace SkyCoop
                         ChangeMenuItems("Lobby");
                     }
                 }
+                else if(list[index].m_Id == "Sandbox" && MyMod.m_Panel_MainMenu != null && __instance == MyMod.m_Panel_MainMenu.m_BasicMenu)
+                {
+                    // Single player Survival shares Panel_Sandbox with the multiplayer menu, restore it to vanilla.
+                    if (MyMod.m_Panel_Sandbox != null)
+                    {
+                        if (MenuMode != "Original")
+                        {
+                            ChangeMenuItems("Original");
+                        }
+                        if (SandboxTitleId != "")
+                        {
+                            MyMod.m_Panel_Sandbox.m_TitleLocalizationId = SandboxTitleId;
+                        }
+                    }
+                }
                 else if(list[index].m_LabelText == "LOBBY")
                 {
                     MyMod.m_Panel_Sandbox.Enable(true);
-                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = "MULTIPLAYER";
-                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle("MULTIPLAYER");
+                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = Loc.T("MULTIPLAYER");
+                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle(Loc.T("MULTIPLAYER"));
                     ChangeMenuItems("Lobby");
                 }
             }
@@ -1109,7 +1204,7 @@ namespace SkyCoop
                     //MelonLogger.Msg("Clicked m_CustomId " + CustomId);
                     if (CustomId != -1)
                     {
-                        if (InterfaceManager.m_Panel_PauseMenu.isActiveAndEnabled)
+                        if (InterfaceManager.GetPanel<Panel_PauseMenu>().isActiveAndEnabled)
                         {
                             if (CustomId == 0)
                             {
@@ -1127,11 +1222,11 @@ namespace SkyCoop
                                 if (CustomId == 1)
                                 {
                                     MyMod.HostMenu(true);
-                                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                                    Align.GetChild(1).gameObject.SetActive(false); //SelectIcon
-                                    Align.GetChild(2).gameObject.SetActive(false); //Grid
-                                    Align.GetChild(4).gameObject.SetActive(false); //Description
-                                    Align.GetChild(5).gameObject.SetActive(false); //Linebreaker
+                                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                                    Align.Find("Selected").gameObject.SetActive(false); //SelectIcon
+                                    Align.Find("Grid").gameObject.SetActive(false); //Grid
+                                    Align.Find("Description").gameObject.SetActive(false); //Description
+                                    Align.Find("Linebreak").gameObject.SetActive(false); //Linebreaker
                                     MenuMode = "Nothing";
                                 }
                                 else if (CustomId == 2)
@@ -1152,7 +1247,7 @@ namespace SkyCoop
                             {
                                 if (CustomId == 1)
                                 {
-                                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "HOW DO YOU WANT TO BE CALLED?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
+                                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "HOW DO YOU WANT TO BE CALLED?", MyMod.MyChatName, Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Apply", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, null, null);
                                 }
                                 else if (CustomId == 2)
                                 {
@@ -1162,22 +1257,29 @@ namespace SkyCoop
                                 {
                                     if (Supporters.IsLoaded())
                                     {
-                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Your ID was copied to clipboard", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Your ID was copied to clipboard", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                                         GUIUtility.systemCopyBuffer = Supporters.MyID;
                                     }else{
-                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't detect your account ID", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Can't detect your account ID", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                                     }
+                                }
+                                else if (CustomId == 4)
+                                {
+                                    Loc.CycleMode();
+                                    MyMod.m_Panel_Sandbox.m_TitleLocalizationId = Loc.T("MULTIPLAYER");
+                                    MyMod.m_Panel_Sandbox.m_BasicMenu.UpdateTitle(Loc.T("MULTIPLAYER"));
+                                    ChangeMenuItems("MultiProfileSettings");
                                 }
                             }
                             else if(MenuMode == "Join")
                             {
                                 if (CustomId == 1)
                                 {
-                                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).GetChild(5);
-                                    Align.GetChild(1).gameObject.SetActive(false); //SelectIcon
-                                    Align.GetChild(2).gameObject.SetActive(false); //Grid
-                                    Align.GetChild(4).gameObject.SetActive(false); //Description
-                                    Align.GetChild(5).gameObject.SetActive(false); //Linebreaker                                    
+                                    Transform Align = MyMod.m_Panel_Sandbox.gameObject.transform.GetChild(0).GetChild(0).Find("Left_Align");
+                                    Align.Find("Selected").gameObject.SetActive(false); //SelectIcon
+                                    Align.Find("Grid").gameObject.SetActive(false); //Grid
+                                    Align.Find("Description").gameObject.SetActive(false); //Description
+                                    Align.Find("Linebreak").gameObject.SetActive(false); //Linebreaker                                    
                                     MenuMode = "Browser";
                                     SteamConnect.Main.BrowseServers();
                                 }
@@ -1232,7 +1334,7 @@ namespace SkyCoop
                                     if (SteamConnect.CanUseSteam)
                                     {
                                         SteamConnect.Main.CopyInviteLink();
-                                        InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Link copied to clipboard.", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                                        InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, "Link copied to clipboard.", Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                                     }
                                 }
                             }
@@ -1306,10 +1408,10 @@ namespace SkyCoop
                 bool EverPlayer = SaveGameSlotHelper.GetNumSaveSlots(SaveSlotType.SANDBOX) > 0;
                 if (!EverPlayer)
                 {
-                    MelonLogger.Msg(ConsoleColor.Yellow, "No saves found, patching menu to not shitup ui");
+                    MelonLogger.Msg(System.ConsoleColor.Yellow, "No saves found, patching menu to not shitup ui");
                     if (__instance.m_BasicMenu == null)
                     {
-                        MelonLogger.Msg(ConsoleColor.Red, "OH NO __instance.m_BasicMenu null");
+                        MelonLogger.Msg(System.ConsoleColor.Red, "OH NO __instance.m_BasicMenu null");
                         return false;
                     }
 
@@ -1350,10 +1452,10 @@ namespace SkyCoop
                 GenVersion = saveProxy[0];
                 if (GenVersion != MyMod.BuildInfo.RandomGenVersion)
                 {
-                    MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because we created on old version of the mod, with Generation version " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
+                    MelonLogger.Msg(System.ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because we created on old version of the mod, with Generation version " + GenVersion + ". Release of mod you using right now has Generation version " + MyMod.BuildInfo.RandomGenVersion);
                 }
             }else{
-                MelonLogger.Msg(ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
+                MelonLogger.Msg(System.ConsoleColor.DarkRed, "This save file can't be use for multiplayer, because was created on old version of mod or without mod at all.");
             }
 
             if (GenVersion != MyMod.BuildInfo.RandomGenVersion)
@@ -1365,14 +1467,14 @@ namespace SkyCoop
                     textToShow = "You can't use this save file for hosting multiplayer! Because this save file has been created on old version of the mod that isn't compatible with current one! Save file Generation version " + GenVersion + ". Current one mod use now " + MyMod.BuildInfo.RandomGenVersion + "!";
                 }
 
-                if (MyMod.m_InterfaceManager != null && InterfaceManager.m_Panel_Confirmation != null)
+                if (MyMod.m_InterfaceManager != null && InterfaceManager.GetPanel<Panel_Confirmation>() != null)
                 {
                     //if (SaveGameSystem.m_CurrentGameMode == SaveSlotType.STORY)
                     //{
                     //    textToShow = "Story mode never has been planned to be synced. Mod works only in SANDBOX game mode. I not know why you even try to host story mode, we never announced it will ever work! Please play regular sandbox!";
                     //}
 
-                    InterfaceManager.m_Panel_Confirmation.AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, textToShow, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
+                    InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.ErrorMessage, textToShow, Panel_Confirmation.ButtonLayout.Button_1, Panel_Confirmation.Background.Transperent, null);
                 }
                 return false;
             }

@@ -206,6 +206,7 @@ namespace GameServer
         ANIMALDESTORYGEAR,
         ANIMALBITECORPSE,
         ANIMALSTOPSFEEDING,
+        FURNMOVED,
     }
 
     /// <summary>Sent from client to server.</summary>
@@ -400,6 +401,7 @@ namespace GameServer
         ANIMALDESTORYGEAR,
         ANIMALBITECORPSE,
         ANIMALSTOPSFEEDING,
+        FURNMOVED,
     }
 
     public class Packet : IDisposable
@@ -771,6 +773,14 @@ namespace GameServer
             Write(obj.m_LevelGUID);
             Write(obj.m_Broken);
         }
+        public void Write(DataStr.MovedFurnitureSync obj)
+        {
+            Write(obj.m_Guid);
+            Write(obj.m_LevelGUID);
+            Write(obj.m_Position);
+            Write(obj.m_Rotation);
+            Write(obj.m_Active);
+        }
         public void Write(DataStr.PickedGearSync obj)
         {
             Write(obj.m_Spawn);
@@ -798,6 +808,7 @@ namespace GameServer
             Write(obj.m_CheckModsValidation);
             Write(obj.m_SaveScamProtection);
             Write(obj.m_PVP);
+            Write(obj.m_SafeZones);
         }
         public void Write(DataStr.HarvestableSyncData obj)
         {
@@ -813,6 +824,7 @@ namespace GameServer
             Write(obj.m_Rotation);
             Write(obj.m_IsCampfire);
             Write(obj.m_FuelName);
+            Write(obj.m_Fuel);
         }
         public void Write(DataStr.SlicedJsonData obj)
         {
@@ -1386,6 +1398,18 @@ namespace GameServer
             return obj;
         }
 
+        public DataStr.MovedFurnitureSync ReadMovedFurn()
+        {
+            DataStr.MovedFurnitureSync obj = new DataStr.MovedFurnitureSync();
+            obj.m_Guid = ReadString();
+            obj.m_LevelGUID = ReadString();
+            obj.m_Position = ReadVector3();
+            obj.m_Rotation = ReadQuaternion();
+            obj.m_Active = ReadBool();
+
+            return obj;
+        }
+
         public DataStr.PickedGearSync ReadPickedGear()
         {
             DataStr.PickedGearSync obj = new DataStr.PickedGearSync();
@@ -1422,6 +1446,7 @@ namespace GameServer
             obj.m_CheckModsValidation = ReadBool();
             obj.m_SaveScamProtection = ReadBool();
             obj.m_PVP = ReadBool();
+            obj.m_SafeZones = ReadBool();
 
             return obj;
         }
@@ -1477,6 +1502,7 @@ namespace GameServer
             obj.m_Rotation = ReadQuaternion();
             obj.m_IsCampfire = ReadBool();
             obj.m_FuelName = ReadString();
+            obj.m_Fuel = ReadFloat();
 
             return obj;
         }

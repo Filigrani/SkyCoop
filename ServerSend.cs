@@ -929,6 +929,28 @@ namespace GameServer
                 }
             }
         }
+        public static void FURNMOVED(int _From, DataStr.MovedFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
+        {
+            using (Packet _packet = new Packet((int)ServerPackets.FURNMOVED))
+            {
+                _packet.Write(_msg);
+                if (toEveryOne == true)
+                {
+                    _packet.Write(0);
+                    SendUDPDataToAll(_packet);
+                }
+                else if (OnlyFor == -1)
+                {
+                    _packet.Write(_From);
+                    SendUDPDataToAllButNotSender(_packet, _From);
+                }
+                else
+                {
+                    _packet.Write(_From);
+                    SendUDPData(OnlyFor, _packet);
+                }
+            }
+        }
         public static void FURNBREAKINGGUID(int _From, DataStr.BrokenFurnitureSync _msg, bool toEveryOne, int OnlyFor = -1)
         {
             using (Packet _packet = new Packet((int)ServerPackets.FURNBREAKINGGUID))
