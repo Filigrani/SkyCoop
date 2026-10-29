@@ -1057,7 +1057,7 @@ namespace SkyCoopClient
                     IsCookingSlot = true;
                     SlotIndex = GetCookingSlotIndex(Slot);
 
-                    FireplaceInteraction FirePlace = Slot.GetFireplaceHost();
+                    FireplaceInteraction FirePlace = Slot.m_FireplaceHost;
 
                     if (FirePlace)
                     {
@@ -1155,7 +1155,7 @@ namespace SkyCoopClient
                     }
                     else if(CookingSlot != null)
                     {
-                        FirePlace = CookingSlot.GetFireplaceHost();
+                        FirePlace = CookingSlot.m_FireplaceHost;
                     }
                     else
                     {
@@ -1377,7 +1377,7 @@ namespace SkyCoopClient
                 return -1;
             }
 
-            FireplaceInteraction Fireplace = Slot.GetFireplaceHost();
+            FireplaceInteraction Fireplace = Slot.m_FireplaceHost;
 
             if (Fireplace)
             {
@@ -1476,7 +1476,7 @@ namespace SkyCoopClient
                 }
                 else
                 {
-                    return GUIDOJB.Get();
+                    return GUIDOJB.GetPDID();
                 }
             }
 
@@ -1785,7 +1785,7 @@ namespace SkyCoopClient
 
                             if (Visual.m_CookingVisual.m_CookingSlot)
                             {
-                                FireplaceInteraction FirePlace = Visual.m_CookingVisual.m_CookingSlot.GetFireplaceHost();
+                                FireplaceInteraction FirePlace = Visual.m_CookingVisual.m_CookingSlot.m_FireplaceHost;
 
                                 if (FirePlace)
                                 {
@@ -1826,7 +1826,7 @@ namespace SkyCoopClient
                     {
                         if(Visual.m_CookingVisual && Visual.m_CookingVisual.m_CookingSlot)
                         {
-                            FireplaceInteraction FirePlace = Visual.m_CookingVisual.m_CookingSlot.GetFireplaceHost();
+                            FireplaceInteraction FirePlace = Visual.m_CookingVisual.m_CookingSlot.m_FireplaceHost;
                             if (FirePlace)
                             {
                                 Panel.SetFireContainer(FirePlace.gameObject);

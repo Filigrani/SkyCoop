@@ -65,7 +65,7 @@ namespace SkyCoopClient
 
                 if (ObjGUID)
                 {
-                    ClientSend.SendWaterSource(ObjGUID.Get(), FireHook.ConvertLiquidVolume(__instance.m_MinStarting), FireHook.ConvertLiquidVolume(__instance.m_MinStarting), __instance.m_ChanceContaminated);
+                    ClientSend.SendWaterSource(ObjGUID.GetPDID(), FireHook.ConvertLiquidVolume(__instance.m_MinStarting), FireHook.ConvertLiquidVolume(__instance.m_MinStarting), __instance.m_ChanceContaminated);
                 }
                 return false;
             }
@@ -111,7 +111,7 @@ namespace SkyCoopClient
                     {
                         long CurrentWaterLeft = s_WaterSourceBeforeTaking.m_CurrentLiters.m_Units;
                         float Took = FireHook.ConvertVolume(s_WaterBeforeTaking - CurrentWaterLeft);
-                        ClientSend.SendTookWaterFromWaterSource(ObjGUID.Get(), FireHook.ConvertVolume(s_WaterBeforeTaking - CurrentWaterLeft));
+                        ClientSend.SendTookWaterFromWaterSource(ObjGUID.GetPDID(), FireHook.ConvertVolume(s_WaterBeforeTaking - CurrentWaterLeft));
                     }
                 }
             }

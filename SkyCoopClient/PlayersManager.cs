@@ -1046,7 +1046,7 @@ namespace SkyCoop
                                 Container.BeginContainerOpen();
                             }
                             MenuHook.DoPleaseWait("Please wait...", "Downloading container data...");
-                            ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().Get());
+                            ClientSend.RequestContainerContent(Container.GetComponent<ObjectGuid>().GetPDID());
                             return;
                         }
                     }
@@ -1394,7 +1394,7 @@ namespace SkyCoop
             ObjectGuid ObjGUID = Door.GetComponent<ObjectGuid>();
             if (ObjGUID)
             {
-                DoorGUID = ObjGUID.Get();
+                DoorGUID = ObjGUID.GetPDID();
             }
             s_LastTryInteractionComponent = Door;
             SkyCoop.Logger.Log($"VehicleDoor PerformHold {DoorGUID}");
@@ -1411,7 +1411,7 @@ namespace SkyCoop
                 ObjectGuid ObjGUID = container.GetComponent<ObjectGuid>();
                 if (ObjGUID)
                 {
-                    ContainerGUID = ObjGUID.Get();
+                    ContainerGUID = ObjGUID.GetPDID();
                 }
                 s_LastTryInteractionComponent = container;
                 SkyCoop.Logger.Log($"Container PerformHold {ContainerGUID}");
@@ -1430,7 +1430,7 @@ namespace SkyCoop
                 ObjectGuid ObjGUID = Harvest.GetComponent<ObjectGuid>();
                 if (ObjGUID)
                 {
-                    GUID = ObjGUID.Get();
+                    GUID = ObjGUID.GetPDID();
                 }
                 s_LastTryInteractionComponent = Harvest;
                 SkyCoop.Logger.Log($"Harvest {GUID}");
@@ -1447,7 +1447,7 @@ namespace SkyCoop
             ObjectGuid ObjGUID = Breakdown.GetComponent<ObjectGuid>();
             if (ObjGUID)
             {
-                GUID = ObjGUID.Get();
+                GUID = ObjGUID.GetPDID();
             }
             s_LastTryInteractionComponent = Breakdown;
             SkyCoop.Logger.Log($"BreakDown {GUID}");
@@ -1646,7 +1646,7 @@ namespace SkyCoop
                 ObjectGuid ObjGUID = vd.GetComponent<ObjectGuid>();
                 if (ObjGUID)
                 {
-                    DoorGUID = ObjGUID.Get();
+                    DoorGUID = ObjGUID.GetPDID();
                 }
                 SkyCoop.Logger.Log($"VehicleDoor EnterVehicle {DoorGUID}");
                 ClientSend.SendVehicleSeat(DoorGUID);
@@ -1663,7 +1663,7 @@ namespace SkyCoop
                 ObjectGuid ObjGUID = vd.GetComponent<ObjectGuid>();
                 if (ObjGUID)
                 {
-                    DoorGUID = ObjGUID.Get();
+                    DoorGUID = ObjGUID.GetPDID();
                 }
                 SkyCoop.Logger.Log($"VehicleDoor ExitVehicle {DoorGUID}");
                 ClientSend.SendVehicleSeat("");

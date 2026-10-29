@@ -205,7 +205,7 @@ namespace SkyCoop
             ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();
             if (Obj)
             {
-                Data.GUID = Obj.Get();
+                Data.GUID = Obj.GetPDID();
             }
 
             Data.IsDLC = Spawn.gameObject.scene.name.Contains("_DLC");
@@ -310,7 +310,7 @@ namespace SkyCoop
             ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();
             if (Obj)
             {
-                Data.GUID = Obj.Get();
+                Data.GUID = Obj.GetPDID();
             }
 
             Data.IsDLC = Spawn.gameObject.scene.name.Contains("_DLC");

@@ -28,7 +28,7 @@ namespace SkyCoopClient
                 ObjectGuid GUIDOBJ = PlayersManager.s_LastTryInteractionComponent.GetComponent<ObjectGuid>();
                 if (GUIDOBJ)
                 {
-                    GUID = GUIDOBJ.Get();
+                    GUID = GUIDOBJ.GetPDID();
                 }
                 Container = PlayersManager.s_LastTryInteractionComponent.GetComponent<Container>();
 
@@ -73,7 +73,7 @@ namespace SkyCoopClient
                 ObjectGuid GUIDOBJ = Container.GetComponent<ObjectGuid>();
                 if (GUIDOBJ)
                 {
-                    GUID = GUIDOBJ.Get();
+                    GUID = GUIDOBJ.GetPDID();
                 }
 
                 string JSON = Container.Serialize();
@@ -135,7 +135,7 @@ namespace SkyCoopClient
                     ObjectGuid GUIDOBJ = PlayersManager.s_LastTryInteractionComponent.GetComponent<ObjectGuid>();
                     if (GUIDOBJ)
                     {
-                        GUID = GUIDOBJ.Get();
+                        GUID = GUIDOBJ.GetPDID();
                     }
                     if (s_SendRemoveOnClosed)
                     {

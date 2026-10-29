@@ -66,7 +66,7 @@ namespace SkyCoopClient
                 ObjectGuid GUIDObj = __instance.GetComponent<ObjectGuid>();
                 if (GUIDObj)
                 {
-                    ClientSend.SendOpenableState(GUIDObj.Get(), __instance.IsOpen());
+                    ClientSend.SendOpenableState(GUIDObj.GetPDID(), __instance.IsOpen());
                 }
             }
         }

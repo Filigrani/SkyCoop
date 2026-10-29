@@ -252,7 +252,7 @@ namespace SkyCoopClient
 
                         if (ObjGUID)
                         {
-                            GUID = ObjGUID.Get();
+                            GUID = ObjGUID.GetPDID();
                         }
 
                         if (!string.IsNullOrEmpty(GUID))
@@ -297,7 +297,7 @@ namespace SkyCoopClient
 
                         if (ObjGUID)
                         {
-                            GUID = ObjGUID.Get();
+                            GUID = ObjGUID.GetPDID();
                         }
 
                         if (!string.IsNullOrEmpty(GUID))

@@ -42,7 +42,7 @@ namespace SkyCoopClient
 
                         if (ObjGUID != null)
                         {
-                            ClientSend.SendBreakDown(ObjGUID.Get());
+                            ClientSend.SendBreakDown(ObjGUID.GetPDID());
                         }
                         __instance.m_BreakDown = null;
                     }

@@ -426,7 +426,7 @@ namespace SkyCoop
             {
                 if (m_CookingSlot)
                 {
-                    FireplaceInteraction FirePlace = m_CookingSlot.GetFireplaceHost();
+                    FireplaceInteraction FirePlace = m_CookingSlot.m_FireplaceHost;
 
                     if(FirePlace && FirePlace.Fire)
                     {
@@ -2394,7 +2394,7 @@ namespace SkyCoop
                                     ObjectGuid OBJGUID = m_Container.GetComponent<ObjectGuid>();
                                     if (OBJGUID)
                                     {
-                                        ClientSend.SendContainerState(OBJGUID.Get(), 2);
+                                        ClientSend.SendContainerState(OBJGUID.GetPDID(), 2);
                                         m_Sent = true;
                                     }
                                 }

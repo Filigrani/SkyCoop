@@ -546,7 +546,7 @@ namespace SkyCoopClient
                     s_PutBackAction = null;
                 }
 
-                __instance.m_PutBackAction = new Action(() => OnRefuseFromGear(gear, __instance.m_RestorePos, __instance.m_RestoreRot));
+                __instance.m_PutBackAction = new Action(() => OnRefuseFromGear(gear, __instance.m_RestoreLocalPosition, __instance.m_RestoreLocalRotation));
             }
         }
 

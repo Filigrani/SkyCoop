@@ -33,7 +33,7 @@ namespace SkyCoopClient
                 ObjectGuid ObjGUID = __instance.gameObject.GetComponent<ObjectGuid>();
                 if (ObjGUID)
                 {
-                    ClientSend.SendHarvest(ObjGUID.Get(), __instance.m_RefreshHoursMin, __instance.m_RefreshHoursMax);
+                    ClientSend.SendHarvest(ObjGUID.GetPDID(), __instance.m_RefreshHoursMin, __instance.m_RefreshHoursMax);
                 }
             }
         }

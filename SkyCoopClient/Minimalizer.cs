@@ -134,7 +134,7 @@ namespace SkyCoopClient
                 ObjectGuid ObjGUID = __instance.gameObject.GetComponent<ObjectGuid>();
                 if (ObjGUID)
                 {
-                    GUID = ObjGUID.Get();
+                    GUID = ObjGUID.GetPDID();
                 }
                 List<GameObject> list = new List<GameObject>(__instance.m_ObjectList);
                 List<int> list2 = new List<int>(__instance.m_Weights);
