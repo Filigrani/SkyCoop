@@ -1830,7 +1830,10 @@ namespace SkyCoop
                             Gear.SetActive(false);
                         }
                     }
-                    AddVisualGear(GearName, Gear, HandPose, Player);
+                    if (Gear)
+                    {
+                        AddVisualGear(GearName, Gear, HandPose, Player);
+                    }
                 }
             }
 

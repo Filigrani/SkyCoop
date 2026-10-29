@@ -312,29 +312,29 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(GearItem), typeof(int), typeof(Vector3), typeof(bool) })]
-        internal static class PlayerManager_InstantiateItemAtLocation
-        {
-            private static void Postfix(PlayerManager __instance, GearItem gearItemPrefab, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
+        //[HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(GearItem), typeof(int), typeof(Vector3), typeof(bool) })]
+        //internal static class PlayerManager_InstantiateItemAtLocation
+        //{
+        //    private static void Postfix(PlayerManager __instance, GearItem gearItemPrefab, int numUnits, Vector3 position, bool stickToGround, GearItem __result)
+        //    {
+        //        if (!ModMain.IsMultiplayer()) { return; }
 
-                if (s_NoSyncFlag)
-                {
-                    return;
-                }
+        //        if (s_NoSyncFlag)
+        //        {
+        //            return;
+        //        }
 
-                if (__result && __result.name == "GEAR_CookingPotDummy")
-                {
-                    SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} cancled");
-                    UnityEngine.Object.Destroy(__result.gameObject);
-                    return;
-                }
+        //        if (__result && __result.name == "GEAR_CookingPotDummy")
+        //        {
+        //            SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} cancled");
+        //            UnityEngine.Object.Destroy(__result.gameObject);
+        //            return;
+        //        }
 
-                SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} numUnits {numUnits}");
-                SendDropItem(__result, 0, 0, true);
-            }
-        }
+        //        SkyCoop.Logger.Log($"InstantiateItemAtLocation {gearItemPrefab.name} numUnits {numUnits}");
+        //        SendDropItem(__result, 0, 0, true);
+        //    }
+        //}
         [HarmonyLib.HarmonyPatch(typeof(PlayerManager), "InstantiateItemAtLocation", new System.Type[] { typeof(AssetReferenceGearItem), typeof(int), typeof(Vector3), typeof(bool) })]
         internal static class PlayerManager_InstantiateItemAtLocation2
         {

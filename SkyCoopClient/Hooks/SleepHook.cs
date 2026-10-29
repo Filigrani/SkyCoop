@@ -53,6 +53,25 @@ namespace SkyCoopClient
                 }
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(Fatigue), "AddFatigue")]
+        private static class Fatigue_AddFatigue
+        {
+            private static void Prefix(Fatigue __instance, ref float fatigueValue)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                if (ModMain.Client != null && ModMain.Client.m_IsReady)
+                {
+                    if (ModMain.Client.m_Rules.m_Fatigue)
+                    {
+                        if(fatigueValue > 0)
+                        {
+                            fatigueValue = fatigueValue / 5f;
+                        }
+                    }
+                }
+            }
+        }
 
         public static void PatchPanel(Panel_Rest Panel)
         {
