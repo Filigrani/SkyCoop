@@ -53,6 +53,8 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("removepleasewait", new Action(RemovePleaseWait));
             uConsole.RegisterCommand("rip", new Action(RIP));
             uConsole.RegisterCommand("ripmodded", new Action(RIPModded));
+            uConsole.RegisterCommand("ripscene", new Action(RIPScene));
+            uConsole.RegisterCommand("ripstartfrom", new Action(RIPStartFrom));
             uConsole.RegisterCommand("ripstop", new Action(RIPSTOP));
             uConsole.RegisterCommand("checksave", new Action(CheckSave));
             uConsole.RegisterCommand("ripnaratives", new Action(RIPNaratives));
@@ -123,6 +125,20 @@ namespace SkyCoopClient
             if (!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
             {
                 GearSpawnsRipper.Start(true);
+            }
+        }
+        public static void RIPStartFrom()
+        {
+            if (!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
+            {
+                GearSpawnsRipper.Start(true, uConsole.GetString());
+            }
+        }
+        public static void RIPScene()
+        {
+            if (!GearSpawnsRipper.s_Active && !ModMain.IsMultiplayer())
+            {
+                GearSpawnsRipper.Start(true, "", uConsole.GetString());
             }
         }
         public static void RIPSTOP()

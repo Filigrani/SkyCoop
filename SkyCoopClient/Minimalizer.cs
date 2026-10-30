@@ -37,6 +37,11 @@ namespace SkyCoopClient
             {
                 bool IsLoading = !__instance.HasFinishedLoading();
 
+                if (GearSpawnsRipper.s_Active)
+                {
+                    GameManager.m_IsPaused = true;
+                }
+
                 if (IsLoading && !s_LoadingFlag)
                 {
                     OnStartedLoading();

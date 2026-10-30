@@ -53,7 +53,7 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Fatigue), "AddFatigue")]
+        [HarmonyLib.HarmonyPatch(typeof(Fatigue), "AddFatigue", new System.Type[] { typeof(float), typeof(FatigueFlags)})]
         private static class Fatigue_AddFatigue
         {
             private static void Prefix(Fatigue __instance, ref float fatigueValue)

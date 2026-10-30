@@ -53,7 +53,7 @@ namespace SkyCoopClient
             //}
         }
 
-        public static void Start(bool ModdedOnly = false)
+        public static void Start(bool ModdedOnly = false, string StartFrom = "", string JustOne = "")
         {
             s_ScenesLootSpawns = new DataStr.ScenesLootSpawns();
             s_ScenesLootSpawns.Scenes = new List<DataStr.SceneLootSpawns>();
@@ -64,21 +64,43 @@ namespace SkyCoopClient
 
             Il2CppCollection.List<IResourceLocation> Scenes = AssetHelper.FindAllAssetsLocations<SceneSet>().Cast<Il2CppCollection.List<IResourceLocation>>();
 
-            foreach (IResourceLocation sceneResource in Scenes)
+            if (string.IsNullOrEmpty(JustOne))
             {
-                if(ModdedOnly && !sceneResource.PrimaryKey.ToLower().StartsWith("mod"))
+                bool CanAdd = string.IsNullOrEmpty(StartFrom);
+                foreach (IResourceLocation sceneResource in Scenes)
                 {
-                    continue;
+                    if (!CanAdd)
+                    {
+                        if (StartFrom == sceneResource.PrimaryKey)
+                        {
+                            CanAdd = true;
+                        }
+                        else
+                        {
+                            continue;
+                        }
+                    }
+
+                    if (ModdedOnly && !sceneResource.PrimaryKey.ToLower().StartsWith("mod"))
+                    {
+                        continue;
+                    }
+                    else if (!ModdedOnly && sceneResource.PrimaryKey.ToLower().StartsWith("mod"))
+                    {
+                        continue;
+                    }
+                    s_ScenesToSave.Add(sceneResource.PrimaryKey);
+                    SkyCoop.Logger.Log($"[GearSpawnsRipper] Scene added to queue {sceneResource.PrimaryKey}");
                 }
-                else if(!ModdedOnly && sceneResource.PrimaryKey.ToLower().StartsWith("mod"))
-                {
-                    continue;
-                }
-                s_ScenesToSave.Add(sceneResource.PrimaryKey);
-                SkyCoop.Logger.Log($"[GearSpawnsRipper] Scene added to queue {sceneResource.PrimaryKey}");
+                s_NameForGearsFiles = !ModdedOnly ? "Sandbox" : "TLDev";
             }
-            s_NameForGearsFiles = !ModdedOnly ? "Sandbox" : "TLDev";
+            else
+            {
+                s_ScenesToSave.Add(JustOne);
+                SkyCoop.Logger.Log($"[GearSpawnsRipper] Scene added to queue {JustOne}");
+            }
             s_Active = true;
+            GameManager.m_IsPaused = true;
             Next();
         }
 
@@ -88,6 +110,7 @@ namespace SkyCoopClient
             {
                 if(s_ScenesToSave.Count > 0)
                 {
+                    GameManager.m_IsPaused = true;
                     string SceneToRip = s_ScenesToSave[0];
                     s_ScenesToSave.RemoveAt(0);
                     SkyCoop.Logger.Log(ConsoleColor.Blue, $"[GearSpawnsRipper] Start loading {SceneToRip}");
@@ -98,6 +121,43 @@ namespace SkyCoopClient
                     s_Active = false;
                     s_StopWatch.Stop();
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"[GearSpawnsRipper] Finished! It took {s_StopWatch.Elapsed}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"[GearSpawnsRipper] Statistic:");
+                    int LooseGears = 0;
+                    int PrefabSpawns = 0;
+                    int RadialSpawns = 0;
+                    int RandomSpawnObjects = 0;
+                    int SpawnGearVariants = 0;
+                    foreach (SceneLootSpawns Scene in s_ScenesLootSpawns.Scenes)
+                    {
+                        if(Scene.LooseGearSpawns != null)
+                        {
+                            LooseGears += Scene.LooseGearSpawns.Count;
+                        }
+                        if (Scene.PrefabSpawns != null)
+                        {
+                            PrefabSpawns += Scene.PrefabSpawns.Count;
+                        }
+                        if (Scene.RandomSpawnObjects != null)
+                        {
+                            RandomSpawnObjects += Scene.RandomSpawnObjects.Count;
+                        }
+                        if (Scene.SpawnGearVariants != null)
+                        {
+                            SpawnGearVariants += Scene.SpawnGearVariants.Count;
+                        }
+                        if (Scene.RadialSpawns != null)
+                        {
+                            RadialSpawns += Scene.RadialSpawns.Count;
+                        }
+                    }
+                    int Total = LooseGears + PrefabSpawns + RadialSpawns + RandomSpawnObjects + SpawnGearVariants;
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"LooseGears:         {LooseGears}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"PrefabSpawns:       {PrefabSpawns}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"RadialSpawns:       {RadialSpawns}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"RandomSpawnObjects: {RandomSpawnObjects}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"SpawnGearVariants:  {SpawnGearVariants}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"Total:              {Total}");
+
                     s_StopWatch = null;
                     SaveToFile();
                 }
@@ -121,6 +181,7 @@ namespace SkyCoopClient
         {
             if (s_Active)
             {
+                SkyCoop.Logger.Log(ConsoleColor.Cyan, $"[GearSpawnsRipper] Saving gears, is game paused? {GameManager.m_IsPaused}");
                 DataStr.SceneLootSpawns SceneData = new DataStr.SceneLootSpawns();
                 SceneData.PrefabSpawns = new List<DataStr.PrefabSpawnData>();
                 SceneData.RandomSpawnObjects = new List<DataStr.RandomSpawnObjectData>();
@@ -156,18 +217,27 @@ namespace SkyCoopClient
                     }
                 }
 
-                if(SpawnGearVariant.s_ActiveSpawners.Count > 0)
+                foreach (SpawnGearVariant Variant in UnityEngine.Object.FindObjectsOfType<SpawnGearVariant>(true))
                 {
                     DataStr.SpawnGearVariantData VariantBase = new SpawnGearVariantData();
-                    foreach (SpawnGearVariant SGV in SpawnGearVariant.s_ActiveSpawners)
+                    VariantBase.Gears = new List<SpawnGearVariantElementData>();
+                    
+                    foreach (AssetReferenceGearItem GearData in Variant.m_PrioritySpawnList)
                     {
-                        DataStr.SpawnGearVariantElementData ElementData = new SpawnGearVariantElementData();
-                        ElementData.GearName = FixName(SGV.m_SpawnedItem.name);
-                        ElementData.Position = new Vector3JSON(SGV.m_SpawnedItem.transform.position.x, SGV.m_SpawnedItem.transform.position.y, SGV.m_SpawnedItem.transform.position.z);
-                        ElementData.Rotation = new QuaternionJSON(SGV.m_SpawnedItem.transform.rotation.x, SGV.m_SpawnedItem.transform.rotation.y, SGV.m_SpawnedItem.transform.rotation.z, SGV.m_SpawnedItem.transform.rotation.w);
+                        GameObject Prefab = GearData.LoadAssetAsync().WaitForCompletion();
+                        if (Prefab)
+                        {
+                            DataStr.SpawnGearVariantElementData ElementData = new SpawnGearVariantElementData();
+                            ElementData.GearName = FixName(Prefab.name);
+                            ElementData.Position = new Vector3JSON(Variant.transform.position.x, Variant.transform.position.y, Variant.transform.position.z);
+                            ElementData.Rotation = new QuaternionJSON(Variant.transform.rotation.x, Variant.transform.rotation.y, Variant.transform.rotation.z, Variant.transform.rotation.w);
 
-                        GearsToIgnore.Add(SGV.m_SpawnedItem.gameObject);
-                        VariantBase.Gears.Add(ElementData);
+                            VariantBase.Gears.Add(ElementData);
+                        }
+                    }
+                    if (Variant.m_SpawnedItem)
+                    {
+                        GearsToIgnore.Add(Variant.m_SpawnedItem.gameObject);
                     }
                     SceneData.SpawnGearVariants.Add(VariantBase);
                 }
@@ -283,7 +353,32 @@ namespace SkyCoopClient
         {
             JsonSerializerOptions Options = new JsonSerializerOptions();
             Options.WriteIndented = true;
-            string JSON = JsonSerializer.Serialize<DataStr.ScenesLootSpawns>(s_ScenesLootSpawns, Options);
+
+            DataStr.ScenesLootSpawns Old = FilesManager.GetGearsSpawnsData($"GearSpawns/{s_NameForGearsFiles}");
+            DataStr.ScenesLootSpawns Combined = s_ScenesLootSpawns;
+            if (Old != null)
+            {
+                foreach (DataStr.SceneLootSpawns NewScene in s_ScenesLootSpawns.Scenes)
+                {
+                    bool Found = false;
+                    for (int i = 0; i < Old.Scenes.Count; i++)
+                    {
+                        DataStr.SceneLootSpawns OldScene = Old.Scenes[i];
+                        if(OldScene.SceneName == NewScene.SceneName)
+                        {
+                            Old.Scenes[i] = NewScene;
+                            Found = true;
+                            break;
+                        }
+                    }
+                    if (!Found)
+                    {
+                        Old.Scenes.Add(NewScene);
+                    }
+                }
+                Combined = Old;
+            }
+            string JSON = JsonSerializer.Serialize<DataStr.ScenesLootSpawns>(Combined, Options);
 
             if (!Directory.Exists($"{FilesManager.s_DataDirectory}/GearSpawns"))
             {

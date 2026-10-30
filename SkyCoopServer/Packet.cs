@@ -120,7 +120,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "beta6";
+        public const string c_Key = "beta7";
 
         public enum TypeVoice
         {

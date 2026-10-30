@@ -34,7 +34,7 @@
 		<!--This package contains almost everything a person could possibly need to reference while modding.-->
 		<PackageReference Include="LiteNetLib" Version="2.1.4" />
 		<PackageReference Include="OpenVoiceSharp" Version="1.0.3" />
-		<PackageReference Include="REDcat.Modding.TLD.Il2CppAssemblies" Version="2.58.0" />
+		<PackageReference Include="REDcat.Modding.TLD.Il2CppAssemblies" Version="2.59.0" />
 		<!--The package version here in this template may be outdated and need to be updated. Visual Studio can update package versions automatically.-->
 		<!--If the mod references any other mods (such as ModSettings), that NuGet package will also need to be listed here.-->
 	</ItemGroup>

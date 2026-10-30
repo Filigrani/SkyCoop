@@ -39,18 +39,34 @@ namespace SkyCoop
 
         public static void SetAppBackgroundMode()
         {
-            if (Application.runInBackground == false)
+            if (IsMultiplayer() || GearSpawnsRipper.s_Active)
             {
-                Application.runInBackground = true; // Always running in bg
+                if (Application.runInBackground == false)
+                {
+                    Application.runInBackground = true; // Always running in bg
+                }
+
+                if (IsMultiplayer())
+                {
+                    GameManager.m_IsPaused = false;
+                }else if (GearSpawnsRipper.s_Active)
+                {
+                    GameManager.m_IsPaused = true;
+                }
             }
-            GameManager.m_IsPaused = false;
         }
         [HarmonyLib.HarmonyPatch(typeof(InputManager), "PauseGame")]
         public static class InputManager_DuckYOuPause
         {
             public static void Postfix()
             {
-                GameManager.m_IsPaused = false;
+                if (IsMultiplayer())
+                {
+                    GameManager.m_IsPaused = false;
+                }else if (GearSpawnsRipper.s_Active)
+                {
+                    GameManager.m_IsPaused = true;
+                }
             }
         }
 
@@ -136,6 +152,7 @@ namespace SkyCoop
         public override void OnUpdate()
         {
             SetAppBackgroundMode();
+
             if (Client != null && Client.m_Instance != null)
             {
                 Client.m_Instance.PollEvents();
