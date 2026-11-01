@@ -101,6 +101,8 @@ namespace SkyCoopServer
                         sceneData.LoadMapData(m_ServerInstance, MapData);
                     }
                     sceneData.SpawnGears(m_ServerInstance);
+                    sceneData.SetupAnimalSpawns(m_ServerInstance);
+                    sceneData.HandleAnimalSpawnersUpdate(m_ServerInstance);
                 }
                 else
                 {
@@ -1005,8 +1007,7 @@ namespace SkyCoopServer
                         }
                         FireData.m_LastUpdateTime = CurrentTime;
                     }
-                    
-                    
+
                     foreach (NetPeer Peer in peers.ToArray())
                     {
                         if (m_ServerInstance.GetPlayerDataByNetPeer(Peer).m_Scene == Data.m_SceneName)
@@ -1014,6 +1015,40 @@ namespace SkyCoopServer
                             ServerSend.SendFire(Peer, FireData);
                         }
                     }
+                }
+
+                foreach (SpawnRegionInstance Spawner in Data.m_AnimalSpawners.Values)
+                {
+                    if (Spawner.m_Active)
+                    {
+                        foreach (NetPeer Peer in peers.ToArray())
+                        {
+                            PlayerData Player = m_ServerInstance.GetPlayerDataByNetPeer(Peer);
+                            if (Player.m_Scene == Data.m_SceneName)
+                            {
+                                SpawnRegionAmountByDifficulty Amount = Spawner.m_Data.GetSpawnsAmount(m_ServerInstance.m_Config.m_ExperienceMode);
+                                int Num = Amount.Day;
+                                if (m_ServerInstance.m_Timeline != null)
+                                {
+                                    //TODO: Тут надо бы проверить что ночь.
+                                }
+                                if (Spawner.m_Spawned < Num)
+                                {
+                                    AnimalEntity Animal = Spawner.SpawnAnimal(Data);
+                                    if (Animal != null)
+                                    {
+                                        //Logger.Log(ConsoleColor.Yellow, $"Spawned {Animal.m_Prefab} {Animal.m_GUID} from spawner {Animal.m_SpawnerGUID}");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+
+                foreach (AnimalEntity Animal in Data.m_Animals.Values)
+                {
+                    Animal.Update(m_ServerInstance, Data);
                 }
 
                 FallingProp[] FallingProps = Data.m_FallingProps.Values.ToArray();

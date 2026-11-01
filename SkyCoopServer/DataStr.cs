@@ -12,13 +12,15 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
-using static SkyCoopServer.DataStr;
-using static SkyCoopServer.Logger;
 
 namespace SkyCoopServer
 {
     public class DataStr
     {
+        public const float c_AnimalsSyncDistance = 350f;
+        public const float c_AnimalsRetakeMinDistance = 5;
+        public const float c_AnimalRetakeCooldown = 10;
+        
         public class ServerConfig
         {
             public string m_ServerName = "Nameless";
@@ -170,6 +172,8 @@ namespace SkyCoopServer
             public Dictionary<string, SceneLootSpawns> m_GearSpawns = new Dictionary<string, SceneLootSpawns>();
             public Dictionary<string, Dictionary<string, RadialObjectSpawnerData>> m_RadialLootSpawnerBySceneByGUID = new Dictionary<string, Dictionary<string, RadialObjectSpawnerData>>();
             public List<string> m_DupesList = new List<string>();
+            public Dictionary<string, SceneAnimalSpawns> m_AnimalSpawns = new Dictionary<string, SceneAnimalSpawns>();
+            public Dictionary<string, Dictionary<string, SpawnRegionData>> m_SpawnRegionBySceneByGUID = new Dictionary<string, Dictionary<string, SpawnRegionData>>();
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -231,6 +235,7 @@ namespace SkyCoopServer
             public bool CanCraft { get; set; }
             public List<string> GearSpawns { get; set; }
             public List<string> DupeLists { get; set; }
+            public List<string> AnimalSpawns { get; set; }
 
             public GameRules Load(string FileName)
             {
@@ -377,6 +382,68 @@ namespace SkyCoopServer
                         }
                     }
                 }
+
+                if (AnimalSpawns != null)
+                {
+                    foreach (string Path in AnimalSpawns)
+                    {
+                        ScenesAnimalSpawns AnimalsSpawnsData = FilesManager.GetAnimalsSpawnsData(Path);
+                        if (AnimalsSpawnsData != null)
+                        {
+                            foreach (SceneAnimalSpawns SpawnsData in AnimalsSpawnsData.Scenes)
+                            {
+                                if (SpawnsData != null)
+                                {
+                                    SceneAnimalSpawns Combined = null;
+                                    if (Inst.m_AnimalSpawns.TryGetValue(SpawnsData.SceneName, out Combined))
+                                    {
+                                        Combined.Join(SpawnsData);
+                                    }
+                                    else
+                                    {
+                                        SceneAnimalSpawns New = new SceneAnimalSpawns();
+                                        New.Spawns = new List<SpawnRegionData>();
+                                        New.RandomSpawnObjects = new List<RandomAnimalSpawnObjectData>();
+                                        New.Clone(SpawnsData);
+                                        Inst.m_AnimalSpawns.Add(SpawnsData.SceneName, New);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    // Оптимизация для будущиего поиска для респавнов предметов
+                    foreach (var item in Inst.m_AnimalSpawns)
+                    {
+                        string SceneName = item.Key;
+                        SceneAnimalSpawns Data = item.Value;
+
+                        Dictionary<string, SpawnRegionData> DictSpawnsByGUID = null;
+                        if (!Inst.m_SpawnRegionBySceneByGUID.TryGetValue(SceneName, out DictSpawnsByGUID))
+                        {
+                            DictSpawnsByGUID = new Dictionary<string, SpawnRegionData>();
+                            Inst.m_SpawnRegionBySceneByGUID.Add(SceneName, DictSpawnsByGUID);
+                        }
+                        foreach (SpawnRegionData Spawner in Data.Spawns)
+                        {
+                            if (!string.IsNullOrEmpty(Spawner.GUID) && !DictSpawnsByGUID.ContainsKey(Spawner.GUID))
+                            {
+                                DictSpawnsByGUID.Add(Spawner.GUID, Spawner);
+                            }
+                        }
+                        foreach (RandomAnimalSpawnObjectData Base in Data.RandomSpawnObjects)
+                        {
+                            foreach (AnimalSpawnElementData Element in Base.SpawnRegions)
+                            {
+                                SpawnRegionData Spawner = Element.Spawn;
+                                if (!string.IsNullOrEmpty(Spawner.GUID) && !DictSpawnsByGUID.ContainsKey(Spawner.GUID))
+                                {
+                                    DictSpawnsByGUID.Add(Spawner.GUID, Spawner);
+                                }
+                            }
+                        }
+                    }
+                }
+
                 if (!string.IsNullOrEmpty(LocalizationID))
                 {
                     Inst.m_LocalizationID = LocalizationID;
@@ -1090,6 +1157,8 @@ namespace SkyCoopServer
             public List<V3Quat> m_SpawnPoints = new List<V3Quat>();
             public List<RadialLootSpawner> m_RadialLootSpawners = new List<RadialLootSpawner>();
             public Dictionary<string, FallingProp> m_FallingProps = new Dictionary<string, FallingProp>();
+            public Dictionary<string, AnimalEntity> m_Animals = new Dictionary<string, AnimalEntity>();
+            public Dictionary<string, SpawnRegionInstance> m_AnimalSpawners = new Dictionary<string, SpawnRegionInstance>();
 
             public DangerCircleConfig m_ZoneConfig = null;
             public DangerCircleData m_ActiveZone = null;
@@ -1114,6 +1183,8 @@ namespace SkyCoopServer
                 public List<HarvestableData.SaveData> Harvestables { get; set; }
                 public List<WaterSourceData.SaveData> WaterSources { get; set; }
                 public List<RadialSpawnSaveData> RadialSpawnsData { get; set; }
+                public List<SpawnRegionInstance.SaveData> SpawnRegions { get; set; }
+                public List<AnimalEntity.SaveData> Animals { get; set; }
             }
 
             public SaveData Save()
@@ -1169,6 +1240,16 @@ namespace SkyCoopServer
                 foreach (RadialSpawnSaveData spawner in m_RadialSpawnsData.Values.ToList())
                 {
                     data.RadialSpawnsData.Add(spawner);
+                }
+                data.SpawnRegions = new List<SpawnRegionInstance.SaveData>();
+                foreach (SpawnRegionInstance spawner in m_AnimalSpawners.Values.ToList())
+                {
+                    data.SpawnRegions.Add(spawner.Save());
+                }
+                data.Animals = new List<AnimalEntity.SaveData>();
+                foreach (AnimalEntity animal in m_Animals.Values.ToList())
+                {
+                    data.Animals.Add(animal.Save());
                 }
                 return data;
             }
@@ -1260,6 +1341,27 @@ namespace SkyCoopServer
                     foreach (RadialSpawnSaveData saveData in data.RadialSpawnsData)
                     {
                         m_RadialSpawnsData.Add(saveData.GUID, saveData);
+                    }
+                }
+                SetupAnimalSpawns(ServerInstance);
+                if (data.SpawnRegions != null)
+                {
+                    foreach (SpawnRegionInstance.SaveData saveData in data.SpawnRegions)
+                    {
+                        SpawnRegionInstance Inst = null;
+                        if(m_AnimalSpawners.TryGetValue(saveData.GUID, out Inst))
+                        {
+                            Inst.Load(saveData);
+                        }
+                    }
+                }
+                HandleAnimalSpawnersUpdate(ServerInstance);
+                if (data.Animals != null)
+                {
+                    foreach (AnimalEntity.SaveData saveData in data.Animals)
+                    {
+                        AnimalEntity Animal = new AnimalEntity(saveData);
+                        m_Animals.Add(Animal.m_GUID, Animal);
                     }
                 }
             }
@@ -1425,6 +1527,143 @@ namespace SkyCoopServer
                 }
             }
 
+            public void SetupAnimalSpawns(Server ServerInstance)
+            {
+                string SceneFileName = m_SceneName;
+
+                if (SceneFileName.Contains('_'))
+                {
+                    SceneFileName = m_SceneName.Split('_')[0];
+                }
+
+                if (ServerInstance.m_Rules.m_AnimalSpawns != null)
+                {
+                    SceneAnimalSpawns SceneAnimals = null;
+                    if (ServerInstance.m_Rules.m_AnimalSpawns.TryGetValue(SceneFileName, out SceneAnimals))
+                    {
+                        foreach (SpawnRegionData Spawner in SceneAnimals.Spawns)
+                        {
+                            SpawnRegionInstance Inst = new SpawnRegionInstance();
+                            Inst.m_Data = Spawner;
+                            m_AnimalSpawners.Add(Inst.m_Data.GUID, Inst);
+                        }
+                        foreach (RandomAnimalSpawnObjectData RandomBase in SceneAnimals.RandomSpawnObjects)
+                        {
+                            foreach (AnimalSpawnElementData Element in RandomBase.SpawnRegions)
+                            {
+                                SpawnRegionInstance Inst = new SpawnRegionInstance();
+                                Inst.m_Data = Element.Spawn;
+                                Inst.m_RandomBase = RandomBase;
+                                m_AnimalSpawners.Add(Inst.m_Data.GUID, Inst);
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void HandleAnimalSpawnersUpdate(Server ServerInstance)
+            {
+                Random RNG = new Random(Guid.NewGuid().GetHashCode());
+
+                Dictionary<string, bool> AlreadyRolledThisBase = new Dictionary<string, bool>();
+
+                foreach (SpawnRegionInstance Inst in m_AnimalSpawners.Values)
+                {
+                    if(Inst.m_RandomBase == null)
+                    {
+                        Inst.m_Active = RNG.Range(0, 100) < Inst.m_Data.ChanceActive;
+                    }
+                    else
+                    {
+                        bool CanBeRerolled = AlreadyRolledThisBase.ContainsKey(Inst.m_RandomBase.GUID);
+
+                        if (CanBeRerolled)
+                        {
+                            if(Inst.m_LastStateChangeTime > 0)
+                            {
+                                if(ServerInstance.m_Timeline != null)
+                                {
+                                    float ElapsedHours = ServerInstance.m_Timeline.m_ElapsedInGameHours - Inst.m_LastStateChangeTime;
+                                    CanBeRerolled = ElapsedHours > Inst.m_RandomBase.RerollAfterGameHours;
+                                }
+                            }
+                        }
+
+                        if (CanBeRerolled)
+                        {
+                            int NumToSpawn = 0;
+
+                            switch (ServerInstance.m_Config.m_ExperienceMode)
+                            {
+                                case "Pilgrim":
+                                    NumToSpawn = Inst.m_RandomBase.NumObjectsToSpawnPilgrim;
+                                    break;
+                                case "Voyageur":
+                                    NumToSpawn = Inst.m_RandomBase.NumObjectsToSpawnVoyageur;
+                                    break;
+                                case "Stalker":
+                                    NumToSpawn = Inst.m_RandomBase.NumObjectsToSpawnStalker;
+                                    break;
+                                case "Interloper":
+                                case "Misery":
+                                    NumToSpawn = Inst.m_RandomBase.NumObjectsToSpawnInterloper;
+                                    break;
+                                default:
+                                    NumToSpawn = Inst.m_RandomBase.NumObjectsToSpawnStalker;
+                                    break;
+                            }
+
+                            List<AnimalSpawnElementData> Elements = new List<AnimalSpawnElementData>(Inst.m_RandomBase.SpawnRegions);
+                            if (NumToSpawn > 0)
+                            {
+                                for (int i = 1; i <= NumToSpawn; i++)
+                                {
+                                    float TotalWeight = 0;
+
+                                    foreach (AnimalSpawnElementData Element in Elements)
+                                    {
+                                        TotalWeight += Element.SpawnWeight;
+                                    }
+                                    float RandomValue = (float)RNG.NextDouble() * TotalWeight;
+                                    float CumulativeWeight = 0;
+                                    int IndexToRemove = -1;
+
+                                    for (int i2 = 0; i2 < Elements.Count; i2++)
+                                    {
+                                        AnimalSpawnElementData Element = Elements[i2];
+                                        CumulativeWeight += Element.SpawnWeight;
+                                        if (RandomValue <= CumulativeWeight)
+                                        {
+                                            IndexToRemove = i2;
+                                            Inst.m_Active = true;
+                                            break;
+                                        }
+                                    }
+                                    if (IndexToRemove != -1)
+                                    {
+                                        Elements.RemoveAt(IndexToRemove);
+                                    }
+                                }
+                            }
+                            foreach (AnimalSpawnElementData Element in Elements)
+                            {
+                                SpawnRegionInstance InstOther = null;
+                                if(m_AnimalSpawners.TryGetValue(Element.Spawn.GUID, out InstOther))
+                                {
+                                    InstOther.m_Active = false;
+                                }
+                            }
+                            AlreadyRolledThisBase.Add(Inst.m_RandomBase.GUID, true);
+                        }
+                    }
+                }
+                //SkyCoopServer.Logger.Log($"Animal spawns updated");
+                //foreach (SpawnRegionInstance Spawner in m_AnimalSpawners.Values)
+                //{
+                //    SkyCoopServer.Logger.Log($"SpawnRegion {Spawner.m_Data.GUID} is Active? {Spawner.m_Active}");
+                //}
+            }
+
             public void HandleRadialSpawner(Server ServerInstance, RadialObjectSpawnerData Spawner)
             {
                 Random RNG = new Random(Guid.NewGuid().GetHashCode());
@@ -1483,7 +1722,7 @@ namespace SkyCoopServer
 
                         RadialObjectSpawnerElementData GearToSpawn = null;
 
-                        for (int i2 = 0; i < Spawner.Gears.Count; i2++)
+                        for (int i2 = 0; i2 < Spawner.Gears.Count; i2++)
                         {
                             RadialObjectSpawnerElementData Gear = Spawner.Gears[i2];
                             CumulativeWeight += Gear.SpawnWeight;
@@ -1593,7 +1832,7 @@ namespace SkyCoopServer
                                 float CumulativeWeight = 0;
                                 int IndexToRemove = -1;
 
-                                for (int i2 = 0; i < Gears.Count; i2++)
+                                for (int i2 = 0; i2 < Gears.Count; i2++)
                                 {
                                     GearSpawnElementData Gear = Gears[i2];
                                     CumulativeWeight += Gear.SpawnWeight;
@@ -1680,7 +1919,7 @@ namespace SkyCoopServer
                                 float CumulativeWeight = 0;
                                 int IndexToRemove = -1;
 
-                                for (int i2 = 0; i < Gears.Count; i2++)
+                                for (int i2 = 0; i2 < Gears.Count; i2++)
                                 {
                                     GearSpawnElementData Gear = Gears[i2];
                                     CumulativeWeight += Gear.SpawnWeight;
@@ -3638,6 +3877,38 @@ namespace SkyCoopServer
             }
         }
 
+        public class ScenesAnimalSpawns
+        {
+            public List<SceneAnimalSpawns> Scenes { get; set; }
+        }
+
+        public class SceneAnimalSpawns
+        {
+            public string SceneName { get; set; }
+            public List<SpawnRegionData> Spawns { get; set; }
+            public List<RandomAnimalSpawnObjectData> RandomSpawnObjects { get; set; }
+
+            public void Clone(SceneAnimalSpawns CloneFrom)
+            {
+                if (CloneFrom.Spawns != null)
+                {
+                    Spawns.AddRange(new List<SpawnRegionData>(CloneFrom.Spawns));
+                }
+                if (CloneFrom.RandomSpawnObjects != null)
+                {
+                    RandomSpawnObjects.AddRange(new List<RandomAnimalSpawnObjectData>(CloneFrom.RandomSpawnObjects));
+                }
+            }
+
+            public void Join(SceneAnimalSpawns Other)
+            {
+                if (Other != null)
+                {
+                    Clone(Other);
+                }
+            }
+        }
+
         public class PrefabSpawnData
         {
             public List<GearSpawnElementData> Gears { get; set; }
@@ -3661,9 +3932,14 @@ namespace SkyCoopServer
             public List<string> EnabledForXP { get; set; }
         }
 
-        public class RandomSpawnObjectData
+        public class AnimalSpawnElementData
         {
-            public List<GearSpawnElementData> Gears { get; set; }
+            public SpawnRegionData Spawn { get; set; }
+            public int SpawnWeight { get; set; }
+        }
+
+        public class RandomSpawnObjectDataBase
+        {
             public int NumObjectsToSpawnPilgrim { get; set; }
             public int NumObjectsToSpawnVoyageur { get; set; }
             public int NumObjectsToSpawnStalker { get; set; }
@@ -3675,6 +3951,16 @@ namespace SkyCoopServer
             public List<string> DisabledForXP { get; set; }
             public List<string> EnabledForXP { get; set; }
             public string GUID { get; set; }
+        }
+
+        public class RandomSpawnObjectData : RandomSpawnObjectDataBase
+        {
+            public List<GearSpawnElementData> Gears { get; set; }
+        }
+
+        public class RandomAnimalSpawnObjectData : RandomSpawnObjectDataBase
+        {
+            public List<AnimalSpawnElementData> SpawnRegions { get; set; }
         }
 
         public class LooseGearSpawn
@@ -3797,6 +4083,422 @@ namespace SkyCoopServer
         {
             public string GUID { get; set; }
             public float TimeBecomeValidToRespawn { get; set; }
+        }
+
+        public class SpawnRegionAnimal
+        {
+            public string NormalPrefab { get; set; }
+            public string AuroraPrefab { get; set; }
+            public int Weight { get; set; }
+        }
+        public class SpawnRegionAmountByDifficulty
+        {
+            public int Day { get; set; }
+            public int Night { get; set; }
+        }
+
+
+        public class SpawnRegionData
+        {
+            public string GUID { get; set; }
+            public float Radius { get; set; }
+            public Vector3JSON Position { get; set; }
+            public List<SpawnRegionAnimal> Animals { get; set; }
+            public List<Vector3JSON> Points { get; set; }
+            public float ChanceActive { get; set; }
+            public bool CanSpawnInBlizzard { get; set; }
+            public float HoursBetweenRespawns { get; set; }
+            public Dictionary<string, SpawnRegionAmountByDifficulty> MaxSimultaneousSpawns { get; set; }
+
+            public void AddSpawnsAmount(string Difficulty, int Day, int Night)
+            {
+                if(MaxSimultaneousSpawns == null)
+                {
+                    MaxSimultaneousSpawns = new Dictionary<string, SpawnRegionAmountByDifficulty>();
+                }
+                if (!MaxSimultaneousSpawns.ContainsKey(Difficulty))
+                {
+                    SpawnRegionAmountByDifficulty Diff = new SpawnRegionAmountByDifficulty();
+                    Diff.Day = Day;
+                    Diff.Night = Night;
+
+                    MaxSimultaneousSpawns.Add(Difficulty, Diff);
+                }
+            }
+            public SpawnRegionAmountByDifficulty GetSpawnsAmount(string Difficulty)
+            {
+                if(Difficulty == "Misery")
+                {
+                    Difficulty = "Interloper";
+                }
+
+                if (!MaxSimultaneousSpawns.ContainsKey(Difficulty))
+                {
+                    return MaxSimultaneousSpawns["Stalker"];
+                }
+                return MaxSimultaneousSpawns[Difficulty];
+            }
+
+            public void AddPoint(float x, float y, float z)
+            {
+                if(Points == null)
+                {
+                    Points = new List<Vector3JSON>();
+                }
+                Points.Add(new Vector3JSON(x, y, z));
+            }
+
+            public string GetRandomAnimal()
+            {
+                Random RNG = new Random(Guid.NewGuid().GetHashCode());
+                List<SpawnRegionAnimal> Elements = new List<SpawnRegionAnimal>(Animals);
+                float TotalWeight = 0;
+
+                foreach (SpawnRegionAnimal Element in Elements)
+                {
+                    TotalWeight += Element.Weight;
+                }
+                float RandomValue = (float)RNG.NextDouble() * TotalWeight;
+                float CumulativeWeight = 0;
+
+                for (int i = 0; i < Elements.Count; i++)
+                {
+                    SpawnRegionAnimal Element = Elements[i];
+                    CumulativeWeight += Element.Weight;
+                    if (RandomValue <= CumulativeWeight)
+                    {
+                        return Element.NormalPrefab;
+                    }
+                }
+                return "";
+            }
+        }
+
+        public class AnimalEntity
+        {
+            public string m_Prefab = "";
+            public string m_GUID = "";
+            public string m_SpawnerGUID = "";
+            public Vector3 m_Position = Vector3.Zero;
+            public Quaternion m_Rotation = Quaternion.Identity;
+
+            public bool m_Active = false;
+
+            public int m_AiState = 0;
+
+            public float m_Health = 100;
+
+            public float m_BleedingPerHour = 20f;
+
+            public int m_ClosestPlayer = -1;
+            public float m_RetakeCooldown = 0;
+
+            public bool m_IsBleeding = false;
+
+            public float m_LastUpdated = 0;
+
+            public AnimalEntity() { }
+            public AnimalEntity(SaveData saveData)
+            {
+                m_Prefab = saveData.Prefab;
+                m_GUID = saveData.GUID ;
+                m_SpawnerGUID = saveData.SpawnerGUID;
+                m_Position = saveData.Position.ToVector();
+                m_Rotation = saveData.Rotation.ToQuaternion();
+                m_Health = saveData.Health;
+                m_IsBleeding = saveData.IsBleeding;
+                m_LastUpdated = saveData.LastUpdated;
+                m_AiState = saveData.AiState;
+            }
+            public SaveData Save()
+            {
+                SaveData saveData = new SaveData();
+                saveData.Prefab = m_Prefab;
+                saveData.GUID = m_GUID;
+                saveData.SpawnerGUID = m_SpawnerGUID;
+                saveData.Position = new Vector3JSON(m_Position.X, m_Position.Y, m_Position.Z);
+                saveData.Rotation = new QuaternionJSON(m_Rotation.X, m_Rotation.Y, m_Rotation.Z, m_Rotation.W);
+                saveData.Health = m_Health;
+                saveData.IsBleeding = m_IsBleeding;
+                saveData.LastUpdated = m_LastUpdated;
+                saveData.AiState = m_AiState;
+                return saveData;
+            }
+            public class SaveData
+            {
+                public string Prefab {  get; set; }
+                public string GUID { get; set; }
+                public string SpawnerGUID { get; set; }
+                public Vector3JSON Position { get; set; }
+                public QuaternionJSON Rotation { get; set; }
+                public float Health { get; set; }
+                public bool IsBleeding { get; set; }
+                public float LastUpdated { get; set; }
+                public int AiState { get; set; }
+            }
+            public void SetActive(Server ServerInstance, SceneData Scene, bool Active)
+            {
+                if(m_Active != Active)
+                {
+                    m_Active = Active;;
+
+                    if (Active)
+                    {
+                        if (ServerInstance.m_Timeline != null)
+                        {
+                            float ElapsedHours = ServerInstance.m_Timeline.m_ElapsedInGameHours - m_LastUpdated;
+                            if (ElapsedHours > 2f)
+                            {
+                                if(Scene != null)
+                                {
+                                    System.Random RNG = new Random(Guid.NewGuid().GetHashCode());
+
+                                    Dictionary<string, SpawnRegionData> Spawners = null;
+                                    if (ServerInstance.m_Rules.m_SpawnRegionBySceneByGUID.TryGetValue(Scene.m_SceneName, out Spawners))
+                                    {
+                                        SpawnRegionData Spawner = null;
+
+                                        if(Spawners.TryGetValue(m_SpawnerGUID, out Spawner))
+                                        {
+                                            int NewPointIndex = RNG.Range(0, Spawner.Points.Count);
+                                            m_Position = Spawner.Points[NewPointIndex].ToVector();
+                                            SkyCoopServer.Logger.Log($"{m_Prefab} {m_GUID} moved to random point after {ElapsedHours} hours of being inactive.");
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Logger.Log(ConsoleColor.Yellow, $"Animal {m_Prefab} {m_GUID} from spawner {m_SpawnerGUID} deactivated");
+                    }
+                    else
+                    {
+                        Logger.Log(ConsoleColor.Yellow, $"Animal {m_Prefab} {m_GUID} from spawner {m_SpawnerGUID} become active");
+                        List<NetPeer> peers = new List<NetPeer>();
+                        ServerInstance.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer peer in peers)
+                        {
+                            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(peer);
+                            if (Player != null && Player.m_Scene == Scene.m_SceneName)
+                            {
+                                ServerSend.SendAnimalRemoved(peer, m_GUID);
+                            }
+                        }
+                        m_RetakeCooldown = 0;
+                    }
+                }
+            }
+
+            public void Update(Server ServerInstance, SceneData Scene)
+            {
+                if(m_RetakeCooldown > 0)
+                {
+                    m_RetakeCooldown--;
+                }
+                
+                int ClosestPlayer = -1;
+                float BestDistance = float.PositiveInfinity;
+                List<NetPeer> peers = new List<NetPeer>();
+                ServerInstance.m_Instance.GetConnectedPeers(peers);
+                foreach (NetPeer peer in peers)
+                {
+                    PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(peer);
+                    if (Player != null && Player.m_Scene == Scene.m_SceneName)
+                    {
+                        float Distance = Vector3.Distance(m_Position, Player.m_Position);
+                        if (Distance < BestDistance)
+                        {
+                            BestDistance = Distance;
+                            ClosestPlayer = Player.m_PlayerID;
+                        }
+                    }
+                }
+
+                if(BestDistance > c_AnimalsSyncDistance)
+                {
+                    ClosestPlayer = -1;
+                    m_ClosestPlayer = -1;
+                    SetActive(ServerInstance, Scene, false);
+                }
+
+                if (m_Active)
+                {
+                    if (ServerInstance.m_Timeline != null)
+                    {
+                        float ElapsedHours = ServerInstance.m_Timeline.m_ElapsedInGameHours - m_LastUpdated;
+                        if (m_IsBleeding)
+                        {
+                            Damage(ServerInstance, Scene, m_BleedingPerHour * ElapsedHours);
+                        }
+
+                        m_LastUpdated = ElapsedHours;
+                    }
+
+                    if(ClosestPlayer == -1)
+                    {
+                        m_ClosestPlayer = -1;
+                        SetActive(ServerInstance, Scene, false);
+                    }else if(ClosestPlayer != m_ClosestPlayer)
+                    {
+                        if(m_RetakeCooldown == 0)
+                        {
+                            if(m_ClosestPlayer != -1)
+                            {
+                                PlayerData CurrentOwner = ServerInstance.m_PlayersData.GetPlayer(m_ClosestPlayer);
+                                PlayerData NewOwner = ServerInstance.m_PlayersData.GetPlayer(m_ClosestPlayer);
+
+                                if(CurrentOwner != null && NewOwner != null)
+                                {
+                                    float Distance = Vector3.Distance(CurrentOwner.m_Position, NewOwner.m_Position);
+                                    if(Distance > c_AnimalsRetakeMinDistance)
+                                    {
+                                        m_ClosestPlayer = ClosestPlayer;
+                                        m_RetakeCooldown = c_AnimalRetakeCooldown;
+                                    }
+                                }
+                            }
+                            else
+                            {
+                                m_ClosestPlayer = ClosestPlayer;
+                                m_RetakeCooldown = c_AnimalRetakeCooldown;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    if(ClosestPlayer != -1)
+                    {
+                        m_RetakeCooldown = c_AnimalRetakeCooldown;
+                        SetActive(ServerInstance, Scene, true);
+                    }
+                }
+
+
+                if(m_Active && m_ClosestPlayer != -1)
+                {
+                    foreach (NetPeer peer in peers)
+                    {
+                        PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(peer);
+                        if (Player != null && Player.m_Scene == Scene.m_SceneName)
+                        {
+                            if(Player.m_PlayerID == m_ClosestPlayer)
+                            {
+                                ServerSend.SendAnimalControlRequest(peer, m_Prefab, m_GUID, m_SpawnerGUID, m_Position, m_Rotation, m_AiState);
+                            }
+                            else
+                            {
+                                float Distance = Vector3.Distance(m_Position, Player.m_Position);
+                                if(Distance < c_AnimalsSyncDistance)
+                                {
+                                    ServerSend.SendAnimalSync(peer, m_Prefab, m_GUID, m_SpawnerGUID, m_Position, m_Rotation, m_AiState);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void Moved(Vector3 Position)
+            {
+                m_Position = Position;
+            }
+
+            public void Rotated(Quaternion Rotation)
+            {
+                m_Rotation = Rotation;
+            }
+
+            public void Damage(Server ServerInstance, SceneData Scene, float Damage)
+            {
+                if(m_Health > 0)
+                {
+                    m_Health -= Damage;
+                    if(m_Health <= 0)
+                    {
+                        m_Health = 0;
+                        Death(ServerInstance, Scene);
+                    }
+                }
+            }
+
+            public void Death(Server ServerInstance, SceneData Scene)
+            {
+                SpawnRegionInstance Spawner = null;
+                if (Scene.m_AnimalSpawners.TryGetValue(m_SpawnerGUID, out Spawner))
+                {
+                    Spawner.m_RespawnPending++;
+                }
+            }
+        }
+
+        public class SpawnRegionInstance
+        {
+            public SpawnRegionData m_Data;
+            public RandomAnimalSpawnObjectData m_RandomBase = null;
+            public bool m_Active = true;
+            public int m_Spawned = 0;
+            public int m_RespawnPending = 0;
+            public float m_LastStateChangeTime = 0;
+
+            public bool IsInsideZone(Vector3 Point)
+            {
+                float Distance = Vector2.Distance(new Vector2(Point.X, Point.Z), new Vector2(m_Data.Position.x, m_Data.Position.z));
+                return Distance < m_Data.Radius / 2;
+            }
+
+            public class SaveData
+            {
+                public bool Active { get; set; }
+                public string GUID { get; set; }
+                public int Spawned { get; set; }
+                public int RespawnPending { get; set; }
+                public float LastStateChangeTime { get; set; }
+            }
+
+            public SaveData Save()
+            {
+                SaveData saveData = new SaveData();
+                saveData.Active = m_Active;
+                saveData.GUID = m_Data.GUID;
+                saveData.Spawned = m_Spawned;
+                saveData.RespawnPending = m_RespawnPending;
+                saveData.LastStateChangeTime = m_LastStateChangeTime;
+                return saveData;
+            }
+
+            public void Load(SaveData saveData)
+            {
+                m_Active = saveData.Active;
+                m_Spawned = saveData.Spawned;
+                m_RespawnPending = saveData.RespawnPending;
+                m_LastStateChangeTime = saveData.LastStateChangeTime;
+            }
+
+            public AnimalEntity SpawnAnimal(SceneData Scene)
+            {
+                if(m_Data.Points != null)
+                {
+                    string PrefabName = m_Data.GetRandomAnimal();
+                    if (!string.IsNullOrEmpty(PrefabName))
+                    {
+                        m_Spawned++;
+                        AnimalEntity Animal = new AnimalEntity();
+                        Animal.m_Prefab = PrefabName;
+                        Animal.m_Active = false;
+                        Animal.m_SpawnerGUID = m_Data.GUID;
+                        Animal.m_GUID = Guid.NewGuid().ToString();
+                        System.Random RNG = new Random(Guid.NewGuid().GetHashCode());
+                        if (m_Data.Points != null)
+                        {
+                            Animal.Moved(m_Data.Points[RNG.Range(0, m_Data.Points.Count)].ToVector());
+                        }
+
+                        Scene.m_Animals.Add(Animal.m_GUID, Animal);
+                        return Animal;
+                    }
+                }
+                return null;
+            }
         }
     }
 }

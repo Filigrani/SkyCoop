@@ -1267,5 +1267,43 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
+
+        public static void SendAnimalControlRequest(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, int AiState)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerAnimalControlRequest);
+
+            writer.Put(Prefab);
+            writer.Put(GUID);
+            writer.Put(SpawnerGUID);
+            writer.Put(Position);
+            writer.Put(Rotation);
+            writer.Put(AiState);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendAnimalSync(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, int AiState)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalControlReply);
+
+            writer.Put(Prefab);
+            writer.Put(GUID);
+            writer.Put(SpawnerGUID);
+            writer.Put(Position);
+            writer.Put(Rotation);
+            writer.Put(AiState);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendAnimalRemoved(NetPeer Client, string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ServerAnimalRemoved);
+
+            writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
     }
 }

@@ -11,6 +11,7 @@ using System.Diagnostics;
 using System.Linq;
 using System.Text;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.ResourceManagement.ResourceLocations;
@@ -22,6 +23,7 @@ namespace SkyCoopClient
     public static class GearSpawnsRipper
     {
         public static DataStr.ScenesLootSpawns s_ScenesLootSpawns = new DataStr.ScenesLootSpawns();
+        public static DataStr.ScenesAnimalSpawns s_ScenesAnimalSpawns = new DataStr.ScenesAnimalSpawns();
         public static List<string> s_ScenesToSave = new List<string>();
         public static bool s_Active = false;
         public static Stopwatch s_StopWatch = null;
@@ -57,6 +59,9 @@ namespace SkyCoopClient
         {
             s_ScenesLootSpawns = new DataStr.ScenesLootSpawns();
             s_ScenesLootSpawns.Scenes = new List<DataStr.SceneLootSpawns>();
+
+            s_ScenesAnimalSpawns = new ScenesAnimalSpawns();
+            s_ScenesAnimalSpawns.Scenes = new List<SceneAnimalSpawns>();
 
             s_StopWatch = new Stopwatch();
             s_StopWatch.Start();
@@ -151,12 +156,34 @@ namespace SkyCoopClient
                         }
                     }
                     int Total = LooseGears + PrefabSpawns + RadialSpawns + RandomSpawnObjects + SpawnGearVariants;
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"Gears");
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"LooseGears:         {LooseGears}");
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"PrefabSpawns:       {PrefabSpawns}");
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"RadialSpawns:       {RadialSpawns}");
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"RandomSpawnObjects: {RandomSpawnObjects}");
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"SpawnGearVariants:  {SpawnGearVariants}");
                     SkyCoop.Logger.Log(ConsoleColor.Green, $"Total:              {Total}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"");
+
+
+                    int LooseSpawners = 0;
+                    int RandomSpawnObjectsAnimals = 0;
+
+                    foreach (SceneAnimalSpawns Scene in s_ScenesAnimalSpawns.Scenes)
+                    {
+                        if (Scene.Spawns != null)
+                        {
+                            LooseSpawners += Scene.Spawns.Count;
+                        }
+                        if (Scene.RandomSpawnObjects != null)
+                        {
+                            RandomSpawnObjectsAnimals += Scene.RandomSpawnObjects.Count;
+                        }
+                    }
+
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"Animals");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"Spawn regions:          {LooseSpawners}");
+                    SkyCoop.Logger.Log(ConsoleColor.Green, $"RandomSpawnObjects:     {RandomSpawnObjectsAnimals}");
 
                     s_StopWatch = null;
                     SaveToFile();
@@ -181,14 +208,21 @@ namespace SkyCoopClient
         {
             if (s_Active)
             {
-                SkyCoop.Logger.Log(ConsoleColor.Cyan, $"[GearSpawnsRipper] Saving gears, is game paused? {GameManager.m_IsPaused}");
+                SkyCoop.Logger.Log(ConsoleColor.Cyan, $"[GearSpawnsRipper] Saving, is game paused? {GameManager.m_IsPaused}");
                 DataStr.SceneLootSpawns SceneData = new DataStr.SceneLootSpawns();
+                SceneData.SceneName = ModMain.GetCurrentSceneName();
+
                 SceneData.PrefabSpawns = new List<DataStr.PrefabSpawnData>();
                 SceneData.RandomSpawnObjects = new List<DataStr.RandomSpawnObjectData>();
                 SceneData.LooseGearSpawns = new List<DataStr.LooseGearSpawn>();
-                SceneData.SceneName = ModMain.GetCurrentSceneName();
                 SceneData.RadialSpawns = new List<DataStr.RadialObjectSpawnerData>();
                 SceneData.SpawnGearVariants = new List<DataStr.SpawnGearVariantData>();
+
+                DataStr.SceneAnimalSpawns SceneDataAnimals = new SceneAnimalSpawns();
+                SceneDataAnimals.SceneName = ModMain.GetCurrentSceneName();
+
+                SceneDataAnimals.Spawns = new List<SpawnRegionData>();
+                SceneDataAnimals.RandomSpawnObjects = new List<RandomAnimalSpawnObjectData>();
 
                 List<GameObject> GearsToIgnore = new List<GameObject>();
 
@@ -204,7 +238,10 @@ namespace SkyCoopClient
                 foreach (RandomSpawnObject RSO in UnityEngine.Object.FindObjectsOfType<RandomSpawnObject>(true))
                 {
                     List<GameObject> BelongToRadial = null;
-                    RandomSpawnObjectData Data = RSO.GetData(out BelongToRadial);
+                    RandomSpawnObjectData Data = null;
+                    RandomAnimalSpawnObjectData DataAnimals = null;
+
+                    RSO.GetData(out BelongToRadial, out Data, out DataAnimals);
 
                     if(BelongToRadial != null && BelongToRadial.Count > 0)
                     {
@@ -214,6 +251,18 @@ namespace SkyCoopClient
                     if(Data != null)
                     {
                         SceneData.RandomSpawnObjects.Add(Data);
+                    }
+                    if (DataAnimals != null)
+                    {
+                        SceneDataAnimals.RandomSpawnObjects.Add(DataAnimals);
+                    }
+                }
+
+                foreach (SpawnRegion Spawn in UnityEngine.Object.FindObjectsOfType<SpawnRegion>(true))
+                {
+                    if (!Spawn.m_ControlledByRandomSpawner && !GearsToIgnore.Contains(Spawn.gameObject))
+                    {
+                        SceneDataAnimals.Spawns.Add(Spawn.GetData());
                     }
                 }
 
@@ -297,6 +346,11 @@ namespace SkyCoopClient
                                 continue;
                             }
 
+                            if (!Gear.gameObject.activeSelf) // Попытка убрать те гиры что изначално всегда неактивны.
+                            {
+                                continue;
+                            }
+
                             DataStr.LooseGearSpawn LooseGear = new LooseGearSpawn();
 
                             LooseGear.GearName = FixName(Gear.name);
@@ -343,16 +397,25 @@ namespace SkyCoopClient
                 }
 
                 s_ScenesLootSpawns.Scenes.Add(SceneData);
+
+                if(SceneDataAnimals.Spawns.Count > 0 || SceneDataAnimals.RandomSpawnObjects.Count > 0)
+                {
+                    s_ScenesAnimalSpawns.Scenes.Add(SceneDataAnimals);
+                }
+                
                 SkyCoop.Logger.Log(ConsoleColor.Cyan, $"[GearSpawnsRipper] Scene {SceneData.SceneName} saved, {s_ScenesToSave.Count} Scenes left");
 
                 Next();
             }
         }
 
-        public static void SaveToFile()
+        public static void SaveGears()
         {
-            JsonSerializerOptions Options = new JsonSerializerOptions();
-            Options.WriteIndented = true;
+            JsonSerializerOptions Options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+            };
 
             DataStr.ScenesLootSpawns Old = FilesManager.GetGearsSpawnsData($"GearSpawns/{s_NameForGearsFiles}");
             DataStr.ScenesLootSpawns Combined = s_ScenesLootSpawns;
@@ -364,7 +427,7 @@ namespace SkyCoopClient
                     for (int i = 0; i < Old.Scenes.Count; i++)
                     {
                         DataStr.SceneLootSpawns OldScene = Old.Scenes[i];
-                        if(OldScene.SceneName == NewScene.SceneName)
+                        if (OldScene.SceneName == NewScene.SceneName)
                         {
                             Old.Scenes[i] = NewScene;
                             Found = true;
@@ -394,6 +457,62 @@ namespace SkyCoopClient
             {
                 SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file: {e.Message}");
             }
+        }
+
+        public static void SaveAnimals()
+        {
+            JsonSerializerOptions Options = new JsonSerializerOptions
+            {
+                WriteIndented = true,
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+            };
+
+            DataStr.ScenesAnimalSpawns Old = FilesManager.GetAnimalsSpawnsData($"WildlifeSpawns/{s_NameForGearsFiles}");
+            DataStr.ScenesAnimalSpawns Combined = s_ScenesAnimalSpawns;
+            if (Old != null)
+            {
+                foreach (DataStr.SceneAnimalSpawns NewScene in s_ScenesAnimalSpawns.Scenes)
+                {
+                    bool Found = false;
+                    for (int i = 0; i < Old.Scenes.Count; i++)
+                    {
+                        DataStr.SceneAnimalSpawns OldScene = Old.Scenes[i];
+                        if (OldScene.SceneName == NewScene.SceneName)
+                        {
+                            Old.Scenes[i] = NewScene;
+                            Found = true;
+                            break;
+                        }
+                    }
+                    if (!Found)
+                    {
+                        Old.Scenes.Add(NewScene);
+                    }
+                }
+                Combined = Old;
+            }
+            string JSON = JsonSerializer.Serialize<DataStr.ScenesAnimalSpawns>(Combined, Options);
+
+            if (!Directory.Exists($"{FilesManager.s_DataDirectory}/WildlifeSpawns"))
+            {
+                Directory.CreateDirectory($"{FilesManager.s_DataDirectory}/WildlifeSpawns");
+            }
+
+            try
+            {
+                File.WriteAllText($"{FilesManager.s_DataDirectory}/WildlifeSpawns/{s_NameForGearsFiles}", JSON);
+                return;
+            }
+            catch (Exception e)
+            {
+                SkyCoop.Logger.Log(ConsoleColor.Red, $"Cant save file: {e.Message}");
+            }
+        }
+
+        public static void SaveToFile()
+        {
+            SaveGears();
+            SaveAnimals();
         }
     }
 }

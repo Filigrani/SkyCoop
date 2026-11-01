@@ -1564,5 +1564,29 @@ namespace SkyCoopServer
                 }
             }
         }
+        public static void ClientAnimalControlReply(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                Vector3 Position = Reader.GetVector3();
+                Quaternion Rotation = Reader.GetQuaternion();
+                int AiState = Reader.GetInt();
+
+                SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
+                if (Scene != null)
+                {
+                    AnimalEntity Animal = null;
+                    if(Scene.m_Animals.TryGetValue(GUID, out Animal))
+                    {
+                        Animal.Moved(Position);
+                        Animal.Rotated(Rotation);
+                        Animal.m_AiState = AiState;
+                    }
+                }
+            }
+        }
     }
 }

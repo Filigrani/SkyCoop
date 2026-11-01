@@ -4,6 +4,7 @@ using System.IO;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
@@ -349,6 +350,10 @@ namespace SkyCoopServer
         public static DataStr.ScenesLootSpawns GetGearsSpawnsData(string Path)
         {
 
+            var options = new JsonSerializerOptions
+            {
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+            };
             string _Path = $"{s_DataDirectory}/{Path}";
             string JSON = "";
 
@@ -376,7 +381,44 @@ namespace SkyCoopServer
                 Logger.Log($"[FilesManager] File {_Path} is empty");
                 return null;
             }
-            return JsonSerializer.Deserialize<ScenesLootSpawns>(JSON);
+            return JsonSerializer.Deserialize<ScenesLootSpawns>(JSON, options);
+        }
+
+        public static DataStr.ScenesAnimalSpawns GetAnimalsSpawnsData(string Path)
+        {
+
+            var options = new JsonSerializerOptions
+            {
+                NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
+            };
+            string _Path = $"{s_DataDirectory}/{Path}";
+            string JSON = "";
+
+            Logger.Log($"[FilesManager] Loading file {_Path}");
+            if (File.Exists(_Path))
+            {
+                try
+                {
+                    JSON = File.ReadAllText(_Path);
+                }
+                catch (Exception e)
+                {
+                    Logger.Log($"[FilesManager] Failed to load {_Path}: {e.Message}");
+                    return null;
+                }
+            }
+            else
+            {
+                Logger.Log($"[FilesManager] File {_Path} not exist");
+                return null;
+            }
+
+            if (string.IsNullOrEmpty(JSON))
+            {
+                Logger.Log($"[FilesManager] File {_Path} is empty");
+                return null;
+            }
+            return JsonSerializer.Deserialize<ScenesAnimalSpawns>(JSON, options);
         }
 
         public static void SaveSceneToFile(SceneData.SaveData SaveData, Server ServerInstance)

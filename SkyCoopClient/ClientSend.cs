@@ -698,5 +698,17 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
+        public static void SendAnimalSync(string GUID, Vector3 Position, Quaternion Rotation, int AitState)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalControlReply);
+
+            writer.Put(GUID);
+            writer.Put(Position);
+            writer.Put(Rotation);
+            writer.Put(AitState);
+
+            SendToHost(writer);
+        }
     }
 }

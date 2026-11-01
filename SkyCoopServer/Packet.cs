@@ -102,6 +102,9 @@ namespace SkyCoopServer
             ClientIsWorking,
             ClientWaterSourceInteraction,
             ClientWaterSourceTakeWater,
+            ServerAnimalControlRequest,
+            ClientAnimalControlReply,
+            ServerAnimalRemoved,
         }
 
         public enum SquadResponce

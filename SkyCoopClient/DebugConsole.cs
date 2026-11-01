@@ -1,11 +1,16 @@
 ﻿using Il2Cpp;
 using Il2CppTLD.Gear;
+using Il2CppTLD.Scenes;
 using SkyCoop;
 using SkyCoopServer;
 using System.Text.Json;
 using UnityEngine;
 using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.ResourceLocations;
+using UnityEngine.SceneManagement;
 using static SkyCoopServer.DataStr;
+using Il2CppCollection = Il2CppSystem.Collections.Generic;
+using Il2CppTLD.AddressableAssets;
 
 namespace SkyCoopClient
 {
@@ -58,6 +63,7 @@ namespace SkyCoopClient
             uConsole.RegisterCommand("ripstop", new Action(RIPSTOP));
             uConsole.RegisterCommand("checksave", new Action(CheckSave));
             uConsole.RegisterCommand("ripnaratives", new Action(RIPNaratives));
+            uConsole.RegisterCommand("nextframe", new Action(NextFrame));
         }
 
         public static void GiveIlegalGear()
@@ -196,6 +202,11 @@ namespace SkyCoopClient
         public static void RemovePleaseWait()
         {
             MenuHook.RemovePleaseWait();
+        }
+
+        public static void NextFrame()
+        {
+            GameManager.m_UnpauseOneFrame = true;
         }
 
 

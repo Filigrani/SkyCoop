@@ -110,6 +110,7 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientIsWorking, ServerHandle.ClientIsWorking },
             { (int)Packet.Type.ClientWaterSourceInteraction, ServerHandle.ClientWaterSourceInteraction },
             { (int)Packet.Type.ClientWaterSourceTakeWater, ServerHandle.ClientWaterSourceTakeWater },
+            { (int)Packet.Type.ClientAnimalControlReply, ServerHandle.ClientAnimalControlReply },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

@@ -53,6 +53,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<CookingSlotVisual>();
+            ClassInjector.RegisterTypeInIl2Cpp<AnimalActor>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -3357,6 +3358,20 @@ namespace SkyCoop
                         }
                     }
                 }
+            }
+        }
+        public class AnimalActor : MonoBehaviour
+        {
+            public AnimalActor(IntPtr ptr) : base(ptr) { }
+
+            public Vector3 m_Position = Vector3.zero;
+            public Quaternion m_Rotation = Quaternion.identity;
+
+
+            void Update()
+            {
+                transform.position = Vector3.Lerp(transform.position, m_Position, Time.deltaTime * 16);
+                transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * 16);
             }
         }
     }

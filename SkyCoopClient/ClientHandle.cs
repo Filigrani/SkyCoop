@@ -1071,5 +1071,34 @@ namespace SkyCoop
                 GameAudioManager.PlayGUIError();
             }
         }
+
+        public static void ServerAnimalControlRequest(NetDataReader Reader)
+        {
+            string PrefabName = Reader.GetString();
+            string GUID = Reader.GetString();
+            string SpawnerGUID = Reader.GetString();
+            Vector3 Position = Reader.GetVector3Unity();
+            Quaternion Rotation = Reader.GetQuaternionUnity();
+            int AiState = Reader.GetInt();
+
+            AnimalsManager.HandleControlRequest(PrefabName, GUID, SpawnerGUID, Position, Rotation, AiState);
+        }
+        public static void ClientAnimalControlReply(NetDataReader Reader)
+        {
+            string PrefabName = Reader.GetString();
+            string GUID = Reader.GetString();
+            string SpawnerGUID = Reader.GetString();
+            Vector3 Position = Reader.GetVector3Unity();
+            Quaternion Rotation = Reader.GetQuaternionUnity();
+            int AiState = Reader.GetInt();
+
+            AnimalsManager.HandleSync(PrefabName, GUID, SpawnerGUID, Position, Rotation, AiState);
+        }
+        public static void ServerAnimalRemoved(NetDataReader Reader)
+        {
+            string GUID = Reader.GetString();
+
+            AnimalsManager.HandleRemove(GUID);
+        }
     }
 }

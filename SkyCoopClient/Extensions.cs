@@ -1,12 +1,10 @@
 ﻿using Harmony;
 using Il2Cpp;
-using Il2CppTLD.Gear;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
-using System.Numerics;
 using UnityEngine;
-using static Il2Cpp.Utils;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
 {
@@ -186,20 +184,29 @@ namespace SkyCoop
             return Data;
         }
 
-        public static DataStr.RandomSpawnObjectData GetData(this RandomSpawnObject Spawn, out List<GameObject> GearsToIgnore)
+        public static void GetData(this RandomSpawnObject Spawn, out List<GameObject> GearsToIgnore, out DataStr.RandomSpawnObjectData Data, out DataStr.RandomAnimalSpawnObjectData AnimalsData)
         {
             GearsToIgnore = new List<GameObject>();
 
-
-            DataStr.RandomSpawnObjectData Data = new DataStr.RandomSpawnObjectData();
+            Data = new DataStr.RandomSpawnObjectData();
             Data.Gears = new List<DataStr.GearSpawnElementData>();
-            Data.NumObjectsToSpawnPilgrim = Spawn.m_NumObjectsToEnablePilgrim;
-            Data.NumObjectsToSpawnVoyageur = Spawn.m_NumObjectsToEnableVoyageur;
-            Data.NumObjectsToSpawnStalker = Spawn.m_NumObjectsToEnableStalker;
-            Data.NumObjectsToSpawnInterloper = Spawn.m_NumObjectsToEnableInterloper;
+            Data.NumObjectsToSpawnPilgrim = Spawn.m_NumObjectsToEnableByLevel[3];
+            Data.NumObjectsToSpawnVoyageur = Spawn.m_NumObjectsToEnableByLevel[2];
+            Data.NumObjectsToSpawnStalker = Spawn.m_NumObjectsToEnableByLevel[1];
+            Data.NumObjectsToSpawnInterloper = Spawn.m_NumObjectsToEnableByLevel[0];
             Data.RerollAfterGameHours = Spawn.m_RerollAfterGameHours;
             Data.DisabledForXP = new List<string>();
             Data.EnabledForXP = new List<string>();
+
+            AnimalsData = new DataStr.RandomAnimalSpawnObjectData();
+            AnimalsData.SpawnRegions = new List<AnimalSpawnElementData>();
+            AnimalsData.NumObjectsToSpawnPilgrim = Spawn.m_NumObjectsToEnableByLevel[3];
+            AnimalsData.NumObjectsToSpawnVoyageur = Spawn.m_NumObjectsToEnableByLevel[2];
+            AnimalsData.NumObjectsToSpawnStalker = Spawn.m_NumObjectsToEnableByLevel[1];
+            AnimalsData.NumObjectsToSpawnInterloper = Spawn.m_NumObjectsToEnableByLevel[0];
+            AnimalsData.RerollAfterGameHours = Spawn.m_RerollAfterGameHours;
+            AnimalsData.DisabledForXP = new List<string>();
+            AnimalsData.EnabledForXP = new List<string>();
 
             Data.GUID = "";
             ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();
@@ -239,58 +246,77 @@ namespace SkyCoop
                 }
             }
 
+            AnimalsData.DisabledForXP = new List<string>(Data.DisabledForXP);
+            AnimalsData.EnabledForXP = new List<string>(Data.EnabledForXP);
+            AnimalsData.GUID = Data.GUID;
+
             for (int i = 0; i < Spawn.m_ObjectList.Count; i++)
             {
                 GameObject Object = Spawn.m_ObjectList[i];
                 int Weight = Spawn.m_Weights[i];
-                if (Object && Object.name.StartsWith("GEAR_"))
+                if (Object)
                 {
-                    DataStr.GearSpawnElementData ElementData = new DataStr.GearSpawnElementData();
-                    ElementData.GearName = GearSpawnsRipper.FixName(Object.name);
-                    ElementData.SpawnWeight = Weight;
-                    ElementData.Position = new DataStr.Vector3JSON(Object.transform.position.x, Object.transform.position.y, Object.transform.position.z);
-                    ElementData.Rotation = new DataStr.QuaternionJSON(Object.transform.rotation.x, Object.transform.rotation.y, Object.transform.rotation.z, Object.transform.rotation.w);
-                    ElementData.Chance = 100f;
-                    GearItem Gear = Object.gameObject.GetComponent<GearItem>();
-                    if (Gear)
+                    if (Object.name.StartsWith("GEAR_"))
                     {
-                        ElementData.Chance = Gear.m_SpawnChance;
-                    }
-
-                    ElementData.EnabledForXP = new List<string>();
-                    ElementData.DisabledForXP = new List<string>();
-
-                    EnableObjectForXPMode EnableForXP = Object.GetComponent<EnableObjectForXPMode>();
-
-                    if (EnableForXP)
-                    {
-                        foreach (ExperienceModeType XP in EnableForXP.m_XPModesToEnable)
+                        DataStr.GearSpawnElementData ElementData = new DataStr.GearSpawnElementData();
+                        ElementData.GearName = GearSpawnsRipper.FixName(Object.name);
+                        ElementData.SpawnWeight = Weight;
+                        ElementData.Position = new DataStr.Vector3JSON(Object.transform.position.x, Object.transform.position.y, Object.transform.position.z);
+                        ElementData.Rotation = new DataStr.QuaternionJSON(Object.transform.rotation.x, Object.transform.rotation.y, Object.transform.rotation.z, Object.transform.rotation.w);
+                        ElementData.Chance = 100f;
+                        GearItem Gear = Object.gameObject.GetComponent<GearItem>();
+                        if (Gear)
                         {
-                            ElementData.EnabledForXP.Add(XP.ToString());
+                            ElementData.Chance = Gear.m_SpawnChance;
+                        }
+
+                        ElementData.EnabledForXP = new List<string>();
+                        ElementData.DisabledForXP = new List<string>();
+
+                        EnableObjectForXPMode EnableForXP = Object.GetComponent<EnableObjectForXPMode>();
+
+                        if (EnableForXP)
+                        {
+                            foreach (ExperienceModeType XP in EnableForXP.m_XPModesToEnable)
+                            {
+                                ElementData.EnabledForXP.Add(XP.ToString());
+                            }
+                        }
+
+                        DisableObjectForXPMode DisableForXP = Object.GetComponent<DisableObjectForXPMode>();
+
+                        if (DisableForXP)
+                        {
+                            foreach (ExperienceModeType XP in DisableForXP.m_XPModesToDisable)
+                            {
+                                ElementData.DisabledForXP.Add(XP.ToString());
+                            }
+                        }
+
+                        GearsToIgnore.Add(Object);
+                        Data.Gears.Add(ElementData);
+                    }else
+                    {
+                        SpawnRegion[] Spawners = Object.GetComponentsInChildren<SpawnRegion>(true);
+                        foreach (SpawnRegion Spawner in Spawners)
+                        {
+                            DataStr.AnimalSpawnElementData ElementData = new DataStr.AnimalSpawnElementData();
+                            ElementData.Spawn = Spawner.GetData();
+                            ElementData.SpawnWeight = Weight;
+                            AnimalsData.SpawnRegions.Add(ElementData);
+                            GearsToIgnore.Add(Spawner.gameObject);
                         }
                     }
-
-                    DisableObjectForXPMode DisableForXP = Object.GetComponent<DisableObjectForXPMode>();
-
-                    if (DisableForXP)
-                    {
-                        foreach (ExperienceModeType XP in DisableForXP.m_XPModesToDisable)
-                        {
-                            ElementData.DisabledForXP.Add(XP.ToString());
-                        }
-                    }
-
-                    GearsToIgnore.Add(Object);
-                    Data.Gears.Add(ElementData);
                 }
             }
-
-            if (Data.Gears.Count == 0)
+            if(Data.Gears.Count == 0)
             {
-                return null;
+                Data = null;
             }
-
-            return Data;
+            if(AnimalsData.SpawnRegions.Count == 0)
+            {
+                AnimalsData = null;
+            }
         }
 
         public static DataStr.RadialObjectSpawnerData GetData(this RadialObjectSpawner Spawn)
@@ -429,6 +455,65 @@ namespace SkyCoop
                 return null;
             }
 
+            return Data;
+        }
+
+        public static DataStr.SpawnRegionData GetData(this SpawnRegion Spawn)
+        {
+            //string Log = Spawn.gameObject.name;
+
+            //Transform Parent = Spawn.gameObject.transform.parent;
+            //while (Parent != null)
+            //{
+            //    Log = $"{Parent.name}/{Log}";
+            //    Parent = Parent.parent;
+            //}
+            //SkyCoop.Logger.Log(ConsoleColor.Green, $"Spawner location {Log}");
+            DataStr.SpawnRegionData Data = new SpawnRegionData();
+            Data.Animals = new List<SpawnRegionAnimal>();
+
+            foreach (var item in Spawn.m_SpawnList)
+            {
+                SpawnRegionAnimal Animal = new SpawnRegionAnimal();
+
+                Animal.Weight = item.m_Weight;
+                Animal.NormalPrefab = "";
+                if (item.m_Normal != null && !string.IsNullOrEmpty(item.m_Normal.AssetGUID))
+                {
+                    item.m_Normal.LoadAssetAsync().WaitForCompletion();
+                    Animal.NormalPrefab = item.m_Normal.Asset.name;
+                }
+
+                Animal.AuroraPrefab = "";
+                if (item.m_Aurora != null && !string.IsNullOrEmpty(item.m_Aurora.AssetGUID))
+                {
+                    item.m_Aurora.LoadAssetAsync().WaitForCompletion();
+                    Animal.AuroraPrefab = item.m_Aurora.Asset.name;
+                }
+
+                Data.Animals.Add(Animal);
+            }
+            foreach (AreaMarkup item in Spawn.gameObject.GetComponentsInChildren<AreaMarkup>(true))
+            {
+                Data.AddPoint(item.transform.position.x, item.transform.position.y, item.transform.position.z);
+            }
+            Data.ChanceActive = Spawn.m_ChanceActive;
+            Data.CanSpawnInBlizzard = Spawn.m_CanSpawnInBlizzard;
+            Data.HoursBetweenRespawns = Spawn.m_NumHoursBetweenRespawns;
+            Data.Radius = Spawn.m_Radius;
+            Data.AddSpawnsAmount("Pilgrim", Spawn.m_MaxSimultaneousSpawnsDayPilgrim, Spawn.m_MaxSimultaneousSpawnsNightPilgrim);
+            Data.AddSpawnsAmount("Voyageur", Spawn.m_MaxSimultaneousSpawnsDayVoyageur, Spawn.m_MaxSimultaneousSpawnsNightVoyageur);
+            Data.AddSpawnsAmount("Stalker", Spawn.m_MaxSimultaneousSpawnsDayStalker, Spawn.m_MaxSimultaneousSpawnsNightStalker);
+            Data.AddSpawnsAmount("Interloper", Spawn.m_MaxSimultaneousSpawnsDayInterloper, Spawn.m_MaxSimultaneousSpawnsNightInterloper);
+
+            Data.GUID = "";
+            ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();
+            if (Obj)
+            {
+                Data.GUID = Obj.GetPDID();
+            }
+
+            Data.Position = new Vector3JSON(Spawn.gameObject.transform.position.x, Spawn.gameObject.transform.position.y, Spawn.gameObject.transform.position.z);
             return Data;
         }
     }
