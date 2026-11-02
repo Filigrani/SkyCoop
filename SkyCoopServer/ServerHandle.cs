@@ -1574,6 +1574,12 @@ namespace SkyCoopServer
                 Vector3 Position = Reader.GetVector3();
                 Quaternion Rotation = Reader.GetQuaternion();
                 int AiState = Reader.GetInt();
+                AnimatorData AnimatorData = Reader.GetAnimatorData();
+                bool IsBleeding = Reader.GetBool();
+                float Health = Reader.GetFloat();
+                float BleedingOutMinutes = Reader.GetFloat();
+                int PreviousState = Reader.GetInt();
+                Vector3 Velocity = Reader.GetVector3();
 
                 SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
                 if (Scene != null)
@@ -1581,9 +1587,22 @@ namespace SkyCoopServer
                     AnimalEntity Animal = null;
                     if(Scene.m_Animals.TryGetValue(GUID, out Animal))
                     {
-                        Animal.Moved(Position);
-                        Animal.Rotated(Rotation);
-                        Animal.m_AiState = AiState;
+                        if(Animal.m_Owner == Player.m_PlayerID)
+                        {
+                            Animal.Moved(Position, Velocity);
+                            Animal.Rotated(Rotation);
+                            Animal.m_AiState = AiState;
+                            Animal.m_AiStatePrevious = PreviousState;
+                            Animal.m_AnimatorData = AnimatorData;
+                            float PreviousHealth = Animal.m_Health;
+                            Animal.m_Health = Health;
+                            if (PreviousHealth != 0 && Animal.m_Health <= 0)
+                            {
+                                Animal.Death(ServerInstance, Scene);
+                            }
+                            Animal.m_IsBleeding = IsBleeding;
+                            Animal.m_BleedingMinutes = BleedingOutMinutes;
+                        }
                     }
                 }
             }

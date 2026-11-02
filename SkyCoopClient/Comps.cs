@@ -7,11 +7,13 @@ using Il2CppMS.Internal.Xml.XPath;
 using Il2CppRewired;
 using Il2CppTLD.Cooking;
 using Il2CppTLD.Interactions;
+using Il2CppTLD.PDID;
 using Il2CppTMPro;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
 using UnityEngine.UIElements;
+using static Il2Cpp.Utils;
 using static SkyCoopServer.DataStr;
 
 namespace SkyCoop
@@ -54,6 +56,7 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<CookingSlotVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<AnimalActor>();
+            ClassInjector.RegisterTypeInIl2Cpp<BaseAiHook>();
         }
 
         public class UiButtonPressHook : MonoBehaviour
@@ -3366,12 +3369,152 @@ namespace SkyCoop
 
             public Vector3 m_Position = Vector3.zero;
             public Quaternion m_Rotation = Quaternion.identity;
+            public Vector3 m_Velocity = Vector3.zero;
+            public Animator m_Animator = null;
+            public BloodTrail m_BloodTrail = null;
+            public float m_NoResponceTime = 0;
+            public int m_AiState = 0;
+            public int m_AiStatePrevious = 0;
+
+
+            public string m_EnterAttackModeAudio = "";
+            public string m_EnterFleeModeAudio = "";
+            public string m_HoldGroundAudio = "";
+            public string m_IdleAudio = "";
+            public string m_WanderAudio = "";
+            public string m_HideAndSeekAudio = "";
+            public string m_JoinPackAudio = "";
+            public string m_SleepingAudio = "";
+            public string m_EnterStalkingAudio = "";
+
+            public void SetupAudio(BaseAi Ai)
+            {
+                if (Ai)
+                {
+                    m_EnterAttackModeAudio = Ai.m_EnterAttackModeAudio;
+                    m_EnterFleeModeAudio = Ai.m_EnterFleeModeAudio;
+                    m_HoldGroundAudio = Ai.m_HoldGroundAudio;
+                    m_IdleAudio = Ai.m_IdleAudio;
+                    m_WanderAudio = Ai.m_WanderAudio;
+                    m_HideAndSeekAudio = Ai.m_HideAndSeekAudio;
+                    m_JoinPackAudio = Ai.m_JoinPackAudio;
+                    m_SleepingAudio = Ai.m_SleepingAudio;
+                }
+            }
+
+            void Update()
+            {
+                float t = 1f - Mathf.Exp(-16f * Time.deltaTime);
+                Vector3 predicted = m_Position + m_Velocity * m_NoResponceTime;
+                transform.position = Vector3.Lerp(transform.position, predicted, t);
+                transform.rotation = Quaternion.Slerp(transform.rotation, m_Rotation, t);
+
+                m_NoResponceTime += Time.deltaTime;
+
+                if(m_NoResponceTime > 3) // Сервер перестал отпарвлять данные из-за того что игрок далеко.
+                {
+                    AnimalsManager.HandleRemove(gameObject, "(timeout)");
+                }
+            }
+
+            public void ResetNoResponceTimer()
+            {
+                m_NoResponceTime = 0;
+            }
+
+            public void PlayAudio(string AudioName)
+            {
+                if (!string.IsNullOrEmpty(AudioName))
+                {
+                    GameAudioManager.Play3DSound(AudioName, gameObject);
+                }
+            }
+
+            public void SetState(int NewState)
+            {
+                if(NewState != m_AiState)
+                {
+                    m_AiStatePrevious = m_AiState;
+                    m_AiState = NewState;
+
+                    GameAudioManager.StopAllSoundsFromGameObject(base.gameObject);
+                    switch ((AiMode)m_AiState)
+                    {
+                        case AiMode.Attack:
+                            PlayAudio(m_EnterAttackModeAudio);
+                            break;
+                        case AiMode.Flee:
+                            PlayAudio(m_EnterFleeModeAudio);
+                            break;
+                        case AiMode.HoldGround:
+                            PlayAudio(m_HoldGroundAudio);
+                            break;
+                        case AiMode.Idle:
+                            PlayAudio(m_IdleAudio);
+                            break;
+                        case AiMode.Sleep:
+                            PlayAudio(m_SleepingAudio);
+                            break;
+                        case AiMode.Stalking:
+                            PlayAudio(m_EnterStalkingAudio);
+                            break;
+                        case AiMode.Wander:
+                            PlayAudio(m_WanderAudio);
+                            break;
+                        case AiMode.HideAndSeek:
+                            PlayAudio(m_HideAndSeekAudio);
+                            break;
+                        case AiMode.JoinPack:
+                            PlayAudio(m_JoinPackAudio);
+                            break;
+                    }
+                }
+            }
+        }
+
+        public class BaseAiHook : MonoBehaviour
+        {
+            public BaseAiHook(IntPtr ptr) : base(ptr) { }
+
+            public BaseAi m_Ai;
+            public string m_GUID = "";
+            public float m_NextUpdate = 0;
+
+            public float c_UpdateRate = 0.3f;
+            public float m_NoResponceTime = 0;
 
 
             void Update()
             {
-                transform.position = Vector3.Lerp(transform.position, m_Position, Time.deltaTime * 16);
-                transform.rotation = Quaternion.Lerp(transform.rotation, m_Rotation, Time.deltaTime * 16);
+                if (m_Ai)
+                {
+                    if(Time.time > m_NextUpdate)
+                    {
+                        m_NextUpdate = Time.time + c_UpdateRate;
+
+                        float Health = m_Ai.m_CurrentMode == AiMode.Dead ? 0 : m_Ai.m_CurrentHP;
+
+                        ClientSend.SendAnimalSync(m_GUID, transform.position, transform.rotation, (int)m_Ai.GetAiMode(), m_Ai.m_Animator, m_Ai.IsBleedingOut(), Health, m_Ai.m_ElapsedBleedingOutMinutes, (int)m_Ai.GetPreviousAiMode(), m_Ai.GetVelocity());
+                    }
+                    if(m_Ai.m_CurrentHP <= 0 || m_Ai.m_CurrentMode == AiMode.Dead)
+                    {
+                        if (m_Ai.m_BodyHarvest)
+                        {
+                            m_Ai.m_BodyHarvest.enabled = false;
+                        }
+                    }
+                    m_NoResponceTime += Time.deltaTime;
+
+                    if (m_NoResponceTime > 3) // Сервер перестал запрашивать контроль.
+                    {
+                        AnimalsManager.HandleRemove(gameObject, "(timeout)");
+                    }
+                }
+            }
+
+            public void ResetNoResponceTimer()
+            {
+                m_NoResponceTime = 0;
             }
         }
     }

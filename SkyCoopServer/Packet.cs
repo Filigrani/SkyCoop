@@ -1,6 +1,8 @@
-﻿using System.Numerics;
+﻿using LiteNetLib.Utils;
+using System.Numerics;
+using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
-using LiteNetLib.Utils;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -123,7 +125,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "beta7";
+        public const string c_Key = "beta8";
 
         public enum TypeVoice
         {
@@ -636,6 +638,61 @@ namespace SkyCoopServer
             Writer.Put(Data.m_NormalizedTime);
             Writer.Put(Data.m_WindDuration);
             Writer.Put(Data.m_WindElapsedHours);
+        }
+
+        public static DataStr.AnimatorData GetAnimatorData(this NetDataReader Reader)
+        {
+            DataStr.AnimatorData Data = new DataStr.AnimatorData();
+
+            int Count = Reader.GetInt();
+            for (int i = 0; i < Count; i++)
+            {
+                int Type = Reader.GetInt();
+                int Hash = Reader.GetInt();
+                switch (Type)
+                {
+                    case 3:
+                        Data.m_Parameters.Add(new AnimatorData.ParameterData(Reader.GetInt(), Hash));
+                        break;
+                    case 1:
+                        Data.m_Parameters.Add(new AnimatorData.ParameterData(Reader.GetFloat(), Hash));
+                        break;
+                    case 4:
+                        Data.m_Parameters.Add(new AnimatorData.ParameterData(Reader.GetBool(), Hash));
+                        break;
+
+                    default:
+                        break;
+                }
+            }
+
+            return Data;
+        }
+
+        public static void Put(this NetDataWriter Writer, AnimatorData AnimatorData)
+        {
+            Writer.Put(AnimatorData.m_Parameters.Count);
+            foreach (AnimatorData.ParameterData Parameter in AnimatorData.m_Parameters)
+            {
+                Writer.Put(Parameter.m_Type);
+                Writer.Put(Parameter.m_Hash);
+                switch (Parameter.m_Type)
+                {
+                    // Нумерация m_Type такая всратая ибо такая в AnimatorControllerParameterType у юнити
+                    case 3:
+                        Writer.Put(Parameter.m_Int);
+                        break;
+                    case 1:
+                        Writer.Put(Parameter.m_Float);
+                        break;
+                    case 4:
+                        Writer.Put(Parameter.m_Bool);
+                        break;
+
+                    default:
+                        break;
+                }
+            }
         }
     }
 }

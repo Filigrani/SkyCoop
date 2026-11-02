@@ -31,6 +31,31 @@ namespace SkyCoop
             Writer.Put(v2.y);
         }
 
+        // делаем PutAnimator а не просто Put через оверлоад, потому что, почему то Animator может быть интерпритирован в байт уже в юнити
+        public static void PutAnimator(this NetDataWriter Writer, Animator Animator)
+        {
+            AnimatorData AnimatorData = new DataStr.AnimatorData();
+            for (int i = 0; i < Animator.parameterCount; i++)
+            {
+                AnimatorControllerParameter Parameter = Animator.parameters[i];
+                switch (Parameter.m_Type)
+                {
+                    case AnimatorControllerParameterType.Float:
+                        AnimatorData.m_Parameters.Add(new AnimatorData.ParameterData(Animator.GetFloat(Parameter.nameHash), Parameter.nameHash));
+                        break;
+                    case AnimatorControllerParameterType.Int:
+                        AnimatorData.m_Parameters.Add(new AnimatorData.ParameterData(Animator.GetInteger(Parameter.nameHash), Parameter.nameHash));
+                        break;
+                    case AnimatorControllerParameterType.Bool:
+                        AnimatorData.m_Parameters.Add(new AnimatorData.ParameterData(Animator.GetBool(Parameter.nameHash), Parameter.nameHash));
+                        break;
+                    default:
+                        break;
+                }
+            }
+            Writer.Put(AnimatorData);
+        }
+
         public static UnityEngine.Vector3 GetVector3Unity(this NetDataReader Reader)
         {
             UnityEngine.Vector3 v3 = new UnityEngine.Vector3(Reader.GetFloat(), Reader.GetFloat(), Reader.GetFloat());
@@ -300,6 +325,11 @@ namespace SkyCoop
                         SpawnRegion[] Spawners = Object.GetComponentsInChildren<SpawnRegion>(true);
                         foreach (SpawnRegion Spawner in Spawners)
                         {
+                            if (Spawner.GetComponent<MissionObjectIdentifier>()) // такие вещи вроде для челенджей, пока хз как с этим работать
+                            {
+                                continue;
+                            }
+                            
                             DataStr.AnimalSpawnElementData ElementData = new DataStr.AnimalSpawnElementData();
                             ElementData.Spawn = Spawner.GetData();
                             ElementData.SpawnWeight = Weight;
@@ -497,14 +527,24 @@ namespace SkyCoop
             {
                 Data.AddPoint(item.transform.position.x, item.transform.position.y, item.transform.position.z);
             }
+            if(Data.Points == null || Data.Points.Count == 0)
+            {
+                Data.AddPoint(Spawn.gameObject.transform.position.x, Spawn.gameObject.transform.position.y, Spawn.gameObject.transform.position.z);
+            }
             Data.ChanceActive = Spawn.m_ChanceActive;
             Data.CanSpawnInBlizzard = Spawn.m_CanSpawnInBlizzard;
-            Data.HoursBetweenRespawns = Spawn.m_NumHoursBetweenRespawns;
+
+
+            SpawnRegion.DifficultyProperties InterloperDifficulty = Spawn.m_DifficultySettings.ElementAt(0);
+            SpawnRegion.DifficultyProperties StalkerDifficulty = Spawn.m_DifficultySettings.ElementAt(1);
+            SpawnRegion.DifficultyProperties VoyageurDifficulty = Spawn.m_DifficultySettings.ElementAt(2);
+            SpawnRegion.DifficultyProperties PiligrimDifficulty = Spawn.m_DifficultySettings.ElementAt(3);
+
             Data.Radius = Spawn.m_Radius;
-            Data.AddSpawnsAmount("Pilgrim", Spawn.m_MaxSimultaneousSpawnsDayPilgrim, Spawn.m_MaxSimultaneousSpawnsNightPilgrim);
-            Data.AddSpawnsAmount("Voyageur", Spawn.m_MaxSimultaneousSpawnsDayVoyageur, Spawn.m_MaxSimultaneousSpawnsNightVoyageur);
-            Data.AddSpawnsAmount("Stalker", Spawn.m_MaxSimultaneousSpawnsDayStalker, Spawn.m_MaxSimultaneousSpawnsNightStalker);
-            Data.AddSpawnsAmount("Interloper", Spawn.m_MaxSimultaneousSpawnsDayInterloper, Spawn.m_MaxSimultaneousSpawnsNightInterloper);
+            Data.AddDifficulty("Pilgrim", PiligrimDifficulty.m_MaxSimultaneousSpawnsDay, PiligrimDifficulty.m_MaxSimultaneousSpawnsNight, 24f / PiligrimDifficulty.m_MaxRespawnsPerDay);
+            Data.AddDifficulty("Voyageur", VoyageurDifficulty.m_MaxSimultaneousSpawnsDay, VoyageurDifficulty.m_MaxSimultaneousSpawnsNight, 24f / VoyageurDifficulty.m_MaxRespawnsPerDay);
+            Data.AddDifficulty("Stalker", StalkerDifficulty.m_MaxSimultaneousSpawnsDay, StalkerDifficulty.m_MaxSimultaneousSpawnsNight, 24f / StalkerDifficulty.m_MaxRespawnsPerDay);
+            Data.AddDifficulty("Interloper", InterloperDifficulty.m_MaxSimultaneousSpawnsDay, InterloperDifficulty.m_MaxSimultaneousSpawnsNight, 24f / InterloperDifficulty.m_MaxRespawnsPerDay);
 
             Data.GUID = "";
             ObjectGuid Obj = Spawn.gameObject.GetComponent<ObjectGuid>();

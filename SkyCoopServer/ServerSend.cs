@@ -4,6 +4,7 @@ using Microsoft.VisualBasic;
 using System;
 using System.Numerics;
 using static SkyCoopServer.DataStr;
+using static SkyCoopServer.DataStr.DangerCircleData;
 namespace SkyCoopServer
 {
     public class ServerSend
@@ -1268,7 +1269,7 @@ namespace SkyCoopServer
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
 
-        public static void SendAnimalControlRequest(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, int AiState)
+        public static void SendAnimalControlRequest(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, int AiState, bool IsBleeding, float Health, float BleedingMinutes, int PreviousState, Vector3 SpawnPos)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ServerAnimalControlRequest);
@@ -1279,10 +1280,15 @@ namespace SkyCoopServer
             writer.Put(Position);
             writer.Put(Rotation);
             writer.Put(AiState);
+            writer.Put(IsBleeding);
+            writer.Put(Health);
+            writer.Put(BleedingMinutes);
+            writer.Put(PreviousState);
+            writer.Put(SpawnPos);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
-        public static void SendAnimalSync(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, int AiState)
+        public static void SendAnimalSync(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, AnimatorData AnimatorData, bool IsBleeding, int AiState, int AiStatePrevious, Vector3 Velocity)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientAnimalControlReply);
@@ -1292,7 +1298,11 @@ namespace SkyCoopServer
             writer.Put(SpawnerGUID);
             writer.Put(Position);
             writer.Put(Rotation);
+            writer.Put(AnimatorData);
+            writer.Put(IsBleeding);
             writer.Put(AiState);
+            writer.Put(AiStatePrevious);
+            writer.Put(Velocity);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

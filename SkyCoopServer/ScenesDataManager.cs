@@ -1026,8 +1026,8 @@ namespace SkyCoopServer
                             PlayerData Player = m_ServerInstance.GetPlayerDataByNetPeer(Peer);
                             if (Player.m_Scene == Data.m_SceneName)
                             {
-                                SpawnRegionAmountByDifficulty Amount = Spawner.m_Data.GetSpawnsAmount(m_ServerInstance.m_Config.m_ExperienceMode);
-                                int Num = Amount.Day;
+                                SpawnRegionDifficultySetting Difficulty = Spawner.m_Data.GetDifficulty(m_ServerInstance.m_Config.m_ExperienceMode);
+                                int Num = Difficulty.MaxDay;
                                 if (m_ServerInstance.m_Timeline != null)
                                 {
                                     //TODO: Тут надо бы проверить что ночь.

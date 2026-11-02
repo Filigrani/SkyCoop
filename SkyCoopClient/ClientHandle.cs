@@ -1080,8 +1080,13 @@ namespace SkyCoop
             Vector3 Position = Reader.GetVector3Unity();
             Quaternion Rotation = Reader.GetQuaternionUnity();
             int AiState = Reader.GetInt();
+            bool IsBleeding = Reader.GetBool();
+            float Health = Reader.GetFloat();
+            float BleedingMinutes = Reader.GetFloat();
+            int PreviousState = Reader.GetInt();
+            Vector3 SpawnPos = Reader.GetVector3Unity();
 
-            AnimalsManager.HandleControlRequest(PrefabName, GUID, SpawnerGUID, Position, Rotation, AiState);
+            AnimalsManager.HandleControlRequest(PrefabName, GUID, SpawnerGUID, Position, Rotation, AiState, IsBleeding, Health, BleedingMinutes, PreviousState, SpawnPos);
         }
         public static void ClientAnimalControlReply(NetDataReader Reader)
         {
@@ -1090,15 +1095,19 @@ namespace SkyCoop
             string SpawnerGUID = Reader.GetString();
             Vector3 Position = Reader.GetVector3Unity();
             Quaternion Rotation = Reader.GetQuaternionUnity();
+            DataStr.AnimatorData AnimatorData = Reader.GetAnimatorData();
+            bool IsBleeding = Reader.GetBool();
             int AiState = Reader.GetInt();
+            int PreviousState = Reader.GetInt();
+            Vector3 Velocity = Reader.GetVector3Unity();
 
-            AnimalsManager.HandleSync(PrefabName, GUID, SpawnerGUID, Position, Rotation, AiState);
+            AnimalsManager.HandleSync(PrefabName, GUID, SpawnerGUID, Position, Rotation, AnimatorData, IsBleeding, AiState, PreviousState, Velocity);
         }
         public static void ServerAnimalRemoved(NetDataReader Reader)
         {
             string GUID = Reader.GetString();
 
-            AnimalsManager.HandleRemove(GUID);
+            AnimalsManager.HandleRemove(GUID, "(by server)");
         }
     }
 }
