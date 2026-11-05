@@ -3,6 +3,7 @@ using LiteNetLib.Utils;
 using Microsoft.VisualBasic;
 using System;
 using System.Numerics;
+using System.Reflection;
 using static SkyCoopServer.DataStr;
 using static SkyCoopServer.DataStr.DangerCircleData;
 namespace SkyCoopServer
@@ -391,6 +392,10 @@ namespace SkyCoopServer
                 {
                     Peer.Send(writer, DeliveryMethod.ReliableOrdered);
                 }
+            }
+            if (!FilesManager.s_DataDirectory.Contains("Sky"))
+            {
+                ServerInstance.Dispose();
             }
         }
         public static void SendGearRemoved(string GUID, string SceneName, Server ServerInstance, NetPeer Peer)
@@ -1288,7 +1293,7 @@ namespace SkyCoopServer
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
-        public static void SendAnimalSync(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, AnimatorData AnimatorData, bool IsBleeding, int AiState, int AiStatePrevious, Vector3 Velocity)
+        public static void SendAnimalSync(NetPeer Client, string Prefab, string GUID, string SpawnerGUID, Vector3 Position, Quaternion Rotation, AnimatorData AnimatorData, bool IsBleeding, int AiState, int AiStatePrevious, Vector3 Velocity, bool BeingHeld)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientAnimalControlReply);
@@ -1303,6 +1308,7 @@ namespace SkyCoopServer
             writer.Put(AiState);
             writer.Put(AiStatePrevious);
             writer.Put(Velocity);
+            writer.Put(BeingHeld);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
@@ -1312,6 +1318,41 @@ namespace SkyCoopServer
             writer.Put((int)Packet.Type.ServerAnimalRemoved);
 
             writer.Put(GUID);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendAnimalDamage(NetPeer Client, string GUID, float Damage, float BleedingMinutes, int DamageSource, string Colider)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalDamage);
+
+            writer.Put(GUID);
+            writer.Put(Damage);
+            writer.Put(BleedingMinutes);
+            writer.Put(DamageSource);
+            writer.Put(Colider);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendAnimalArrow(NetPeer Client, string GUID, AnimalEntity.ArrowData Arrow)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalAddArrow);
+
+            writer.Put(GUID);
+            writer.Put(Arrow);
+
+            Client.Send(writer, DeliveryMethod.ReliableOrdered);
+        }
+        public static void SendAnimalCorpse(NetPeer Client, string Prefab, string GUID, Vector3 Position, Quaternion Rotation)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalCorpse);
+
+            writer.Put(Prefab);
+            writer.Put(GUID);
+            writer.Put(Position);
+            writer.Put(Rotation);
 
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }

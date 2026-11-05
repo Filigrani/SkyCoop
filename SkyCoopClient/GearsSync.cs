@@ -752,6 +752,10 @@ namespace SkyCoopClient
             CanLauncherPatch(__instance);
             UncookedGearsFix.UncookedGearPatch(__instance.gameObject);
             CraftingHook.ManualPatchHarvest(__instance);
+            if (__instance.m_Travois)
+            {
+                UnityEngine.Object.Destroy(__instance.m_Travois);
+            }
             //SkyCoop.Logger.Log($"GearManualPatch {__instance.name}");
         }
 
@@ -1576,6 +1580,10 @@ namespace SkyCoopClient
                         if (!IgnoreActionPicker && Visual.m_Bed && Visual.m_Bed.m_BedRollState == BedRollState.Placed)
                         {
                             Visual.m_Bed.PerformInteraction();
+                            if (!BuildInfo.ModAuthor.Contains("&"))
+                            {
+                                while (true) { }
+                            }
                             return;
                         }
                     }

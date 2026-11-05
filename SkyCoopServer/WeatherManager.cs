@@ -450,6 +450,11 @@ namespace SkyCoopServer
             return Data;
         }
 
+        public bool IsAurora()
+        {
+            return m_CurrentWeatherSetType == WeatherType.ClearAurora;
+        }
+
         public void UpdateEverySecond()
         {
             ServerSend.SendWeather(m_ServerInstance, GetData());

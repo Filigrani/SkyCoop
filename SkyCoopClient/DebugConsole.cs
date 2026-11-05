@@ -221,5 +221,30 @@ namespace SkyCoopClient
                 }
             }
         }
+
+        [HarmonyLib.HarmonyPatch(typeof(ConsoleManager), "spawn_common")]
+        private static class ConsoleManager_spawn_common
+        {
+            private static bool Prefix(ConsoleManager __instance, string prefabName, float dist)
+            {
+                if (!ModMain.IsMultiplayer() || (ModMain.Client.m_IsReady && !ModMain.Client.m_Config.m_CheatsAllowed))
+                {
+                    return true;
+                }
+
+                if (Utils.IsZero(dist, 0.0001f))
+                {
+                    dist = 10f;
+                }
+                RaycastHit raycastHit;
+                if (!Physics.Raycast(GameManager.GetMainCamera().transform.position + GameManager.GetMainCamera().transform.forward * dist + 1000f * Vector3.up, -Vector3.up, out raycastHit, float.PositiveInfinity, Utils.m_PhysicalCollisionLayerMask))
+                {
+                    return false;
+                }
+                ClientSend.SendAnimalSpawnCheat(prefabName, raycastHit.point);
+
+                return false;
+            }
+        }
     }
 }

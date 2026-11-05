@@ -2,6 +2,7 @@
 using LiteNetLib.Utils;
 using System;
 using System.Collections.Generic;
+using System.Reflection;
 using System.Text;
 using static SkyCoopServer.DataStr.PlayerData;
 
@@ -111,6 +112,10 @@ namespace SkyCoopServer
             { (int)Packet.Type.ClientWaterSourceInteraction, ServerHandle.ClientWaterSourceInteraction },
             { (int)Packet.Type.ClientWaterSourceTakeWater, ServerHandle.ClientWaterSourceTakeWater },
             { (int)Packet.Type.ClientAnimalControlReply, ServerHandle.ClientAnimalControlReply },
+            { (int)Packet.Type.ClientCheatSpawnAnimal, ServerHandle.ClientCheatSpawnAnimal },
+            { (int)Packet.Type.ClientAnimalDamage, ServerHandle.ClientAnimalDamage },
+            { (int)Packet.Type.ClientAnimalAddArrow, ServerHandle.ClientAnimalAddArrow },
+            { (int)Packet.Type.ClientRequestAnimalArrows, ServerHandle.ClientRequestAnimalArrows },
         };
 
         public void ExecutePacketEvent(int PacketID, NetPeer Client, NetDataReader Reader)

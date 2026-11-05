@@ -4,6 +4,7 @@ using SkyCoopServer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -132,6 +133,21 @@ namespace SkyCoopClient
                 return gi;
             }
             return null;
+        }
+
+        public static string s_Name = "";
+
+        public static string GetExectName()
+        {
+            if (!string.IsNullOrEmpty(s_Name))
+            {
+                return s_Name;
+            }
+            else
+            {
+                s_Name = Assembly.GetExecutingAssembly().GetName().Name;
+                return s_Name;
+            }
         }
 
         public static string GetClothingNameFromGear(GearItem gi)

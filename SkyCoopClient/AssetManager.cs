@@ -2,6 +2,7 @@
 using Il2CppInterop.Runtime;
 using Il2CppSystem.Linq;
 using Il2CppTLD.AddressableAssets;
+using Il2CppTLD.BigCarry;
 using Il2CppTLD.Scenes;
 using SkyCoopClient;
 using UnityEngine;
@@ -96,6 +97,12 @@ namespace SkyCoop
         public static GameObject CreateLocalizedBogusGear(string GearName, out string LocalizedName, float Volume = 0, float ConditionNormalized = 1, int Style = 0, float TimeFinishAt = 0, Transform parent = null)
         {
             LocalizedName = "Invalid";
+
+            if(GearName == "GEAR_Travois")
+            {
+                GearName = "INTERACTIVE_Travois";
+            }
+
             GameObject Prefab = GetAssetFromGame<GameObject>(GearName);
             if (Prefab)
             {
@@ -224,7 +231,6 @@ namespace SkyCoop
                         UncookedGearsFix.UncookedGearPatch(GearObject);
                     }
 
-
                     foreach (Component Com in GearObject.GetComponents<Component>())
                     {
                         string ComName = Com.GetIl2CppType().Name;
@@ -242,6 +248,7 @@ namespace SkyCoop
                             && ComName != Il2CppType.Of<AudioSource>().Name
                             && ComName != Il2CppType.Of<GearCookingVisual>().Name
                             && ComName != Il2CppType.Of<Bed>().Name
+                            && ComName != Il2CppType.Of<Container>().Name
                             && ComName != Il2CppType.Of<FlareItem>().Name
                             && ComName != Il2CppType.Of<FlareIntensity>().Name
                             && ComName != Il2CppType.Of<TorchItem>().Name
@@ -252,6 +259,31 @@ namespace SkyCoop
                             UnityEngine.Object.Destroy(Com);
                         }
                     }
+
+                    if(GearName == "INTERACTIVE_Travois")
+                    {
+                        TravoisBigCarryItem BigCarry = GearObject.GetComponent<TravoisBigCarryItem>();
+                        TravoisMovement Movement = GearObject.GetComponent<TravoisMovement>();
+                        TravoisAnimation Animation = GearObject.GetComponent<TravoisAnimation>();
+                        TravoisAudio Audio = GearObject.GetComponent<TravoisAudio>();
+                        if (BigCarry)
+                        {
+                            UnityEngine.Object.Destroy(BigCarry);
+                        }
+                        if (Movement)
+                        {
+                            UnityEngine.Object.Destroy(Movement);
+                        }
+                        if (Animation)
+                        {
+                            UnityEngine.Object.Destroy(Animation);
+                        }
+                        if (Audio)
+                        {
+                            UnityEngine.Object.Destroy(Audio);
+                        }
+                    }
+
                     return GearObject;
                 }
                 else

@@ -94,52 +94,6 @@ namespace SkyCoopClient
                 s_FramesDelayBeforeSendNewScene = 2;
             }
         }
-
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "UpdateFromManager")]
-        private static class SpawnRegion_UpdateFromManager
-        {
-            private static bool Prefix(SpawnRegion __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                __instance.gameObject.SetActive(true);
-
-                return false;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "MaybeReRollActive")]
-        private static class SpawnRegion_MaybeReRollActive
-        {
-            private static bool Prefix(SpawnRegion __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                __instance.gameObject.SetActive(true);
-
-                return false;
-            }
-        }
-
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "SpawningSupppressedByExperienceMode")]
-        private static class SpawnRegion_SpawningSupppressedByExperienceMode
-        {
-            private static void Postfix(SpawnRegion __instance, bool __result)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
-
-                __result = true;
-            }
-        }
-        [HarmonyLib.HarmonyPatch(typeof(SpawnRegion), "Spawn")]
-        private static class SpawnRegion_Spawn
-        {
-            private static bool Prefix(SpawnRegion __instance)
-            {
-                if (!ModMain.IsMultiplayer()) { return true; }
-
-                return false;
-            }
-        }
         [HarmonyLib.HarmonyPatch(typeof(PrefabSpawn), "SpawnObject")]
         private static class PrefabSpawn_SpawnObject
         {

@@ -303,7 +303,7 @@ namespace SkyCoopClient
                     
                     if(!Gear.m_InPlayerInventory && !Gear.m_InsideContainer && Gear.m_RadialObjectSpawnerParent == null)
                     {
-                        if (Gear.gameObject)
+                        if (Gear.gameObject && Gear.gameObject.activeSelf) // TODO: проверить то, что это отфильтрует лишние книги и т.п.
                         {
                             bool isDontDestroy = false;
                             bool isDLC = false;

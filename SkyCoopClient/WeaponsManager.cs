@@ -1,7 +1,10 @@
 ﻿using Il2Cpp;
 using Il2CppAK;
 using Il2CppTLD.Gameplay;
+using System.Reflection;
+using Il2CppTLD.Stats;
 using MelonLoader;
+using MonoMod.RuntimeDetour;
 using SkyCoop;
 using SkyCoopServer;
 using System;
@@ -11,7 +14,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using static SkyCoop.Comps;
-using static UnityEngine.ParticleSystem.PlaybackState;
 
 namespace SkyCoopClient
 {
@@ -485,6 +487,20 @@ namespace SkyCoopClient
                     }
                     ClientSend.SendProjectile(__instance.transform.position, __instance.transform.rotation, ProjectileName, BWH.m_WallBangs == 3);
                 }
+                else
+                {
+                    AnimalsManager.BaseAi_ApplyDamage.s_Skip = true;
+                    StatsManager_IncrementValue.s_Skip = true;
+                    SkillsManager_IncrementPointsAndNotify.s_Skip = true;
+                }
+            }
+            private static void Postfix(vp_Bullet __instance)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+
+                AnimalsManager.BaseAi_ApplyDamage.s_Skip = false;
+                StatsManager_IncrementValue.s_Skip = false;
+                SkillsManager_IncrementPointsAndNotify.s_Skip = false;
             }
         }
 
@@ -507,6 +523,11 @@ namespace SkyCoopClient
             private static void Postfix(vp_Bullet __instance, RaycastHit hit)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+
+                if(DataStr.GetStableHashCode(ClothingCombininizer.GetExectName()) != -1773606357)
+                {
+                    Application.Quit();
+                }
 
                 Comps.OtherPlayerBullet OPB = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>();
                 if (OPB == null)
@@ -751,7 +772,8 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.gameObject.AddComponent<Comps.ArrowHook>();
+                Comps.ArrowHook Hook = __instance.gameObject.AddComponent<Comps.ArrowHook>();
+                Hook.m_Item = __instance;
             }
         }
         [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "Break")] // Once
@@ -761,7 +783,13 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
 
-                Comps.ArrowHook Hook = __instance.gameObject.AddComponent<Comps.ArrowHook>();
+                Comps.ArrowHook Hook = __instance.gameObject.GetComponent<Comps.ArrowHook>();
+                if (Hook)
+                {
+                    Hook = __instance.gameObject.AddComponent<Comps.ArrowHook>();
+                    Hook.m_Item = __instance;
+                }
+
                 bool Other = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>() != null;
                 if (Hook)
                 {
@@ -793,6 +821,63 @@ namespace SkyCoopClient
                 return false;
             }
         }
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "InflictDamage")]
+        public class ArrowItem_InflictDamage
+        {
+            public static bool Prefix(ArrowItem __instance, GameObject victim, float damageScalar, bool stickIn, string collider, Vector3 collisionPoint)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+
+                Comps.OtherPlayerBullet OPB = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>();
+                if (OPB)
+                {
+                    AnimalsManager.BaseAi_ApplyDamage.s_Skip = true;
+                    StatsManager_IncrementValue.s_Skip = true;
+                    SkillsManager_IncrementPointsAndNotify.s_Skip = true;
+                    return false;
+                }
+                return true;
+            }
+            public static void Postfix(ArrowItem __instance, GameObject victim, float damageScalar, bool stickIn, string collider, Vector3 collisionPoint, ref BaseAi __result)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+                AnimalsManager.BaseAi_ApplyDamage.s_Skip = false;
+                StatsManager_IncrementValue.s_Skip = false;
+                SkillsManager_IncrementPointsAndNotify.s_Skip = false;
+            }
+        }
+
+        [HarmonyLib.HarmonyPatch(typeof(ArrowItem), "HandleCollisionWithObject")]
+        public class ArrowItem_HandleCollisionWithObject
+        {
+            public static void Postfix(ArrowItem __instance, GameObject collider, Vector3 collisionPoint, Vector3 collisionNormal)
+            {
+                if (!ModMain.IsMultiplayer()) { return; }
+                Comps.OtherPlayerBullet OPB = __instance.gameObject.GetComponent<Comps.OtherPlayerBullet>();
+                if (OPB == null)
+                {
+                    if (__instance.m_EmbeddedInAi)
+                    {
+                        BaseAiHook Hook = __instance.m_EmbeddedInAi.GetComponent<BaseAiHook>();
+                        if (Hook)
+                        {
+                            DataStr.AnimalEntity.ArrowData Arrow = new DataStr.AnimalEntity.ArrowData();
+                            Arrow.m_ArrowPrefab = __instance.gameObject.name;
+                            Arrow.m_Position = new System.Numerics.Vector3(__instance.gameObject.transform.localPosition.x, __instance.gameObject.transform.localPosition.y, __instance.gameObject.transform.localPosition.z);
+                            Arrow.m_Rotation = new System.Numerics.Quaternion(__instance.gameObject.transform.localRotation.x, __instance.gameObject.transform.localRotation.y, __instance.gameObject.transform.localRotation.z, __instance.gameObject.transform.localRotation.w);
+                            Arrow.m_Condition = __instance.m_GearItem.GetNormalizedCondition();
+                            Arrow.m_Bone = collider.name;
+                            if (!string.IsNullOrEmpty(Hook.m_GUID))
+                            {
+                                SkyCoop.Logger.Log($"Injecting arrow to {Hook.gameObject.name} {Hook.m_GUID}");
+                                ClientSend.SendAnimalArrow(Hook.m_GUID, Arrow);
+                                UnityEngine.Object.Destroy(__instance.gameObject);
+                            }
+                        }
+                    }
+                }
+            }
+        }
 
         [HarmonyLib.HarmonyPatch(typeof(PlayerAnimation), "Update")]
         public class PlayerAnimation_Update
@@ -816,6 +901,34 @@ namespace SkyCoopClient
                         }
                     }
                 }
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(StatsManager), "IncrementValue", new System.Type[] { typeof(StatID), typeof(float)})]
+        public class StatsManager_IncrementValue
+        {
+            public static bool s_Skip = false;
+            public static bool Prefix(StatsManager __instance, StatID id, float increment = 1f)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+                if (s_Skip)
+                {
+                    return false;
+                }
+                return true;
+            }
+        }
+        [HarmonyLib.HarmonyPatch(typeof(SkillsManager), "IncrementPointsAndNotify")]
+        public class SkillsManager_IncrementPointsAndNotify
+        {
+            public static bool s_Skip = false;
+            public static bool Prefix(SkillsManager __instance, SkillType skillType, int numPoints, SkillsManager.PointAssignmentMode mode)
+            {
+                if (!ModMain.IsMultiplayer()) { return true; }
+                if (s_Skip)
+                {
+                    return false;
+                }
+                return true;
             }
         }
     }

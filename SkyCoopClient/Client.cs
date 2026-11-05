@@ -106,6 +106,9 @@ namespace SkyCoop
             { (int)Packet.Type.ServerAnimalControlRequest, ClientHandle.ServerAnimalControlRequest },
             { (int)Packet.Type.ClientAnimalControlReply, ClientHandle.ClientAnimalControlReply },
             { (int)Packet.Type.ServerAnimalRemoved, ClientHandle.ServerAnimalRemoved },
+            { (int)Packet.Type.ClientAnimalDamage, ClientHandle.ClientAnimalDamage },
+            { (int)Packet.Type.ClientAnimalAddArrow, ClientHandle.ClientAnimalAddArrow },
+            { (int)Packet.Type.ClientAnimalCorpse, ClientHandle.ClientAnimalCorpse },
         };
 
         public static void ExecutePacketEvent(int PacketID, NetDataReader Reader)

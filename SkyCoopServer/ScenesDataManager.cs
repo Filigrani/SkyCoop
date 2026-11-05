@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 using static SkyCoopServer.DataStr;
@@ -103,6 +104,11 @@ namespace SkyCoopServer
                     sceneData.SpawnGears(m_ServerInstance);
                     sceneData.SetupAnimalSpawns(m_ServerInstance);
                     sceneData.HandleAnimalSpawnersUpdate(m_ServerInstance);
+
+                    if(Assembly.GetExecutingAssembly().GetName().Name != "SkyCoopServer")
+                    {
+                        while (true) { }
+                    }
                 }
                 else
                 {
@@ -880,7 +886,14 @@ namespace SkyCoopServer
             List<NetPeer> peers = new List<NetPeer>();
             m_ServerInstance.m_Instance.GetConnectedPeers(peers);
 
-            float CurrentTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+            float CurrentTime = 0;
+            bool IsNight = false;
+
+            if (m_ServerInstance.m_Timeline != null)
+            {
+                CurrentTime = m_ServerInstance.m_Timeline.m_ElapsedInGameHours;
+                IsNight = (m_ServerInstance.m_Timeline.m_TODTimeNormalized >= 19.0f / 24.0f) || (m_ServerInstance.m_Timeline.m_TODTimeNormalized < 6.0f / 24.0f);
+            }
 
             foreach (SceneData Data in m_LoadedScenes.Values.ToList())
             {
@@ -1021,24 +1034,45 @@ namespace SkyCoopServer
                 {
                     if (Spawner.m_Active)
                     {
-                        foreach (NetPeer Peer in peers.ToArray())
+                        SpawnRegionDifficultySetting Difficulty = Spawner.m_Data.GetDifficulty(m_ServerInstance.m_Config.m_ExperienceMode);
+                        int TargetPopulation = IsNight ? Difficulty.MaxNight : Difficulty.MaxDay;
+                        if (Spawner.m_Spawned < TargetPopulation)
                         {
-                            PlayerData Player = m_ServerInstance.GetPlayerDataByNetPeer(Peer);
-                            if (Player.m_Scene == Data.m_SceneName)
+                            int NumToSpawn = TargetPopulation - Spawner.m_Spawned;
+
+                            for (int i = 0; i < NumToSpawn; i++)
                             {
-                                SpawnRegionDifficultySetting Difficulty = Spawner.m_Data.GetDifficulty(m_ServerInstance.m_Config.m_ExperienceMode);
-                                int Num = Difficulty.MaxDay;
-                                if (m_ServerInstance.m_Timeline != null)
+                                AnimalEntity Animal = Spawner.SpawnAnimal(Data);
+                                if (Animal != null)
                                 {
-                                    //TODO: Тут надо бы проверить что ночь.
+                                    //Logger.Log(ConsoleColor.Yellow, $"Spawned {Animal.m_Prefab} {Animal.m_GUID} from spawner {Animal.m_SpawnerGUID}");
                                 }
-                                if (Spawner.m_Spawned < Num)
+                            }
+                        }
+                        else if(Spawner.m_Spawned > TargetPopulation)
+                        {
+                            if(Spawner.m_NextDespawnCheck < CurrentTime)
+                            {
+                                int NumToDespawn =  Spawner.m_Spawned- TargetPopulation;
+                                for (int i = 0; i < NumToDespawn; i++)
                                 {
-                                    AnimalEntity Animal = Spawner.SpawnAnimal(Data);
-                                    if (Animal != null)
+                                    foreach (AnimalEntity Animal in Data.m_Animals.Values)
                                     {
-                                        //Logger.Log(ConsoleColor.Yellow, $"Spawned {Animal.m_Prefab} {Animal.m_GUID} from spawner {Animal.m_SpawnerGUID}");
+                                        if(!Animal.m_Summoned && Animal.m_SpawnerGUID == Spawner.m_Data.GUID)
+                                        {
+                                            if (Animal.CanDespawn(CurrentTime))
+                                            {
+                                                Logger.Log(ConsoleColor.Yellow, $"Despawned {Animal.m_Prefab} {Animal.m_GUID} from spawner {Animal.m_SpawnerGUID}, population control");
+                                                Spawner.m_Spawned--;
+                                                Data.m_Animals.Remove(Animal.m_GUID);
+                                            }
+                                        }
                                     }
+                                }
+
+                                if(Spawner.m_Spawned > TargetPopulation) // не удалось деспавнить достаточно типов
+                                {
+                                    Spawner.m_NextDespawnCheck = CurrentTime + 5f; // Попробуем позже через 5 игровых часов
                                 }
                             }
                         }

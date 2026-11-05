@@ -281,6 +281,10 @@ namespace SkyCoop
                 {
                     return Comps.NetworkPlayer.Actions.PistolAim;
                 }
+                else if (PM.m_ItemInHands.name == "GEAR_Placeholder")
+                {
+                    return Comps.NetworkPlayer.Actions.PistolAim;
+                }
             }
 
             return Comps.NetworkPlayer.Actions.None;
@@ -381,6 +385,17 @@ namespace SkyCoop
                         {
                             GearItem Gi = PM.m_ItemInHands;
                             string HoldingGear = Gi ? Gi.name : "";
+                            if (PM.IsHoldingWildlifeItem())
+                            {
+                                WildlifeItem Wi = Gi.m_WildlifeItem;
+                                if (Wi)
+                                {
+                                    if(Wi.m_BaseAi && Wi.m_BaseAi.m_CarcassPrefab)
+                                    {
+                                        HoldingGear = Wi.m_BaseAi.m_CarcassPrefab.name;
+                                    }
+                                }
+                            }
                             if (m_LocalPlayerData.m_GearName != HoldingGear)
                             {
                                 m_LocalPlayerData.m_GearName = HoldingGear;

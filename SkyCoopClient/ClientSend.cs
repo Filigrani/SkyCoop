@@ -698,7 +698,7 @@ namespace SkyCoop
 
             SendToHost(writer);
         }
-        public static void SendAnimalSync(string GUID, Vector3 Position, Quaternion Rotation, int AitState, Animator Animator, bool IsBleeding, float Health, float BleedingOutMinutes, int PreviousState, Vector3 Velocity)
+        public static void SendAnimalSync(string GUID, Vector3 Position, Quaternion Rotation, int AitState, Animator Animator, bool IsBleeding, float Health, float BleedingOutMinutes, int PreviousState, Vector3 Velocity, float DeathOfBleedingMinutes, bool IsHolding)
         {
             NetDataWriter writer = new NetDataWriter();
             writer.Put((int)Packet.Type.ClientAnimalControlReply);
@@ -713,6 +713,51 @@ namespace SkyCoop
             writer.Put(BleedingOutMinutes);
             writer.Put(PreviousState);
             writer.Put(Velocity);
+            writer.Put(DeathOfBleedingMinutes);
+            writer.Put(IsHolding);
+
+            SendToHost(writer);
+        }
+
+        public static void SendAnimalSpawnCheat(string Prefab, Vector3 Position)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientCheatSpawnAnimal);
+
+            writer.Put(Prefab);
+            writer.Put(Position);
+
+            SendToHost(writer);
+        }
+        public static void SendAnimalDamage(string GUID, float Damage, float BleedingMinutes, int DamageSource, string Colider)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalDamage);
+
+            writer.Put(GUID);
+            writer.Put(Damage);
+            writer.Put(BleedingMinutes);
+            writer.Put(DamageSource);
+            writer.Put(Colider);
+
+            SendToHost(writer);
+        }
+        public static void SendAnimalArrow(string GUID, DataStr.AnimalEntity.ArrowData Arrow)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientAnimalAddArrow);
+
+            writer.Put(GUID);
+            writer.Put(Arrow);
+
+            SendToHost(writer);
+        }
+        public static void SendAnimalArrowRequest(string GUID)
+        {
+            NetDataWriter writer = new NetDataWriter();
+            writer.Put((int)Packet.Type.ClientRequestAnimalArrows);
+
+            writer.Put(GUID);
 
             SendToHost(writer);
         }

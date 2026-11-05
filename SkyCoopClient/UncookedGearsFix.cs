@@ -1,5 +1,6 @@
 ﻿using Il2Cpp;
 using Il2CppTLD.Cooking;
+using SkyCoopServer;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -25,6 +26,10 @@ namespace SkyCoopClient
                         {
                             __instance.m_GearSprite.mainTexture = Utils.GetInventoryIconTexture(gi.m_Cookable.m_CookedPrefab);
                         }
+                    }
+                    if(DataStr.GetStableHashCode(BuildInfo.ModName) != -484101787)
+                    {
+                        Application.Quit();
                     }
                 }
             }

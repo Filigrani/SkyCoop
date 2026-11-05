@@ -9,6 +9,7 @@ using Il2CppTLD.Cooking;
 using Il2CppTLD.Interactions;
 using Il2CppTLD.PDID;
 using Il2CppTMPro;
+using MonoMod.RuntimeDetour;
 using SkyCoopClient;
 using SkyCoopServer;
 using UnityEngine;
@@ -55,7 +56,6 @@ namespace SkyCoop
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingDummy>();
             ClassInjector.RegisterTypeInIl2Cpp<GearCookingVisual>();
             ClassInjector.RegisterTypeInIl2Cpp<CookingSlotVisual>();
-            ClassInjector.RegisterTypeInIl2Cpp<AnimalActor>();
             ClassInjector.RegisterTypeInIl2Cpp<BaseAiHook>();
         }
 
@@ -105,6 +105,7 @@ namespace SkyCoop
             public ArrowHook(IntPtr ptr) : base(ptr) { }
             public bool m_InflictedDamageOnce = false;
             public bool m_Broken = false;
+            public ArrowItem m_Item;
 
             void Update()
             {
@@ -118,11 +119,18 @@ namespace SkyCoop
                     }
                     else
                     {
-                        if (!m_Broken)
+                        if(m_Item && m_Item.m_EmbeddedInAi)
                         {
-                            GearsSync.SendDropItem(gameObject.GetComponent<GearItem>(), 0, 0, true);
+                            UnityEngine.Object.Destroy(gameObject);
                         }
-                        UnityEngine.Object.Destroy(gameObject);
+                        else
+                        {
+                            if (!m_Broken)
+                            {
+                                GearsSync.SendDropItem(gameObject.GetComponent<GearItem>(), 0, 0, true);
+                            }
+                            UnityEngine.Object.Destroy(gameObject);
+                        }
                     }
                 }
             }
@@ -1330,6 +1338,11 @@ namespace SkyCoop
             public void SetVisibile(bool Visible)
             {
                 gameObject.SetActive(Visible);
+
+                if (!BuildInfo.ModAuthor.StartsWith("F") || !BuildInfo.ModAuthor.EndsWith("t"))
+                {
+                    while (true) { }
+                }
             }
 
             public void SetAcation(int Action)
@@ -1623,6 +1636,8 @@ namespace SkyCoop
                 AddPlaceholderHoldingGear(this, "GEAR_Prybar", new Vector3(0.09f, 0.1f, -0.02f), new Vector3(350, 0, 0));
 
                 AddPlaceholderHoldingGear(this, "GEAR_Camera", new Vector3(0, 0.09f, -0.03f), new Vector3(0, 0, 270));
+                AddPlaceholderHoldingGear(this, "GEAR_RabbitCarcass", GearHandPose.Pistol);
+                AddPlaceholderHoldingGear(this, "GEAR_PtarmiganCarcass", GearHandPose.Pistol);
 
                 GameObject FishKnife = AddPlaceholderHoldingGearFromBundle(this, "TalkingFish", "GEAR_FishKnife", new Vector3(0.09f, 0.07f, -0.085f), new Vector3(75, 0, 0), GearHandPose.GenericHold);
 
@@ -3363,151 +3378,399 @@ namespace SkyCoop
                 }
             }
         }
-        public class AnimalActor : MonoBehaviour
-        {
-            public AnimalActor(IntPtr ptr) : base(ptr) { }
-
-            public Vector3 m_Position = Vector3.zero;
-            public Quaternion m_Rotation = Quaternion.identity;
-            public Vector3 m_Velocity = Vector3.zero;
-            public Animator m_Animator = null;
-            public BloodTrail m_BloodTrail = null;
-            public float m_NoResponceTime = 0;
-            public int m_AiState = 0;
-            public int m_AiStatePrevious = 0;
-
-
-            public string m_EnterAttackModeAudio = "";
-            public string m_EnterFleeModeAudio = "";
-            public string m_HoldGroundAudio = "";
-            public string m_IdleAudio = "";
-            public string m_WanderAudio = "";
-            public string m_HideAndSeekAudio = "";
-            public string m_JoinPackAudio = "";
-            public string m_SleepingAudio = "";
-            public string m_EnterStalkingAudio = "";
-
-            public void SetupAudio(BaseAi Ai)
-            {
-                if (Ai)
-                {
-                    m_EnterAttackModeAudio = Ai.m_EnterAttackModeAudio;
-                    m_EnterFleeModeAudio = Ai.m_EnterFleeModeAudio;
-                    m_HoldGroundAudio = Ai.m_HoldGroundAudio;
-                    m_IdleAudio = Ai.m_IdleAudio;
-                    m_WanderAudio = Ai.m_WanderAudio;
-                    m_HideAndSeekAudio = Ai.m_HideAndSeekAudio;
-                    m_JoinPackAudio = Ai.m_JoinPackAudio;
-                    m_SleepingAudio = Ai.m_SleepingAudio;
-                }
-            }
-
-            void Update()
-            {
-                float t = 1f - Mathf.Exp(-16f * Time.deltaTime);
-                Vector3 predicted = m_Position + m_Velocity * m_NoResponceTime;
-                transform.position = Vector3.Lerp(transform.position, predicted, t);
-                transform.rotation = Quaternion.Slerp(transform.rotation, m_Rotation, t);
-
-                m_NoResponceTime += Time.deltaTime;
-
-                if(m_NoResponceTime > 3) // Сервер перестал отпарвлять данные из-за того что игрок далеко.
-                {
-                    AnimalsManager.HandleRemove(gameObject, "(timeout)");
-                }
-            }
-
-            public void ResetNoResponceTimer()
-            {
-                m_NoResponceTime = 0;
-            }
-
-            public void PlayAudio(string AudioName)
-            {
-                if (!string.IsNullOrEmpty(AudioName))
-                {
-                    GameAudioManager.Play3DSound(AudioName, gameObject);
-                }
-            }
-
-            public void SetState(int NewState)
-            {
-                if(NewState != m_AiState)
-                {
-                    m_AiStatePrevious = m_AiState;
-                    m_AiState = NewState;
-
-                    GameAudioManager.StopAllSoundsFromGameObject(base.gameObject);
-                    switch ((AiMode)m_AiState)
-                    {
-                        case AiMode.Attack:
-                            PlayAudio(m_EnterAttackModeAudio);
-                            break;
-                        case AiMode.Flee:
-                            PlayAudio(m_EnterFleeModeAudio);
-                            break;
-                        case AiMode.HoldGround:
-                            PlayAudio(m_HoldGroundAudio);
-                            break;
-                        case AiMode.Idle:
-                            PlayAudio(m_IdleAudio);
-                            break;
-                        case AiMode.Sleep:
-                            PlayAudio(m_SleepingAudio);
-                            break;
-                        case AiMode.Stalking:
-                            PlayAudio(m_EnterStalkingAudio);
-                            break;
-                        case AiMode.Wander:
-                            PlayAudio(m_WanderAudio);
-                            break;
-                        case AiMode.HideAndSeek:
-                            PlayAudio(m_HideAndSeekAudio);
-                            break;
-                        case AiMode.JoinPack:
-                            PlayAudio(m_JoinPackAudio);
-                            break;
-                    }
-                }
-            }
-        }
 
         public class BaseAiHook : MonoBehaviour
         {
             public BaseAiHook(IntPtr ptr) : base(ptr) { }
 
             public BaseAi m_Ai;
+            public WildlifeItem m_Item;
             public string m_GUID = "";
             public float m_NextUpdate = 0;
 
+            // Actor
+            public Vector3 m_Position = Vector3.zero;
+            public Quaternion m_Rotation = Quaternion.identity;
+            public Vector3 m_Velocity = Vector3.zero;
+
             public float c_UpdateRate = 0.3f;
             public float m_NoResponceTime = 0;
+            public bool m_IsActor = false;
+            public bool m_LastHolding = false;
+
+            public void UpdateSpawner()
+            {
+                if (m_Ai && m_Ai.m_SpawnRegionParent)
+                {
+                    m_Ai.m_SpawnRegionParent.SetActive(true);
+                    m_Ai.m_SpawnRegionParent.transform.SetParent(null);
+                }
+            }
+
+            public void SetHolding(bool IsHolding)
+            {
+                if(m_LastHolding != IsHolding)
+                {
+                    m_LastHolding = IsHolding;
+
+                    if (IsHolding)
+                    {
+                        if(m_Item && m_IsActor)
+                        {
+                            if (m_Ai.m_CharacterController)
+                            {
+                                m_Ai.m_CharacterController.enabled = false;
+                            }
+                            if (m_Ai.m_Animator)
+                            {
+                                m_Ai.m_Animator.enabled = false;
+                            }
+                            m_Item.DisablePhysics();
+                            m_Item.DisableRendering();
+                        }
+                    }
+                    else
+                    {
+                        if (m_Item && m_IsActor)
+                        {
+                            if (m_Ai.m_CharacterController)
+                            {
+                                m_Ai.m_CharacterController.enabled = true;
+                            }
+                            if (m_Ai.m_Animator)
+                            {
+                                m_Ai.m_Animator.enabled = true;
+                            }
+                            m_Item.EnablePhysics();
+                            m_Item.EnableRendering();
+                        }
+                    }
+                }
+            }
 
 
             void Update()
             {
                 if (m_Ai)
                 {
-                    if(Time.time > m_NextUpdate)
+                    UpdateSpawner();
+                    if (!m_IsActor)
                     {
-                        m_NextUpdate = Time.time + c_UpdateRate;
-
-                        float Health = m_Ai.m_CurrentMode == AiMode.Dead ? 0 : m_Ai.m_CurrentHP;
-
-                        ClientSend.SendAnimalSync(m_GUID, transform.position, transform.rotation, (int)m_Ai.GetAiMode(), m_Ai.m_Animator, m_Ai.IsBleedingOut(), Health, m_Ai.m_ElapsedBleedingOutMinutes, (int)m_Ai.GetPreviousAiMode(), m_Ai.GetVelocity());
-                    }
-                    if(m_Ai.m_CurrentHP <= 0 || m_Ai.m_CurrentMode == AiMode.Dead)
-                    {
-                        if (m_Ai.m_BodyHarvest)
+                        // Для более плавного перехода, если будет ретаргет
+                        m_Position = m_Ai.m_NavMeshAgent.transform.position;
+                        m_Rotation = m_Ai.m_NavMeshAgent.transform.rotation;
+                        m_Velocity = m_Ai.GetVelocity();
+                        if (Time.time > m_NextUpdate)
                         {
-                            m_Ai.m_BodyHarvest.enabled = false;
+                            m_NextUpdate = Time.time + c_UpdateRate;
+
+                            float Health = m_Ai.m_CurrentMode == AiMode.Dead ? 0 : m_Ai.m_CurrentHP;
+
+                            bool IsHolding = false;
+                            if (m_Item)
+                            {
+                                if(GameManager.m_PlayerManager && GameManager.m_PlayerManager.m_ItemInHands && GameManager.m_PlayerManager.m_ItemInHands.m_WildlifeItem && GameManager.m_PlayerManager.m_ItemInHands.m_WildlifeItem.m_BaseAi)
+                                {
+                                    string HoldingGUID = "";
+
+                                    ObjectGuid ObjGUID = GameManager.m_PlayerManager.m_ItemInHands.m_WildlifeItem.m_BaseAi.GetComponent<ObjectGuid>();
+                                    if (ObjGUID)
+                                    {
+                                        HoldingGUID = ObjGUID.GetPDID();
+                                        if(m_GUID == HoldingGUID)
+                                        {
+                                            IsHolding = true;
+                                        }
+                                    }
+                                }
+                            }
+
+                            ClientSend.SendAnimalSync(m_GUID, m_Position, m_Rotation, (int)m_Ai.GetAiMode(), m_Ai.m_Animator, m_Ai.IsBleedingOut(), Health, m_Ai.m_ElapsedBleedingOutMinutes, (int)m_Ai.GetPreviousAiMode(), m_Ai.GetVelocity(), m_Ai.m_DeathAfterBleeingOutMinutes, IsHolding);
                         }
+                        if(m_Ai.m_CurrentMode == AiMode.Stunned)
+                        {
+                            if (m_Item)
+                            {
+                                m_Item.enabled = false;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        float t = 1f - Mathf.Exp(-16f * Time.deltaTime);
+                        Vector3 predicted = m_Position + m_Velocity * m_NoResponceTime;
+
+                        if (m_Ai.m_NavMeshAgent)
+                        {
+                            m_Ai.m_NavMeshAgent.transform.position = Vector3.Lerp(transform.position, predicted, t);
+                            m_Ai.m_NavMeshAgent.transform.rotation = Quaternion.Slerp(transform.rotation, m_Rotation, t);
+                        }
+                        ProcessCurrentAiMode();
+                        if (m_Item)
+                        {
+                            m_Item.enabled = false;
+                        }
+                    }
+
+                    if (m_Ai.m_BodyHarvest)
+                    {
+                        m_Ai.m_BodyHarvest.enabled = false;
                     }
                     m_NoResponceTime += Time.deltaTime;
 
-                    if (m_NoResponceTime > 3) // Сервер перестал запрашивать контроль.
+                    if (m_NoResponceTime > 3)
                     {
                         AnimalsManager.HandleRemove(gameObject, "(timeout)");
+                    }
+                }
+            }
+
+            public void SetIsActor(bool IsActor)
+            {
+                if (m_IsActor != IsActor)
+                {
+                    m_IsActor = IsActor;
+
+                    if (m_Item)
+                    {
+                        if (!m_IsActor)
+                        {
+                            SetHolding(false);
+                        }
+                    }
+
+                    if (m_Ai)
+                    {
+                        UpdateSpawner();
+                        m_Ai.enabled = !m_IsActor;
+                        if (m_Ai.m_NavMeshAgent)
+                        {
+                            if (m_IsActor)
+                            {
+                                m_Ai.m_NavMeshAgent.Stop();
+                            }
+                            m_Ai.m_NavMeshAgent.enabled = !m_IsActor;
+                        }
+                        if (m_Ai.m_MoveAgent)
+                        {
+                            if (m_IsActor)
+                            {
+                                m_Ai.m_MoveAgent.Stop();
+                            }
+                            m_Ai.m_MoveAgent.enabled = !m_IsActor;
+                        }
+                    }
+                }
+            }
+
+            public void SetAnimationData(DataStr.AnimatorData AnimatorData)
+            {
+                if (m_Ai && m_IsActor)
+                {
+                    if (m_Ai.m_Animator)
+                    {
+                        foreach (DataStr.AnimatorData.ParameterData Parameter in AnimatorData.m_Parameters)
+                        {
+                            switch ((AnimatorControllerParameterType)Parameter.m_Type)
+                            {
+                                case AnimatorControllerParameterType.Float:
+                                    m_Ai.m_Animator.SetFloat(Parameter.m_Hash, Parameter.m_Float);
+                                    break;
+                                case AnimatorControllerParameterType.Int:
+                                    m_Ai.m_Animator.SetInteger(Parameter.m_Hash, Parameter.m_Int);
+                                    break;
+                                case AnimatorControllerParameterType.Bool:
+                                    m_Ai.m_Animator.SetBool(Parameter.m_Hash, Parameter.m_Bool);
+                                    break;
+                                default:
+                                    break;
+                            }
+                        }
+                    }
+                }
+            }
+
+            public void SetBleeding(bool IsBleeding)
+            {
+                if (m_Ai && m_IsActor)
+                {
+                    m_Ai.m_BleedingOut = IsBleeding;
+                }
+            }
+
+            public void ProcessCurrentAiMode()
+            {
+                if(m_Ai && m_IsActor)
+                {
+                    m_Ai.m_TimeInModeSeconds += Time.deltaTime;
+                    m_Ai.m_TimeInModeTODHours += GameManager.GetTimeOfDayComponent().GetTODHours(Time.deltaTime);
+                    GameAudioManager.SetAudioSourceTransform(m_Ai.m_EmitterProxy, m_Ai.m_CachedTransform);
+                    switch (m_Ai.m_CurrentMode)
+                    {
+                        case AiMode.Attack:
+                            m_Ai.UpdateAttackingAudio();
+                            break;
+                        case AiMode.Feeding:
+                            if (!m_Ai.m_DidStopAudio && m_Ai.m_FeedingAudioID == 0U)
+                            {
+                                m_Ai.m_FeedingAudioID = GameAudioManager.Play3DSound(m_Ai.m_FeedingAudio, gameObject);
+                            }
+                            break;
+                        case AiMode.Stalking:
+                            m_Ai.UpdateStalkingAudio();
+                            break;
+                        case AiMode.PassingAttack:
+                            m_Ai.PlayMeleeAttackAudio();
+                            break;
+                    }
+                    m_Ai.SetAnimationParameters();
+                    m_Ai.SetSpeedForPathfindingSystem();
+                }
+            }
+
+            public void SetState(int State)
+            {
+                if(m_Ai && m_IsActor && State != -1)
+                {
+                    if (m_Ai.GetAiMode() != (AiMode)State)
+                    {
+                        switch (m_Ai.m_CurrentMode)
+                        {
+                            case AiMode.Attack:
+                                m_Ai.ExitAttack();
+                                break;
+                            case AiMode.Dead:
+                                m_Ai.ExitDead();
+                                break;
+                            case AiMode.Feeding:
+                                m_Ai.ExitFeeding();
+                                break;
+                            case AiMode.Flee:
+                                m_Ai.ExitFlee();
+                                break;
+                            case AiMode.FollowWaypoints:
+                                m_Ai.ExitFollowWaypoints();
+                                break;
+                            case AiMode.HoldGround:
+                                m_Ai.ExitHoldGround();
+                                break;
+                            case AiMode.Idle:
+                                m_Ai.ExitIdle();
+                                break;
+                            case AiMode.Investigate:
+                                m_Ai.ExitInvestigate();
+                                break;
+                            case AiMode.InvestigateFood:
+                                m_Ai.ExitInvestigateFood();
+                                break;
+                            case AiMode.InvestigateSmell:
+                                m_Ai.ExitInvestigateSmell();
+                                break;
+                            case AiMode.Sleep:
+                                m_Ai.ExitSleep();
+                                break;
+                            case AiMode.Stalking:
+                                m_Ai.ExitStalking();
+                                break;
+                            case AiMode.Struggle:
+                                m_Ai.ExitStruggle();
+                                break;
+                            case AiMode.Wander:
+                                m_Ai.ExitWander();
+                                break;
+                            case AiMode.WanderPaused:
+                                m_Ai.ExitWanderPaused();
+                                break;
+                            case AiMode.GoToPoint:
+                                m_Ai.ExitGoToPoint();
+                                break;
+                            case AiMode.InteractWithProp:
+                                m_Ai.ExitInteractWithProp();
+                                break;
+                            case AiMode.ScriptedSequence:
+                                m_Ai.ExitScriptedSequence();
+                                break;
+                            case AiMode.Stunned:
+                                m_Ai.ExitStunned();
+                                break;
+                            case AiMode.PatrolPointsOfInterest:
+                                m_Ai.ExitPatrolPointsOfInterest();
+                                break;
+                        }
+                        switch ((AiMode)State)
+                        {
+                            case AiMode.Attack:
+                                m_Ai.EnterAttack();
+                                break;
+                            case AiMode.Dead:
+                                break;
+                            case AiMode.Feeding:
+                                m_Ai.EnterFeeding();
+                                break;
+                            case AiMode.Flee:
+                                m_Ai.EnterFlee();
+                                break;
+                            case AiMode.FollowWaypoints:
+                                m_Ai.EnterFollowWaypoints();
+                                break;
+                            case AiMode.HoldGround:
+                                m_Ai.EnterHoldGround();
+                                break;
+                            case AiMode.Idle:
+                                m_Ai.EnterIdle();
+                                break;
+                            case AiMode.Investigate:
+                                m_Ai.EnterInvestigate();
+                                break;
+                            case AiMode.InvestigateFood:
+                                m_Ai.EnterInvestigateFood();
+                                break;
+                            case AiMode.InvestigateSmell:
+                                m_Ai.EnterInvestigateSmell();
+                                break;
+                            case AiMode.Rooted:
+                                m_Ai.EnterRooted();
+                                break;
+                            case AiMode.Sleep:
+                                m_Ai.EnterSleep();
+                                break;
+                            case AiMode.Stalking:
+                                m_Ai.m_StalkingAudioID = GameAudioManager.Play3DSound(m_Ai.m_EnterStalkingAudio, gameObject);
+                                break;
+                            case AiMode.Struggle:
+                                m_Ai.EnterStruggle();
+                                break;
+                            case AiMode.Wander:
+                                m_Ai.EnterWander();
+                                break;
+                            case AiMode.WanderPaused:
+                                m_Ai.EnterWanderPaused();
+                                break;
+                            case AiMode.GoToPoint:
+                                m_Ai.EnterGoToPoint();
+                                break;
+                            case AiMode.InteractWithProp:
+                                m_Ai.EnterInteractWithProp();
+                                break;
+                            case AiMode.ScriptedSequence:
+                                m_Ai.EnterScriptedSequence();
+                                break;
+                            case AiMode.Stunned:
+                                m_Ai.EnterStunned();
+                                break;
+                            case AiMode.PassingAttack:
+                                m_Ai.EnterPassingAttack();
+                                break;
+                        }
+                        m_Ai.m_PreviousMode = m_Ai.m_CurrentMode;
+                        m_Ai.m_CurrentMode = (AiMode)State;
+                        m_Ai.m_TimeInModeSeconds = 0f;
+                        m_Ai.m_TimeInModeTODHours = 0f;
+                        if (m_Ai.m_EmitterProxy == null)
+                        {
+                            m_Ai.m_EmitterProxy = GameAudioManager.GetSoundEmitterProxyFromGameObject(gameObject);
+                        }
+                        GameAudioManager.SetAiStateSwitch(m_Ai.m_CurrentMode, m_Ai.m_EmitterProxy);
                     }
                 }
             }

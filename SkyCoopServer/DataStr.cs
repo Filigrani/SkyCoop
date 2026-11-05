@@ -12,6 +12,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Channels;
 using System.Xml.Linq;
+using static SkyCoopServer.DataStr;
 
 namespace SkyCoopServer
 {
@@ -1355,7 +1356,6 @@ namespace SkyCoopServer
                         }
                     }
                 }
-                HandleAnimalSpawnersUpdate(ServerInstance);
                 if (data.Animals != null)
                 {
                     foreach (AnimalEntity.SaveData saveData in data.Animals)
@@ -1364,6 +1364,7 @@ namespace SkyCoopServer
                         m_Animals.Add(Animal.m_GUID, Animal);
                     }
                 }
+                HandleAnimalSpawnersUpdate(ServerInstance);
             }
 
             public void SaveToFile(Server ServerInstance)
@@ -1702,6 +1703,28 @@ namespace SkyCoopServer
                 //{
                 //    SkyCoopServer.Logger.Log($"SpawnRegion {Spawner.m_Data.GUID} is Active? {Spawner.m_Active}");
                 //}
+
+                foreach (AnimalEntity Animal in m_Animals.Values.ToArray())
+                {
+                    SpawnRegionInstance Spawner = null;
+                    if(m_AnimalSpawners.TryGetValue(Animal.m_SpawnerGUID, out Spawner))
+                    {
+                        if (!Spawner.m_Active)
+                        {
+                            float CurrentTime = 0;
+                            if (ServerInstance.m_Timeline != null)
+                            {
+                                CurrentTime = ServerInstance.m_Timeline.m_ElapsedInGameHours;
+                            }
+                            if (Animal.CanDespawn(CurrentTime))
+                            {
+                                Spawner.m_Spawned--;
+                                m_Animals.Remove(Animal.m_GUID);
+                                SkyCoopServer.Logger.Log($"{Animal.m_Prefab} {Animal.m_GUID} despawned, spawner inactive");
+                            }
+                        }
+                    }
+                }
             }
 
             public void HandleRadialSpawner(Server ServerInstance, RadialObjectSpawnerData Spawner)
@@ -2082,6 +2105,22 @@ namespace SkyCoopServer
                     }
                     PointIndex++;
                 }
+            }
+
+            public SpawnRegionInstance GetClosestSpawnInstance(Vector3 Point)
+            {
+                SpawnRegionInstance BestSpawner = null;
+                float BestDistance = float.PositiveInfinity;
+                foreach (SpawnRegionInstance Spawner in m_AnimalSpawners.Values.ToArray())
+                {
+                    float Dist = Vector3.Distance(Spawner.m_Data.Position.ToVector(), Point);
+                    if (Dist < BestDistance)
+                    {
+                        Dist = BestDistance;
+                        BestSpawner = Spawner;
+                    }
+                }
+                return BestSpawner;
             }
         }
 
@@ -4191,7 +4230,7 @@ namespace SkyCoopServer
                 Points.Add(new Vector3JSON(x, y, z));
             }
 
-            public string GetRandomAnimal()
+            public SpawnRegionAnimal GetRandomAnimal()
             {
                 Random RNG = new Random(Guid.NewGuid().GetHashCode());
                 List<SpawnRegionAnimal> Elements = new List<SpawnRegionAnimal>(Animals);
@@ -4210,10 +4249,10 @@ namespace SkyCoopServer
                     CumulativeWeight += Element.Weight;
                     if (RandomValue <= CumulativeWeight)
                     {
-                        return Element.NormalPrefab;
+                        return Element;
                     }
                 }
-                return "";
+                return null;
             }
 
             public float GetRespawnTime(string DifficultyName)
@@ -4230,6 +4269,7 @@ namespace SkyCoopServer
         public class AnimalEntity
         {
             public string m_Prefab = "";
+            public string m_PrefabAurora = "";
             public string m_GUID = "";
             public string m_SpawnerGUID = "";
             public Vector3 m_Position = Vector3.Zero;
@@ -4238,6 +4278,7 @@ namespace SkyCoopServer
             public Vector3 m_Velocity = Vector3.Zero;
 
             public bool m_Active = false;
+            public bool m_Summoned = false;
 
             public int m_AiState = -1;
             public int m_AiStatePrevious = -1;
@@ -4246,49 +4287,113 @@ namespace SkyCoopServer
 
             public float m_BleedingPerHour = 20f;
             public float m_BleedingMinutes = 0;
+            public float m_BleedingMinutesMax = 0;
 
             public int m_Owner = -1;
             public float m_RetakeCooldown = 0;
 
             public bool m_IsBleeding = false;
+            public bool m_IsBeingHeld = false;
 
             public float m_LastUpdated = 0;
             public AnimatorData m_AnimatorData = new AnimatorData();
+            public List<ArrowData> m_Arrows = new List<ArrowData>();
+
+            public class ArrowData
+            {
+                public string m_ArrowPrefab { get; set; }
+                public Vector3 m_Position = Vector3.Zero;
+                public Quaternion m_Rotation = Quaternion.Identity;
+                public float m_Condition = 1f;
+                public string m_Bone = "";
+
+                public ArrowData() { }
+                public ArrowData(SaveData saveData) 
+                {
+                    m_ArrowPrefab = saveData.Arrow;
+                    m_Position = saveData.Position.ToVector();
+                    m_Rotation = saveData.Rotation.ToQuaternion();
+                    m_Condition = saveData.Condition;
+                    m_Bone = saveData.Bone;
+                }
+
+                public SaveData Save()
+                {
+                    return new SaveData(m_ArrowPrefab, m_Position, m_Rotation, m_Condition, m_Bone);
+                }
+
+                public class SaveData
+                {
+                    public string Arrow { get; set; }
+                    public Vector3JSON Position { get; set; }
+                    public QuaternionJSON Rotation { get; set; }
+                    public float Condition { get; set; }
+                    public string Bone { get; set; }
+
+                    public SaveData() { }
+                    public SaveData(string arrow, Vector3 position, Quaternion rotation, float condition, string bone)
+                    {
+                        Arrow = arrow;
+                        Position = new Vector3JSON(position.X, position.Y, position.Z);
+                        Rotation = new QuaternionJSON(rotation.X, rotation.Y, rotation.Z, rotation.W);
+                        Condition = condition;
+                        Bone = bone;
+                    }
+                }
+            }
 
             public AnimalEntity() { }
             public AnimalEntity(SaveData saveData)
             {
                 m_Prefab = saveData.Prefab;
+                m_PrefabAurora = saveData.PrefabAurora;
                 m_GUID = saveData.GUID ;
                 m_SpawnerGUID = saveData.SpawnerGUID;
                 m_Position = saveData.Position.ToVector();
                 m_Rotation = saveData.Rotation.ToQuaternion();
                 m_Health = saveData.Health;
                 m_IsBleeding = saveData.IsBleeding;
+                m_BleedingMinutes = saveData.BleedingMinutes;
+                m_BleedingMinutesMax = saveData.BleedingMinutesMax;
                 m_LastUpdated = saveData.LastUpdated;
                 m_AiState = saveData.AiState;
                 m_AiStatePrevious = saveData.AiStatePrevious;
                 m_SpawnPos = saveData.SpawnPos.ToVector();
+                m_Summoned = saveData.Summoned;
+                foreach (ArrowData.SaveData ArrowData in saveData.Arrows)
+                {
+                    m_Arrows.Add(new ArrowData(ArrowData));
+                }
             }
             public SaveData Save()
             {
                 SaveData saveData = new SaveData();
                 saveData.Prefab = m_Prefab;
+                saveData.PrefabAurora = m_PrefabAurora;
                 saveData.GUID = m_GUID;
                 saveData.SpawnerGUID = m_SpawnerGUID;
                 saveData.Position = new Vector3JSON(m_Position.X, m_Position.Y, m_Position.Z);
                 saveData.Rotation = new QuaternionJSON(m_Rotation.X, m_Rotation.Y, m_Rotation.Z, m_Rotation.W);
                 saveData.Health = m_Health;
                 saveData.IsBleeding = m_IsBleeding;
+                saveData.BleedingMinutes = m_BleedingMinutes;
+                saveData.BleedingMinutesMax = m_BleedingMinutesMax;
                 saveData.LastUpdated = m_LastUpdated;
                 saveData.AiState = m_AiState;
                 saveData.AiStatePrevious = m_AiStatePrevious;
                 saveData.SpawnPos = new Vector3JSON(m_SpawnPos.X, m_SpawnPos.Y, m_SpawnPos.Z);
+                saveData.Summoned = m_Summoned;
+                saveData.Arrows = new List<ArrowData.SaveData>();
+                foreach (ArrowData Arrow in m_Arrows)
+                {
+                    saveData.Arrows.Add(Arrow.Save());
+                }
                 return saveData;
             }
             public class SaveData
             {
                 public string Prefab {  get; set; }
+                public string PrefabAurora { get; set; }
                 public string GUID { get; set; }
                 public string SpawnerGUID { get; set; }
                 public Vector3JSON Position { get; set; }
@@ -4299,7 +4404,10 @@ namespace SkyCoopServer
                 public int AiState { get; set; }
                 public int AiStatePrevious { get; set; }
                 public float BleedingMinutes { get; set; }
+                public float BleedingMinutesMax { get; set; }
                 public Vector3JSON SpawnPos { get; set; }
+                public bool Summoned { get; set; }
+                public List<ArrowData.SaveData> Arrows { get; set; }
             }
             public void SetActive(Server ServerInstance, SceneData Scene, bool Active)
             {
@@ -4332,6 +4440,16 @@ namespace SkyCoopServer
                                     }
                                 }
                             }
+                            if (m_IsBleeding)
+                            {
+                                m_BleedingMinutes += ElapsedHours * 60;
+
+                                if(m_BleedingMinutes > m_BleedingMinutesMax)
+                                {
+                                    SkyCoopServer.Logger.Log($"{m_Prefab} {m_GUID} got bleed to death after {ElapsedHours} hours of being inactive.");
+                                    Damage(ServerInstance, Scene, 10000f);
+                                }
+                            }
                         }
                         Logger.Log(ConsoleColor.Yellow, $"{m_Prefab} {m_GUID} active");
                     }
@@ -4351,6 +4469,22 @@ namespace SkyCoopServer
                         m_RetakeCooldown = 0;
                     }
                 }
+            }
+
+            public string GetPrefabName(bool IsAurora)
+            {
+                if (string.IsNullOrEmpty(m_PrefabAurora))
+                {
+                    return m_Prefab;
+                }
+                else
+                {
+                    if (IsAurora)
+                    {
+                        return m_PrefabAurora;
+                    }
+                }
+                return m_Prefab;
             }
 
             public void Update(Server ServerInstance, SceneData Scene)
@@ -4390,16 +4524,7 @@ namespace SkyCoopServer
                 {
                     if (ServerInstance.m_Timeline != null)
                     {
-                        float ElapsedHours = ServerInstance.m_Timeline.m_ElapsedInGameHours - m_LastUpdated;
-                        if (m_IsBleeding)
-                        {
-                            m_BleedingMinutes += ElapsedHours * 60;
-                            float Dmg = m_BleedingPerHour * ElapsedHours;
-                            SkyCoopServer.Logger.Log($"{m_Prefab} {m_GUID} got {Dmg} of bleeding damage after {ElapsedHours} hours of being inactive.");
-                            Damage(ServerInstance, Scene, Dmg);
-                        }
-
-                        m_LastUpdated = ElapsedHours;
+                        m_LastUpdated = ServerInstance.m_Timeline.m_ElapsedInGameHours;
                     }
 
                     if(NewClosestPlayer == -1)
@@ -4444,8 +4569,15 @@ namespace SkyCoopServer
                 }
 
 
-                if(m_Active && m_Owner != -1)
+                if(m_Active && m_Owner != -1 && m_Health > 0) // Проверка на хп ибо там сверху SetActive на тру, и там симуляция кровотечения
                 {
+                    bool IsAurora = false;
+                    if (ServerInstance.m_Weather != null)
+                    {
+                        IsAurora = ServerInstance.m_Weather.IsAurora();
+                    }
+                    string Prefab = GetPrefabName(IsAurora);
+
                     foreach (NetPeer peer in peers)
                     {
                         PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(peer);
@@ -4455,7 +4587,7 @@ namespace SkyCoopServer
                             {
                                 if(Player.m_GamePlayState == PlayerData.GamePlayState.Alive)
                                 {
-                                    ServerSend.SendAnimalControlRequest(peer, m_Prefab, m_GUID, m_SpawnerGUID, m_Position, m_Rotation, m_AiState, m_IsBleeding, m_Health, m_BleedingMinutes, m_AiStatePrevious, m_SpawnPos);
+                                    ServerSend.SendAnimalControlRequest(peer, Prefab, m_GUID, m_SpawnerGUID, m_Position, m_Rotation, m_AiState, m_IsBleeding, m_Health, m_BleedingMinutes, m_AiStatePrevious, m_SpawnPos);
                                 }
                             }
                             else
@@ -4463,12 +4595,30 @@ namespace SkyCoopServer
                                 float Distance = Vector3.Distance(m_Position, Player.m_Position);
                                 if(Distance < c_AnimalsSyncDistance)
                                 {
-                                    ServerSend.SendAnimalSync(peer, m_Prefab, m_GUID, m_SpawnerGUID, m_Position, m_Rotation, m_AnimatorData, m_IsBleeding, m_AiState, m_AiStatePrevious, m_Velocity);
+                                    ServerSend.SendAnimalSync(peer, Prefab, m_GUID, m_SpawnerGUID, m_Position, m_Rotation, m_AnimatorData, m_IsBleeding, m_AiState, m_AiStatePrevious, m_Velocity, m_IsBeingHeld);
                                 }
                             }
                         }
                     }
                 }
+            }
+
+            public bool EverEncounted()
+            {
+                return m_AiState != -1;
+            }
+
+            // Нам нужно как то вычищять спавны что бы другие животные могли заспавниться
+            // Я тупо проверю если кровотечения нету и животное было в оффлайне 5 часов
+            // то можно его удалить, либо, если игрок вообще с ним не встречался.
+            // Хз кому я это пишу, вдруг кто-то будет потом популяцию редактировать
+            public bool CanDespawn(float CurrentTime)
+            {
+                if (EverEncounted() || (!m_IsBleeding && CurrentTime-m_LastUpdated > 5))
+                {
+                    return true;
+                }
+                return false;
             }
 
             public void Moved(Vector3 Position, Vector3 Velocity)
@@ -4505,7 +4655,15 @@ namespace SkyCoopServer
                     {
                         CurrentTime = ServerInstance.m_Timeline.m_ElapsedInGameHours;
                     }
-                    Spawner.OnAnimalDied(CurrentTime, ServerInstance.m_Config.m_ExperienceMode);
+                    if (!m_Summoned)
+                    {
+                        Spawner.OnAnimalDied(CurrentTime, ServerInstance.m_Config.m_ExperienceMode);
+                    }
+                    bool IsAurora = false;
+                    if (ServerInstance.m_Weather != null)
+                    {
+                        IsAurora = ServerInstance.m_Weather.IsAurora();
+                    }
                     List<NetPeer> peers = new List<NetPeer>();
                     ServerInstance.m_Instance.GetConnectedPeers(peers);
                     foreach (NetPeer peer in peers)
@@ -4513,6 +4671,9 @@ namespace SkyCoopServer
                         PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(peer);
                         if (Player != null && Player.m_Scene == Scene.m_SceneName)
                         {
+                            //ServerSend.SendAnimalCorpse(peer, GetPrefabName(IsAurora), m_GUID, m_Position, m_Rotation);
+
+                            //TODO: вернуть трупы когда закончу их визуал
                             ServerSend.SendAnimalRemoved(peer, m_GUID);
                         }
                     }
@@ -4531,6 +4692,8 @@ namespace SkyCoopServer
             public int m_RespawnPending = 0;
             public float m_NextRespawnAllowed = 0;
             public float m_LastStateChangeTime = 0;
+            public int m_DespawnAttempsHad = 0;
+            public float m_NextDespawnCheck = 0;
 
             public bool IsInsideZone(Vector3 Point)
             {
@@ -4573,12 +4736,13 @@ namespace SkyCoopServer
             {
                 if(m_Data.Points != null)
                 {
-                    string PrefabName = m_Data.GetRandomAnimal();
-                    if (!string.IsNullOrEmpty(PrefabName))
+                    SpawnRegionAnimal AnimalDefinition = m_Data.GetRandomAnimal();
+                    if (AnimalDefinition != null)
                     {
                         m_Spawned++;
                         AnimalEntity Animal = new AnimalEntity();
-                        Animal.m_Prefab = PrefabName;
+                        Animal.m_Prefab = AnimalDefinition.NormalPrefab;
+                        Animal.m_PrefabAurora = AnimalDefinition.AuroraPrefab;
                         Animal.m_Active = false;
                         Animal.m_SpawnerGUID = m_Data.GUID;
                         Animal.m_GUID = Guid.NewGuid().ToString();
@@ -4652,6 +4816,24 @@ namespace SkyCoopServer
                     m_Type = 4;
                     m_Hash = NameHash;
                 }
+            }
+        }
+
+        public static int GetStableHashCode(string str)
+        {
+            unchecked
+            {
+                int hash1 = 5381;
+                int hash2 = hash1;
+
+                for (int i = 0; i < str.Length; i += 2)
+                {
+                    hash1 = ((hash1 << 5) + hash1) ^ str[i];
+                    if (i == str.Length - 1)
+                        break;
+                    hash2 = ((hash2 << 5) + hash2) ^ str[i + 1];
+                }
+                return hash1 + (hash2 * 1566083941);
             }
         }
     }

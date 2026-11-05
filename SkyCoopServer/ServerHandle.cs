@@ -1580,6 +1580,8 @@ namespace SkyCoopServer
                 float BleedingOutMinutes = Reader.GetFloat();
                 int PreviousState = Reader.GetInt();
                 Vector3 Velocity = Reader.GetVector3();
+                float DeathOfBleedingMinutes = Reader.GetFloat();
+                bool IsHolding = Reader.GetBool();
 
                 SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
                 if (Scene != null)
@@ -1594,6 +1596,7 @@ namespace SkyCoopServer
                             Animal.m_AiState = AiState;
                             Animal.m_AiStatePrevious = PreviousState;
                             Animal.m_AnimatorData = AnimatorData;
+                            Animal.m_IsBeingHeld = IsHolding;
                             float PreviousHealth = Animal.m_Health;
                             Animal.m_Health = Health;
                             if (PreviousHealth != 0 && Animal.m_Health <= 0)
@@ -1602,6 +1605,121 @@ namespace SkyCoopServer
                             }
                             Animal.m_IsBleeding = IsBleeding;
                             Animal.m_BleedingMinutes = BleedingOutMinutes;
+                        }
+                    }
+                }
+            }
+        }
+        public static void ClientCheatSpawnAnimal(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null && ServerInstance.m_PlayersData.PlayerCanBeTrusted(Player))
+            {
+                string Prefab = Reader.GetString();
+                Vector3 Position = Reader.GetVector3();
+
+                SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
+                if (Scene != null)
+                {
+                    AnimalEntity Animal = new AnimalEntity();
+                    Animal.m_Prefab = Prefab;
+                    Animal.m_SpawnPos = Position;
+                    Animal.m_Position = Position;
+                    Animal.m_Rotation = Quaternion.Identity;
+                    Animal.m_GUID = Guid.NewGuid().ToString();
+                    SpawnRegionInstance Spawner = Scene.GetClosestSpawnInstance(Position);
+                    if (Spawner != null)
+                    {
+                        Animal.m_SpawnerGUID = Spawner.m_Data.GUID;
+                    }
+                    Animal.m_Summoned = true;
+                    Scene.m_Animals.Add(Animal.m_GUID, Animal);
+                    Logger.Log(ConsoleColor.Magenta, $"Client {Client.Id} cheated to spawn {Prefab}, it linekd to {Animal.m_SpawnerGUID} now");
+                }
+            }
+        }
+        public static void ClientAnimalDamage(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                float Damage = Reader.GetFloat();
+                float BleedingtMinutes = Reader.GetFloat();
+                int DamageSource = Reader.GetInt();
+                string Colider = Reader.GetString();
+
+                SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
+                if (Scene != null)
+                {
+                    AnimalEntity Animal = null;
+                    if (Scene.m_Animals.TryGetValue(GUID, out Animal))
+                    {
+                        if (Animal.m_Owner != -1)
+                        {
+                            NetPeer OwnerClient = ServerInstance.GetClient(Animal.m_Owner);
+                            if (OwnerClient != null)
+                            {
+                                ServerSend.SendAnimalDamage(OwnerClient, GUID, Damage, BleedingtMinutes, DamageSource, Colider);
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public static void ClientAnimalAddArrow(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+                AnimalEntity.ArrowData Arrow = Reader.GetArrowData();
+
+                SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
+                if (Scene != null)
+                {
+                    AnimalEntity Animal = null;
+                    if (Scene.m_Animals.TryGetValue(GUID, out Animal))
+                    {
+                        Animal.m_Arrows.Add(Arrow);
+                        List<NetPeer> peers = new List<NetPeer>();
+                        ServerInstance.m_Instance.GetConnectedPeers(peers);
+                        foreach (NetPeer Peer in peers)
+                        {
+                            if (Peer != null)
+                            {
+                                DataStr.PlayerData OtherPlayer = ServerInstance.GetPlayerDataByNetPeer(Peer);
+
+                                if (OtherPlayer != null && OtherPlayer.m_Scene == Player.m_Scene)
+                                {
+                                    ServerSend.SendAnimalArrow(Peer, GUID, Arrow);
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        public static void ClientRequestAnimalArrows(NetPeer Client, NetDataReader Reader, Server ServerInstance)
+        {
+            PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(Client);
+
+            if (Player != null)
+            {
+                string GUID = Reader.GetString();
+
+                SceneData Scene = ServerInstance.m_ScenesData.GetSceneData(Player.m_Scene);
+                if (Scene != null)
+                {
+                    AnimalEntity Animal = null;
+                    if (Scene.m_Animals.TryGetValue(GUID, out Animal))
+                    {
+                        foreach (AnimalEntity.ArrowData Arrow in Animal.m_Arrows)
+                        {
+                            ServerSend.SendAnimalArrow(Client, GUID, Arrow);
                         }
                     }
                 }

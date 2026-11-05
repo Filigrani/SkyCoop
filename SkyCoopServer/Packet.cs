@@ -107,6 +107,11 @@ namespace SkyCoopServer
             ServerAnimalControlRequest,
             ClientAnimalControlReply,
             ServerAnimalRemoved,
+            ClientCheatSpawnAnimal,
+            ClientAnimalDamage,
+            ClientAnimalAddArrow,
+            ClientRequestAnimalArrows,
+            ClientAnimalCorpse,
         }
 
         public enum SquadResponce
@@ -125,7 +130,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "beta8";
+        public const string c_Key = "public1";
 
         public enum TypeVoice
         {
@@ -693,6 +698,27 @@ namespace SkyCoopServer
                         break;
                 }
             }
+        }
+
+        public static void Put(this NetDataWriter Writer, DataStr.AnimalEntity.ArrowData Data)
+        {
+            Writer.Put(Data.m_ArrowPrefab);
+            Writer.Put(Data.m_Position);
+            Writer.Put(Data.m_Rotation);
+            Writer.Put(Data.m_Condition);
+            Writer.Put(Data.m_Bone);
+        }
+
+        public static DataStr.AnimalEntity.ArrowData GetArrowData(this NetDataReader Reader)
+        {
+            DataStr.AnimalEntity.ArrowData Arrow = new AnimalEntity.ArrowData();
+            Arrow.m_ArrowPrefab = Reader.GetString();
+            Arrow.m_Position = Reader.GetVector3();
+            Arrow.m_Rotation = Reader.GetQuaternion();
+            Arrow.m_Condition = Reader.GetFloat();
+            Arrow.m_Bone = Reader.GetString();
+
+            return Arrow;
         }
     }
 }
