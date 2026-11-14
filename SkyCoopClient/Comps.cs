@@ -1155,8 +1155,9 @@ namespace SkyCoop
                             ArrowItem ARR = col.gameObject.GetComponent<ArrowItem>();
                             ARR.m_ArrowMesh.GetComponent<BoxCollider>().enabled = false;
                             SkyCoop.Logger.Log("Arrow colided other player, and dealing damage");
+                            GearItem Gear = col.gameObject.GetComponent<GearItem>();
                             WeaponsManager.WeaponDescripter Descriptor = WeaponsManager.GetDescriptor(col.gameObject.name);
-                            ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, col.gameObject.name, Descriptor.m_DamageType);
+                            ClientSend.SendDamageToPlayer(Descriptor.m_PlayerDamage, m_Player.m_PlayerID, m_DamageZone, col.gameObject.name, Descriptor.m_DamageType, -1, Gear.GetNormalizedCondition());
                             ClientSend.SendInjectedItem(m_Player.m_PlayerID, col.gameObject.name, m_ColiderIndex, m_DamageZone, col.gameObject.transform.localPosition, col.gameObject.transform.localRotation);
                             Hook.m_InflictedDamageOnce = true;
                         }

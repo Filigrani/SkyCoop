@@ -66,6 +66,16 @@ namespace SkyCoop
         public static Dictionary<string, BlueprintOverrideDataMinMax> s_ClenableOverrides = new Dictionary<string, BlueprintOverrideDataMinMax>();
         public static Dictionary<string, BlueprintOverrideData> s_ResearchItemOverrides = new Dictionary<string, BlueprintOverrideData>();
 
+        public static void WipeOverrides()
+        {
+            s_BlueprintsOverrides.Clear();
+            s_HarvestOverrides.Clear();
+            s_RepariableOverrides.Clear();
+            s_SharpingOverrides.Clear();
+            s_ClenableOverrides.Clear();
+            s_ResearchItemOverrides.Clear();
+        }
+
         public static void MayOverrideBlueprint(BlueprintData Blueprint)
         {
             BlueprintOverrideData OverrideData;
@@ -82,7 +92,7 @@ namespace SkyCoop
             }
             else
             {
-                OverrideData = new BlueprintOverrideData(Blueprint.m_DurationMinutes, (int)Math.Round((float)Blueprint.m_DurationMinutes * 0.2f));
+                OverrideData = new BlueprintOverrideData(Blueprint.m_DurationMinutes, (int)Math.Round((float)Blueprint.m_DurationMinutes * ModMain.GetActionsDurationMultiplier()));
                 s_BlueprintsOverrides.Add(Blueprint.name, OverrideData);
 
                 MayOverrideBlueprint(Blueprint);
@@ -105,7 +115,7 @@ namespace SkyCoop
             }
             else
             {
-                OverrideData = new BlueprintOverrideData(Blueprint.m_DurationMinutes, (int)Math.Round((float)Blueprint.m_DurationMinutes * 0.2f));
+                OverrideData = new BlueprintOverrideData(Blueprint.m_DurationMinutes, (int)Math.Round((float)Blueprint.m_DurationMinutes * ModMain.GetActionsDurationMultiplier()));
                 s_HarvestOverrides.Add(Blueprint.name, OverrideData);
 
                 MayOverrideBlueprint(Blueprint);
@@ -128,7 +138,7 @@ namespace SkyCoop
             }
             else
             {
-                OverrideData = new BlueprintOverrideData(Blueprint.m_DurationMinutes, (int)Math.Round((float)Blueprint.m_DurationMinutes * 0.2f));
+                OverrideData = new BlueprintOverrideData(Blueprint.m_DurationMinutes, (int)Math.Round((float)Blueprint.m_DurationMinutes * ModMain.GetActionsDurationMultiplier()));
                 s_RepariableOverrides.Add(Blueprint.name, OverrideData);
 
                 MayOverrideBlueprint(Blueprint);
@@ -154,7 +164,7 @@ namespace SkyCoop
             else
             {
                 OverrideData = new BlueprintOverrideDataMinMax(new Vector2Int(Blueprint.m_DurationMinutesMin, Blueprint.m_DurationMinutesMax),
-                    new Vector2Int((int)Math.Round((float)Blueprint.m_DurationMinutesMin * 0.2f), (int)Math.Round((float)Blueprint.m_DurationMinutesMax * 0.2f)));
+                    new Vector2Int((int)Math.Round((float)Blueprint.m_DurationMinutesMin * ModMain.GetActionsDurationMultiplier()), (int)Math.Round((float)Blueprint.m_DurationMinutesMax * ModMain.GetActionsDurationMultiplier())));
                 s_SharpingOverrides.Add(Blueprint.name, OverrideData);
 
                 MayOverrideBlueprint(Blueprint);
@@ -180,7 +190,7 @@ namespace SkyCoop
             else
             {
                 OverrideData = new BlueprintOverrideDataMinMax(new Vector2Int(Blueprint.m_DurationMinutesMin, Blueprint.m_DurationMinutesMax),
-                    new Vector2Int((int)Math.Round((float)Blueprint.m_DurationMinutesMin * 0.2f), (int)Math.Round((float)Blueprint.m_DurationMinutesMax * 0.2f)));
+                    new Vector2Int((int)Math.Round((float)Blueprint.m_DurationMinutesMin * ModMain.GetActionsDurationMultiplier()), (int)Math.Round((float)Blueprint.m_DurationMinutesMax * ModMain.GetActionsDurationMultiplier())));
                 s_ClenableOverrides.Add(Blueprint.name, OverrideData);
 
                 MayOverrideBlueprint(Blueprint);
@@ -274,6 +284,8 @@ namespace SkyCoop
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return; }
+
                 int InGameMinutes = __instance.GetFinalCraftingTimeWithAllModifiers();
 
                 if (__instance.m_RequirementContainer.m_TimeSelect.gameObject.activeSelf)
@@ -319,6 +331,8 @@ namespace SkyCoop
             private static bool Prefix(Panel_Inventory_Examine __instance, int minutes, bool doFadeout)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
+
+                if(ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return true; }
 
                 TimeOfDay timeOfDayComponent = GameManager.GetTimeOfDayComponent();
                 __instance.m_DayLengthScaleBeforeRepair = timeOfDayComponent.GetDayLengthScale();

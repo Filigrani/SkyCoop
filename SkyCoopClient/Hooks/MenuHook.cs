@@ -437,7 +437,7 @@ namespace SkyCoop
                     }
                     else
                     {
-                        AddButton(__instance.m_BasicMenu, "GAMEPLAY_Host", "GAMEPLAY_HostDescription", 0, new Action(OnToHostMenu), !Environment.GetCommandLineArgs().Contains("-JoeBiden"));
+                        AddButton(__instance.m_BasicMenu, "GAMEPLAY_Host", "GAMEPLAY_HostDescription", 0, new Action(OnToHostMenu));
                     }
 
                     AddButton(__instance.m_BasicMenu, "GAMEPLAY_Join", "GAMEPLAY_JoinDescription", 1, new Action(OnJoinPressed));

@@ -73,7 +73,7 @@ namespace SkyCoop
             SendToHost(writer);
         }
 
-        public static void SendDamageToPlayer(float Damage, int Victim, Comps.PlayerDamageColider.DamageZone BodyPart, string Weapon, DataStr.DamageType DamageType, int Killer = -1)
+        public static void SendDamageToPlayer(float Damage, int Victim, Comps.PlayerDamageColider.DamageZone BodyPart, string Weapon, DataStr.DamageType DamageType, int Killer = -1, float Condition = 1)
         {
             if(ModMain.Client != null && !ModMain.Client.m_Rules.m_PVP)
             {
@@ -91,6 +91,7 @@ namespace SkyCoop
             writer.Put(Weapon);
             writer.Put((int)DamageType); // Only for server, this won't be send back to clients.
             writer.Put(Killer);
+            writer.Put(Condition);
             SendToHost(writer);
         }
         public static void SendProjectile(Vector3 Position, Quaternion Rotation, string ProjectileName, bool PlaySound = true, float ExtaFloat = 1)

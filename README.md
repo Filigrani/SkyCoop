@@ -2,7 +2,7 @@
 
 | Branch | Game Versions | Status |
 |--------|--------------|--------|
-| [Reborn](https://github.com/Filigrani/SkyCoop/tree/Reborn) | 2.59+ | Playable |
+| [Reborn](https://github.com/Filigrani/SkyCoop/tree/Reborn) | 2.60+ | Playable |
 | [BeforeTFTFT](https://github.com/Filigrani/SkyCoop/tree/BeforeTFTFT) | 2.01 – 2.02 | Legacy Version |
 | [main](https://github.com/Filigrani/SkyCoop/tree/main) | — | Legacy codebase (abandoned) |
 

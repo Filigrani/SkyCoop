@@ -106,6 +106,7 @@ namespace SkyCoop
                 Server.SaveToFile();
                 Server.DisconnectAllPlayers("Server shutdown", true);
             }
+            FilesManager.DeleteTempFolder();
 
             base.OnApplicationQuit();
         }
@@ -389,7 +390,7 @@ namespace SkyCoop
 
         public static string GetNickName()
         {
-#warning TODO: fix this to
+#warning TODO: Вернуть когда modsettings обновят
             //string UserName = Settings.m_Options.m_UserName;
             string UserName = "";
 
@@ -397,7 +398,6 @@ namespace SkyCoop
             {
                 return SteamFriends.GetPersonaName();
             }
-
             return UserName;
         }
 
@@ -435,6 +435,18 @@ namespace SkyCoop
             }
 
             return seed;
+        }
+
+        public static float GetActionsDurationMultiplier()
+        {
+            if (IsMultiplayer())
+            {
+                if(Client != null && Client.m_IsReady)
+                {
+                    return Client.m_Rules.m_ActionsDurationMultiplier;
+                }
+            }
+            return 1;
         }
 
         [HarmonyLib.HarmonyPatch(typeof(GameManager), "OnApplicationFocus")]

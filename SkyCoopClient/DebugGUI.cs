@@ -79,7 +79,7 @@ namespace SkyCoopClient
 
             if (Data != null)
             {
-                s_CurrentLoadedMapPath = $"{FilesManager.s_DataDirectory}/{FilesManager.s_MapsDirectory}/{FileName}";
+                s_CurrentLoadedMapPath = $"{FilesManager.s_OverrideDataDirectory}/{FilesManager.s_MapsDirectory}/{FileName}";
                 LoadMap(Data);
             }
         }
@@ -116,7 +116,7 @@ namespace SkyCoopClient
 
         public static bool CreateNewMap(string MapName)
         {
-            string Path = $"{FilesManager.s_DataDirectory}/{FilesManager.s_MapsDirectory}/{MapName}";
+            string Path = $"{FilesManager.s_OverrideDataDirectory}/{FilesManager.s_MapsDirectory}/{MapName}";
 
             if (File.Exists(Path))
             {
@@ -132,7 +132,7 @@ namespace SkyCoopClient
             if (CreateNewMap(text))
             {
                 s_CurrentMapData = new MapData();
-                s_CurrentLoadedMapPath = $"{FilesManager.s_DataDirectory}/{FilesManager.s_MapsDirectory}/{text}";
+                s_CurrentLoadedMapPath = $"{FilesManager.s_OverrideDataDirectory}/{FilesManager.s_MapsDirectory}/{text}";
                 LoadMap(s_CurrentMapData);
                 InterfaceManager.GetPanel<Panel_Confirmation>().AddConfirmation(Panel_Confirmation.ConfirmationType.Rename, "Input scene for map", ModMain.GetCurrentSceneName(), Panel_Confirmation.ButtonLayout.Button_2, "GAMEPLAY_Confirm", "GAMEPLAY_Cancel", Panel_Confirmation.Background.Transperent, new Action(OnSetScene), null);
                 SetState(State.SelectTool);

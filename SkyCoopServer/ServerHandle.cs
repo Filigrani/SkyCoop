@@ -95,6 +95,7 @@ namespace SkyCoopServer
             {
                 KillerID = Client.Id;
             }
+            float Condition = Reader.GetFloat();
 
             if (!ServerInstance.m_Rules.m_PVP && KillerID != VictimID)
             {
@@ -116,7 +117,7 @@ namespace SkyCoopServer
                 }
 
 
-                ServerSend.SendDamageToPlayer(ServerInstance.GetClient(VictimID), Damage, KillerID, BodyPart, WeaponName);
+                ServerSend.SendDamageToPlayer(ServerInstance.GetClient(VictimID), Damage, KillerID, BodyPart, WeaponName, Condition);
                 ServerSend.SendGettingDamage(VictimID, ServerInstance); // Анимация
 
                 Victim.DealDamage(KillerID, Damage, DamageType);
@@ -378,6 +379,7 @@ namespace SkyCoopServer
                 ServerSend.SendPickUpGearFailed(Client);
                 return;
             }
+
             string GUID = Reader.GetString();
 
             List<NetPeer> peers = new List<NetPeer>();
@@ -401,7 +403,7 @@ namespace SkyCoopServer
 
             DataStr.GearDataContainer GearData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GUID);
 
-            if(GearData == null)
+            if (GearData == null)
             {
                 ServerSend.SendPickUpGearFailed(Client);
             }
@@ -412,7 +414,7 @@ namespace SkyCoopServer
                 {
                     DataStr.GearDataContainer ProductData = ServerInstance.m_ScenesData.GetGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, GearData.m_Visual.m_ProductGUID);
 
-                    if(ProductData != null)
+                    if (ProductData != null)
                     {
                         ServerSend.SendPickUpGear(Client, ProductData.m_Visual.m_GearName, ProductData.m_Data.m_JSON, true, GearData.m_Visual.m_BeingCookedTime, ProductData.m_Visual.m_CookingResult, ProductData.m_Visual.m_Volume, ProductData.m_Visual.m_Style, ProductData.m_Data.m_GUID);
                         ServerInstance.m_ScenesData.RemoveGear(ServerInstance.GetPlayerDataByNetPeer(Client).m_Scene, ProductData.m_Visual.m_GUID, Client);

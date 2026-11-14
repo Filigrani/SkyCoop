@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Compression;
 using System.Numerics;
 using System.Reflection;
 using System.Text.Json;
@@ -11,8 +12,12 @@ namespace SkyCoopServer
 {
     public class FilesManager
     {
+        public static string s_ExecutingLocation = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}";
         // Main Data folder
-        public static string s_DataDirectory = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/SkyModData";
+        public static string s_DataDirectory = $"{s_ExecutingLocation}/_rebornTemp";
+
+        // InDev data
+        public static string s_OverrideDataDirectory = $"{s_ExecutingLocation}/RebornData";
 
         // Save Data folder
         public static string s_SaveDirectory = "";
@@ -22,10 +27,71 @@ namespace SkyCoopServer
         public static string s_LootTablesDirectory = "LootTables";
         public static string s_MapsDirectory = "Maps";
         public static string s_WeatherDirectory = "Weather";
+        public static string s_DupeListsDirectory = "DupeLists";
+        public static string s_GearSpawnsDirectory = "GearSpawns";
+        public static string s_WildlifeSpawnsDirectory = "WildlifeSpawns";
 
-        public static string s_ServerConfigLocation = $"{Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)}/Server.json";
+        public static string s_ServerConfigLocation = $"{s_ExecutingLocation}/Server.json";
 
-        public static void InitFolders(bool SkipDefaultSaveFolder = false)
+        // PreLoaded Assets
+        public static List<string> s_Dupes = new List<string>();
+        public static Dictionary<string, SceneAnimalSpawns> s_AnimalSpawns = new Dictionary<string, SceneAnimalSpawns>();
+        public static Dictionary<string, Dictionary<string, SpawnRegionData>> s_SpawnRegionBySceneByGUID = new Dictionary<string, Dictionary<string, SpawnRegionData>>();
+
+        public static void CopyOverrideData()
+        {
+            if (!Directory.Exists(s_OverrideDataDirectory))
+            {
+                return;
+            }
+
+            foreach (string filePath in Directory.EnumerateFiles(s_OverrideDataDirectory, "*", SearchOption.AllDirectories))
+            {
+                string relativePath = Path.GetRelativePath(s_OverrideDataDirectory, filePath);
+                string destPath = Path.Combine(s_DataDirectory, relativePath);
+                string destDir = Path.GetDirectoryName(destPath);
+                if (!string.IsNullOrEmpty(destDir))
+                {
+                    Directory.CreateDirectory(destDir);
+                }
+
+                File.Copy(filePath, destPath, true);
+            }
+        }
+
+        public static void ExtractAllArchives()
+        {
+            foreach (string FilePath in Directory.GetFiles(s_ExecutingLocation))
+            {
+                string FileName = Path.GetFileName(FilePath);
+                if(!string.IsNullOrEmpty(FileName))
+                {
+                    string LowerName = FileName.ToLower();
+                    if (LowerName.EndsWith(".reborndata"))
+                    {
+                        try
+                        {
+                            ZipFile.ExtractToDirectory(FilePath, s_DataDirectory, overwriteFiles: true);
+                            Logger.Log($"[FilesManager] Unpacked {FilePath}");
+                        }
+                        catch (Exception ex)
+                        {
+                            Logger.Log($"[FilesManager] Unpacking failed! {FilePath}");
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void DeleteTempFolder()
+        {
+            if (Directory.Exists(s_DataDirectory))
+            {
+                Directory.Delete(s_DataDirectory, true);
+            }
+        }
+
+        public static void CreateTempFolder()
         {
             if (!Directory.Exists(s_DataDirectory))
             {
@@ -43,6 +109,91 @@ namespace SkyCoopServer
             {
                 Directory.CreateDirectory($"{s_DataDirectory}/{s_LootTablesDirectory}");
             }
+            if (!Directory.Exists($"{s_DataDirectory}/{s_DupeListsDirectory}"))
+            {
+                Directory.CreateDirectory($"{s_DataDirectory}/{s_DupeListsDirectory}");
+            }
+            if (!Directory.Exists($"{s_DataDirectory}/{s_WildlifeSpawnsDirectory}"))
+            {
+                Directory.CreateDirectory($"{s_DataDirectory}/{s_WildlifeSpawnsDirectory}");
+            }
+            if (!Directory.Exists($"{s_DataDirectory}/{s_GearSpawnsDirectory}"))
+            {
+                Directory.CreateDirectory($"{s_DataDirectory}/{s_GearSpawnsDirectory}");
+            }
+        }
+
+        public static void PreloadAssets()
+        {
+            s_Dupes.Clear();
+            s_AnimalSpawns.Clear();
+            s_SpawnRegionBySceneByGUID.Clear();
+
+            s_Dupes = GetAllDupes();
+            foreach (ScenesAnimalSpawns AnimalsSpawnsData in GetAllAnimalsSpawnsData())
+            {
+                if (AnimalsSpawnsData != null)
+                {
+                    foreach (SceneAnimalSpawns SpawnsData in AnimalsSpawnsData.Scenes)
+                    {
+                        if (SpawnsData != null)
+                        {
+                            SceneAnimalSpawns Combined = null;
+                            if (s_AnimalSpawns.TryGetValue(SpawnsData.SceneName, out Combined))
+                            {
+                                Combined.Join(SpawnsData);
+                            }
+                            else
+                            {
+                                SceneAnimalSpawns New = new SceneAnimalSpawns();
+                                New.Spawns = new List<SpawnRegionData>();
+                                New.RandomSpawnObjects = new List<RandomAnimalSpawnObjectData>();
+                                New.Clone(SpawnsData);
+                                s_AnimalSpawns.Add(SpawnsData.SceneName, New);
+                            }
+                        }
+                    }
+                }
+            }
+            // Оптимизация для будущиего поиска для респавнов предметов
+            foreach (var item in s_AnimalSpawns)
+            {
+                string SceneName = item.Key;
+                SceneAnimalSpawns Data = item.Value;
+
+                Dictionary<string, SpawnRegionData> DictSpawnsByGUID = null;
+                if (!s_SpawnRegionBySceneByGUID.TryGetValue(SceneName, out DictSpawnsByGUID))
+                {
+                    DictSpawnsByGUID = new Dictionary<string, SpawnRegionData>();
+                    s_SpawnRegionBySceneByGUID.Add(SceneName, DictSpawnsByGUID);
+                }
+                foreach (SpawnRegionData Spawner in Data.Spawns)
+                {
+                    if (!string.IsNullOrEmpty(Spawner.GUID) && !DictSpawnsByGUID.ContainsKey(Spawner.GUID))
+                    {
+                        DictSpawnsByGUID.Add(Spawner.GUID, Spawner);
+                    }
+                }
+                foreach (RandomAnimalSpawnObjectData Base in Data.RandomSpawnObjects)
+                {
+                    foreach (AnimalSpawnElementData Element in Base.SpawnRegions)
+                    {
+                        SpawnRegionData Spawner = Element.Spawn;
+                        if (!string.IsNullOrEmpty(Spawner.GUID) && !DictSpawnsByGUID.ContainsKey(Spawner.GUID))
+                        {
+                            DictSpawnsByGUID.Add(Spawner.GUID, Spawner);
+                        }
+                    }
+                }
+            }
+        }
+
+        public static void InitFolders(bool SkipDefaultSaveFolder = false)
+        {
+            DeleteTempFolder();
+            CreateTempFolder();
+            ExtractAllArchives();
+            CopyOverrideData();
 
             if (!SkipDefaultSaveFolder)
             {
@@ -56,6 +207,7 @@ namespace SkyCoopServer
                     Directory.CreateDirectory(s_SaveDirectory);
                 }
             }
+            PreloadAssets();
         }
 
         public static void SetSavesFolder(string Path)
@@ -347,6 +499,26 @@ namespace SkyCoopServer
             return JsonSerializer.Deserialize<WeatherManager.WeatherSettingsConfig>(JSON);
         }
 
+        public static Dictionary<string , DataStr.ScenesLootSpawns> GetAllGearSpawns()
+        {
+            Dictionary<string, DataStr.ScenesLootSpawns> Result = new Dictionary<string, DataStr.ScenesLootSpawns>();
+
+            string _Path = $"{s_DataDirectory}/{s_GearSpawnsDirectory}";
+
+            if (Directory.Exists(_Path))
+            {
+                foreach (string FilePath in Directory.GetFiles(_Path))
+                {
+                    DataStr.ScenesLootSpawns Data = GetGearsSpawnsData(FilePath);
+                    if (Data != null)
+                    {
+                        Result.Add(Path.GetFileNameWithoutExtension(FilePath), Data);
+                    }
+                }
+            }
+            return Result;
+        }
+
         public static DataStr.ScenesLootSpawns GetGearsSpawnsData(string Path)
         {
 
@@ -354,34 +526,53 @@ namespace SkyCoopServer
             {
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
             };
-            string _Path = $"{s_DataDirectory}/{Path}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {_Path}");
-            if (File.Exists(_Path))
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
             {
                 try
                 {
-                    JSON = File.ReadAllText(_Path);
+                    JSON = File.ReadAllText(Path);
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"[FilesManager] Failed to load {_Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return null;
                 }
             }
             else
             {
-                Logger.Log($"[FilesManager] File {_Path} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
                 return null;
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {_Path} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
             return JsonSerializer.Deserialize<ScenesLootSpawns>(JSON, options);
+        }
+
+        public static List<DataStr.ScenesAnimalSpawns> GetAllAnimalsSpawnsData()
+        {
+            List<DataStr.ScenesAnimalSpawns> Result = new List<ScenesAnimalSpawns>();
+
+            string _Path = $"{s_DataDirectory}/{s_WildlifeSpawnsDirectory}";
+
+            if (Directory.Exists(_Path))
+            {
+                foreach (string FilePath in Directory.GetFiles(_Path))
+                {
+                    DataStr.ScenesAnimalSpawns AnimalSpawns = GetAnimalsSpawnsData(FilePath);
+                    if (AnimalSpawns != null)
+                    {
+                        Result.Add(AnimalSpawns);
+                    }
+                }
+            }
+            return Result;
         }
 
         public static DataStr.ScenesAnimalSpawns GetAnimalsSpawnsData(string Path)
@@ -391,31 +582,30 @@ namespace SkyCoopServer
             {
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
             };
-            string _Path = $"{s_DataDirectory}/{Path}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {_Path}");
-            if (File.Exists(_Path))
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
             {
                 try
                 {
-                    JSON = File.ReadAllText(_Path);
+                    JSON = File.ReadAllText(Path);
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"[FilesManager] Failed to load {_Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return null;
                 }
             }
             else
             {
-                Logger.Log($"[FilesManager] File {_Path} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
                 return null;
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {_Path} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
             return JsonSerializer.Deserialize<ScenesAnimalSpawns>(JSON, options);
@@ -611,34 +801,56 @@ namespace SkyCoopServer
             return Proxy.Load();
         }
 
+        public static List<string> GetAllDupes()
+        {
+            List<string> Gears = new List<string>();
+            string _Path = $"{s_DataDirectory}/{s_DupeListsDirectory}";
+            if (Directory.Exists(_Path))
+            {
+                foreach (string FilePath in Directory.GetFiles(_Path))
+                {
+                    List<string> DupeList = GetDupeList(FilePath);
+                    if (DupeList != null)
+                    {
+                        foreach (string Gear in DupeList)
+                        {
+                            if (!Gears.Contains(Gear))
+                            {
+                                Gears.Add(Gear);
+                            }
+                        }
+                    }
+                }
+            }
+            return Gears;
+        }
+
         public static List<string> GetDupeList(string Path)
         {
-
-            string _Path = $"{s_DataDirectory}/{Path}";
             string JSON = "";
 
-            Logger.Log($"[FilesManager] Loading file {_Path}");
-            if (File.Exists(_Path))
+            Logger.Log($"[FilesManager] Loading file {Path}");
+            if (File.Exists(Path))
             {
                 try
                 {
-                    JSON = File.ReadAllText(_Path);
+                    JSON = File.ReadAllText(Path);
                 }
                 catch (Exception e)
                 {
-                    Logger.Log($"[FilesManager] Failed to load {_Path}: {e.Message}");
+                    Logger.Log($"[FilesManager] Failed to load {Path}: {e.Message}");
                     return null;
                 }
             }
             else
             {
-                Logger.Log($"[FilesManager] File {_Path} not exist");
+                Logger.Log($"[FilesManager] File {Path} not exist");
                 return null;
             }
 
             if (string.IsNullOrEmpty(JSON))
             {
-                Logger.Log($"[FilesManager] File {_Path} is empty");
+                Logger.Log($"[FilesManager] File {Path} is empty");
                 return null;
             }
             return JsonSerializer.Deserialize<List<string>>(JSON);

@@ -46,6 +46,29 @@ namespace SkyCoop
         public static void ApplyRules(DataStr.GameRules Rules)
         {
             ModMain.Client.m_Rules = Rules;
+            CraftingHook.WipeOverrides();
+            Logger.Log(ConsoleColor.Cyan, "Server rules");
+            Logger.Log(ConsoleColor.Cyan, $"PlayerCanBeKnocked: {Rules.m_PlayerCanBeKnocked}");
+            Logger.Log(ConsoleColor.Cyan, $"PVP: {Rules.m_PVP}");
+            Logger.Log(ConsoleColor.Cyan, $"HUDMode: {Rules.m_HUDMode}");
+            Logger.Log(ConsoleColor.Cyan, $"DeathPacks: {Rules.m_DeathPacks}");
+            Logger.Log(ConsoleColor.Cyan, $"Respawns: {Rules.m_Respawns}");
+            Logger.Log(ConsoleColor.Cyan, $"Clothing: {Rules.m_Clothing}");
+            Logger.Log(ConsoleColor.Cyan, $"CanDropItems: {Rules.m_CanDropItems}");
+            Logger.Log(ConsoleColor.Cyan, $"CanUseContainers: {Rules.m_CanUseContainers}");
+            Logger.Log(ConsoleColor.Cyan, $"CanUseMap: {Rules.m_CanUseMap}");
+            Logger.Log(ConsoleColor.Cyan, $"AdvancedSpawnPoints: {Rules.m_AdvancedSpawnPoints}");
+            Logger.Log(ConsoleColor.Cyan, $"Fatigue: {Rules.m_Fatigue}");
+            Logger.Log(ConsoleColor.Cyan, $"Hunger: {Rules.m_Hunger}");
+            Logger.Log(ConsoleColor.Cyan, $"Thirst: {Rules.m_Thirst}");
+            Logger.Log(ConsoleColor.Cyan, $"Cold: {Rules.m_Cold}");
+            Logger.Log(ConsoleColor.Cyan, $"CanUseBeds: {Rules.m_CanUseBeds}");
+            Logger.Log(ConsoleColor.Cyan, $"CanStartFire: {Rules.m_CanStartFire}");
+            Logger.Log(ConsoleColor.Cyan, $"CanUseTransitions: {Rules.m_CanUseTransitions}");
+            Logger.Log(ConsoleColor.Cyan, $"Weather: {Rules.m_Weather}");
+            Logger.Log(ConsoleColor.Cyan, $"CanCraft: {Rules.m_CanCraft}");
+            Logger.Log(ConsoleColor.Cyan, $"AsyncTimeline: {Rules.m_AsyncTimeline}");
+            Logger.Log(ConsoleColor.Cyan, $"ActionsDurationMultiplier: {Rules.m_ActionsDurationMultiplier}");
         }
 
         public static void ServerConfig(NetDataReader Reader)
@@ -194,8 +217,9 @@ namespace SkyCoop
             float Damage = Reader.GetFloat();
             int PlayerID = Reader.GetInt();
             Comps.PlayerDamageColider.DamageZone BodyPart = (Comps.PlayerDamageColider.DamageZone)Reader.GetInt();
-            string MeleeName = Reader.GetString();
-            PlayersManager.OtherPlayerDamageMe(Damage, PlayerID, BodyPart, MeleeName);
+            string WeaponName = Reader.GetString();
+            float WeaponCondition = Reader.GetFloat();
+            PlayersManager.OtherPlayerDamageMe(Damage, PlayerID, BodyPart, WeaponName, WeaponCondition);
         }
         public static void ClientProjectile(NetDataReader Reader)
         {
@@ -891,20 +915,23 @@ namespace SkyCoop
             if(ModMain.Client != null && ModMain.Client.m_IsReady)
             {
                 ModMain.Client.m_LastServerTime = ElapsedInGameHours;
-            }
 
-            SleepHook.SetEveryoneIsSleeping(EveryoneIsSleeping);
-
-            if (SleepHook.s_LastPlayersReadyForAccelerate != PlayersReady)
-            {
-                SleepHook.s_LastPlayersReadyForAccelerate = PlayersReady;
-
-                Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
-                if (Panel)
+                if (!ModMain.Client.m_Rules.m_AsyncTimeline)
                 {
-                    HUDMessage.HUDMessageInfo msg = new HUDMessage.HUDMessageInfo();
-                    msg.m_Text = $"{PlayersReady} / {TotalPlayers} {Localization.Get("GAMEPLAY_PlayersReady_Accelerate")}";
-                    HUDMessage.ShowMessage(Panel, msg);
+                    SleepHook.SetEveryoneIsSleeping(EveryoneIsSleeping);
+
+                    if (SleepHook.s_LastPlayersReadyForAccelerate != PlayersReady)
+                    {
+                        SleepHook.s_LastPlayersReadyForAccelerate = PlayersReady;
+
+                        Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+                        if (Panel)
+                        {
+                            HUDMessage.HUDMessageInfo msg = new HUDMessage.HUDMessageInfo();
+                            msg.m_Text = $"{PlayersReady} / {TotalPlayers} {Localization.Get("GAMEPLAY_PlayersReady_Accelerate")}";
+                            HUDMessage.ShowMessage(Panel, msg);
+                        }
+                    }
                 }
             }
         }

@@ -9,8 +9,6 @@ using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.AI;
-using static Il2Cpp.PlayerVoice;
-using static Il2Cpp.Utils;
 using static SkyCoop.Comps;
 
 namespace SkyCoopClient
@@ -128,13 +126,21 @@ namespace SkyCoopClient
 
                     if (Ai)
                     {
-                        Ai.m_CurrentHP = 0;
+                        if (Ai.m_NavMeshAgent)
+                        {
+                            Ai.m_NavMeshAgent.transform.position = Position;
+                            Ai.m_NavMeshAgent.transform.rotation = Rotation;
+                        }
+                        Ai.m_CurrentMode = AiMode.None;
                         Ai.SetAiMode(AiMode.Dead);
-                        Ai.enabled = false;
+                        Ai.m_CurrentHP = 0;
                         if (Ai.m_BodyHarvest)
                         {
                             Ai.m_BodyHarvest.enabled = false;
                         }
+                        Ai.m_Animator.SetBool(Ai.m_AnimParameter_Dead, true);
+                        Ai.m_Animator.SetInteger(Ai.m_AnimParameter_DamageSide, 1);
+                        Ai.m_Animator.SetTrigger(Ai.m_AnimParameter_DamageImpact_Trigger);
                     }
 
                     return Obj;
@@ -270,7 +276,7 @@ namespace SkyCoopClient
         public static void HandleCorpse(string GUID, string Prefab, Vector3 Position, Quaternion Rotation)
         {
             GameObject Obj = PdidTable.GetGameObject(GUID);
-            if (Obj && Obj.GetComponent<BaseAi>())
+            if (Obj && Obj.GetComponent<BaseAiHook>())
             {
                 HandleRemove(Obj, "(death)");
                 Obj = null;

@@ -13,6 +13,7 @@ using UnityEngine.AddressableAssets;
 using UnityEngine.UIElements;
 using static Il2Cpp.BaseAi;
 using static Il2Cpp.PlayerManager;
+using static Il2Cpp.PlayerVoice;
 using static SkyCoop.Comps.PlayerDamageColider;
 using static SkyCoopServer.DataStr;
 
@@ -566,7 +567,38 @@ namespace SkyCoop
             return Protection / 100;
         }
 
-        public static void OtherPlayerDamageMe(float damage, int from, Comps.PlayerDamageColider.DamageZone bodypart, string Weapon)
+        public static bool GearShouldBeInjected(string GearName)
+        {
+            return GearName == "GEAR_Arrow" || GearName == "GEAR_ArrowHardened";
+        }
+
+        public static string GetGearAfflictionIcon(string GearName)
+        {
+            switch (GearName)
+            {
+                case "GEAR_Arrow":
+                    return "ico_ammo_arrow";
+                case "GEAR_ArrowHardened":
+                    return "ico_ammo_arrowHardened";
+                default:
+                    return "";
+            }
+        }
+
+        public static string GetGearAfflictionName(string GearName)
+        {
+            switch (GearName)
+            {
+                case "GEAR_Arrow":
+                    return "GAMEPLAY_Arrow";
+                case "GEAR_ArrowHardened":
+                    return "GAMEPLAY_ArrowHardened";
+                default:
+                    return "";
+            }
+        }
+
+        public static void OtherPlayerDamageMe(float damage, int from, Comps.PlayerDamageColider.DamageZone bodypart, string Weapon, float Condition = 1)
         {
             if (damage <= 0)
             {
@@ -771,9 +803,9 @@ namespace SkyCoop
                 GameManager.GetBurnsComponent().BurnsStart(DamageCase, true, true, AfflictionOptions.PlayFX);
             }
 
-            if(Weapon == "GEAR_Bow" || Weapon == "GEAR_Arrow" || Weapon == "GEAR_ArrowHardened")
+            if(GearShouldBeInjected(Weapon))
             {
-                AddArrowAffiction(BodyArea, DamageCase, Weapon);
+                AddArrowAffiction(BodyArea, Weapon, Condition);
             }
 
             if(Weapon == "ZONE")
@@ -799,18 +831,11 @@ namespace SkyCoop
             GameAudioManager.SetAudioSourceTransform(Player, V3);
         }
 
-        public static void AddArrowAffiction(AfflictionBodyArea Area, string Case, string ArrowName)
+        public static void AddArrowAffiction(AfflictionBodyArea Area, string ArrowName, float Condition = 1)
         {
-            string CaseHack = "_ARROW_";
-            string GameplayString = "GAMEPLAY_ARROW";
-            string Ico = "ico_ammo_arrow";
-
-            if (ArrowName == "GEAR_ArrowHardened")
-            {
-                CaseHack = "_ARROW2_";
-                GameplayString = "GAMEPLAY_ArrowHardened";
-                Ico = "ico_ammo_arrowHardened";
-            }
+            string CaseHack = $"{ArrowName}&{Math.Round(Condition).ToString()}";
+            string GameplayString = GetGearAfflictionName(ArrowName);
+            string Ico = GetGearAfflictionIcon(ArrowName);
 
             BloodLoss bloodLossComponent = GameManager.GetBloodLossComponent();
             bloodLossComponent.m_Locations.Add((int)Area);
@@ -1242,20 +1267,15 @@ namespace SkyCoop
         {
             private static void Postfix(AfflictionButton __instance, string causeStr, AfflictionType affType, AfflictionBodyArea location, int index, string effectName, string spriteName)
             {
-                if (causeStr == "_ARROW_" || causeStr == "_ARROW2_")
+                if (causeStr.StartsWith("GEAR_"))
                 {
-                    __instance.m_SpriteEffect.spriteName = "ico_ammo_arrow";
-                    if(causeStr == "_ARROW_")
-                    {
-                        __instance.m_LabelEffect.text = Localization.Get("GAMEPLAY_Arrow");
-                    }
-                    else
-                    {
-                        __instance.m_LabelEffect.text = Localization.Get("GAMEPLAY_ArrowHardened");
-                    }
+                    string[] Slices =  causeStr.Split('&');
+                    string GearName = Slices[0];
+
+                    __instance.m_SpriteEffect.spriteName = GetGearAfflictionIcon(GearName);
+                    __instance.m_LabelEffect.text = Localization.Get(GetGearAfflictionName(GearName));
                     __instance.m_LabelCause.text = "Player shot you";
                 }
-
             }
         }
 
@@ -1264,13 +1284,12 @@ namespace SkyCoop
         {
             private static void Postfix(AfflictionCoverflow __instance, Affliction affliction)
             {
-                if (affliction.m_Cause == "_ARROW_")
+                if (affliction.m_Cause.StartsWith("GEAR_"))
                 {
-                    __instance.m_SpriteEffect.spriteName = "ico_ammo_arrow";
-                }
-                else if (affliction.m_Cause == "_ARROW2_")
-                {
-                    __instance.m_SpriteEffect.spriteName = "ico_ammo_arrowHardened";
+                    string[] Slices = affliction.m_Cause.Split('&');
+                    string GearName = Slices[0];
+
+                    __instance.m_SpriteEffect.spriteName = GetGearAfflictionIcon(GearName);
                 }
             }
         }
@@ -1280,16 +1299,12 @@ namespace SkyCoop
         {
             private static void Postfix(Panel_Affliction __instance, Affliction affliction)
             {
-                if (affliction.m_Cause == "_ARROW_" || affliction.m_Cause == "_ARROW2_")
+                if (affliction.m_Cause.StartsWith("GEAR_"))
                 {
-                    if (affliction.m_Cause == "_ARROW_")
-                    {
-                        __instance.m_Label.text = Localization.Get("GAMEPLAY_Arrow");
-                    }
-                    else
-                    {
-                        __instance.m_Label.text = Localization.Get("GAMEPLAY_ArrowHardened");
-                    }
+                    string[] Slices = affliction.m_Cause.Split('&');
+                    string GearName = Slices[0];
+
+                    __instance.m_Label.text = Localization.Get(GetGearAfflictionName(GearName));
                     __instance.m_LabelCause.text = "Player shot you";
                 }
             }
@@ -1307,21 +1322,19 @@ namespace SkyCoop
                 string Cause = __instance.m_CausesLocIDs[index];
                 int Location = __instance.m_Locations[index];
 
-                if(Cause != "_ARROW_" && Cause != "_ARROW2_")
+                if(!Cause.StartsWith("GEAR_"))
                 {
                     return true;
                 }
 
-                string GearName = "GEAR_Arrow";
-                string GamePlayString = "GAMEPLAY_Arrow";
-                string Ico = "ico_ammo_arrow";
+                string[] Slices = Cause.Split('&');
 
-                if(Cause == "_ARROW2_")
-                {
-                    GearName = "GEAR_ArrowHardened";
-                    GamePlayString = "GAMEPLAY_ArrowHardened";
-                    Ico = "ico_ammo_arrowHardened";
-                }
+                string GearName = Slices[0];
+                string GamePlayString = GetGearAfflictionName(GearName);
+                string Ico = GetGearAfflictionIcon(GearName);
+                string Condition = Slices[1];
+                float ConditionNormalized = 1;
+                float.TryParse(Condition, out ConditionNormalized);
 
                 __instance.m_CausesLocIDs.RemoveAt(index);
                 __instance.m_Locations.RemoveAt(index);
@@ -1346,6 +1359,7 @@ namespace SkyCoop
                     GameManager.GetPlayerManagerComponent().EnterInspectGearMode(component);
                     AfflictionBodyArea BodyArea = (AfflictionBodyArea)Location;
                     Comps.PlayerDamageColider.DamageZone DamageZone = DamageZone.Head;
+                    component.SetNormalizedHP(ConditionNormalized);
 
                     switch (BodyArea)
                     {

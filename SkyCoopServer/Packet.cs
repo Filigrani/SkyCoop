@@ -130,7 +130,7 @@ namespace SkyCoopServer
             YouInvitedTooMuch,
         }
 
-        public const string c_Key = "public1";
+        public const string c_Key = "public2";
 
         public enum TypeVoice
         {
@@ -322,6 +322,8 @@ namespace SkyCoopServer
             Writer.Put(Rules.m_CanUseTransitions);
             Writer.Put(Rules.m_Weather);
             Writer.Put(Rules.m_CanCraft);
+            Writer.Put(Rules.m_AsyncTimeline);
+            Writer.Put(Rules.m_ActionsDurationMultiplier);
         }
 
         public static DataStr.GameRules GetRules(this NetDataReader Reader)
@@ -349,6 +351,8 @@ namespace SkyCoopServer
             Rules.m_CanUseTransitions = Reader.GetBool();
             Rules.m_Weather = Reader.GetBool();
             Rules.m_CanCraft = Reader.GetBool();
+            Rules.m_AsyncTimeline = Reader.GetBool();
+            Rules.m_ActionsDurationMultiplier = Reader.GetFloat();
 
             return Rules;
         }

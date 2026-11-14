@@ -3,6 +3,7 @@ using LiteNetLib;
 using LiteNetLib.Utils;
 using SkyCoopClient;
 using SkyCoopServer;
+using System.Text.Unicode;
 
 namespace SkyCoop
 {
@@ -172,7 +173,7 @@ namespace SkyCoop
                 {
                     if(message.AdditionalData.RawData.Length > 0)
                     {
-                        Message = message.AdditionalData.GetString();
+                        Message = System.Text.Encoding.UTF8.GetString(message.AdditionalData.RawData);
                     }
                     else
                     {
@@ -221,6 +222,7 @@ namespace SkyCoop
                             break;
                     }
                 }
+                Logger.Log(ConsoleColor.Red, $"Disconnect reason: {message}");
                 m_IsReady = false;
                 PlayersManager.DestoryPlayers();
                 m_Instance.Stop();

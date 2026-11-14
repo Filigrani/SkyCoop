@@ -177,14 +177,14 @@ namespace SkyCoopClient
             Options.WriteIndented = true;
             string JSON = JsonSerializer.Serialize<List<string>>(Dupples, Options);
 
-            if (!Directory.Exists($"{FilesManager.s_DataDirectory}/DupeLists"))
+            if (!Directory.Exists($"{FilesManager.s_OverrideDataDirectory}/DupeLists"))
             {
-                Directory.CreateDirectory($"{FilesManager.s_DataDirectory}/DupeLists");
+                Directory.CreateDirectory($"{FilesManager.s_OverrideDataDirectory}/DupeLists");
             }
 
             try
             {
-                File.WriteAllText($"{FilesManager.s_DataDirectory}/DupeLists/Naratives", JSON);
+                File.WriteAllText($"{FilesManager.s_OverrideDataDirectory}/DupeLists/Naratives", JSON);
                 return;
             }
             catch (Exception e)

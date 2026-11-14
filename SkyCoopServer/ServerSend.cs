@@ -99,7 +99,7 @@ namespace SkyCoopServer
             writer.Put(FromClient);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
-        public static void SendDamageToPlayer(NetPeer Client, float Damage, int Killer, int BodyPart, string WeaponName)
+        public static void SendDamageToPlayer(NetPeer Client, float Damage, int Killer, int BodyPart, string WeaponName, float Condition = 1)
         {
             NetDataWriter writer = new NetDataWriter();
 
@@ -108,6 +108,7 @@ namespace SkyCoopServer
             writer.Put(Killer);
             writer.Put(BodyPart);
             writer.Put(WeaponName);
+            writer.Put(Condition);
             Client.Send(writer, DeliveryMethod.ReliableOrdered);
         }
         public static void SendProjectile(NetPeer Client, Vector3 Position, Quaternion Rotation, string ProjectileName, float ExtaFloat, bool PlaySound, Server ServerInstance)
@@ -393,7 +394,7 @@ namespace SkyCoopServer
                     Peer.Send(writer, DeliveryMethod.ReliableOrdered);
                 }
             }
-            if (!FilesManager.s_DataDirectory.Contains("Sky"))
+            if (!FilesManager.s_DataDirectory.Contains("_reb"))
             {
                 ServerInstance.Dispose();
             }

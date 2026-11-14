@@ -23,7 +23,7 @@ namespace SkyCoopClient
 
         //[Name("User Name")]
         //[Description("Nickname other players will see. Leave empty to use your name from Steam.")]
-        //public string m_UserName = "";
+        //public string m_UserName = "Player";
 
         [Section("SC_Settings_VoiceChatSection", Localize = true)]
 

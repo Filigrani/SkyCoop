@@ -21,7 +21,7 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                __instance.m_TimeCostHours = __instance.m_TimeCostHours * 0.2f;
+                __instance.m_TimeCostHours = __instance.m_TimeCostHours * ModMain.GetActionsDurationMultiplier();
             }
         }
 
@@ -56,6 +56,7 @@ namespace SkyCoopClient
             private static void Prefix(Panel_BreakDown __instance)
             {
                 if (!ModMain.IsMultiplayer()) { return; }
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return; }
 
                 float RealTimeSeconds = (__instance.m_DurationHours * 60 * 60) / 12;
 

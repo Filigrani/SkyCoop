@@ -448,7 +448,7 @@ namespace SkyCoopServer
                         SceneData.AddRadialSpawnerToRespawn(Data.m_Data.m_SpawnerGUID, m_ServerInstance.m_Timeline.m_ElapsedInGameHours);
                     }
 
-                    if (!Data.m_Data.m_DroppedByPlayer && m_ServerInstance.m_Rules.m_DupesList.Contains(Data.m_Visual.m_GearName))
+                    if (!Data.m_Data.m_DroppedByPlayer && FilesManager.s_Dupes.Contains(Data.m_Visual.m_GearName))
                     {
                         if (Picker != null)
                         {

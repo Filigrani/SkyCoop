@@ -18,6 +18,7 @@ namespace SkyCoopClient
         public static bool s_PassTimeMode = false;
         public static bool s_PassingTime = false;
         public static float s_PassTimeStartTOD = 0;
+        public static int s_FixFadeFrames = 0;
 
         // Rest.m_SleepFadeOutSeconds это 8 секунд
         // TimeOfDay.m_DayLengthScale когда спим 12 часов 0.0083f
@@ -53,25 +54,25 @@ namespace SkyCoopClient
                 }
             }
         }
-        [HarmonyLib.HarmonyPatch(typeof(Fatigue), "AddFatigue", new System.Type[] { typeof(float), typeof(FatigueFlags)})]
-        private static class Fatigue_AddFatigue
-        {
-            private static void Prefix(Fatigue __instance, ref float fatigueValue)
-            {
-                if (!ModMain.IsMultiplayer()) { return; }
+        //[HarmonyLib.HarmonyPatch(typeof(Fatigue), "AddFatigue", new System.Type[] { typeof(float), typeof(FatigueFlags)})]
+        //private static class Fatigue_AddFatigue
+        //{
+        //    private static void Prefix(Fatigue __instance, ref float fatigueValue)
+        //    {
+        //        if (!ModMain.IsMultiplayer()) { return; }
 
-                if (ModMain.Client != null && ModMain.Client.m_IsReady)
-                {
-                    if (ModMain.Client.m_Rules.m_Fatigue)
-                    {
-                        if(fatigueValue > 0)
-                        {
-                            fatigueValue = fatigueValue / 5f;
-                        }
-                    }
-                }
-            }
-        }
+        //        if (ModMain.Client != null && ModMain.Client.m_IsReady)
+        //        {
+        //            if (ModMain.Client.m_Rules.m_Fatigue)
+        //            {
+        //                if(fatigueValue > 0)
+        //                {
+        //                    fatigueValue = fatigueValue / 5f;
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
 
         public static void PatchPanel(Panel_Rest Panel)
         {
@@ -111,7 +112,7 @@ namespace SkyCoopClient
 
                         if (Loca)
                         {
-                            if (ModMain.IsMultiplayer())
+                            if (ModMain.IsMultiplayer() && !ModMain.Client.m_Rules.m_AsyncTimeline)
                             {
                                 Loca.key = "GAMEPLAY_RestDescription_Multiplayer";
                             }
@@ -134,7 +135,7 @@ namespace SkyCoopClient
 
                         if (Loca)
                         {
-                            if (ModMain.IsMultiplayer())
+                            if (ModMain.IsMultiplayer() && !ModMain.Client.m_Rules.m_AsyncTimeline)
                             {
                                 Loca.key = "GAMEPLAY_PassTimeDescription_Multiplayer";
                             }
@@ -200,6 +201,7 @@ namespace SkyCoopClient
             private static bool Prefix(Rest __instance, Bed b, int durationHours, int maxHours)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return true; }
 
                 OnStartSleeping(__instance, b);
                 return false;
@@ -212,6 +214,7 @@ namespace SkyCoopClient
             private static bool Prefix(Rest __instance, Bed b, int durationHours, int maxHours, float fadeOutDuration, Rest.PassTimeOptions options, Il2CppSystem.Action onSleepEnd)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return true; }
 
                 OnStartSleeping(__instance, b);
                 return false;
@@ -224,6 +227,7 @@ namespace SkyCoopClient
             private static bool Prefix(Rest __instance, bool interrupted)
             {
                 if (!ModMain.IsMultiplayer()) { return true; }
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return true; }
 
                 if (__instance.m_Bed)
                 {
@@ -258,6 +262,7 @@ namespace SkyCoopClient
             private static bool Prefix(Panel_Rest __instance)
             {
                 if (!ModMain.IsMultiplayer() || s_ByPass) { return true; }
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return true; }
 
                 s_PassTimeMode = false;
                 s_DesiredTimeToSleep = __instance.m_SleepHours * 60 * 60;
@@ -301,6 +306,7 @@ namespace SkyCoopClient
             private static bool Prefix(Panel_Rest __instance, float sleepHours)
             {
                 if (!ModMain.IsMultiplayer() || s_ByPass) { return true; }
+                if (ModMain.Client != null && ModMain.Client.m_IsReady && ModMain.Client.m_Rules.m_AsyncTimeline) { return true; }
 
                 s_PassTimeMode = true;
 
@@ -481,9 +487,12 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if(GameManager.m_Rest && GameManager.m_Rest.IsSleeping())
+                if (!ModMain.Client.m_Rules.m_AsyncTimeline)
                 {
-                    __result = true;
+                    if (GameManager.m_Rest && GameManager.m_Rest.IsSleeping())
+                    {
+                        __result = true;
+                    }
                 }
             }
         }
@@ -495,13 +504,16 @@ namespace SkyCoopClient
             {
                 if (!ModMain.IsMultiplayer()) { return; }
 
-                if (GameManager.m_Rest && GameManager.m_Rest.IsSleeping())
+                if (!ModMain.Client.m_Rules.m_AsyncTimeline)
                 {
-                    if (__instance.m_AccelTimePopup && __instance.m_AccelTimePopup.m_BackButtonObject)
+                    if (GameManager.m_Rest && GameManager.m_Rest.IsSleeping())
                     {
-                        __instance.m_AccelTimePopup.m_BackButtonObject.SetActive(true);
-                        __instance.m_GenericButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_Cancel", true, 0, true);
-                        __instance.m_TimePopupButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_Cancel", true, 0, true);
+                        if (__instance.m_AccelTimePopup && __instance.m_AccelTimePopup.m_BackButtonObject)
+                        {
+                            __instance.m_AccelTimePopup.m_BackButtonObject.SetActive(true);
+                            __instance.m_GenericButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_Cancel", true, 0, true);
+                            __instance.m_TimePopupButtonLegendContainer.UpdateButton("Escape", "GAMEPLAY_Cancel", true, 0, true);
+                        }
                     }
                 }
             }
@@ -701,6 +713,18 @@ namespace SkyCoopClient
             if (!s_LastEveryoneIsSleeping)
             {
                 CameraFade.FinishFade();
+                if (GameManager.m_TimeOfDay)
+                {
+                    Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+                    if (Panel)
+                    {
+                        Panel.EnableForcedTimeOfDayScaleDisplay(true);
+                        s_FixFadeFrames = 2;
+                    }
+
+                    GameManager.m_TimeOfDay.m_IsTimeLapseActiveCounter = 0;
+
+                }
             }
         }
 
@@ -710,6 +734,111 @@ namespace SkyCoopClient
             {
                 s_LastEveryoneIsSleeping = State;
                 OnEveryoneSleepingChanged();
+            }
+        }
+
+        public static void UpdateLable(string Text)
+        {
+            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+
+            if (Panel)
+            {
+                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
+                {
+                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
+                    if (RestingLable)
+                    {
+                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
+
+                        if (Localize)
+                        {
+                            Localize.key = Text;
+                            Localize.OnLocalize();
+                        }
+                    }
+                }
+            }
+        }
+
+        public static bool IsSpeedUp()
+        {
+            if (GameManager.m_Rest)
+            {
+                return GameManager.m_Rest.m_TimeAccelerated;
+            }
+            if (GameManager.m_TimeOfDay)
+            {
+                return GameManager.m_TimeOfDay.m_DayLengthScale < 1f;
+            }
+
+            return false;
+        }
+
+        public static bool ShouldSpeedUp()
+        {
+            return s_LastEveryoneIsSleeping;
+        }
+
+        public static void UpdateTimeline()
+        {
+            if (ModMain.Client.m_Rules.m_AsyncTimeline)
+            {
+                return;
+            }
+            
+            
+            if (ShouldSpeedUp())
+            {
+                if (GameManager.m_Rest.IsSleeping() || s_PassingTime)
+                {
+                    if (!IsSpeedUp())
+                    {
+                        GameManager.m_Rest.AccelerateTimeOfDay(DataStr.c_SpeedUpHoursMinutes, DataStr.c_SpeedUpRealSecondsDuration, false);
+                    }
+
+                    if (s_PassingTime)
+                    {
+                        UpdateLable("GAMEPLAY_PassTimeProgress_Accelerated");
+                    }
+                    else
+                    {
+                        UpdateLable("GAMEPLAY_RestingProgress_Accelerated");
+                    }
+                }
+                else
+                {
+                    if (!IsSpeedUp())
+                    {
+                        BreakDownHook.SpeedUp();
+                        CraftingHook.SpeedUp();
+                    }
+                }
+            }
+            else
+            {
+                if (IsSpeedUp())
+                {
+                    if (GameManager.m_Rest.IsSleeping() || s_PassingTime)
+                    {
+                        if (s_PassingTime)
+                        {
+                            UpdateLable("GAMEPLAY_PassTimeProgress_RT");
+                        }
+                        else
+                        {
+                            UpdateLable("GAMEPLAY_RestingProgress_RT");
+                        }
+                    }
+                    if (GameManager.m_Rest.m_TimeAccelerated)
+                    {
+                        GameManager.m_Rest.RestoreTimeOfDay();
+                    }
+                    else
+                    {
+                        BreakDownHook.SlowDown();
+                        CraftingHook.SlowDown();
+                    }
+                }
             }
         }
 
@@ -770,125 +899,19 @@ namespace SkyCoopClient
                     }
                 }
 
-                if (!s_LastEveryoneIsSleeping)
+                UpdateTimeline();
+            }
+
+            if(s_FixFadeFrames > 0)
+            {
+                s_FixFadeFrames--;
+
+                if(s_FixFadeFrames == 0)
                 {
-                    if (GameManager.m_Rest.m_TimeAccelerated)
+                    Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
+                    if (Panel)
                     {
-                        GameManager.m_Rest.RestoreTimeOfDay();
-                    }
-                    if (PlayersManager.m_LocalPlayerData.m_LastSentWorking)
-                    {
-                        BreakDownHook.SlowDown();
-                        CraftingHook.SlowDown();
-                    }
-
-                    if (GameManager.m_Rest.IsSleeping())
-                    {
-                        if (s_PassingTime)
-                        {
-                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
-
-                            if (Panel)
-                            {
-                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
-                                {
-                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
-                                    if (RestingLable)
-                                    {
-                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
-
-                                        if (Localize)
-                                        {
-                                            Localize.key = "GAMEPLAY_PassTimeProgress_RT";
-                                            Localize.OnLocalize();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                        else
-                        {
-                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
-
-                            if (Panel)
-                            {
-                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
-                                {
-                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
-                                    if (RestingLable)
-                                    {
-                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
-
-                                        if (Localize)
-                                        {
-                                            Localize.key = "GAMEPLAY_RestingProgress_RT";
-                                            Localize.OnLocalize();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                    if (GameManager.m_Rest.IsSleeping())
-                    {
-                        if (!GameManager.m_Rest.m_TimeAccelerated)
-                        {
-                            GameManager.m_Rest.AccelerateTimeOfDay(DataStr.c_SpeedUpHoursMinutes, DataStr.c_SpeedUpRealSecondsDuration, false);
-                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
-
-                            if (Panel)
-                            {
-                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
-                                {
-                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
-                                    if (RestingLable)
-                                    {
-                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
-
-                                        if (Localize)
-                                        {
-                                            Localize.key = "GAMEPLAY_RestingProgress_Accelerated";
-                                            Localize.OnLocalize();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }else if (s_PassingTime)
-                    {
-                        if (!GameManager.m_Rest.m_TimeAccelerated)
-                        {
-                            GameManager.m_Rest.AccelerateTimeOfDay(DataStr.c_SpeedUpHoursMinutes, DataStr.c_SpeedUpRealSecondsDuration, false);
-
-                            Panel_HUD Panel = InterfaceManager.GetPanel<Panel_HUD>();
-
-                            if (Panel)
-                            {
-                                if (Panel.m_AccelTimePopup && Panel.m_AccelTimePopup.m_RestingObject)
-                                {
-                                    Transform RestingLable = Panel.m_AccelTimePopup.m_RestingObject.transform.GetChild(1);
-                                    if (RestingLable)
-                                    {
-                                        UILocalize Localize = RestingLable.gameObject.GetComponent<UILocalize>();
-
-                                        if (Localize)
-                                        {
-                                            Localize.key = "GAMEPLAY_PassTimeProgress_Accelerated";
-                                            Localize.OnLocalize();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    if (PlayersManager.m_LocalPlayerData.m_LastSentWorking)
-                    {
-                        BreakDownHook.SpeedUp();
-                        CraftingHook.SpeedUp();
+                        Panel.EnableForcedTimeOfDayScaleDisplay(false);
                     }
                 }
             }

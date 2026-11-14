@@ -28,7 +28,7 @@ namespace SkyCoopClient
         public static bool s_Active = false;
         public static Stopwatch s_StopWatch = null;
         //public static int m_FramesDelay = 0;
-        public static string s_NameForGearsFiles = "Sandbox";
+        public static string s_NameForGearsFiles = "Vanila_Sandbox";
 
         public static void SceneLoaded()
         {
@@ -97,7 +97,7 @@ namespace SkyCoopClient
                     s_ScenesToSave.Add(sceneResource.PrimaryKey);
                     SkyCoop.Logger.Log($"[GearSpawnsRipper] Scene added to queue {sceneResource.PrimaryKey}");
                 }
-                s_NameForGearsFiles = !ModdedOnly ? "Sandbox" : "TLDev";
+                s_NameForGearsFiles = !ModdedOnly ? "Vanila_Sandbox" : "TLDev";
             }
             else
             {
@@ -417,7 +417,7 @@ namespace SkyCoopClient
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
             };
 
-            DataStr.ScenesLootSpawns Old = FilesManager.GetGearsSpawnsData($"GearSpawns/{s_NameForGearsFiles}");
+            DataStr.ScenesLootSpawns Old = FilesManager.GetGearsSpawnsData($"{FilesManager.s_DataDirectory}/GearSpawns/{s_NameForGearsFiles}");
             DataStr.ScenesLootSpawns Combined = s_ScenesLootSpawns;
             if (Old != null)
             {
@@ -443,14 +443,14 @@ namespace SkyCoopClient
             }
             string JSON = JsonSerializer.Serialize<DataStr.ScenesLootSpawns>(Combined, Options);
 
-            if (!Directory.Exists($"{FilesManager.s_DataDirectory}/GearSpawns"))
+            if (!Directory.Exists($"{FilesManager.s_OverrideDataDirectory}/GearSpawns"))
             {
-                Directory.CreateDirectory($"{FilesManager.s_DataDirectory}/GearSpawns");
+                Directory.CreateDirectory($"{FilesManager.s_OverrideDataDirectory}/GearSpawns");
             }
 
             try
             {
-                File.WriteAllText($"{FilesManager.s_DataDirectory}/GearSpawns/{s_NameForGearsFiles}", JSON);
+                File.WriteAllText($"{FilesManager.s_OverrideDataDirectory}/GearSpawns/{s_NameForGearsFiles}", JSON);
                 return;
             }
             catch (Exception e)
@@ -467,7 +467,7 @@ namespace SkyCoopClient
                 NumberHandling = JsonNumberHandling.AllowNamedFloatingPointLiterals
             };
 
-            DataStr.ScenesAnimalSpawns Old = FilesManager.GetAnimalsSpawnsData($"WildlifeSpawns/{s_NameForGearsFiles}");
+            DataStr.ScenesAnimalSpawns Old = FilesManager.GetAnimalsSpawnsData($"{FilesManager.s_DataDirectory}/WildlifeSpawns/{s_NameForGearsFiles}");
             DataStr.ScenesAnimalSpawns Combined = s_ScenesAnimalSpawns;
             if (Old != null)
             {
@@ -493,14 +493,14 @@ namespace SkyCoopClient
             }
             string JSON = JsonSerializer.Serialize<DataStr.ScenesAnimalSpawns>(Combined, Options);
 
-            if (!Directory.Exists($"{FilesManager.s_DataDirectory}/WildlifeSpawns"))
+            if (!Directory.Exists($"{FilesManager.s_OverrideDataDirectory}/WildlifeSpawns"))
             {
-                Directory.CreateDirectory($"{FilesManager.s_DataDirectory}/WildlifeSpawns");
+                Directory.CreateDirectory($"{FilesManager.s_OverrideDataDirectory}/WildlifeSpawns");
             }
 
             try
             {
-                File.WriteAllText($"{FilesManager.s_DataDirectory}/WildlifeSpawns/{s_NameForGearsFiles}", JSON);
+                File.WriteAllText($"{FilesManager.s_OverrideDataDirectory}/WildlifeSpawns/{s_NameForGearsFiles}", JSON);
                 return;
             }
             catch (Exception e)

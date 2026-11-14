@@ -170,11 +170,11 @@ namespace SkyCoopServer
             public string m_SceneUnload = "";
             public bool m_Weather = true;
             public bool m_CanCraft = true;
+            public bool m_AsyncTimeline = false;
+            public float m_ActionsDurationMultiplier = 0.2f;
             public Dictionary<string, SceneLootSpawns> m_GearSpawns = new Dictionary<string, SceneLootSpawns>();
             public Dictionary<string, Dictionary<string, RadialObjectSpawnerData>> m_RadialLootSpawnerBySceneByGUID = new Dictionary<string, Dictionary<string, RadialObjectSpawnerData>>();
-            public List<string> m_DupesList = new List<string>();
-            public Dictionary<string, SceneAnimalSpawns> m_AnimalSpawns = new Dictionary<string, SceneAnimalSpawns>();
-            public Dictionary<string, Dictionary<string, SpawnRegionData>> m_SpawnRegionBySceneByGUID = new Dictionary<string, Dictionary<string, SpawnRegionData>>();
+            public bool m_Animals = true;
 
             public string GetRandomMap(string CurrentMap = "")
             {
@@ -234,9 +234,10 @@ namespace SkyCoopServer
             public string SceneUnload { get; set; }
             public bool Weather { get; set; }
             public bool CanCraft { get; set; }
+            public bool AsyncTimeline { get; set; }
+            public float ActionsDurationMultiplier { get; set; }
             public List<string> GearSpawns { get; set; }
-            public List<string> DupeLists { get; set; }
-            public List<string> AnimalSpawns { get; set; }
+            public bool Animals { get; set; }
 
             public GameRules Load(string FileName)
             {
@@ -313,33 +314,47 @@ namespace SkyCoopServer
                 Inst.m_SceneUnload = SceneUnload;
                 Inst.m_Weather = Weather;
                 Inst.m_CanCraft = CanCraft;
-
-                if(GearSpawns != null)
+                Inst.m_AsyncTimeline = AsyncTimeline;
+                if(ActionsDurationMultiplier <= 0)
                 {
-                    foreach (string Path in GearSpawns)
+                    Inst.m_ActionsDurationMultiplier = 1;
+                }
+                else
+                {
+                    Inst.m_ActionsDurationMultiplier = ActionsDurationMultiplier;
+                }
+
+                if (GearSpawns != null)
+                {
+                    foreach (string Postfix in GearSpawns)
                     {
-                        ScenesLootSpawns GearsSpawnsData = FilesManager.GetGearsSpawnsData(Path);
-                        if(GearsSpawnsData != null)
+                        string PostfixLower = Postfix.ToLower();
+                        Dictionary<string, ScenesLootSpawns> Spawns = FilesManager.GetAllGearSpawns();
+                        foreach (var item in Spawns)
                         {
-                            foreach (SceneLootSpawns LootData in GearsSpawnsData.Scenes)
+                            string SpawnerName = item.Key.ToLower();
+                            if (SpawnerName == PostfixLower || SpawnerName.EndsWith($"_{PostfixLower}"))
                             {
-                                if(LootData != null)
+                                foreach (SceneLootSpawns LootData in item.Value.Scenes)
                                 {
-                                    SceneLootSpawns Combined = null;
-                                    if (Inst.m_GearSpawns.TryGetValue(LootData.SceneName, out Combined))
+                                    if (LootData != null)
                                     {
-                                        Combined.Join(LootData);
-                                    }
-                                    else
-                                    {
-                                        SceneLootSpawns New = new SceneLootSpawns();
-                                        New.PrefabSpawns = new List<PrefabSpawnData>();
-                                        New.RandomSpawnObjects = new List<RandomSpawnObjectData>();
-                                        New.LooseGearSpawns = new List<LooseGearSpawn>();
-                                        New.RadialSpawns = new List<RadialObjectSpawnerData>();
-                                        New.SpawnGearVariants = new List<SpawnGearVariantData>();
-                                        New.Clone(LootData);
-                                        Inst.m_GearSpawns.Add(LootData.SceneName, New);
+                                        SceneLootSpawns Combined = null;
+                                        if (Inst.m_GearSpawns.TryGetValue(LootData.SceneName, out Combined))
+                                        {
+                                            Combined.Join(LootData);
+                                        }
+                                        else
+                                        {
+                                            SceneLootSpawns New = new SceneLootSpawns();
+                                            New.PrefabSpawns = new List<PrefabSpawnData>();
+                                            New.RandomSpawnObjects = new List<RandomSpawnObjectData>();
+                                            New.LooseGearSpawns = new List<LooseGearSpawn>();
+                                            New.RadialSpawns = new List<RadialObjectSpawnerData>();
+                                            New.SpawnGearVariants = new List<SpawnGearVariantData>();
+                                            New.Clone(LootData);
+                                            Inst.m_GearSpawns.Add(LootData.SceneName, New);
+                                        }
                                     }
                                 }
                             }
@@ -350,9 +365,9 @@ namespace SkyCoopServer
                     {
                         string SceneName = item.Key;
                         SceneLootSpawns Data = item.Value;
-                        
+
                         Dictionary<string, RadialObjectSpawnerData> DictRadialByGUID = null;
-                        if(!Inst.m_RadialLootSpawnerBySceneByGUID.TryGetValue(SceneName, out DictRadialByGUID))
+                        if (!Inst.m_RadialLootSpawnerBySceneByGUID.TryGetValue(SceneName, out DictRadialByGUID))
                         {
                             DictRadialByGUID = new Dictionary<string, RadialObjectSpawnerData>();
                             Inst.m_RadialLootSpawnerBySceneByGUID.Add(SceneName, DictRadialByGUID);
@@ -362,84 +377,6 @@ namespace SkyCoopServer
                             if (!string.IsNullOrEmpty(Radial.GUID) && !DictRadialByGUID.ContainsKey(Radial.GUID))
                             {
                                 DictRadialByGUID.Add(Radial.GUID, Radial);
-                            }
-                        }
-                    }
-                }
-                if (DupeLists != null)
-                {
-                    foreach (string Path in DupeLists)
-                    {
-                        List<string> DupesList = FilesManager.GetDupeList(Path);
-                        if (DupesList != null)
-                        {
-                            foreach (string GearName in DupesList)
-                            {
-                                if (!Inst.m_DupesList.Contains(GearName))
-                                {
-                                    Inst.m_DupesList.Add(GearName);
-                                }
-                            }
-                        }
-                    }
-                }
-
-                if (AnimalSpawns != null)
-                {
-                    foreach (string Path in AnimalSpawns)
-                    {
-                        ScenesAnimalSpawns AnimalsSpawnsData = FilesManager.GetAnimalsSpawnsData(Path);
-                        if (AnimalsSpawnsData != null)
-                        {
-                            foreach (SceneAnimalSpawns SpawnsData in AnimalsSpawnsData.Scenes)
-                            {
-                                if (SpawnsData != null)
-                                {
-                                    SceneAnimalSpawns Combined = null;
-                                    if (Inst.m_AnimalSpawns.TryGetValue(SpawnsData.SceneName, out Combined))
-                                    {
-                                        Combined.Join(SpawnsData);
-                                    }
-                                    else
-                                    {
-                                        SceneAnimalSpawns New = new SceneAnimalSpawns();
-                                        New.Spawns = new List<SpawnRegionData>();
-                                        New.RandomSpawnObjects = new List<RandomAnimalSpawnObjectData>();
-                                        New.Clone(SpawnsData);
-                                        Inst.m_AnimalSpawns.Add(SpawnsData.SceneName, New);
-                                    }
-                                }
-                            }
-                        }
-                    }
-                    // Оптимизация для будущиего поиска для респавнов предметов
-                    foreach (var item in Inst.m_AnimalSpawns)
-                    {
-                        string SceneName = item.Key;
-                        SceneAnimalSpawns Data = item.Value;
-
-                        Dictionary<string, SpawnRegionData> DictSpawnsByGUID = null;
-                        if (!Inst.m_SpawnRegionBySceneByGUID.TryGetValue(SceneName, out DictSpawnsByGUID))
-                        {
-                            DictSpawnsByGUID = new Dictionary<string, SpawnRegionData>();
-                            Inst.m_SpawnRegionBySceneByGUID.Add(SceneName, DictSpawnsByGUID);
-                        }
-                        foreach (SpawnRegionData Spawner in Data.Spawns)
-                        {
-                            if (!string.IsNullOrEmpty(Spawner.GUID) && !DictSpawnsByGUID.ContainsKey(Spawner.GUID))
-                            {
-                                DictSpawnsByGUID.Add(Spawner.GUID, Spawner);
-                            }
-                        }
-                        foreach (RandomAnimalSpawnObjectData Base in Data.RandomSpawnObjects)
-                        {
-                            foreach (AnimalSpawnElementData Element in Base.SpawnRegions)
-                            {
-                                SpawnRegionData Spawner = Element.Spawn;
-                                if (!string.IsNullOrEmpty(Spawner.GUID) && !DictSpawnsByGUID.ContainsKey(Spawner.GUID))
-                                {
-                                    DictSpawnsByGUID.Add(Spawner.GUID, Spawner);
-                                }
                             }
                         }
                     }
@@ -1546,6 +1483,11 @@ namespace SkyCoopServer
 
             public void SetupAnimalSpawns(Server ServerInstance)
             {
+                if (!ServerInstance.m_Rules.m_Animals)
+                {
+                    return;
+                }
+                
                 string SceneFileName = m_SceneName;
 
                 if (SceneFileName.Contains('_'))
@@ -1561,26 +1503,23 @@ namespace SkyCoopServer
                     }
                 }
 
-                if (ServerInstance.m_Rules.m_AnimalSpawns != null)
+                SceneAnimalSpawns SceneAnimals = null;
+                if (FilesManager.s_AnimalSpawns.TryGetValue(SceneFileName, out SceneAnimals))
                 {
-                    SceneAnimalSpawns SceneAnimals = null;
-                    if (ServerInstance.m_Rules.m_AnimalSpawns.TryGetValue(SceneFileName, out SceneAnimals))
+                    foreach (SpawnRegionData Spawner in SceneAnimals.Spawns)
                     {
-                        foreach (SpawnRegionData Spawner in SceneAnimals.Spawns)
+                        SpawnRegionInstance Inst = new SpawnRegionInstance();
+                        Inst.m_Data = Spawner;
+                        m_AnimalSpawners.Add(Inst.m_Data.GUID, Inst);
+                    }
+                    foreach (RandomAnimalSpawnObjectData RandomBase in SceneAnimals.RandomSpawnObjects)
+                    {
+                        foreach (AnimalSpawnElementData Element in RandomBase.SpawnRegions)
                         {
                             SpawnRegionInstance Inst = new SpawnRegionInstance();
-                            Inst.m_Data = Spawner;
+                            Inst.m_Data = Element.Spawn;
+                            Inst.m_RandomBase = RandomBase;
                             m_AnimalSpawners.Add(Inst.m_Data.GUID, Inst);
-                        }
-                        foreach (RandomAnimalSpawnObjectData RandomBase in SceneAnimals.RandomSpawnObjects)
-                        {
-                            foreach (AnimalSpawnElementData Element in RandomBase.SpawnRegions)
-                            {
-                                SpawnRegionInstance Inst = new SpawnRegionInstance();
-                                Inst.m_Data = Element.Spawn;
-                                Inst.m_RandomBase = RandomBase;
-                                m_AnimalSpawners.Add(Inst.m_Data.GUID, Inst);
-                            }
                         }
                     }
                 }
@@ -1594,7 +1533,12 @@ namespace SkyCoopServer
 
                 foreach (SpawnRegionInstance Inst in m_AnimalSpawners.Values)
                 {
-                    if(Inst.m_RandomBase == null)
+                    if (Inst.m_Data.IsCougarSpawn())
+                    {
+                        Inst.m_Active = false;
+                        continue;
+                    }
+                    if (Inst.m_RandomBase == null)
                     {
                         Inst.m_Active = RNG.Range(0, 100) < Inst.m_Data.ChanceActive;
                     }
@@ -1817,7 +1761,7 @@ namespace SkyCoopServer
                                     Vector3JSON Point = PossiblePoints[RandomPointIndex];
                                     PossiblePoints.RemoveAt(RandomPointIndex);
 
-                                    int Style = ServerInstance.m_Rules.m_DupesList.Contains(GearToSpawn.GearName) ? -1 : 0;
+                                    int Style = FilesManager.s_Dupes.Contains(GearToSpawn.GearName) ? -1 : 0;
                                     ServerInstance.m_ScenesData.AddGear(m_SceneName, GearToSpawn.GearName, Point.ToVector(), Extensions.Euler(0, RNG.Range(0, 360), 0), string.Empty, 1, Style, false, "", -1, "", 0, 0, "", Spawner.GUID);
                                 }
                             }
@@ -1912,7 +1856,7 @@ namespace SkyCoopServer
 
                                         if (Spawn)
                                         {
-                                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Gear.GearName) ? -1 : 0;
+                                            int Style = FilesManager.s_Dupes.Contains(Gear.GearName) ? -1 : 0;
                                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                                         }
                                         break;
@@ -1998,7 +1942,7 @@ namespace SkyCoopServer
 
                                         if (Spawn)
                                         {
-                                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Gear.GearName) ? -1 : 0;
+                                            int Style = FilesManager.s_Dupes.Contains(Gear.GearName) ? -1 : 0;
                                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Gear.GearName, Gear.Position.ToVector(), Gear.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                                         }
                                         break;
@@ -2021,7 +1965,7 @@ namespace SkyCoopServer
 
                         if (Spawn)
                         {
-                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Spawner.GearName) ? -1 : 0;
+                            int Style = FilesManager.s_Dupes.Contains(Spawner.GearName) ? -1 : 0;
                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Spawner.GearName, Spawner.Position.ToVector(), Spawner.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                         }
                     }
@@ -2036,7 +1980,7 @@ namespace SkyCoopServer
                             int RandomIndex = RNG.Range(0, Spawn.Gears.Count);
 
                             SpawnGearVariantElementData Element = Spawn.Gears[RandomIndex];
-                            int Style = ServerInstance.m_Rules.m_DupesList.Contains(Element.GearName) ? -1 : 0;
+                            int Style = FilesManager.s_Dupes.Contains(Element.GearName) ? -1 : 0;
                             ServerInstance.m_ScenesData.AddGear(m_SceneName, Element.GearName, Element.Position.ToVector(), Element.Rotation.ToQuaternion(), string.Empty, 1, Style, false);
                         }
                     }
@@ -4264,6 +4208,18 @@ namespace SkyCoopServer
                 }
                 return 0;
             }
+
+            public bool IsCougarSpawn()
+            {
+                foreach (SpawnRegionAnimal Animal in Animals)
+                {
+                    if (Animal != null)
+                    {
+                        return Animal.NormalPrefab.StartsWith("WILDLIFE_Cougar");
+                    }
+                }
+                return false;
+            }
         }
 
         public class AnimalEntity
@@ -4276,6 +4232,7 @@ namespace SkyCoopServer
             public Vector3 m_SpawnPos = Vector3.Zero;
             public Quaternion m_Rotation = Quaternion.Identity;
             public Vector3 m_Velocity = Vector3.Zero;
+            public Vector3 m_Origin = Vector3.Zero;
 
             public bool m_Active = false;
             public bool m_Summoned = false;
@@ -4427,7 +4384,7 @@ namespace SkyCoopServer
                                     System.Random RNG = new Random(Guid.NewGuid().GetHashCode());
 
                                     Dictionary<string, SpawnRegionData> Spawners = null;
-                                    if (ServerInstance.m_Rules.m_SpawnRegionBySceneByGUID.TryGetValue(Scene.m_SceneName, out Spawners))
+                                    if (FilesManager.s_SpawnRegionBySceneByGUID.TryGetValue(Scene.m_SceneName, out Spawners))
                                     {
                                         SpawnRegionData Spawner = null;
 
@@ -4671,10 +4628,9 @@ namespace SkyCoopServer
                         PlayerData Player = ServerInstance.GetPlayerDataByNetPeer(peer);
                         if (Player != null && Player.m_Scene == Scene.m_SceneName)
                         {
-                            //ServerSend.SendAnimalCorpse(peer, GetPrefabName(IsAurora), m_GUID, m_Position, m_Rotation);
+                            ServerSend.SendAnimalCorpse(peer, GetPrefabName(IsAurora), m_GUID, m_Position, m_Rotation);
 
-                            //TODO: вернуть трупы когда закончу их визуал
-                            ServerSend.SendAnimalRemoved(peer, m_GUID);
+                            //ServerSend.SendAnimalRemoved(peer, m_GUID);
                         }
                     }
                     Scene.m_Animals.Remove(m_GUID);
@@ -4756,6 +4712,10 @@ namespace SkyCoopServer
 
                         Scene.m_Animals.Add(Animal.m_GUID, Animal);
                         return Animal;
+                    }
+                    else
+                    {
+                        m_Active = false;
                     }
                 }
                 return null;
